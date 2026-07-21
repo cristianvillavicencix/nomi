@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 import type { MailAccount } from "./types";
+import {
+  HOSTINGER_BRAND_PURPLE,
+} from "./hostingerLogo";
 
 export type MailBrandId =
   | "google"
@@ -111,11 +114,10 @@ export function MailBrandLogo({
       );
     case "hostinger":
       return (
-        <SvgWrap className={className}>
-          <rect width="24" height="24" rx="5" fill="#673DE6" />
+        <SvgWrap className={className} viewBox="7.002 8.287 148.203 175.426">
           <path
-            fill="#fff"
-            d="M6.2 17V7h2.45l2.85 5.2L14.35 7H16.8v10h-2.1v-5.9L11.1 17H9.55l-3.6-5.9V17H6.2z"
+            fill={HOSTINGER_BRAND_PURPLE}
+            d="m7.002 8.287 39.319 21.172v39.32h57.467l36.295 21.172h-133.081zm148.203 75.615v-54.443l-42.344-21.172v51.418zm0 99.811-39.319-21.172v-39.32h-57.467l-36.295-21.172h133.081zm-148.203-75.615v54.443l42.343 21.172v-51.418z"
           />
         </SvgWrap>
       );

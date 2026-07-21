@@ -3,10 +3,14 @@ import {
   decodeBase64ToBytes,
   syncAttachmentBatch,
 } from "./mailAttachmentStorage.ts";
+import { normalizeContentId } from "./mailInlineImages.ts";
+
+type GmailHeader = { name?: string; value?: string };
 
 type GmailPart = {
   mimeType?: string;
   filename?: string;
+  headers?: GmailHeader[];
   body?: { data?: string; attachmentId?: string; size?: number };
   parts?: GmailPart[];
 };
@@ -17,6 +21,24 @@ export type GmailAttachmentMeta = {
   attachmentId: string;
 };
 
+export type GmailInlineImageMeta = {
+  filename: string;
+  mimeType: string;
+  attachmentId: string;
+  contentId: string;
+  embeddedBytes?: Uint8Array;
+};
+
+function getGmailPartHeader(
+  part: GmailPart | undefined,
+  name: string,
+): string | null {
+  const header = part?.headers?.find(
+    (h) => String(h.name || "").toLowerCase() === name.toLowerCase(),
+  );
+  return header?.value?.trim() || null;
+}
+
 export function collectGmailAttachmentParts(
   part: GmailPart | undefined,
   out: GmailAttachmentMeta[] = [],
@@ -25,11 +47,13 @@ export function collectGmailAttachmentParts(
   const filename = part.filename?.trim();
   const attachmentId = part.body?.attachmentId;
   const mime = String(part.mimeType || "").toLowerCase();
+  const contentId = getGmailPartHeader(part, "Content-ID");
   if (
     filename &&
     attachmentId &&
     mime !== "text/plain" &&
-    mime !== "text/html"
+    mime !== "text/html" &&
+    !(contentId && mime.startsWith("image/"))
   ) {
     out.push({
       filename,
@@ -43,10 +67,55 @@ export function collectGmailAttachmentParts(
   return out;
 }
 
+export function collectGmailInlineImageParts(
+  part: GmailPart | undefined,
+  out: GmailInlineImageMeta[] = [],
+): GmailInlineImageMeta[] {
+  if (!part) return out;
+  const mime = String(part.mimeType || "").toLowerCase();
+  const contentId = getGmailPartHeader(part, "Content-ID");
+  const attachmentId = part.body?.attachmentId;
+  const embeddedData = part.body?.data;
+
+  if (contentId && mime.startsWith("image/")) {
+    const normalized = normalizeContentId(contentId);
+    const filename =
+      part.filename?.trim() ||
+      `inline-${normalized.slice(0, 48) || "image"}`;
+    if (attachmentId) {
+      out.push({
+        filename,
+        mimeType: part.mimeType || "image/png",
+        attachmentId,
+        contentId,
+      });
+    } else if (embeddedData) {
+      out.push({
+        filename,
+        mimeType: part.mimeType || "image/png",
+        attachmentId: `inline-${normalized || out.length}`,
+        contentId,
+        embeddedBytes: decodeBase64ToBytes(embeddedData),
+      });
+    }
+  }
+
+  for (const child of part.parts ?? []) {
+    collectGmailInlineImageParts(child, out);
+  }
+  return out;
+}
+
 export function gmailMessageHasFileAttachments(
   payload: GmailPart | undefined,
 ): boolean {
   return collectGmailAttachmentParts(payload).length > 0;
+}
+
+export function gmailMessageHasInlineImages(
+  payload: GmailPart | undefined,
+): boolean {
+  return collectGmailInlineImageParts(payload).length > 0;
 }
 
 async function fetchGmailAttachmentBytes(
@@ -71,17 +140,19 @@ export async function syncGmailMessageAttachments(
   messageId: number,
   payload: GmailPart | undefined,
 ): Promise<number> {
-  const metas = collectGmailAttachmentParts(payload);
-  if (metas.length === 0) return 0;
+  const fileMetas = collectGmailAttachmentParts(payload);
+  const inlineMetas = collectGmailInlineImageParts(payload);
+  if (fileMetas.length === 0 && inlineMetas.length === 0) return 0;
 
   const files: Array<{
     providerAttachmentId: string;
     filename: string;
     mimeType: string;
     bytes: Uint8Array;
+    contentId?: string | null;
   }> = [];
 
-  for (const meta of metas) {
+  for (const meta of fileMetas) {
     const bytes = await fetchGmailAttachmentBytes(
       accessToken,
       providerMessageId,
@@ -93,6 +164,24 @@ export async function syncGmailMessageAttachments(
       filename: meta.filename,
       mimeType: meta.mimeType,
       bytes,
+    });
+  }
+
+  for (const meta of inlineMetas) {
+    const bytes =
+      meta.embeddedBytes ??
+      (await fetchGmailAttachmentBytes(
+        accessToken,
+        providerMessageId,
+        meta.attachmentId,
+      ));
+    if (!bytes) continue;
+    files.push({
+      providerAttachmentId: meta.attachmentId,
+      filename: meta.filename,
+      mimeType: meta.mimeType,
+      bytes,
+      contentId: meta.contentId,
     });
   }
 
@@ -121,6 +210,7 @@ export async function syncGraphMessageAttachments(
     filename: string;
     mimeType: string;
     bytes: Uint8Array;
+    contentId?: string | null;
   }> = [];
 
   for (const att of json.value ?? []) {
@@ -129,11 +219,22 @@ export async function syncGraphMessageAttachments(
     const contentBytes = att.contentBytes;
     if (typeof contentBytes !== "string" || !contentBytes.trim()) continue;
     const id = String(att.id || att.name || files.length);
+    const isInline = Boolean(att.isInline);
+    const contentId = typeof att.contentId === "string"
+      ? att.contentId.trim()
+      : null;
+    const mimeType = String(att.contentType || "application/octet-stream");
+    if (isInline && contentId && !mimeType.toLowerCase().startsWith("image/")) {
+      continue;
+    }
+    if (isInline && !contentId) continue;
+    if (!isInline && !String(att.name || "").trim()) continue;
     files.push({
       providerAttachmentId: id,
       filename: String(att.name || "attachment"),
-      mimeType: String(att.contentType || "application/octet-stream"),
+      mimeType,
       bytes: decodeBase64ToBytes(contentBytes.replace(/\s+/g, "")),
+      contentId: isInline ? contentId : null,
     });
   }
 

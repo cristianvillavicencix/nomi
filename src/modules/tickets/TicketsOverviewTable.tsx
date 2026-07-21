@@ -1,6 +1,8 @@
 import { useGetList, useListContext } from "ra-core";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { OrganizationMember, Ticket } from "@/modules/types";
@@ -23,10 +25,18 @@ export const TicketsOverviewTable = ({
   selectedTicketId,
   onSelectTicket,
   searchQuery = "",
+  selectedTicketIds = [],
+  onToggleTicketSelection,
+  onToggleAllVisible,
+  selectionEnabled = false,
 }: {
   selectedTicketId?: string | null;
   onSelectTicket: (ticketId: string) => void;
   searchQuery?: string;
+  selectedTicketIds?: string[];
+  onToggleTicketSelection?: (ticketId: string, checked: boolean) => void;
+  onToggleAllVisible?: (checked: boolean, visibleTicketIds: string[]) => void;
+  selectionEnabled?: boolean;
 }) => {
   const { data = [], isPending } = useListContext<Ticket>();
 
@@ -144,6 +154,10 @@ export const TicketsOverviewTable = ({
     });
   }, [allTickets, companiesById, contactsById, searchQuery]);
 
+  const allVisibleSelected =
+    tickets.length > 0 &&
+    tickets.every((ticket) => selectedTicketIds.includes(String(ticket.id)));
+
   if (isPending) {
     return (
       <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
@@ -161,10 +175,34 @@ export const TicketsOverviewTable = ({
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-card">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card">
+      {selectionEnabled ? (
+        <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
+          <Checkbox
+            id="tickets-overview-select-all"
+            checked={allVisibleSelected}
+            onCheckedChange={(value) =>
+              onToggleAllVisible?.(
+                value === true,
+                tickets.map((ticket) => String(ticket.id)),
+              )
+            }
+          />
+          <Label
+            htmlFor="tickets-overview-select-all"
+            className="text-xs text-muted-foreground"
+          >
+            Select all on this page
+          </Label>
+        </div>
+      ) : null}
+      <div className="min-h-0 flex-1 overflow-auto">
       <table className="w-full min-w-[720px] border-collapse text-left text-sm">
         <thead className="sticky top-0 z-10 border-b bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
+            {selectionEnabled ? (
+              <th className="w-10 px-3 py-2.5 font-medium" aria-label="Select" />
+            ) : null}
             <th className="px-3 py-2.5 font-medium">Ticket</th>
             <th className="px-3 py-2.5 font-medium">Subject</th>
             <th className="px-3 py-2.5 font-medium">Client</th>
@@ -198,6 +236,7 @@ export const TicketsOverviewTable = ({
               ticket.requester_email?.trim() ||
               "—";
             const selected = selectedTicketId === ticketId;
+            const bulkSelected = selectedTicketIds.includes(ticketId);
 
             return (
               <tr
@@ -205,9 +244,24 @@ export const TicketsOverviewTable = ({
                 className={cn(
                   "cursor-pointer border-b border-border/60 transition-colors hover:bg-muted/40",
                   selected && "bg-primary/5 hover:bg-primary/10",
+                  bulkSelected && !selected && "bg-primary/5",
                 )}
                 onClick={() => onSelectTicket(ticketId)}
               >
+                {selectionEnabled ? (
+                  <td
+                    className="px-3 py-2.5"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={bulkSelected}
+                      onCheckedChange={(value) =>
+                        onToggleTicketSelection?.(ticketId, value === true)
+                      }
+                      aria-label={`Select ticket #${ticket.id}`}
+                    />
+                  </td>
+                ) : null}
                 <td className="px-3 py-2.5 tabular-nums text-muted-foreground">
                   #{ticket.id}
                 </td>
@@ -248,6 +302,7 @@ export const TicketsOverviewTable = ({
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 };

@@ -48,6 +48,7 @@ export type MailAttachment = {
   mime_type: string | null;
   size_bytes: number | null;
   storage_path: string | null;
+  content_id: string | null;
 };
 
 export type MailMessage = {

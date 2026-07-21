@@ -391,9 +391,8 @@ html.nomi-form-embed body {
   background: transparent;
 }
 
-/* Mail reader — keep marketing HTML inside a light, bounded canvas */
+/* Legacy — mail reader uses sandboxed iframe (mailIframeDocument.ts). */
 .mail-html-canvas {
-  color: #171717;
   word-break: break-word;
 }
 
@@ -407,18 +406,48 @@ html.nomi-form-embed body {
   height: auto !important;
 }
 
-.mail-html-canvas table {
-  max-width: 100% !important;
-  border-collapse: collapse;
-}
-
-.mail-html-canvas td,
-.mail-html-canvas th {
-  word-break: break-word;
-}
-
 .mail-html-canvas pre {
   white-space: pre-wrap;
   overflow-x: auto;
+}
+
+/* Compose — keep quoted HTML inside the reply modal */
+.mail-compose-editor {
+  min-width: 0;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-x: hidden;
+}
+
+.mail-compose-editor blockquote.mail-compose-quote {
+  margin: 0.75rem 0 0 0;
+  padding: 0.75rem 0 0 0.75rem;
+  border-left: 3px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.mail-compose-editor blockquote.mail-compose-quote img,
+.mail-compose-editor blockquote.mail-compose-quote table {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.mail-compose-editor blockquote.mail-compose-quote td,
+.mail-compose-editor blockquote.mail-compose-quote th {
+  word-break: break-word;
+}
+
+.mail-compose-editor blockquote.mail-compose-quote h1,
+.mail-compose-editor blockquote.mail-compose-quote h2,
+.mail-compose-editor blockquote.mail-compose-quote h3,
+.mail-compose-editor blockquote.mail-compose-quote h4 {
+  font-size: 1em !important;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0.5em 0;
 }
 

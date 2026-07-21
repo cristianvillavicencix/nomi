@@ -1,6 +1,6 @@
 import { Inbox, KanbanSquare, List as ListIcon } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useGetIdentity, useListContext } from "ra-core";
+import { useEffect, useMemo, useState } from "react";
+import { useGetIdentity, useGetList, useListContext } from "ra-core";
 import { useNavigate, useSearchParams } from "react-router";
 import { List } from "@/components/admin/list";
 import {
@@ -20,6 +20,7 @@ import {
   ModuleToolbar,
   ModuleToolbarActions,
 } from "@/components/atomic-crm/layout/ModuleToolbar";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useMarkTicketNotificationsReadOnVisit } from "@/modules/notifications/useMarkTicketNotificationsReadOnVisit";
@@ -29,11 +30,13 @@ import {
   TICKETS_OVERVIEW_VIEW_KEY,
   type TicketsOverviewView,
 } from "@/modules/tickets/ticketOverviewConfig";
+import { TicketInboxBulkBar } from "@/modules/tickets/TicketInboxBulkBar";
 import { TicketOverviewPreview } from "@/modules/tickets/TicketOverviewPreview";
 import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
 import { TicketsKanban } from "@/modules/tickets/TicketsKanban";
 import { TicketsOverviewTable } from "@/modules/tickets/TicketsOverviewTable";
 import { useTicketsInboxRealtime } from "@/modules/tickets/useTicketsInboxRealtime";
+import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 
 const OVERVIEW_LIST_FILTER = { "merged_into_ticket_id@is": null };
@@ -137,14 +140,117 @@ const TicketsOverviewBody = ({
   onClearSelection: () => void;
   isMobile: boolean;
 }) => {
-  const { total } = useListContext<Ticket>();
+  const { total, data: tickets = [] } = useListContext<Ticket>();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
+  const canManage = useMemberCapability("support.tickets.manage");
+
+  useEffect(() => {
+    setSelectedTicketIds([]);
+  }, [view]);
+
+  const allTickets = useMemo(
+    () =>
+      (tickets ?? []).filter((ticket) => ticket.merged_into_ticket_id == null),
+    [tickets],
+  );
+
+  const companyIds = useMemo(
+    () =>
+      [
+        ...new Set(
+          allTickets
+            .map((ticket) => ticket.company_id)
+            .filter((id) => id != null)
+            .map(Number),
+        ),
+      ],
+    [allTickets],
+  );
+  const contactIds = useMemo(
+    () =>
+      [
+        ...new Set(
+          allTickets
+            .map((ticket) => ticket.contact_id)
+            .filter((id) => id != null)
+            .map(Number),
+        ),
+      ],
+    [allTickets],
+  );
+
+  const { data: companies = [] } = useGetList<Company>(
+    "companies",
+    {
+      pagination: { page: 1, perPage: Math.max(companyIds.length, 1) },
+      filter: companyIds.length ? { "id@in": `(${companyIds.join(",")})` } : {},
+    },
+    { enabled: companyIds.length > 0 },
+  );
+  const { data: contacts = [] } = useGetList<Contact>(
+    "contacts_summary",
+    {
+      pagination: { page: 1, perPage: Math.max(contactIds.length, 1) },
+      filter: contactIds.length
+        ? { "id@in": `(${contactIds.join(",")})` }
+        : undefined,
+    },
+    { enabled: contactIds.length > 0 },
+  );
+
+  const companyById = useMemo(() => {
+    const map = new Map<string, Company>();
+    for (const company of companies) {
+      map.set(String(company.id), company);
+    }
+    return map;
+  }, [companies]);
+  const contactById = useMemo(() => {
+    const map = new Map<string, Contact>();
+    for (const contact of contacts) {
+      map.set(String(contact.id), contact);
+    }
+    return map;
+  }, [contacts]);
+
+  const selectedTickets = useMemo(
+    () =>
+      allTickets.filter((ticket) =>
+        selectedTicketIds.includes(String(ticket.id)),
+      ),
+    [allTickets, selectedTicketIds],
+  );
+
+  const toggleTicketSelection = (ticketId: string, checked: boolean) => {
+    setSelectedTicketIds((current) =>
+      checked
+        ? [...new Set([...current, ticketId])]
+        : current.filter((id) => id !== ticketId),
+    );
+  };
+
+  const clearBulkSelection = () => setSelectedTicketIds([]);
+
+  const toggleAllVisible = (checked: boolean, visibleTicketIds: string[]) => {
+    if (checked) {
+      setSelectedTicketIds((current) => [
+        ...new Set([...current, ...visibleTicketIds]),
+      ]);
+      return;
+    }
+    const visible = new Set(visibleTicketIds);
+    setSelectedTicketIds((current) => current.filter((id) => !visible.has(id)));
+  };
+
+  const hasBulkSelection = selectedTicketIds.length > 0;
 
   return (
     <div
       className={cn(
         "flex min-h-0 flex-1 flex-col gap-3",
         view === "kanban" ? "pb-2" : "pb-3",
+        hasBulkSelection && "pb-20",
       )}
     >
       <ModuleToolbar>
@@ -184,14 +290,30 @@ const TicketsOverviewBody = ({
           selectedTicketId={selectedTicketId}
           onSelectTicket={onSelectTicket}
           searchQuery={searchQuery}
+          selectedTicketIds={selectedTicketIds}
+          onToggleTicketSelection={toggleTicketSelection}
+          onToggleAllVisible={toggleAllVisible}
+          selectionEnabled={canManage}
         />
       ) : (
         <TicketsKanban
           selectedTicketId={selectedTicketId}
           onSelectTicket={onSelectTicket}
           searchQuery={searchQuery}
+          selectedTicketIds={selectedTicketIds}
+          onToggleTicketSelection={toggleTicketSelection}
+          selectionEnabled={canManage}
         />
       )}
+      {canManage ? (
+        <TicketInboxBulkBar
+          selectedTickets={selectedTickets}
+          companyById={companyById}
+          contactById={contactById}
+          onClear={clearBulkSelection}
+          onMerged={() => clearBulkSelection()}
+        />
+      ) : null}
       <Sheet
         open={Boolean(selectedTicketId) && !isMobile}
         onOpenChange={(open) => {

@@ -2,7 +2,6 @@ import { useMutation } from "@tanstack/react-query";
 import {
   ChevronDown,
   ChevronUp,
-  CloudUpload,
   Loader2,
   Lock,
   Paperclip,
@@ -34,7 +33,10 @@ import type {
   TicketInbox,
   TicketMessage,
 } from "@/modules/types";
-import { getTicketReplyStatusActions } from "@/modules/tickets/ticketReplyStatusActions";
+import {
+  getTicketReplyStatusTransitions,
+  normalizeTicketWorkflowStatus,
+} from "@/modules/tickets/ticketReplyStatusActions";
 import {
   TicketReplyComposerActions,
   type TicketReplySubmittingAs,
@@ -90,11 +92,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { TicketRecipientInput } from "@/modules/tickets/TicketRecipientInput";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
 import { allDeliverablesHaveBilling } from "@/modules/tickets/supplementPricing";
-import {
-  dispatchTicketFocusDeliverableUpload,
-  dispatchTicketOpenBilling,
-} from "@/modules/tickets/ticketComposerEvents";
 import { isValidRecordId } from "@/lib/isValidRecordId";
+import {
+  TicketReplyInvoiceSection,
+  type TicketReplyInvoiceSectionHandle,
+} from "@/modules/tickets/TicketReplyInvoiceSection";
 import { cn } from "@/lib/utils";
 
 type ComposeMode = "reply" | "forward" | "internal";
@@ -137,6 +139,7 @@ export const TicketReplyForm = forwardRef<
   const [toRecipients, setToRecipients] = useState("");
   const [ccRecipients, setCcRecipients] = useState("");
   const [showCc, setShowCc] = useState(false);
+  const [showInvoiceNote, setShowInvoiceNote] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<PendingTicketAttachment[]>(
     [],
   );
@@ -145,6 +148,7 @@ export const TicketReplyForm = forwardRef<
     useState<TicketReplySubmittingAs>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
+  const invoiceSectionRef = useRef<TicketReplyInvoiceSectionHandle>(null);
   const composeModeRef = useRef(composeMode);
   composeModeRef.current = composeMode;
   const notify = useNotify();
@@ -195,6 +199,14 @@ export const TicketReplyForm = forwardRef<
   const isInvoiceReply =
     composeMode === "reply" && replySendIntent === "reply_and_invoice";
 
+  const invoiceBlocksSend =
+    invoice?.status === "sent" || invoice?.status === "paid";
+  const canCreateInvoice =
+    unbilledDeliverables.length > 0 &&
+    deliverablesReadyForInvoice &&
+    ticket.delivery_status !== "delivered" &&
+    !invoiceBlocksSend;
+
   const awaitingPaidDelivery = isTicketAwaitingPaidDelivery(ticket, invoice);
   const outboundAttachmentsAllowed = canSendTicketOutboundAttachments(
     ticket,
@@ -220,8 +232,13 @@ export const TicketReplyForm = forwardRef<
     },
   );
 
-  const replyStatusActions = useMemo(
-    () => getTicketReplyStatusActions(ticket.status),
+  const replyKeepStatus = useMemo(
+    () => normalizeTicketWorkflowStatus(ticket.status),
+    [ticket.status],
+  );
+
+  const replyStatusTransitions = useMemo(
+    () => getTicketReplyStatusTransitions(ticket.status),
     [ticket.status],
   );
 
@@ -422,7 +439,7 @@ export const TicketReplyForm = forwardRef<
         setToRecipients(defaultRecipientEmail);
         setBodyHtml(buildReplyHtmlWithQuote(lastInboundMessage));
         if (options?.replyIntent === "reply_and_invoice") {
-          dispatchTicketOpenBilling(ticket.id);
+          setShowInvoiceNote(false);
         }
       } else if (mode === "internal") {
         setForwardContext(null);
@@ -447,6 +464,14 @@ export const TicketReplyForm = forwardRef<
     ],
   );
 
+  const startReplyAndInvoice = useCallback(() => {
+    setComposeMode("reply");
+    setReplySendIntent("reply_and_invoice");
+    setShowInvoiceNote(false);
+    setIsExpanded(true);
+    setIsMinimized(false);
+  }, []);
+
   useImperativeHandle(ref, () => ({ openComposer }), [openComposer]);
 
   useEffect(() => {
@@ -458,7 +483,9 @@ export const TicketReplyForm = forwardRef<
     setIsExpanded(false);
     setIsMinimized(false);
     setShowCc(false);
+    setShowInvoiceNote(false);
     setComposeMode("reply");
+    setReplySendIntent("reply");
     resetDraft();
   }, [ticket.id, defaultRecipientEmail, defaultReplyHtml]);
 
@@ -768,7 +795,7 @@ export const TicketReplyForm = forwardRef<
       expandedHtml,
       inboxSignature,
     );
-    setSubmittingAs(nextStatus ?? "open");
+    setSubmittingAs(nextStatus ?? replyKeepStatus);
     submitMutation.mutate({
       isInternalNote: false,
       messageBody: textBody,
@@ -779,134 +806,18 @@ export const TicketReplyForm = forwardRef<
     });
   };
 
-  const chargeTicketAfterReply = async () => {
-    if (invoice?.status === "draft") {
-      await dataProvider.sendTicketInvoice({
-        ticketId: ticket.id,
-        baseUrl: window.location.origin,
-      });
-      return;
-    }
-
-    if (invoice?.status === "paid") {
-      throw new Error("This invoice is already paid");
-    }
-
-    if (invoice?.status === "sent") {
-      throw new Error(
-        "This ticket already has a sent invoice. Use Remind on the invoice panel.",
-      );
-    }
-
-    await dataProvider.createTicketInvoice({
-      ticketId: ticket.id,
-      baseUrl: window.location.origin,
-    });
+  const handleCreateInvoice = () => {
+    invoiceSectionRef.current?.openInvoicePreview();
   };
 
-  const handleSendAndCharge = async () => {
-    if (unbilledDeliverables.length === 0) {
-      notify("Upload at least one delivery file before sending an invoice", {
-        type: "warning",
-      });
-      dispatchTicketOpenBilling(ticket.id);
-      dispatchTicketFocusDeliverableUpload(ticket.id);
-      return;
-    }
-
-    if (!deliverablesReadyForInvoice) {
-      notify("Set billing type for each delivery file before sending", {
-        type: "warning",
-      });
-      dispatchTicketOpenBilling(ticket.id);
-      return;
-    }
-
-    if (attachmentsUploading) {
-      notify("Wait until attachments finish uploading", { type: "warning" });
-      return;
-    }
-
-    if (attachmentsErrored) {
-      notify("Remove or retry failed attachments before sending", {
-        type: "warning",
-      });
-      return;
-    }
-
-    if (!hasContent) {
-      notify("Add a message or attach a file", { type: "warning" });
-      return;
-    }
-
-    const expandedHtml = expandTicketReplyTemplate(
-      bodyHtml,
-      ticket,
-      contact,
-      company,
-    );
-    const toEmails = parseEmailList(toRecipients);
-    const ccEmails = parseEmailList(ccRecipients);
-
-    if (!isValidEmailList(toEmails)) {
-      notify("Enter at least one valid To email (comma-separated)", {
-        type: "warning",
-      });
-      return;
-    }
-    if (ccRecipients.trim() && !isValidEmailList(ccEmails)) {
-      notify("Cc contains an invalid email address", { type: "warning" });
-      return;
-    }
-
-    if (readyPendingFiles.length > 0 && !outboundAttachmentsAllowed) {
-      notify(TICKET_AWAITING_PAYMENT_ATTACHMENT_MESSAGE, { type: "warning" });
-      return;
-    }
-
-    const { textBody, htmlBody } = buildReplyOutboundBodiesFromHtml(
-      expandedHtml,
-      inboxSignature,
-    );
-
-    setSubmittingAs("charge");
-    try {
-      await chargeTicketAfterReply();
-
-      const result = await dataProvider.replyTicket({
-        ticketId: ticket.id,
-        body: textBody,
-        htmlBody,
-        toEmails,
-        ccEmails: ccEmails.length ? ccEmails : undefined,
-        nextStatus: "waiting",
-      });
-
-      setIsExpanded(false);
-      setIsMinimized(false);
-      resetDraft();
-      refresh();
-      onSent?.();
-
-      if (result.email_sent) {
-        notify("Invoice sent and reply delivered", { type: "success" });
-      } else if (result.email_skipped) {
-        notify(
-          "Invoice sent. Reply saved but email was not sent — check Communications settings.",
-          { type: "warning" },
-        );
-      } else {
-        notify("Invoice sent and reply delivered", { type: "success" });
-      }
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to send invoice and reply";
-      notify(message, { type: "error" });
-    } finally {
-      setSubmittingAs(null);
-    }
+  const handleInvoiceSent = () => {
+    setIsExpanded(false);
+    setIsMinimized(false);
+    setReplySendIntent("reply");
+    setShowInvoiceNote(false);
+    resetDraft();
+    refresh();
+    onSent?.();
   };
 
   const handleInsertTemplate = (text: string) => {
@@ -928,28 +839,6 @@ export const TicketReplyForm = forwardRef<
     if (imageFiles.length === 0) return;
     event.preventDefault();
     imageFiles.forEach(addPendingFile);
-  };
-
-  const handleInvoiceDeliverableUpload = (files?: File[]) => {
-    dispatchTicketOpenBilling(ticket.id);
-    dispatchTicketFocusDeliverableUpload(ticket.id, files);
-  };
-
-  const handleComposerAttachClick = () => {
-    if (isInvoiceReply) {
-      handleInvoiceDeliverableUpload();
-      return;
-    }
-    fileInputRef.current?.click();
-  };
-
-  const handleInvoiceDeliverableDrop = (
-    event: React.DragEvent<HTMLDivElement>,
-  ) => {
-    event.preventDefault();
-    const files = Array.from(event.dataTransfer.files ?? []);
-    if (files.length === 0) return;
-    handleInvoiceDeliverableUpload(files);
   };
 
   const isPending = submitMutation.isPending;
@@ -1202,48 +1091,17 @@ export const TicketReplyForm = forwardRef<
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {isInvoiceReply ? (
-            <div className="border-b border-primary/20 bg-primary/5 px-4 py-3 md:px-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    Delivery files for invoice
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {unbilledDeliverables.length === 0
-                      ? "Upload the billable files here — they are not email attachments."
-                      : deliverablesReadyForInvoice
-                        ? `${unbilledDeliverables.length} file${unbilledDeliverables.length === 1 ? "" : "s"} ready to invoice.`
-                        : `${unbilledDeliverables.length} file${unbilledDeliverables.length === 1 ? "" : "s"} uploaded — set billing type for each.`}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="shrink-0"
-                  onClick={() => handleInvoiceDeliverableUpload()}
-                >
-                  <CloudUpload className="mr-1.5 size-4" />
-                  Upload files
-                </Button>
-              </div>
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => handleInvoiceDeliverableUpload()}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === "") {
-                    event.preventDefault();
-                    handleInvoiceDeliverableUpload();
-                  }
-                }}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={handleInvoiceDeliverableDrop}
-                className="mt-2 cursor-pointer rounded-md border border-dashed border-primary/30 bg-background/80 px-3 py-2.5 text-center text-xs text-muted-foreground transition-colors hover:bg-background"
-              >
-                Drop .esx, PDF, or photos here to add them to the invoice
-              </div>
-            </div>
+            <TicketReplyInvoiceSection
+              ref={invoiceSectionRef}
+              ticket={ticket}
+              invoice={invoice}
+              company={company}
+              contact={contact}
+              deliverables={deliverables}
+              unbilledDeliverables={unbilledDeliverables}
+              deliverablesReadyForInvoice={deliverablesReadyForInvoice}
+              onInvoiceSent={handleInvoiceSent}
+            />
           ) : null}
 
           {awaitingPaidDelivery ? (
@@ -1283,46 +1141,83 @@ export const TicketReplyForm = forwardRef<
             }}
           />
 
-          <TicketComposerToolbar
-            editorRef={editorRef}
-            onEditorChange={(userHtml) => {
-              setBodyHtml((current) => {
-                const { signatureHtml, quotedReplyHtml } =
-                  extractReplyComposerParts(current);
-                return assembleReplyComposerHtml({
-                  userNoteHtml: userHtml,
-                  signatureHtml,
-                  quotedReplyHtml,
-                });
-              });
-            }}
-            disabled={isPending}
-            ticket={ticket}
-            inbox={activeInbox}
-            contact={contact}
-            company={company}
-            onInsertTemplate={handleInsertTemplate}
-            attachLabel={isInvoiceReply ? "Upload delivery file" : "Attach"}
-            showLargeFileTransfer={false}
-            onAttachClick={handleComposerAttachClick}
-          />
+          {isInvoiceReply ? (
+            <div className="flex items-center border-b px-4 py-2 md:px-5">
+              {showInvoiceNote ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-muted-foreground"
+                  onClick={() => setShowInvoiceNote(false)}
+                >
+                  Hide note
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto px-0 text-muted-foreground"
+                  onClick={() => {
+                    setShowInvoiceNote(true);
+                    requestAnimationFrame(() => editorRef.current?.focus());
+                  }}
+                >
+                  Add a personal note (optional)
+                </Button>
+              )}
+            </div>
+          ) : null}
 
-          <TicketReplyRichComposer
-            editorRef={editorRef}
-            value={bodyHtml}
-            onChange={setBodyHtml}
-            onPaste={handlePaste}
-            placeholder={
-              composeMode === "forward"
-                ? "Add a note above the forwarded message..."
-                : "Write your reply..."
-            }
-            disabled={isPending}
-            minHeight={replyMinHeight}
-            maxHeight={replyMaxHeight}
-            resizeTrigger={isExpanded}
-            className={composeMode === "forward" ? "min-h-20" : "min-h-[9rem]"}
-          />
+          {!isInvoiceReply || showInvoiceNote ? (
+            <>
+              <TicketComposerToolbar
+                editorRef={editorRef}
+                onEditorChange={(userHtml) => {
+                  setBodyHtml((current) => {
+                    const { signatureHtml, quotedReplyHtml } =
+                      extractReplyComposerParts(current);
+                    return assembleReplyComposerHtml({
+                      userNoteHtml: userHtml,
+                      signatureHtml,
+                      quotedReplyHtml,
+                    });
+                  });
+                }}
+                disabled={isPending}
+                ticket={ticket}
+                inbox={activeInbox}
+                contact={contact}
+                company={company}
+                onInsertTemplate={handleInsertTemplate}
+                attachLabel="Attach"
+                showLargeFileTransfer={false}
+                onAttachClick={() => fileInputRef.current?.click()}
+              />
+
+              <TicketReplyRichComposer
+                editorRef={editorRef}
+                value={bodyHtml}
+                onChange={setBodyHtml}
+                onPaste={handlePaste}
+                placeholder={
+                  composeMode === "forward"
+                    ? "Add a note above the forwarded message..."
+                    : isInvoiceReply
+                      ? "Add an optional note for the client..."
+                      : "Write your reply..."
+                }
+                disabled={isPending}
+                minHeight={replyMinHeight}
+                maxHeight={replyMaxHeight}
+                resizeTrigger={isExpanded}
+                className={
+                  composeMode === "forward" ? "min-h-20" : "min-h-[9rem]"
+                }
+              />
+            </>
+          ) : null}
 
           {composeMode === "forward" && forwardContext ? (
             <div className="border-t bg-muted/10 px-4 py-3 md:px-5">
@@ -1342,17 +1237,21 @@ export const TicketReplyForm = forwardRef<
         <TicketReplyComposerActions
           className="shrink-0 shadow-[0_-6px_16px_-12px_rgba(0,0,0,0.35)]"
           composeMode={composeMode}
-          actions={replyStatusActions}
+          currentStatus={replyKeepStatus}
+          statusTransitions={replyStatusTransitions}
           disabled={isPending || attachmentsUploading}
           hasContent={hasContent}
           submittingAs={submittingAs}
           showReplyAndCharge={canReplyAndCharge}
+          invoiceComposerMode={isInvoiceReply}
+          canCreateInvoice={canCreateInvoice}
           preferReplyAndCharge={replySendIntent === "reply_and_invoice"}
           onCancel={collapseComposer}
           onSendReply={(nextStatus) =>
             handleSend({ isInternalNote: false, nextStatus })
           }
-          onSendReplyAndCharge={() => void handleSendAndCharge()}
+          onCreateInvoice={handleCreateInvoice}
+          onStartReplyAndInvoice={startReplyAndInvoice}
           onSendForward={() => handleSend({ isInternalNote: false })}
         />
       </div>

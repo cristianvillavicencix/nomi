@@ -76,10 +76,12 @@ export const TicketDetailPanel = ({
     { id: ticket?.company_id ?? "" },
     { enabled: Boolean(ticket?.company_id) },
   );
+  const resolvedContactId =
+    ticket?.contact_id ?? company?.primary_contact_id ?? null;
   const { data: contact } = useGetOne<Contact>(
     "contacts",
-    { id: ticket?.contact_id ?? "" },
-    { enabled: Boolean(ticket?.contact_id) },
+    { id: resolvedContactId ?? "" },
+    { enabled: Boolean(resolvedContactId) },
   );
   const {
     messages,

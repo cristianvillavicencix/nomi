@@ -85,12 +85,12 @@ const NavigationLayoutMenu = () => {
       {isSidebar ? (
         <>
           <LayoutPanelTop />
-          Use top navigation
+          Top navigation
         </>
       ) : (
         <>
           <LayoutPanelLeft />
-          Use sidebar navigation
+          Sidebar navigation
         </>
       )}
     </DropdownMenuItem>

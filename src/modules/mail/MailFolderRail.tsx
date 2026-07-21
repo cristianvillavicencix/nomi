@@ -45,6 +45,91 @@ function accountLabel(account: MailAccount) {
   return account.display_name?.trim() || account.email;
 }
 
+function MailboxSwitcher({
+  accounts,
+  accountFilter,
+  onAccountFilterChange,
+  selectedAccount,
+}: {
+  accounts: MailAccount[];
+  accountFilter: number | "all";
+  onAccountFilterChange: (id: number | "all") => void;
+  selectedAccount: MailAccount | null;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-auto w-full justify-between gap-2 border-0 bg-muted/40 px-2 py-2 shadow-none hover:bg-muted/60"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            {selectedAccount ? (
+              <MailAccountAvatar account={selectedAccount} />
+            ) : (
+              <MailAllAccountsAvatar />
+            )}
+            <span className="min-w-0 text-left">
+              <span className="block truncate text-sm font-medium">
+                {selectedAccount ? accountLabel(selectedAccount) : "All mailboxes"}
+              </span>
+              {selectedAccount ? (
+                <span className="block truncate text-[11px] text-muted-foreground">
+                  {selectedAccount.email}
+                </span>
+              ) : (
+                <span className="block text-[11px] text-muted-foreground">
+                  {accounts.length} connected
+                </span>
+              )}
+            </span>
+          </span>
+          <CaretDown className="size-4 shrink-0 opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        side="top"
+        className="w-[var(--radix-dropdown-menu-trigger-width)]"
+      >
+        <DropdownMenuLabel>Mailboxes</DropdownMenuLabel>
+        <DropdownMenuItem onClick={() => onAccountFilterChange("all")}>
+          <MailAllAccountsAvatar className="size-6" />
+          <span className="flex-1">All mailboxes</span>
+          {accountFilter === "all" ? (
+            <Check className="size-4 text-primary" weight="bold" />
+          ) : null}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {accounts.map((account) => (
+          <DropdownMenuItem
+            key={account.id}
+            onClick={() => onAccountFilterChange(account.id)}
+          >
+            <MailAccountAvatar account={account} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm">{accountLabel(account)}</span>
+              <span className="block truncate text-xs text-muted-foreground">
+                {account.email}
+              </span>
+            </span>
+            {accountFilter === account.id ? (
+              <Check className="size-4 shrink-0 text-primary" weight="bold" />
+            ) : null}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to={mailboxesSettingsPath()} className="cursor-pointer">
+            Manage mailboxes…
+          </Link>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function MailFolderRail({
   folder,
   onFolderChange,
@@ -76,85 +161,22 @@ export function MailFolderRail({
   return (
     <aside
       className={cn(
-        "flex h-full min-h-0 w-[220px] shrink-0 flex-col border-r bg-muted/20",
+        "flex h-full min-h-0 w-[220px] shrink-0 flex-col bg-muted/25",
         className,
       )}
     >
-      <div className="space-y-2 border-b p-3">
-        <Button type="button" className="w-full justify-center gap-2" onClick={onCompose}>
+      <div className="shrink-0 p-3">
+        <Button
+          type="button"
+          className="w-full justify-center gap-2"
+          onClick={onCompose}
+        >
           <Plus className="size-4" weight="bold" />
           Compose
         </Button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-auto w-full justify-between gap-2 px-2 py-2"
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                {selectedAccount ? (
-                  <MailAccountAvatar account={selectedAccount} />
-                ) : (
-                  <MailAllAccountsAvatar />
-                )}
-                <span className="min-w-0 text-left">
-                  <span className="block truncate text-sm font-medium">
-                    {selectedAccount ? accountLabel(selectedAccount) : "All mailboxes"}
-                  </span>
-                  {selectedAccount ? (
-                    <span className="block truncate text-[11px] text-muted-foreground">
-                      {selectedAccount.email}
-                    </span>
-                  ) : (
-                    <span className="block text-[11px] text-muted-foreground">
-                      {accounts.length} connected
-                    </span>
-                  )}
-                </span>
-              </span>
-              <CaretDown className="size-4 shrink-0 opacity-60" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-            <DropdownMenuLabel>Mailboxes</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => onAccountFilterChange("all")}>
-              <MailAllAccountsAvatar className="size-6" />
-              <span className="flex-1">All mailboxes</span>
-              {accountFilter === "all" ? (
-                <Check className="size-4 text-primary" weight="bold" />
-              ) : null}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {accounts.map((account) => (
-              <DropdownMenuItem
-                key={account.id}
-                onClick={() => onAccountFilterChange(account.id)}
-              >
-                <MailAccountAvatar account={account} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm">{accountLabel(account)}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {account.email}
-                  </span>
-                </span>
-                {accountFilter === account.id ? (
-                  <Check className="size-4 shrink-0 text-primary" weight="bold" />
-                ) : null}
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to={mailboxesSettingsPath()} className="cursor-pointer">
-                Manage mailboxes…
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
         <nav className="space-y-0.5">
           {FOLDERS.map((item) => {
             const Icon = item.icon;
@@ -218,6 +240,15 @@ export function MailFolderRail({
             </nav>
           </>
         ) : null}
+      </div>
+
+      <div className="mt-auto shrink-0 p-2">
+        <MailboxSwitcher
+          accounts={accounts}
+          accountFilter={accountFilter}
+          onAccountFilterChange={onAccountFilterChange}
+          selectedAccount={selectedAccount}
+        />
       </div>
     </aside>
   );

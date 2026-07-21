@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { Company } from "@/components/atomic-crm/types";
 import type {
@@ -58,6 +59,9 @@ export const TicketKanbanCard = ({
   lastReadAt,
   className,
   dragging,
+  bulkSelected = false,
+  selectionEnabled = false,
+  onToggleBulkSelect,
 }: {
   ticket: Ticket;
   company?: Company | null;
@@ -66,7 +70,13 @@ export const TicketKanbanCard = ({
   lastReadAt?: string | null;
   className?: string;
   dragging?: boolean;
+  bulkSelected?: boolean;
+  selectionEnabled?: boolean;
+  onToggleBulkSelect?: (checked: boolean) => void;
 }) => {
+  const stopCheckboxBubble = (event: MouseEvent) => {
+    event.stopPropagation();
+  };
   const unpaid = ticketHasUnpaidInvoice(ticket, invoices);
   const unread = isTicketUnread(ticket, lastReadAt);
   const elevated = isElevatedTicketPriority(ticket);
@@ -137,9 +147,11 @@ export const TicketKanbanCard = ({
   return (
     <div
       className={cn(
+        "group",
         "relative w-full overflow-hidden rounded-lg border bg-card text-left shadow-xs transition-shadow",
-        dragging && "shadow-md",
+        dragging && "shadow-md rotate-[0.5deg] ring-2 ring-primary/30",
         "hover:border-border/80",
+        bulkSelected && "border-primary/40 bg-primary/5",
         resolved && "opacity-70",
         className,
       )}
@@ -148,6 +160,23 @@ export const TicketKanbanCard = ({
         aria-hidden
         className={cn("absolute inset-y-0 left-0 w-[3px]", railClassName[rail])}
       />
+      {selectionEnabled ? (
+        <div
+          className="absolute right-2 top-2 z-10"
+          onClick={stopCheckboxBubble}
+          onPointerDown={stopCheckboxBubble}
+        >
+          <Checkbox
+            checked={bulkSelected}
+            onCheckedChange={(value) => onToggleBulkSelect?.(value === true)}
+            aria-label={`Select ticket #${ticket.id}`}
+            className={cn(
+              "bg-background/90 shadow-xs",
+              !bulkSelected && "opacity-0 transition-opacity group-hover:opacity-100",
+            )}
+          />
+        </div>
+      ) : null}
       <div className="px-3 py-2.5 pl-3.5">
         <p className="line-clamp-2 text-sm font-semibold leading-snug">
           {formatTicketCardSubject(ticket.subject)}

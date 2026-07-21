@@ -1,88 +1,32 @@
-import { Link } from "react-router";
-import { ArrowsClockwise, CaretDown, GearSix } from "@phosphor-icons/react";
+import { ArrowsClockwise } from "@phosphor-icons/react";
 import { IconButtonWithTooltip } from "@/components/admin/icon-button-with-tooltip";
-import { IconButton } from "@/components/ui/icon-button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { mailboxesSettingsPath } from "./mailSettingsPath";
 
-/** Sync + settings chrome for the mail reading column (no per-message actions). */
-export function MailDetailToolbar({
-  className,
-  syncing = false,
-  onSync,
-  onSyncFromDate,
-}: {
-  className?: string;
+export type MailSyncToolbarProps = {
   syncing?: boolean;
   onSync: () => void;
-  onSyncFromDate?: () => void;
-}) {
+};
+
+/** Sync control for the mail list search row. */
+export function MailSyncActionIcons({
+  syncing = false,
+  onSync,
+  className,
+}: MailSyncToolbarProps & { className?: string }) {
   return (
-    <div
-      className={cn(
-        "flex h-11 shrink-0 items-center gap-0.5 border-b px-2",
-        className,
-      )}
+    <IconButtonWithTooltip
+      label="Sync mailbox"
+      className={cn("size-8 shrink-0", className)}
+      disabled={syncing}
+      onClick={onSync}
     >
-      <span className="px-2 text-sm font-medium text-muted-foreground">
-        Mail
-      </span>
-      <div className="ml-auto flex items-center gap-0.5">
-        <IconButtonWithTooltip
-          label="Sync mailbox"
-          disabled={syncing}
-          onClick={onSync}
-        >
-          <ArrowsClockwise
-            className={cn("size-4", syncing && "animate-spin")}
-          />
-        </IconButtonWithTooltip>
-        {onSyncFromDate ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <IconButtonWithTooltip
-                label="More sync options"
-                disabled={syncing}
-                className="size-8"
-              >
-                <CaretDown className="size-3.5" />
-              </IconButtonWithTooltip>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled={syncing} onClick={onSyncFromDate}>
-                Sync from date…
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <IconButton aria-label="Mail settings" asChild>
-                <Link to={mailboxesSettingsPath()}>
-                  <GearSix className="size-4" />
-                </Link>
-              </IconButton>
-            </TooltipTrigger>
-            <TooltipContent>Mail settings</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-    </div>
+      <ArrowsClockwise className={cn("size-4", syncing && "animate-spin")} />
+    </IconButtonWithTooltip>
   );
 }
 
-/** @deprecated use MailDetailToolbar */
-export const MailToolbar = MailDetailToolbar;
+/** @deprecated use MailSyncToolbarProps */
+export type MailMailboxToolbarProps = MailSyncToolbarProps;
+
+/** @deprecated use MailSyncActionIcons */
+export const MailMailboxActionIcons = MailSyncActionIcons;

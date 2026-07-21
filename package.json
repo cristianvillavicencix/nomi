@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test": "node -e \"console.log('No unit tests configured.'); process.exit(0)\"",
+    "test": "vitest run",
+    "test:mail": "vitest run src/modules/mail/mailRenderPipeline.test.ts src/modules/mail/mailInlineImages.test.ts supabase/functions/_shared/mailInlineImages.test.ts",
     "dev": "vite",
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
@@ -126,6 +127,7 @@
     "glob": "^11.1.0",
     "globals": "^16.3.0",
     "husky": "^9.1.7",
+    "jsdom": "^29.1.1",
     "prettier": "^3.6.2",
     "shadcn": "^3.5.0",
     "supabase": "^2.92.0",
@@ -133,6 +135,7 @@
     "typescript-eslint": "^8.35.1",
     "vite": "^7.3.0",
     "vite-plugin-pwa": "^1.2.0",
-    "vite-plugin-simple-html": "^1.0.1"
+    "vite-plugin-simple-html": "^1.0.1",
+    "vitest": "^4.1.10"
   }
 }

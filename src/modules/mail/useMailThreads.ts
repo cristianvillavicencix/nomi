@@ -311,7 +311,9 @@ export function useMailAttachments(messageIds: number[]) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("mail_attachments")
-        .select("id, message_id, filename, mime_type, size_bytes, storage_path")
+        .select(
+          "id, message_id, filename, mime_type, size_bytes, storage_path, content_id",
+        )
         .in("message_id", messageIds);
       if (error) throw error;
       return (data ?? []) as MailAttachment[];

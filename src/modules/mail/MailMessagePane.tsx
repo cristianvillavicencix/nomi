@@ -1,6 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useRef, type RefObject } from "react";
 import {
   Archive,
+  ArrowBendDoubleUpLeft,
+  ArrowBendUpLeft,
+  ArrowBendUpRight,
   ArrowUUpLeft,
   CaretLeft,
   File,
@@ -11,14 +14,20 @@ import {
   Trash,
 } from "@phosphor-icons/react";
 import { IconButtonWithTooltip } from "@/components/admin/icon-button-with-tooltip";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNotify } from "ra-core";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { isMailTicketBridgeEnabled } from "@/lib/featureFlags";
+import { cn } from "@/lib/utils";
 import { useMailAttachments, useMailMessages } from "./useMailThreads";
 import { MailHtmlBody } from "./MailHtmlBody";
-import type { MailAttachment, MailThread } from "./types";
+import { isMailRenderDebugEnabled } from "./mailRenderDebug";
+import { MailRenderDebugPanel } from "./MailRenderDebugPanel";
+import {
+  isDownloadableMailAttachment,
+  useResolvedMailHtml,
+} from "./useMailInlineHtml";
+import type { MailAttachment, MailMessage, MailThread } from "./types";
 
 export type MailMessagePaneActions = {
   isStarred: boolean;
@@ -86,21 +95,73 @@ function AttachmentRow({ file }: { file: MailAttachment }) {
   );
 }
 
-function MessageOrganizeBar({ actions }: { actions: MailMessagePaneActions }) {
-  const hasAny =
-    actions.onToggleStar ||
-    actions.onArchive ||
-    actions.onUnarchive ||
-    actions.onRestore ||
-    actions.onMoveToTrash ||
-    actions.onReportSpam ||
-    actions.onNotSpam ||
-    actions.onDeleteForever;
-  if (!hasAny) return null;
+function MessageHeaderActions({
+  actions,
+  onReply,
+  onReplyAll,
+  onForward,
+  onCreateTicket,
+}: {
+  actions?: MailMessagePaneActions;
+  onReply?: () => void;
+  onReplyAll?: () => void;
+  onForward?: () => void;
+  onCreateTicket?: () => void;
+}) {
+  const hasOrganize =
+    actions &&
+    (actions.onToggleStar ||
+      actions.onArchive ||
+      actions.onUnarchive ||
+      actions.onRestore ||
+      actions.onMoveToTrash ||
+      actions.onReportSpam ||
+      actions.onNotSpam ||
+      actions.onDeleteForever);
+
+  if (!hasOrganize && !onReply && !onReplyAll && !onForward && !onCreateTicket) {
+    return null;
+  }
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 px-2 py-1.5 md:px-3">
-      {actions.onToggleStar ? (
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-0.5 self-start">
+      {onCreateTicket ? (
+        <IconButtonWithTooltip
+          label="Create ticket"
+          className="size-8"
+          onClick={onCreateTicket}
+        >
+          <Ticket className="size-4" />
+        </IconButtonWithTooltip>
+      ) : null}
+      {onReply ? (
+        <IconButtonWithTooltip
+          label="Reply"
+          className="size-8"
+          onClick={onReply}
+        >
+          <ArrowBendUpLeft className="size-4" />
+        </IconButtonWithTooltip>
+      ) : null}
+      {onReplyAll ? (
+        <IconButtonWithTooltip
+          label="Reply all"
+          className="size-8"
+          onClick={onReplyAll}
+        >
+          <ArrowBendDoubleUpLeft className="size-4" />
+        </IconButtonWithTooltip>
+      ) : null}
+      {onForward ? (
+        <IconButtonWithTooltip
+          label="Forward"
+          className="size-8"
+          onClick={onForward}
+        >
+          <ArrowBendUpRight className="size-4" />
+        </IconButtonWithTooltip>
+      ) : null}
+      {actions?.onToggleStar ? (
         <IconButtonWithTooltip
           label={actions.isStarred ? "Unstar" : "Star"}
           className="size-8"
@@ -112,7 +173,7 @@ function MessageOrganizeBar({ actions }: { actions: MailMessagePaneActions }) {
           />
         </IconButtonWithTooltip>
       ) : null}
-      {actions.onRestore ? (
+      {actions?.onRestore ? (
         <IconButtonWithTooltip
           label="Restore to inbox"
           className="size-8"
@@ -121,7 +182,7 @@ function MessageOrganizeBar({ actions }: { actions: MailMessagePaneActions }) {
           <ArrowUUpLeft className="size-4" />
         </IconButtonWithTooltip>
       ) : null}
-      {actions.onUnarchive ? (
+      {actions?.onUnarchive ? (
         <IconButtonWithTooltip
           label="Move to inbox"
           className="size-8"
@@ -130,7 +191,7 @@ function MessageOrganizeBar({ actions }: { actions: MailMessagePaneActions }) {
           <Archive className="size-4" />
         </IconButtonWithTooltip>
       ) : null}
-      {actions.onArchive ? (
+      {actions?.onArchive ? (
         <IconButtonWithTooltip
           label="Archive"
           className="size-8"
@@ -139,7 +200,7 @@ function MessageOrganizeBar({ actions }: { actions: MailMessagePaneActions }) {
           <Archive className="size-4" />
         </IconButtonWithTooltip>
       ) : null}
-      {actions.onReportSpam ? (
+      {actions?.onReportSpam ? (
         <IconButtonWithTooltip
           label="Report spam"
           className="size-8"
@@ -148,7 +209,7 @@ function MessageOrganizeBar({ actions }: { actions: MailMessagePaneActions }) {
           <Prohibit className="size-4" />
         </IconButtonWithTooltip>
       ) : null}
-      {actions.onNotSpam ? (
+      {actions?.onNotSpam ? (
         <IconButtonWithTooltip
           label="Not spam"
           className="size-8"
@@ -157,7 +218,7 @@ function MessageOrganizeBar({ actions }: { actions: MailMessagePaneActions }) {
           <Prohibit className="size-4" />
         </IconButtonWithTooltip>
       ) : null}
-      {actions.onMoveToTrash ? (
+      {actions?.onMoveToTrash ? (
         <IconButtonWithTooltip
           label="Move to trash"
           className="size-8"
@@ -166,7 +227,7 @@ function MessageOrganizeBar({ actions }: { actions: MailMessagePaneActions }) {
           <Trash className="size-4" />
         </IconButtonWithTooltip>
       ) : null}
-      {actions.onDeleteForever ? (
+      {actions?.onDeleteForever ? (
         <IconButtonWithTooltip
           label="Delete forever"
           className="size-8 text-destructive"
@@ -176,6 +237,27 @@ function MessageOrganizeBar({ actions }: { actions: MailMessagePaneActions }) {
         </IconButtonWithTooltip>
       ) : null}
     </div>
+  );
+}
+
+function MessageHtmlBody({
+  message,
+  attachments,
+  scrollPaneRef,
+}: {
+  message: MailMessage;
+  attachments: MailAttachment[];
+  scrollPaneRef: RefObject<HTMLDivElement | null>;
+}) {
+  const resolvedHtml = useResolvedMailHtml(message.body_html, attachments);
+  if (!resolvedHtml) return null;
+  return (
+    <MailHtmlBody
+      html={resolvedHtml}
+      variant="reader"
+      layout="auto"
+      scrollPaneRef={scrollPaneRef}
+    />
   );
 }
 
@@ -189,7 +271,7 @@ export function MailMessagePane({
 }: {
   thread: MailThread | null;
   threadActions?: MailMessagePaneActions;
-  onReply: () => void;
+  onReply?: () => void;
   onReplyAll?: () => void;
   onForward?: () => void;
   onBack?: () => void;
@@ -208,6 +290,11 @@ export function MailMessagePane({
     return map;
   }, [attachments]);
   const ticketBridge = isMailTicketBridgeEnabled();
+  const soleMessage = messages.length === 1 ? messages[0] : null;
+  const showRenderDebug = isMailRenderDebugEnabled();
+  const debugHtml =
+    messages.find((m) => m.body_html?.trim())?.body_html ?? null;
+  const scrollPaneRef = useRef<HTMLDivElement>(null);
 
   if (!thread) {
     return (
@@ -228,8 +315,8 @@ export function MailMessagePane({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-start gap-2 border-b px-3 py-3 md:px-4">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex items-start gap-2 px-3 py-3 md:px-4">
         {onBack ? (
           <IconButtonWithTooltip
             label="Back to list"
@@ -244,196 +331,126 @@ export function MailMessagePane({
             {thread.subject || "(No subject)"}
           </h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {thread.message_count} message
-            {thread.message_count === 1 ? "" : "s"}
-            {thread.is_starred ? " · Starred" : ""}
+            {soleMessage && !isPending ? (
+              <>
+                <span className="text-foreground/90">
+                  {soleMessage.from_name || soleMessage.from_email || "Unknown"}
+                </span>
+                {soleMessage.from_name && soleMessage.from_email ? (
+                  <span> · {soleMessage.from_email}</span>
+                ) : null}
+                {soleMessage.sent_at ? (
+                  <span>
+                    {" · "}
+                    {new Date(soleMessage.sent_at).toLocaleString()}
+                  </span>
+                ) : null}
+                {thread.is_starred ? " · Starred" : ""}
+              </>
+            ) : (
+              <>
+                {thread.message_count} message
+                {thread.message_count === 1 ? "" : "s"}
+                {thread.is_starred ? " · Starred" : ""}
+              </>
+            )}
           </p>
         </div>
-        <div className="hidden shrink-0 flex-wrap justify-end gap-1 sm:flex">
-          {ticketBridge ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={createTicketStub}
-            >
-              <Ticket className="size-4" />
-              Ticket
-            </Button>
-          ) : null}
-          {onForward ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={onForward}
-            >
-              Forward
-            </Button>
-          ) : null}
-          {onReplyAll ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={onReplyAll}
-            >
-              Reply all
-            </Button>
-          ) : null}
-          <Button type="button" size="sm" onClick={onReply}>
-            Reply
-          </Button>
-        </div>
+        <MessageHeaderActions
+          actions={threadActions}
+          onReply={onReply}
+          onReplyAll={onReplyAll}
+          onForward={onForward}
+          onCreateTicket={ticketBridge ? createTicketStub : undefined}
+        />
       </div>
 
-      {threadActions ? <MessageOrganizeBar actions={threadActions} /> : null}
+      {showRenderDebug && debugHtml ? (
+        <MailRenderDebugPanel rawHtml={debugHtml} />
+      ) : null}
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-muted/20 p-3 md:p-4">
+      <div
+        ref={scrollPaneRef}
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background"
+      >
         {isPending ? (
-          <Skeleton className="h-40 w-full" />
+          <Skeleton className="m-4 h-40 w-auto" />
         ) : messages.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No messages in this thread.</p>
+          <p className="p-4 text-sm text-muted-foreground">
+            No messages in this thread.
+          </p>
         ) : (
-          messages.map((message) => {
-            const files = attachmentsByMessage.get(message.id) ?? [];
-            return (
-              <article
-                key={message.id}
-                className="overflow-hidden rounded-lg border border-border/80 bg-white text-neutral-900 shadow-sm isolate"
-              >
-                <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-black/5 bg-neutral-50/80 px-4 py-2.5 text-xs text-neutral-600">
-                  <div className="min-w-0">
-                    <div className="truncate font-medium text-neutral-900">
-                      {message.from_name || message.from_email || "Unknown"}
-                    </div>
-                    {message.from_email ? (
-                      <div className="truncate">{message.from_email}</div>
-                    ) : null}
-                    {message.to_emails?.length ? (
-                      <div className="mt-0.5 truncate">
-                        To: {message.to_emails.join(", ")}
-                      </div>
-                    ) : null}
-                  </div>
-                  {message.sent_at ? (
-                    <time className="shrink-0" dateTime={message.sent_at}>
-                      {new Date(message.sent_at).toLocaleString()}
-                    </time>
-                  ) : null}
-                </header>
-
-                {message.body_html ? (
-                  <div className="overflow-x-auto px-4 py-3">
-                    <MailHtmlBody html={message.body_html} />
-                  </div>
-                ) : (
-                  <pre className="whitespace-pre-wrap px-4 py-3 font-sans text-sm leading-relaxed text-neutral-900">
-                    {message.body_text || ""}
-                  </pre>
-                )}
-
-                {files.length > 0 ? (
-                  <div className="border-t border-black/5 px-4 py-3">
-                    <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                      {files.length} attachment{files.length === 1 ? "" : "s"}
-                    </p>
-                    <ul className="space-y-1.5">
-                      {files.map((file) => (
-                        <AttachmentRow key={file.id} file={file} />
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </article>
-            );
-          })
-        )}
-      </div>
-
-      <div className="flex flex-col gap-2 border-t p-3 sm:hidden">
-        {threadActions ? (
-          <div className="flex flex-wrap gap-1">
-            {threadActions.onToggleStar ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={threadActions.onToggleStar}
-              >
-                <Star
-                  className="size-4"
-                  weight={threadActions.isStarred ? "fill" : "regular"}
-                />
-                {threadActions.isStarred ? "Unstar" : "Star"}
-              </Button>
-            ) : null}
-            {threadActions.onRestore ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={threadActions.onRestore}
-              >
-                Restore
-              </Button>
-            ) : null}
-            {threadActions.onArchive ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={threadActions.onArchive}
-              >
-                Archive
-              </Button>
-            ) : null}
-            {threadActions.onReportSpam ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={threadActions.onReportSpam}
-              >
-                Spam
-              </Button>
-            ) : null}
-            {threadActions.onMoveToTrash ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={threadActions.onMoveToTrash}
-              >
-                Trash
-              </Button>
-            ) : null}
-            {threadActions.onDeleteForever ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="destructive"
-                onClick={threadActions.onDeleteForever}
-              >
-                Delete
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="flex-1"
-            onClick={onForward}
+          <div
+            className={cn(
+              "flex min-h-0 w-full flex-col",
+              messages.length === 1 ? "" : "divide-y divide-border/30",
+            )}
           >
-            Forward
-          </Button>
-          <Button type="button" size="sm" className="flex-1" onClick={onReply}>
-            Reply
-          </Button>
-        </div>
+            {messages.map((message, index) => {
+              const files = attachmentsByMessage.get(message.id) ?? [];
+              const downloadableFiles = files.filter(isDownloadableMailAttachment);
+              const showMessageHeader = messages.length > 1;
+              return (
+                <article
+                  key={message.id}
+                  className={cn(
+                    "flex w-full min-w-0 flex-col text-neutral-900",
+                    index > 0 && messages.length > 1 && "pt-0",
+                  )}
+                >
+                  {showMessageHeader ? (
+                    <header className="flex flex-wrap items-baseline justify-between gap-2 bg-muted/20 px-3 py-2.5 text-xs text-neutral-600 md:px-4">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium text-neutral-900">
+                          {message.from_name || message.from_email || "Unknown"}
+                        </div>
+                        {message.from_email ? (
+                          <div className="truncate">{message.from_email}</div>
+                        ) : null}
+                        {message.to_emails?.length ? (
+                          <div className="mt-0.5 truncate">
+                            To: {message.to_emails.join(", ")}
+                          </div>
+                        ) : null}
+                      </div>
+                      {message.sent_at ? (
+                        <time className="shrink-0" dateTime={message.sent_at}>
+                          {new Date(message.sent_at).toLocaleString()}
+                        </time>
+                      ) : null}
+                    </header>
+                  ) : null}
+
+                  {message.body_html ? (
+                    <MessageHtmlBody
+                      message={message}
+                      attachments={files}
+                      scrollPaneRef={scrollPaneRef}
+                    />
+                  ) : (
+                    <pre className="whitespace-pre-wrap px-3 py-3 font-sans text-sm leading-relaxed text-neutral-900 md:px-4">
+                      {message.body_text || ""}
+                    </pre>
+                  )}
+
+                  {downloadableFiles.length > 0 ? (
+                    <div className="px-3 py-3 md:px-4">
+                      <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                        {downloadableFiles.length} attachment
+                        {downloadableFiles.length === 1 ? "" : "s"}
+                      </p>
+                      <ul className="space-y-1.5">
+                        {downloadableFiles.map((file) => (
+                          <AttachmentRow key={file.id} file={file} />
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

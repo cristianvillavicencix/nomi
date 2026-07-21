@@ -1,26 +1,133 @@
-import { sanitizeMailHtml } from "./sanitizeMailHtml";
+import { rewriteHostingerLogoImagesInHtml } from "./hostingerLogo";
+import { sanitizeMailHtmlParts } from "./sanitizeMailHtml";
 
-const IFRAME_RESET_CSS = `
-  html, body { margin: 0; padding: 0; background: #ffffff; }
-  body {
+export type MailIframeVariant = "reader" | "embedded";
+export type MailIframeLayout = "fill" | "auto";
+
+/** Shell chrome only — sender CSS loads after this so it wins. */
+const READER_SHELL_FILL = `
+  html.mail-reader-html {
+    margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 13px;
-    line-height: 1.45;
-    color: #171717;
-    word-break: break-word;
-    overflow-x: auto;
+    height: 100%;
+    overflow: hidden;
+    -webkit-text-size-adjust: 100%;
   }
-  img { max-width: 100%; height: auto; }
-  table { max-width: 100%; border-collapse: collapse; }
-  td, th { word-break: break-word; }
-  a { color: #1d4ed8; text-decoration: underline; }
-  pre { white-space: pre-wrap; overflow-x: auto; }
-  blockquote { margin: 0.5em 0; padding-left: 1ex; border-left: 1px solid #ccc; }
+  body.mail-reader-shell {
+    margin: 0;
+    padding: 16px 0 32px;
+    height: 100%;
+    box-sizing: border-box;
+    background: #ffffff;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  body.mail-reader-shell .mail-body-root,
+  body.mail-reader-shell .mail-nested-body {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    overflow: visible !important;
+  }
+  body.mail-reader-shell .mail-body-root img,
+  body.mail-reader-shell .mail-nested-body img {
+    max-width: 100%;
+  }
 `;
 
+const READER_SHELL_AUTO = `
+  html.mail-reader-html {
+    margin: 0;
+    padding: 0;
+    height: auto !important;
+    min-height: 0;
+    -webkit-text-size-adjust: 100%;
+  }
+  body.mail-reader-shell {
+    margin: 0;
+    padding: 16px 0 32px;
+    height: auto !important;
+    min-height: 0;
+    background: #ffffff;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+  body.mail-reader-shell .mail-body-root,
+  body.mail-reader-shell .mail-nested-body {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    overflow: visible !important;
+  }
+  body.mail-reader-shell .mail-body-root img,
+  body.mail-reader-shell .mail-nested-body img {
+    max-width: 100%;
+  }
+`;
+
+/** Minimal post-sender overrides for responsive newsletter classes only. */
+const READER_LAYOUT_UNLOCK = `
+body.mail-reader-shell .mobile_only {
+  display: none !important;
+}
+`;
+
+const EMBEDDED_SHELL = `
+  html.mail-reader-html, body.mail-reader-shell {
+    margin: 0;
+    padding: 0;
+    height: auto !important;
+    min-height: 0;
+    background: #ffffff;
+    -webkit-text-size-adjust: 100%;
+  }
+  body.mail-reader-shell .mail-body-root,
+  body.mail-reader-shell .mail-nested-body {
+    max-width: 100%;
+  }
+  body.mail-reader-shell .mail-body-root img,
+  body.mail-reader-shell .mail-nested-body img {
+    max-width: 100%;
+  }
+`;
+
+function escapeStyleText(css: string): string {
+  return css.replace(/<\/style/gi, "<\\/style");
+}
+
 /** Full HTML document for sandboxed iframe email rendering. */
-export function buildMailIframeSrcDoc(rawHtml: string): string {
-  const body = sanitizeMailHtml(rawHtml);
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base target="_blank" rel="noopener noreferrer"><style>${IFRAME_RESET_CSS}</style></head><body>${body}</body></html>`;
+export function buildMailIframeSrcDoc(
+  rawHtml: string,
+  variant: MailIframeVariant = "reader",
+  layout: MailIframeLayout = "fill",
+): string {
+  const { body, emailStyles, headLinks } = sanitizeMailHtmlParts(
+    rewriteHostingerLogoImagesInHtml(rawHtml),
+  );
+  const bodyHtml = body.includes("mail-body-root")
+    ? body
+    : `<div class="mail-body-root">${body}</div>`;
+  const shellCss =
+    variant === "embedded"
+      ? EMBEDDED_SHELL
+      : layout === "fill"
+        ? READER_SHELL_FILL
+        : READER_SHELL_AUTO;
+  const senderCss = emailStyles.trim()
+    ? `<style>${escapeStyleText(emailStyles)}</style>`
+    : "";
+  const readerUnlockCss =
+    variant === "reader"
+      ? `<style>${escapeStyleText(READER_LAYOUT_UNLOCK)}</style>`
+      : "";
+  const viewportMeta =
+    variant === "reader"
+      ? '<meta name="viewport" content="width=680">'
+      : "";
+  return `<!DOCTYPE html><html lang="en" class="mail-reader-html"><head><meta charset="utf-8">${viewportMeta}<base target="_blank" rel="noopener noreferrer"><style>${shellCss}</style>${headLinks}${senderCss}${readerUnlockCss}</head><body class="mail-reader-shell">${bodyHtml}</body></html>`;
 }

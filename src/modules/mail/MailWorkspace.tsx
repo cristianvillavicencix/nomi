@@ -20,12 +20,10 @@ import {
   MailComposeDialog,
   type MailComposeMode,
 } from "./MailComposeDialog";
-import { MailSyncRangeDialog } from "./MailSyncRangeDialog";
 import {
   MailFolderRail,
   type MailFolderId,
 } from "./MailFolderRail";
-import { MailDetailToolbar } from "./MailToolbar";
 import { MailThreadFilters } from "./MailThreadFilters";
 import type { MailListFilter } from "./mailListFilters";
 import { syncMailAccount, applyMailThreadAction, type MailThreadAction } from "./mailApi";
@@ -35,8 +33,11 @@ import {
   writeMailAccountFilter,
   writeMailFolder,
 } from "./mailPreferences";
-import type { MailFolderId } from "./MailFolderRail";
 import { mailRfcMessageId } from "./mailHeaders";
+import {
+  buildForwardQuoteBlock,
+  buildReplyQuoteBlock,
+} from "./mailQuoteHtml";
 import {
   useMailThreads,
   useMailMessages,
@@ -44,7 +45,6 @@ import {
   mailDraftRecordIdFromListId,
 } from "./useMailThreads";
 import { useMailLabels } from "./useMailLabels";
-import type { MailSyncRange } from "./mailSyncRange";
 import { incrementalMailSyncRange } from "./mailSyncRange";
 import type { MailAccount, MailMessage, MailThread } from "./types";
 
@@ -55,40 +55,6 @@ const MOBILE_FOLDERS: Array<{ id: MailFolderId; label: string }> = [
   { id: "spam", label: "Spam" },
   { id: "trash", label: "Trash" },
 ];
-
-function messageBodyHtml(
-  last: MailMessage | undefined,
-  snippet: string | null | undefined,
-): string {
-  if (last?.body_html?.trim()) return last.body_html;
-  if (last?.body_text?.trim()) {
-    return `<p>${last.body_text.replace(/\n/g, "<br/>")}</p>`;
-  }
-  if (snippet?.trim()) return `<p>${snippet}</p>`;
-  return "";
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function buildReplyQuoteHtml(last: MailMessage | undefined, snippet: string | null) {
-  const quoted = messageBodyHtml(last, snippet);
-  const from = escapeHtml(
-    last?.from_name?.trim() || last?.from_email?.trim() || "Unknown",
-  );
-  const when = last?.sent_at
-    ? escapeHtml(new Date(last.sent_at).toLocaleString())
-    : "";
-  const header = when
-    ? `On ${when}, ${from} wrote:`
-    : `${from} wrote:`;
-  return `<p><br></p><p>${header}</p><blockquote style="margin:0 0 0 0.8ex;border-left:1px solid #ccc;padding-left:1ex">${quoted || "<p></p>"}</blockquote>`;
-}
 
 export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const notify = useNotify();
@@ -108,11 +74,13 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const [composeCc, setComposeCc] = useState("");
   const [composeSubject, setComposeSubject] = useState("");
   const [composeBody, setComposeBody] = useState("");
+  const [composeQuotedHtml, setComposeQuotedHtml] = useState<string | null>(
+    null,
+  );
   const [composeInReplyTo, setComposeInReplyTo] = useState<string | undefined>();
   const [composeDraftId, setComposeDraftId] = useState<number | null>(null);
   const [composeAccountId, setComposeAccountId] = useState<number | undefined>();
   const [composeThreadId, setComposeThreadId] = useState<number | undefined>();
-  const [syncTarget, setSyncTarget] = useState<MailAccount | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [mobileShowThread, setMobileShowThread] = useState(false);
 
@@ -266,6 +234,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     setComposeCc(row.cc_emails.join(", "));
     setComposeSubject(row.subject ?? "");
     setComposeBody(row.body_html ?? "<p><br></p>");
+    setComposeQuotedHtml(null);
     setComposeInReplyTo(undefined);
     setComposeOpen(true);
   };
@@ -321,11 +290,12 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     setComposeDraftId(null);
     setComposeAccountId(undefined);
     setComposeThreadId(undefined);
+    setComposeQuotedHtml(null);
     if (mode === "new") {
       setComposeTo("");
       setComposeCc("");
       setComposeSubject("");
-      setComposeBody("");
+      setComposeBody("<p><br></p>");
     } else if (thread && !isMailDraftListId(thread.id)) {
       const last =
         thread.id === selected?.id
@@ -343,22 +313,22 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         setComposeTo(fromEmail);
         setComposeCc("");
         setComposeSubject("");
-        setComposeBody(buildReplyQuoteHtml(last, thread.snippet));
+        setComposeBody("<p><br></p>");
+        setComposeQuotedHtml(buildReplyQuoteBlock(last, thread.snippet));
         setComposeInReplyTo(mailRfcMessageId(last));
       } else if (mode === "reply_all") {
         setComposeTo(fromEmail);
         setComposeCc([...new Set(others)].join(", "));
         setComposeSubject("");
-        setComposeBody(buildReplyQuoteHtml(last, thread.snippet));
+        setComposeBody("<p><br></p>");
+        setComposeQuotedHtml(buildReplyQuoteBlock(last, thread.snippet));
         setComposeInReplyTo(mailRfcMessageId(last));
       } else if (mode === "forward") {
         setComposeTo("");
         setComposeCc("");
         setComposeSubject("");
-        const quoted = messageBodyHtml(last, thread.snippet);
-        setComposeBody(
-          `<p><br></p><p>---------- Forwarded message ----------</p>${quoted}`,
-        );
+        setComposeBody("<p><br></p>");
+        setComposeQuotedHtml(buildForwardQuoteBlock(last, thread.snippet));
       }
       if (contextThread) {
         setSelected(contextThread);
@@ -401,31 +371,9 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     }
   };
 
-  const runSync = async (range: MailSyncRange) => {
-    if (!syncTarget) return;
-    try {
-      const result = await syncMailAccount(syncTarget.id, {
-        since: range.since,
-        max_results: range.max_results,
-      });
-      notify(
-        `Synced ${result.synced ?? 0} message${
-          (result.synced ?? 0) === 1 ? "" : "s"
-        }`,
-        { type: "success" },
-      );
-      invalidate();
-      void queryClient.invalidateQueries({ queryKey: ["mail_accounts_safe"] });
-    } catch (e) {
-      notify(e instanceof Error ? e.message : "Sync failed", { type: "error" });
-    }
-  };
-
   if (accounts.length === 0) {
     return <MailEmptyState />;
   }
-
-  const listOrganizeEnabled = folder !== "draft";
 
   const handleListStar = (thread: MailThread) => {
     void runThreadAction(
@@ -465,15 +413,6 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     }
     void runThreadAction(thread, "spam");
   };
-
-  const listTrashMode =
-    folder === "trash"
-      ? "delete_forever"
-      : folder === "spam"
-        ? "not_spam"
-        : "trash";
-
-  const showReportSpam = listOrganizeEnabled && folder === "inbox";
 
   const buildMessagePaneActions = (
     t: MailThread,
@@ -515,7 +454,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   };
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden rounded-lg border bg-background">
+    <div className="flex h-full min-h-0 overflow-hidden rounded-xl bg-background">
       <MailFolderRail
         className="hidden md:flex"
         folder={folder}
@@ -546,11 +485,11 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
       <div
         className={cn(
           "flex min-h-0 min-w-0 flex-1 flex-col md:flex-none md:w-[320px] md:max-w-[360px] md:shrink-0",
-          "border-r bg-background",
+          "bg-muted/15 md:bg-muted/20",
           mobileShowThread && "hidden md:flex",
         )}
       >
-        <div className="flex items-center gap-2 border-b px-2 py-2 md:hidden">
+        <div className="flex items-center gap-2 px-2 py-2 md:hidden">
           <Select
             value={folder}
             onValueChange={(v) => {
@@ -612,10 +551,16 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
           }}
           searchQuery={search}
           onSearchQueryChange={setSearch}
+          syncToolbar={{
+            syncing,
+            onSync: () => {
+              void runQuickSync();
+            },
+          }}
         />
 
         {threads.length > 0 ? (
-          <div className="flex items-center gap-2 border-b px-3 py-1.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
             <Checkbox
               checked={
                 selectedIds.size > 0 && selectedIds.size === threads.length
@@ -722,7 +667,6 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
             threads={threads}
             selectedId={selected?.id ?? null}
             selectedIds={selectedIds}
-            showOrganizeActions={listOrganizeEnabled}
             onToggleSelect={(id, on) => {
               setSelectedIds((prev) => {
                 const next = new Set(prev);
@@ -742,30 +686,6 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
                 void runThreadAction(thread, "mark_read");
               }
             }}
-            onStar={listOrganizeEnabled ? handleListStar : undefined}
-            onArchive={
-              listOrganizeEnabled && folder !== "spam" && folder !== "trash"
-                ? handleListArchive
-                : undefined
-            }
-            onRestore={
-              listOrganizeEnabled && folder === "trash"
-                ? handleListRestore
-                : undefined
-            }
-            onTrash={listOrganizeEnabled ? handleListTrash : undefined}
-            onSpam={showReportSpam ? handleListSpam : undefined}
-            trashMode={listTrashMode}
-            onReply={
-              listOrganizeEnabled
-                ? (t) => openCompose("reply", t)
-                : undefined
-            }
-            onForward={
-              listOrganizeEnabled
-                ? (t) => openCompose("forward", t)
-                : undefined
-            }
           />
           </div>
         )}
@@ -773,25 +693,11 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
 
       <div
         className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col",
+          "flex min-h-0 min-w-0 flex-1 flex-col bg-background",
           !mobileShowThread && "hidden md:flex",
         )}
       >
-        <MailDetailToolbar
-          syncing={syncing}
-          onSync={() => {
-            void runQuickSync();
-          }}
-          onSyncFromDate={() => {
-            const target =
-              accountFilter === "all"
-                ? accountsToSync[0] ?? null
-                : accountsToSync[0] ?? null;
-            if (target) setSyncTarget(target);
-          }}
-        />
-
-        <div className="min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <MailMessagePane
             thread={
               selected && !isMailDraftListId(selected.id) ? selected : null
@@ -825,7 +731,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
           if (!open) {
             setComposeDraftId(null);
             setComposeAccountId(undefined);
-            setComposeThreadId(undefined);
+            setComposeQuotedHtml(null);
           }
         }}
         accounts={accounts}
@@ -835,20 +741,13 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         initialCc={composeCc}
         initialSubject={composeSubject}
         initialBody={composeBody}
+        initialQuotedHtml={composeQuotedHtml}
         initialInReplyTo={composeInReplyTo}
         initialDraftId={composeDraftId}
         initialAccountId={composeAccountId}
         initialThreadId={composeThreadId}
       />
 
-      <MailSyncRangeDialog
-        open={syncTarget != null}
-        onOpenChange={(open) => {
-          if (!open) setSyncTarget(null);
-        }}
-        accountEmail={syncTarget?.email}
-        onConfirm={runSync}
-      />
     </div>
   );
 }

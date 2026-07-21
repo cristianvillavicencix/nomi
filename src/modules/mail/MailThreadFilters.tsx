@@ -10,6 +10,10 @@ import {
 import { cn } from "@/lib/utils";
 import type { MailFolderId } from "./MailFolderRail";
 import type { MailListFilter } from "./mailListFilters";
+import {
+  MailSyncActionIcons,
+  type MailSyncToolbarProps,
+} from "./MailToolbar";
 
 const PRIMARY: Array<{ id: MailListFilter; label: string }> = [
   { id: "all", label: "All mail" },
@@ -28,6 +32,7 @@ export function MailThreadFilters({
   searchQuery,
   onSearchQueryChange,
   counts,
+  syncToolbar,
 }: {
   folder: MailFolderId;
   listFilter: MailListFilter;
@@ -35,6 +40,7 @@ export function MailThreadFilters({
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   counts?: Partial<Record<MailListFilter, number>>;
+  syncToolbar?: MailSyncToolbarProps;
 }) {
   const showStarred = folder === "inbox";
   const showOthers = folder === "inbox";
@@ -45,20 +51,21 @@ export function MailThreadFilters({
   const otherActive = OTHER.some((o) => o.id === listFilter);
 
   const searchField = (
-    <div className="shrink-0 border-b px-2 py-2">
+    <div className="flex shrink-0 items-center gap-1 px-2 pb-2 pt-1">
       <Input
-        className="h-8 w-full"
+        className="h-8 min-w-0 flex-1 border-0 bg-muted/50 shadow-none focus-visible:ring-1"
         placeholder="Search mail…"
         value={searchQuery}
         onChange={(e) => onSearchQueryChange(e.target.value)}
         aria-label="Search mail"
       />
+      {syncToolbar ? <MailSyncActionIcons {...syncToolbar} /> : null}
     </div>
   );
 
   if (folder === "draft") {
     return (
-      <div className="shrink-0 border-b">
+      <div className="shrink-0">
         <div className="flex items-center gap-1 px-2 py-2">
           <span className="px-2 text-xs font-medium text-foreground">
             All drafts
@@ -71,7 +78,7 @@ export function MailThreadFilters({
 
   if (folder === "trash" || folder === "spam") {
     return (
-      <div className="shrink-0 border-b">
+      <div className="shrink-0">
         <div className="flex items-center gap-1 overflow-x-auto px-2 py-2">
           {[
             { id: "all" as const, label: "All mail" },
@@ -102,7 +109,7 @@ export function MailThreadFilters({
   }
 
   return (
-    <div className="shrink-0 border-b">
+    <div className="shrink-0">
       <div className="flex items-center gap-1 overflow-x-auto px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {options.map((option) => {
         const active = listFilter === option.id;

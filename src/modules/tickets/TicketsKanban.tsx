@@ -65,10 +65,16 @@ export const TicketsKanban = ({
   selectedTicketId,
   onSelectTicket,
   searchQuery = "",
+  selectedTicketIds = [],
+  onToggleTicketSelection,
+  selectionEnabled = false,
 }: {
   selectedTicketId?: string | null;
   onSelectTicket: (ticketId: string) => void;
   searchQuery?: string;
+  selectedTicketIds?: string[];
+  onToggleTicketSelection?: (ticketId: string, checked: boolean) => void;
+  selectionEnabled?: boolean;
 }) => {
   const { data = [], isPending, refetch } = useListContext<Ticket>();
   const [ticketsByStatus, setTicketsByStatus] = useState<TicketsByStatus>(
@@ -77,12 +83,32 @@ export const TicketsKanban = ({
   const [isDragging, setIsDragging] = useState(false);
   const suppressClickRef = useRef(false);
   const boardRef = useRef<HTMLDivElement>(null);
+  const revertBoardRef = useRef<TicketsByStatus | null>(null);
   useHorizontalWheelScroll(boardRef);
   useKanbanEdgeAutoScroll(boardRef, isDragging);
 
-  const { applyStatusChange, statusChangeDialog } = useTicketStatusChange(() => {
-    void refetch();
-  });
+  const cloneTicketsByStatus = (source: TicketsByStatus): TicketsByStatus => {
+    const next = emptyTicketKanbanBuckets<Ticket>();
+    for (const column of TICKET_KANBAN_COLUMNS) {
+      next[column.id] = [...source[column.id]];
+    }
+    return next;
+  };
+
+  const { applyStatusChange, statusChangeDialog } = useTicketStatusChange(
+    () => {
+      revertBoardRef.current = null;
+      void refetch();
+    },
+    {
+      onStatusDialogClose: () => {
+        if (revertBoardRef.current) {
+          setTicketsByStatus(revertBoardRef.current);
+          revertBoardRef.current = null;
+        }
+      },
+    },
+  );
 
   const allTickets = useMemo(
     () =>
@@ -262,6 +288,10 @@ export const TicketsKanban = ({
     );
     if (!ticket) return;
 
+    if (fromStatus !== toStatus) {
+      revertBoardRef.current = cloneTicketsByStatus(ticketsByStatus);
+    }
+
     setTicketsByStatus((prev) => {
       const next = emptyTicketKanbanBuckets<Ticket>();
       for (const column of TICKET_KANBAN_COLUMNS) {
@@ -277,6 +307,9 @@ export const TicketsKanban = ({
     });
 
     applyStatusChange(ticket, toStatus);
+    if (fromStatus === toStatus) {
+      revertBoardRef.current = null;
+    }
   };
 
   if (isPending) {
@@ -342,24 +375,37 @@ export const TicketsKanban = ({
                             ticket.organization_member_id ??
                             null;
                           const selected = selectedTicketId === ticketId;
+                          const bulkSelected =
+                            selectedTicketIds.includes(ticketId);
                           return (
                             <Draggable
                               key={ticket.id}
                               draggableId={ticketId}
                               index={index}
+                              isDragDisabled={bulkSelected}
                             >
                               {(dragProvided, dragSnapshot) => (
-                                <button
-                                  type="button"
+                                <div
                                   ref={dragProvided.innerRef}
                                   {...dragProvided.draggableProps}
                                   {...dragProvided.dragHandleProps}
+                                  role="button"
+                                  tabIndex={0}
                                   onClick={() => {
                                     if (suppressClickRef.current) return;
                                     onSelectTicket(ticketId);
                                   }}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "Enter" || event.key === " ") {
+                                      event.preventDefault();
+                                      if (suppressClickRef.current) return;
+                                      onSelectTicket(ticketId);
+                                    }
+                                  }}
+                                  style={dragProvided.draggableProps.style}
                                   className={cn(
                                     "w-full rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                    !bulkSelected && "cursor-grab active:cursor-grabbing",
                                     selected && "ring-2 ring-primary/40",
                                   )}
                                 >
@@ -382,8 +428,16 @@ export const TicketsKanban = ({
                                     }
                                     lastReadAt={readMap.get(ticketId) ?? null}
                                     dragging={dragSnapshot.isDragging}
+                                    bulkSelected={bulkSelected}
+                                    selectionEnabled={selectionEnabled}
+                                    onToggleBulkSelect={(checked) =>
+                                      onToggleTicketSelection?.(
+                                        ticketId,
+                                        checked,
+                                      )
+                                    }
                                   />
-                                </button>
+                                </div>
                               )}
                             </Draggable>
                           );

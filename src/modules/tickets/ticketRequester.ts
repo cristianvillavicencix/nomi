@@ -6,7 +6,10 @@ import {
   getContactFullName,
 } from "@/modules/clients/clientShowUtils";
 import { resolveCompanyEmailForDisplay } from "@/modules/clients/companyChannelResolvers";
-import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
+import {
+  getTicketListMeta,
+  resolveTicketPrimaryContactName,
+} from "@/modules/tickets/ticketListMeta";
 
 const normalize = (value?: string | null) => {
   const trimmed = value?.trim();
@@ -24,11 +27,7 @@ export const resolveTicketRequesterName = (
   ticket: Ticket,
   contact?: Contact | null,
   company?: Company | null,
-) =>
-  normalize(ticket.requester_name) ??
-  (contact ? normalize(getContactFullName(contact)) : null) ??
-  normalize(company?.name) ??
-  null;
+) => resolveTicketPrimaryContactName(ticket, company, contact);
 
 export const getTicketClientFirstName = (
   ticket: Ticket,

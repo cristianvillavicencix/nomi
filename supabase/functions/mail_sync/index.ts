@@ -10,9 +10,9 @@ import {
   upsertThreadAndMessage,
   type MailAccountRow,
 } from "../_shared/mailAccount.ts";
-import { stripCidFromHtml } from "../_shared/stripCidFromHtml.ts";
 import {
   gmailMessageHasFileAttachments,
+  gmailMessageHasInlineImages,
   syncGmailMessageAttachments,
   syncGraphMessageAttachments,
 } from "../_shared/mailAttachmentSync.ts";
@@ -31,9 +31,14 @@ type SyncOptions = {
 type GmailPart = {
   mimeType?: string;
   filename?: string;
+  headers?: Array<{ name: string; value: string }>;
   body?: { data?: string; attachmentId?: string; size?: number };
   parts?: GmailPart[];
 };
+
+function htmlHasCidReferences(html: string | null | undefined): boolean {
+  return Boolean(html && /cid:/i.test(html));
+}
 
 function parseSyncOptions(body: Record<string, unknown>): SyncOptions {
   const sinceRaw = body.since;
@@ -136,14 +141,12 @@ async function extractGmailBodies(
     );
   }
 
-  if (bodyHtml) bodyHtml = stripCidFromHtml(bodyHtml) || bodyHtml;
-
   return { bodyHtml, bodyText };
 }
 
 function prepareStoredHtml(html: string | null): string | null {
   if (!html?.trim()) return null;
-  return stripCidFromHtml(html) || html;
+  return html;
 }
 
 async function syncGoogleFolder(
@@ -233,6 +236,7 @@ async function syncGoogleFolder(
 
       const payload = detail.payload as GmailPart | undefined;
       const hasAttachments = gmailMessageHasFileAttachments(payload);
+      const hasInlineImages = gmailMessageHasInlineImages(payload);
 
       const upserted = await upsertThreadAndMessage({
         account,
@@ -256,10 +260,13 @@ async function syncGoogleFolder(
         isStarred: labelIds.includes("STARRED"),
         rfcMessageId,
         inReplyTo,
-        hasAttachments,
+        hasAttachments: hasAttachments || hasInlineImages,
       });
 
-      if (hasAttachments && upserted.messageId) {
+      if (
+        upserted.messageId &&
+        (hasAttachments || hasInlineImages || htmlHasCidReferences(bodyHtml))
+      ) {
         await syncGmailMessageAttachments(
           accessToken,
           account,
@@ -394,6 +401,7 @@ async function syncMicrosoftFolder(
         contentType === "html" ||
         Boolean(content && /<[a-z][\s\S]*>/i.test(content));
       const hasAttachments = Boolean(msg.hasAttachments);
+      const bodyHtml = looksHtml ? prepareStoredHtml(content) : null;
       const upserted = await upsertThreadAndMessage({
         account,
         providerThreadId: String(msg.conversationId || msg.id),
@@ -404,14 +412,17 @@ async function syncMicrosoftFolder(
         fromName,
         toEmails,
         ccEmails,
-        bodyHtml: looksHtml ? prepareStoredHtml(content) : null,
+        bodyHtml,
         bodyText: !looksHtml ? content : null,
         sentAt: msg.receivedDateTime ?? null,
         isUnread: isOutbound ? false : msg.isRead === false,
         direction: isOutbound ? "outbound" : "inbound",
         hasAttachments,
       });
-      if (hasAttachments && upserted.messageId) {
+      if (
+        upserted.messageId &&
+        (hasAttachments || htmlHasCidReferences(bodyHtml))
+      ) {
         await syncGraphMessageAttachments(
           accessToken,
           account,

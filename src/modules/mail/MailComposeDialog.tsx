@@ -40,6 +40,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { sendMailMessage, deleteMailDraft } from "./mailApi";
+import { MailHtmlBody } from "./MailHtmlBody";
+import { assembleComposeBody } from "./mailQuoteHtml";
 import type { MailAccount, MailThread } from "./types";
 
 export type MailComposeMode = "new" | "reply" | "reply_all" | "forward";
@@ -238,6 +240,7 @@ export function MailComposeDialog({
   initialCc = "",
   initialSubject = "",
   initialBody = "",
+  initialQuotedHtml = null,
   initialInReplyTo,
   initialDraftId = null,
   initialAccountId,
@@ -252,6 +255,7 @@ export function MailComposeDialog({
   initialCc?: string;
   initialSubject?: string;
   initialBody?: string;
+  initialQuotedHtml?: string | null;
   initialInReplyTo?: string;
   initialDraftId?: number | null;
   initialAccountId?: number;
@@ -273,6 +277,7 @@ export function MailComposeDialog({
   const [attachments, setAttachments] = useState<ComposeAttachment[]>([]);
   const [pending, setPending] = useState(false);
   const [editingDraftId, setEditingDraftId] = useState<number | null>(null);
+  const [quotedHtml, setQuotedHtml] = useState<string | null>(null);
   const [formatPos, setFormatPos] = useState<{
     top: number;
     left: number;
@@ -294,6 +299,7 @@ export function MailComposeDialog({
     setShowBcc(false);
     setAttachments([]);
     setFormatPos(null);
+    setQuotedHtml(initialQuotedHtml ?? null);
     if (initialSubject) {
       setSubject(initialSubject);
     } else if (replyTo?.subject) {
@@ -319,6 +325,7 @@ export function MailComposeDialog({
     initialCc,
     initialSubject,
     initialBody,
+    initialQuotedHtml,
     initialDraftId,
     initialAccountId,
   ]);
@@ -438,7 +445,8 @@ export function MailComposeDialog({
 
   const handleSend = async (asDraft = false) => {
     const id = Number(accountId);
-    const bodyHtml = editorRef.current?.innerHTML?.trim() || "<p></p>";
+    const userHtml = editorRef.current?.innerHTML?.trim() || "<p></p>";
+    const bodyHtml = assembleComposeBody(userHtml, quotedHtml);
     if (!id || (!asDraft && to.length === 0)) {
       notify("Choose a From account and at least one recipient", {
         type: "warning",
@@ -490,11 +498,11 @@ export function MailComposeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-2xl">
+      <DialogContent className="!flex h-[min(720px,90vh)] max-h-[90vh] w-full max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
         <DialogHeader className="border-b px-4 py-3">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 px-4 py-3">
+        <div className="min-h-0 shrink-0 space-y-3 overflow-y-auto px-4 py-3">
           <div className="grid gap-2 sm:grid-cols-[4.5rem_1fr] sm:items-center">
             <Label className="text-muted-foreground">From</Label>
             <Select value={accountId} onValueChange={setAccountId}>
@@ -573,7 +581,10 @@ export function MailComposeDialog({
           </div>
         </div>
 
-        <div ref={editorShellRef} className="relative border-t">
+        <div
+          ref={editorShellRef}
+          className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-t"
+        >
           {formatPos ? (
             <div
               className="pointer-events-auto absolute z-10"
@@ -590,11 +601,26 @@ export function MailComposeDialog({
             onMouseUp={updateFormatToolbar}
             onKeyUp={updateFormatToolbar}
             className={cn(
-              "mail-compose-editor min-h-[220px] max-h-[420px] overflow-y-auto px-4 py-3 text-sm leading-relaxed outline-none",
+              "mail-compose-editor shrink-0 overflow-x-hidden overflow-y-auto px-4 py-3 text-sm leading-relaxed outline-none",
+              quotedHtml ? "max-h-[28vh] min-h-[72px]" : "min-h-[200px] flex-1",
               "[&_a]:text-primary [&_a]:underline [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-0 [&_p+p]:mt-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
               "empty:before:pointer-events-none empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)]",
             )}
           />
+          {quotedHtml ? (
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-t bg-muted/15">
+              <p className="shrink-0 border-b border-border/60 px-4 py-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                {mode === "forward" ? "Forwarded message" : "Original message"}
+              </p>
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+                <MailHtmlBody
+                  html={quotedHtml}
+                  variant="embedded"
+                  layout="auto"
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {attachments.length > 0 ? (
@@ -648,7 +674,7 @@ export function MailComposeDialog({
           }}
         />
 
-        <DialogFooter className="gap-2 border-t px-4 py-3 sm:justify-between">
+        <DialogFooter className="shrink-0 gap-2 border-t px-4 py-3 sm:justify-between">
           <div className="flex items-center gap-1">
             <IconButton
               aria-label="Attach files"

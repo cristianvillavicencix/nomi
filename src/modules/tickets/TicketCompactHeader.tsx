@@ -26,7 +26,11 @@ import {
 } from "@/modules/tickets/ticketInboxConfig";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
-import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
+import {
+  formatTicketWebsiteLabel,
+  getTicketListMeta,
+  ticketWebsiteHref,
+} from "@/modules/tickets/ticketListMeta";
 
 export const TicketCompactHeader = ({
   ticket,
@@ -57,6 +61,7 @@ export const TicketCompactHeader = ({
   const displayPhone = meta.phone
     ? formatUsPhoneDisplayFromAny(meta.phone)
     : null;
+  const website = meta.website;
   const priorityLabel = ticketPriorityLabel(ticket.priority);
   const waitingLabel = getTicketWaitingDurationLabel(
     ticket.status,
@@ -151,6 +156,19 @@ export const TicketCompactHeader = ({
                   dealId={ticket.deal_id}
                   className="transition-colors hover:text-foreground hover:underline"
                 />
+              </>
+            ) : null}
+            {website ? (
+              <>
+                <TicketMetaSep tone="soft" />
+                <a
+                  href={ticketWebsiteHref(website)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  {formatTicketWebsiteLabel(website)}
+                </a>
               </>
             ) : null}
           </p>

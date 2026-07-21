@@ -11,7 +11,10 @@ import {
 import { TICKET_WORKSPACE_SETTINGS_QUERY_KEY } from "@/modules/settings/tickets/useTicketWorkspaceSettings";
 import { DEFAULT_TICKET_WORKSPACE_SETTINGS } from "@/modules/settings/tickets/ticketWorkspaceSettings";
 
-export const useTicketStatusChange = (onUpdated?: () => void) => {
+export const useTicketStatusChange = (
+  onUpdated?: () => void,
+  options?: { onStatusDialogClose?: () => void },
+) => {
   const notify = useNotify();
   const refresh = useRefresh();
   const [update] = useUpdate();
@@ -65,7 +68,10 @@ export const useTicketStatusChange = (onUpdated?: () => void) => {
   const dialog = (
     <TicketStatusChangeDialog
       request={statusChangeRequest}
-      onClose={() => setStatusChangeRequest(null)}
+      onClose={() => {
+        setStatusChangeRequest(null);
+        options?.onStatusDialogClose?.();
+      }}
       onSuccess={onUpdated}
       requireStatusNote={requireStatusNote}
     />

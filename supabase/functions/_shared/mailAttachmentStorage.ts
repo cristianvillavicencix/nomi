@@ -1,3 +1,4 @@
+import { normalizeContentId } from "./mailInlineImages.ts";
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 
 export const MAIL_ATTACHMENTS_BUCKET = "mail-attachments";
@@ -37,6 +38,21 @@ async function attachmentAlreadyStored(
   return Boolean(data?.id);
 }
 
+async function inlineAlreadyStored(
+  messageId: number,
+  contentId: string,
+): Promise<boolean> {
+  const normalized = normalizeContentId(contentId);
+  if (!normalized) return false;
+  const { data } = await supabaseAdmin
+    .from("mail_attachments")
+    .select("id")
+    .eq("message_id", messageId)
+    .eq("content_id", normalized)
+    .maybeSingle();
+  return Boolean(data?.id);
+}
+
 export async function storeMailAttachment(params: {
   orgId: number;
   accountId: number;
@@ -45,13 +61,18 @@ export async function storeMailAttachment(params: {
   filename: string;
   mimeType: string;
   bytes: Uint8Array;
+  contentId?: string | null;
 }): Promise<boolean> {
   const { bytes } = params;
   if (bytes.length === 0 || bytes.length > MAIL_ATTACHMENT_MAX_FILE_BYTES) {
     return false;
   }
 
-  if (
+  if (params.contentId) {
+    if (await inlineAlreadyStored(params.messageId, params.contentId)) {
+      return true;
+    }
+  } else if (
     await attachmentAlreadyStored(
       params.messageId,
       params.providerAttachmentId,
@@ -86,6 +107,9 @@ export async function storeMailAttachment(params: {
       mime_type: params.mimeType || null,
       size_bytes: bytes.length,
       storage_path: storagePath,
+      content_id: params.contentId
+        ? normalizeContentId(params.contentId)
+        : null,
     });
   if (insertError) {
     console.error("mail_attachment_row_failed", insertError.message);
@@ -116,6 +140,7 @@ export async function syncAttachmentBatch(
     filename: string;
     mimeType: string;
     bytes: Uint8Array;
+    contentId?: string | null;
   }>,
 ): Promise<number> {
   let stored = 0;
@@ -133,6 +158,7 @@ export async function syncAttachmentBatch(
       filename: file.filename,
       mimeType: file.mimeType,
       bytes: file.bytes,
+      contentId: file.contentId,
     });
     if (ok) {
       stored += 1;

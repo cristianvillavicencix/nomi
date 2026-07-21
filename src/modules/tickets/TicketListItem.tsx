@@ -23,7 +23,7 @@ import {
   ticketWaitingSlaClassName,
 } from "@/modules/tickets/ticketSlaUtils";
 import { Badge } from "@/components/ui/badge";
-import { getContactFullName } from "@/modules/clients/clientShowUtils";
+import { resolveTicketPrimaryContactName } from "@/modules/tickets/ticketListMeta";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type {
   ClientInvoice,
@@ -83,13 +83,7 @@ export const TicketListItem = ({
     ticket.updated_at,
   );
 
-  const contactName = (() => {
-    if (contact) {
-      const full = getContactFullName(contact);
-      if (full !== "—") return full;
-    }
-    return ticket.requester_name?.trim() || null;
-  })();
+  const contactName = resolveTicketPrimaryContactName(ticket, company, contact);
 
   const identityParts = [`#${ticket.id}`, companyName, contactName].filter(
     Boolean,

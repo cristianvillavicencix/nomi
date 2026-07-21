@@ -1,31 +1,48 @@
 import { ticketStatusLabel } from "@/modules/tickets/ticketInboxConfig";
 import type { TicketWorkflowStatus } from "@/modules/tickets/ticketStatusWorkflow";
 
-export type TicketReplyStatusAction = {
+export type TicketReplyStatusTransition = {
   status: TicketWorkflowStatus;
   label: string;
-  primary: boolean;
 };
+
+const REPLY_TRANSITION_STATUSES: TicketWorkflowStatus[] = [
+  "open",
+  "waiting",
+  "resolved",
+];
 
 const formatReplyStatusLabel = (status: TicketWorkflowStatus) => {
   const raw = ticketStatusLabel(status);
   return raw.charAt(0).toUpperCase() + raw.slice(1);
 };
 
-const action = (
-  status: TicketWorkflowStatus,
-  primary: boolean,
-): TicketReplyStatusAction => ({
-  status,
-  label: `Reply & ${formatReplyStatusLabel(status)}`,
-  primary,
-});
-
-export const getPrimaryTicketReplyStatusAction = (
+export const normalizeTicketWorkflowStatus = (
   currentStatus: string | null | undefined,
-) =>
-  getTicketReplyStatusActions(currentStatus).find((action) => action.primary) ??
-  getTicketReplyStatusActions(currentStatus)[0];
+): TicketWorkflowStatus => {
+  if (
+    currentStatus === "new" ||
+    currentStatus === "open" ||
+    currentStatus === "waiting" ||
+    currentStatus === "resolved"
+  ) {
+    return currentStatus;
+  }
+  return "open";
+};
+
+/** Status-changing send options for the reply chevron menu (excludes current status). */
+export const getTicketReplyStatusTransitions = (
+  currentStatus: string | null | undefined,
+): TicketReplyStatusTransition[] => {
+  const normalized = normalizeTicketWorkflowStatus(currentStatus);
+  return REPLY_TRANSITION_STATUSES.filter((status) => status !== normalized).map(
+    (status) => ({
+      status,
+      label: `Reply & ${formatReplyStatusLabel(status)}`,
+    }),
+  );
+};
 
 export const ticketReplyStatusDotClass = (status: TicketWorkflowStatus) => {
   switch (status) {
@@ -38,38 +55,5 @@ export const ticketReplyStatusDotClass = (status: TicketWorkflowStatus) => {
       return "bg-muted-foreground/70";
     default:
       return "bg-muted-foreground/70";
-  }
-};
-
-export const getTicketReplyStatusActions = (
-  currentStatus: string | null | undefined,
-): TicketReplyStatusAction[] => {
-  switch (currentStatus) {
-    case "new":
-      return [
-        action("open", true),
-        action("waiting", false),
-        action("resolved", false),
-      ];
-    case "open":
-      return [
-        action("open", true),
-        action("waiting", false),
-        action("resolved", false),
-      ];
-    case "waiting":
-      return [
-        action("waiting", true),
-        action("open", false),
-        action("resolved", false),
-      ];
-    case "resolved":
-      return [action("open", true), action("resolved", false)];
-    default:
-      return [
-        action("open", true),
-        action("waiting", false),
-        action("resolved", false),
-      ];
   }
 };
