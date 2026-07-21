@@ -4,8 +4,9 @@ Long-lived worker for CRM Mail accounts with `provider = imap`.
 
 ## What it does
 
-- `POST /sync` — `{ account_id, since?, max_results? }` — IMAP fetch into `mail_threads` / `mail_messages`
+- `POST /sync` — `{ account_id, since?, max_results? }` — IMAP fetch into `mail_threads` / `mail_messages`, uploads file attachments to Storage (`mail-attachments` bucket)
 - `POST /send` — `{ account_id, to, cc?, bcc?, subject, body_html }` — SMTP send
+- `POST /actions` — `{ account_id, thread_id, action }` — trash, archive, spam, read/star, delete forever (used by Edge `mail_actions`)
 - `GET /health` — liveness
 
 ## Auth
@@ -36,4 +37,4 @@ supabase secrets set MAIL_IMAP_WORKER_URL=https://your-worker.example \
   MAIL_IMAP_WORKER_SECRET=... --project-ref <ref>
 ```
 
-Redeploy `mail_sync` / `mail_send` after setting secrets.
+Redeploy `mail_sync` / `mail_send` / `mail_actions` after setting secrets. Restart or redeploy this worker after pulling changes (sync uploads attachments; `/actions` for folder moves).

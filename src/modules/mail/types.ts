@@ -67,6 +67,21 @@ export type MailMessage = {
   is_read: boolean;
   has_attachments: boolean;
   send_status: "pending" | "sent" | "failed" | null;
+  in_reply_to?: string | null;
+  raw_headers?: Record<string, unknown> | null;
+};
+
+export type MailDraft = {
+  id: number;
+  account_id: number;
+  org_id: number;
+  thread_id: number | null;
+  to_emails: string[];
+  cc_emails: string[];
+  bcc_emails: string[];
+  subject: string | null;
+  body_html: string | null;
+  updated_at: string;
 };
 
 export type MailLabel = {

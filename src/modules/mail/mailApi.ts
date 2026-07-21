@@ -79,6 +79,55 @@ export async function syncMailAccount(
   return json;
 }
 
+export type MailThreadAction =
+  | "trash"
+  | "untrash"
+  | "archive"
+  | "unarchive"
+  | "star"
+  | "unstar"
+  | "mark_read"
+  | "mark_unread"
+  | "spam"
+  | "not_spam"
+  | "delete_forever";
+
+export async function applyMailThreadAction(
+  threadIds: number | number[],
+  action: MailThreadAction,
+) {
+  const headers = await authHeaders();
+  const ids = Array.isArray(threadIds) ? threadIds : [threadIds];
+  const res = await fetch(`${functionsBase()}/mail_actions`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ action, thread_ids: ids }),
+  });
+  const raw = await res.text();
+  let json: {
+    ok?: boolean;
+    error?: string;
+    results?: Array<{ thread_id: number; ok: boolean; error?: string }>;
+  } = {};
+  try {
+    json = raw ? (JSON.parse(raw) as typeof json) : {};
+  } catch {
+    /* ignore */
+  }
+  if (!res.ok && res.status !== 207) {
+    throw new Error(
+      json.error ||
+        (raw.trim() && raw.length < 500 ? raw.trim() : null) ||
+        `Action failed (${res.status})`,
+    );
+  }
+  const failed = json.results?.filter((r) => !r.ok) ?? [];
+  if (failed.length > 0) {
+    throw new Error(failed[0]?.error ?? "Action failed");
+  }
+  return json;
+}
+
 export async function sendMailMessage(payload: {
   account_id: number;
   to: string[];
@@ -89,6 +138,7 @@ export async function sendMailMessage(payload: {
   thread_id?: number;
   in_reply_to?: string;
   save_draft?: boolean;
+  draft_id?: number;
   attachments?: Array<{
     filename: string;
     content_type: string;
@@ -102,9 +152,21 @@ export async function sendMailMessage(payload: {
     headers,
     body: JSON.stringify(payload),
   });
-  const json = (await res.json()) as { ok?: boolean; error?: string };
+  const json = (await res.json()) as {
+    ok?: boolean;
+    error?: string;
+    draft_id?: number;
+  };
   if (!res.ok) throw new Error(json.error ?? "Send failed");
   return json;
+}
+
+export async function deleteMailDraft(draftId: number) {
+  const { error } = await supabase
+    .from("mail_drafts")
+    .delete()
+    .eq("id", draftId);
+  if (error) throw new Error(error.message);
 }
 
 export async function testAndSaveImapAccount(payload: {

@@ -440,5 +440,8 @@ verify_jwt = false
 [functions.mail_send]
 verify_jwt = false
 
+[functions.mail_actions]
+verify_jwt = false
+
 [functions.mail_imap]
 verify_jwt = false

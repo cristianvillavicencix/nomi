@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PencilSimple } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,7 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNotify } from "ra-core";
 import { MailEmptyState } from "./MailEmptyState";
 import { MailThreadList } from "./MailThreadList";
-import { MailMessagePane } from "./MailMessagePane";
+import { MailMessagePane, type MailMessagePaneActions } from "./MailMessagePane";
 import {
   MailComposeDialog,
   type MailComposeMode,
@@ -28,8 +28,21 @@ import {
 import { MailDetailToolbar } from "./MailToolbar";
 import { MailThreadFilters } from "./MailThreadFilters";
 import type { MailListFilter } from "./mailListFilters";
-import { syncMailAccount } from "./mailApi";
-import { useMailThreads, useMailMessages } from "./useMailThreads";
+import { syncMailAccount, applyMailThreadAction, type MailThreadAction } from "./mailApi";
+import {
+  readMailAccountFilter,
+  readMailFolder,
+  writeMailAccountFilter,
+  writeMailFolder,
+} from "./mailPreferences";
+import type { MailFolderId } from "./MailFolderRail";
+import { mailRfcMessageId } from "./mailHeaders";
+import {
+  useMailThreads,
+  useMailMessages,
+  isMailDraftListId,
+  mailDraftRecordIdFromListId,
+} from "./useMailThreads";
 import { useMailLabels } from "./useMailLabels";
 import type { MailSyncRange } from "./mailSyncRange";
 import { incrementalMailSyncRange } from "./mailSyncRange";
@@ -80,8 +93,10 @@ function buildReplyQuoteHtml(last: MailMessage | undefined, snippet: string | nu
 export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const notify = useNotify();
   const queryClient = useQueryClient();
-  const [accountFilter, setAccountFilter] = useState<number | "all">("all");
-  const [folder, setFolder] = useState<MailFolderId>("inbox");
+  const [accountFilter, setAccountFilter] = useState<number | "all">(() =>
+    readMailAccountFilter(),
+  );
+  const [folder, setFolder] = useState<MailFolderId>(() => readMailFolder());
   const [listFilter, setListFilter] = useState<MailListFilter>("all");
   const [labelId, setLabelId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -93,6 +108,10 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const [composeCc, setComposeCc] = useState("");
   const [composeSubject, setComposeSubject] = useState("");
   const [composeBody, setComposeBody] = useState("");
+  const [composeInReplyTo, setComposeInReplyTo] = useState<string | undefined>();
+  const [composeDraftId, setComposeDraftId] = useState<number | null>(null);
+  const [composeAccountId, setComposeAccountId] = useState<number | undefined>();
+  const [composeThreadId, setComposeThreadId] = useState<number | undefined>();
   const [syncTarget, setSyncTarget] = useState<MailAccount | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [mobileShowThread, setMobileShowThread] = useState(false);
@@ -105,12 +124,157 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     labelId,
   });
   const { data: labels = [] } = useMailLabels(accountFilter);
-  const { data: selectedMessages = [] } = useMailMessages(selected?.id ?? null);
+
+  useEffect(() => {
+    writeMailFolder(folder);
+  }, [folder]);
+
+  useEffect(() => {
+    writeMailAccountFilter(accountFilter);
+  }, [accountFilter]);
+
+  useEffect(() => {
+    if (accountFilter === "all") return;
+    if (!accounts.some((a) => a.id === accountFilter)) {
+      setAccountFilter("all");
+    }
+  }, [accounts, accountFilter]);
+
+  const { data: selectedMessages = [] } = useMailMessages(
+    selected && !isMailDraftListId(selected.id) ? selected.id : null,
+  );
+
+  const leavesFolderForAction = (
+    action: MailThreadAction,
+    _thread: MailThread,
+  ) => {
+    if (action === "delete_forever") return true;
+    if (action === "trash" && folder !== "trash") return true;
+    if (action === "untrash" && folder === "trash") return true;
+    if (action === "archive" && folder === "inbox" && listFilter !== "archived") {
+      return true;
+    }
+    if (action === "unarchive" && listFilter === "archived") return true;
+    if (action === "spam" && folder === "inbox") return true;
+    if (action === "not_spam" && folder === "spam") return true;
+    if (action === "unstar" && listFilter === "starred") return true;
+    if (
+      action === "mark_read" &&
+      listFilter === "unread"
+    ) {
+      return true;
+    }
+    return false;
+  };
+
+  const runThreadAction = async (
+    thread: MailThread,
+    action: MailThreadAction,
+    options?: { skipConfirm?: boolean },
+  ) => {
+    if (isMailDraftListId(thread.id)) return;
+    if (
+      action === "delete_forever" &&
+      !options?.skipConfirm &&
+      !window.confirm(
+        "Delete this conversation forever? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    try {
+      await applyMailThreadAction(thread.id, action);
+      if (selected?.id === thread.id && leavesFolderForAction(action, thread)) {
+        selectNeighborAfterRemoval(thread.id);
+      } else if (selected?.id === thread.id && action !== "delete_forever") {
+        const patch: Partial<MailThread> = {};
+        if (action === "star") patch.is_starred = true;
+        if (action === "unstar") patch.is_starred = false;
+        if (action === "mark_read") patch.is_unread = false;
+        if (action === "mark_unread") patch.is_unread = true;
+        if (action === "archive") patch.is_archived = true;
+        if (action === "unarchive") patch.is_archived = false;
+        if (action === "trash") patch.is_trashed = true;
+        if (action === "untrash") patch.is_trashed = false;
+        if (action === "spam") patch.is_spam = true;
+        if (action === "not_spam") patch.is_spam = false;
+        setSelected({ ...thread, ...patch });
+      }
+      invalidate();
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Action failed", { type: "error" });
+    }
+  };
+
+  const runBulkAction = async (action: MailThreadAction) => {
+    const ids = [...selectedIds].filter((id) => !isMailDraftListId(id));
+    if (ids.length === 0 && selected && !isMailDraftListId(selected.id)) {
+      ids.push(selected.id);
+    }
+    if (ids.length === 0) return;
+    if (
+      action === "delete_forever" &&
+      !window.confirm(
+        `Delete ${ids.length} conversation${ids.length === 1 ? "" : "s"} forever? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await applyMailThreadAction(ids, action);
+      setSelectedIds(new Set());
+      if (selected && ids.includes(selected.id)) {
+        if (leavesFolderForAction(action, selected)) {
+          selectNeighborAfterRemoval(ids);
+        }
+      }
+      invalidate();
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Action failed", { type: "error" });
+    }
+  };
+
+  const openDraftFromList = async (thread: MailThread) => {
+    const draftId = mailDraftRecordIdFromListId(thread.id);
+    const { data, error } = await supabase
+      .from("mail_drafts")
+      .select(
+        "id, account_id, thread_id, to_emails, cc_emails, bcc_emails, subject, body_html",
+      )
+      .eq("id", draftId)
+      .maybeSingle();
+    if (error || !data) {
+      notify(error?.message ?? "Draft not found", { type: "error" });
+      return;
+    }
+    const row = data as {
+      account_id: number;
+      thread_id: number | null;
+      to_emails: string[];
+      cc_emails: string[];
+      bcc_emails: string[];
+      subject: string | null;
+      body_html: string | null;
+    };
+    setSelected(thread);
+    setMobileShowThread(true);
+    setComposeMode("new");
+    setComposeDraftId(draftId);
+    setComposeAccountId(row.account_id);
+    setComposeThreadId(row.thread_id ?? undefined);
+    setComposeTo(row.to_emails.join(", "));
+    setComposeCc(row.cc_emails.join(", "));
+    setComposeSubject(row.subject ?? "");
+    setComposeBody(row.body_html ?? "<p><br></p>");
+    setComposeInReplyTo(undefined);
+    setComposeOpen(true);
+  };
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["mail_threads"] });
     void queryClient.invalidateQueries({ queryKey: ["mail_unread_count"] });
     void queryClient.invalidateQueries({ queryKey: ["mail_messages"] });
+    void queryClient.invalidateQueries({ queryKey: ["mail_attachments"] });
   };
 
   /** After removing the open thread from the current folder, open the next (or previous) in the list. */
@@ -146,99 +310,28 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     setSelected(neighbor);
     setMobileShowThread(Boolean(neighbor));
     if (neighbor?.is_unread) {
-      void updateThreadQuiet(neighbor, { is_unread: false });
+      void runThreadAction(neighbor, "mark_read");
     }
   };
 
-  const updateThreadQuiet = async (
-    thread: MailThread,
-    patch: Partial<MailThread>,
-  ) => {
-    const { error } = await supabase
-      .from("mail_threads")
-      .update(patch)
-      .eq("id", thread.id);
-    if (error) return;
-    if (patch.is_unread === false) {
-      await supabase
-        .from("mail_messages")
-        .update({ is_read: true })
-        .eq("thread_id", thread.id);
-    }
-    invalidate();
-  };
-
-  const updateThread = async (
-    thread: MailThread,
-    patch: Partial<MailThread>,
-  ) => {
-    const leavesFolder =
-      patch.is_trashed === true ||
-      patch.is_archived === true ||
-      patch.is_spam === true ||
-      (listFilter === "unread" && patch.is_unread === false) ||
-      (listFilter === "starred" && patch.is_starred === false) ||
-      (folder === "draft" && patch.is_draft === false) ||
-      (folder === "trash" && patch.is_trashed === false) ||
-      (folder === "spam" && patch.is_spam === false);
-
-    const { error } = await supabase
-      .from("mail_threads")
-      .update(patch)
-      .eq("id", thread.id);
-    if (error) {
-      notify(error.message, { type: "error" });
-      return;
-    }
-    if (patch.is_unread === false) {
-      await supabase
-        .from("mail_messages")
-        .update({ is_read: true })
-        .eq("thread_id", thread.id);
-    }
-    if (selected?.id === thread.id) {
-      if (leavesFolder) {
-        selectNeighborAfterRemoval(thread.id);
-      } else {
-        setSelected({ ...thread, ...patch });
-      }
-    }
-    invalidate();
-  };
-
-  const bulkUpdate = async (patch: Partial<MailThread>) => {
-    const ids = [...selectedIds];
-    if (ids.length === 0 && selected) ids.push(selected.id);
-    if (ids.length === 0) return;
-    const { error } = await supabase
-      .from("mail_threads")
-      .update(patch)
-      .in("id", ids);
-    if (error) {
-      notify(error.message, { type: "error" });
-      return;
-    }
-    setSelectedIds(new Set());
-    if (selected && ids.includes(selected.id)) {
-      if (patch.is_trashed || patch.is_archived) {
-        selectNeighborAfterRemoval(ids);
-      } else {
-        setSelected({ ...selected, ...patch });
-      }
-    }
-    invalidate();
-  };
-
-  const openCompose = (mode: MailComposeMode) => {
+  const openCompose = (mode: MailComposeMode, contextThread?: MailThread) => {
+    const thread = contextThread ?? selected;
     setComposeMode(mode);
+    setComposeInReplyTo(undefined);
+    setComposeDraftId(null);
+    setComposeAccountId(undefined);
+    setComposeThreadId(undefined);
     if (mode === "new") {
       setComposeTo("");
       setComposeCc("");
       setComposeSubject("");
       setComposeBody("");
-    } else if (selected) {
-      const last = selectedMessages[selectedMessages.length - 1];
-      const participants = selected.participants ?? [];
+    } else if (thread && !isMailDraftListId(thread.id)) {
+      const last =
+        thread.id === selected?.id
+          ? selectedMessages[selectedMessages.length - 1]
+          : undefined;
+      const participants = thread.participants ?? [];
       const fromEmail = last?.from_email || participants[0]?.email || "";
       const others = [
         ...(last?.to_emails ?? []),
@@ -250,20 +343,26 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         setComposeTo(fromEmail);
         setComposeCc("");
         setComposeSubject("");
-        setComposeBody(buildReplyQuoteHtml(last, selected.snippet));
+        setComposeBody(buildReplyQuoteHtml(last, thread.snippet));
+        setComposeInReplyTo(mailRfcMessageId(last));
       } else if (mode === "reply_all") {
         setComposeTo(fromEmail);
         setComposeCc([...new Set(others)].join(", "));
         setComposeSubject("");
-        setComposeBody(buildReplyQuoteHtml(last, selected.snippet));
+        setComposeBody(buildReplyQuoteHtml(last, thread.snippet));
+        setComposeInReplyTo(mailRfcMessageId(last));
       } else if (mode === "forward") {
         setComposeTo("");
         setComposeCc("");
         setComposeSubject("");
-        const quoted = messageBodyHtml(last, selected.snippet);
+        const quoted = messageBodyHtml(last, thread.snippet);
         setComposeBody(
           `<p><br></p><p>---------- Forwarded message ----------</p>${quoted}`,
         );
+      }
+      if (contextThread) {
+        setSelected(contextThread);
+        setMobileShowThread(true);
       }
     }
     setComposeOpen(true);
@@ -326,6 +425,95 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     return <MailEmptyState />;
   }
 
+  const listOrganizeEnabled = folder !== "draft";
+
+  const handleListStar = (thread: MailThread) => {
+    void runThreadAction(
+      thread,
+      thread.is_starred ? "unstar" : "star",
+    );
+  };
+
+  const handleListArchive = (thread: MailThread) => {
+    if (folder === "spam" || folder === "trash") return;
+    void runThreadAction(
+      thread,
+      listFilter === "archived" || thread.is_archived ? "unarchive" : "archive",
+    );
+  };
+
+  const handleListRestore = (thread: MailThread) => {
+    void runThreadAction(thread, "untrash");
+  };
+
+  const handleListTrash = (thread: MailThread) => {
+    if (folder === "trash") {
+      void runThreadAction(thread, "delete_forever");
+      return;
+    }
+    if (folder === "spam") {
+      void runThreadAction(thread, "not_spam");
+      return;
+    }
+    void runThreadAction(thread, "trash");
+  };
+
+  const handleListSpam = (thread: MailThread) => {
+    if (folder === "spam") {
+      void runThreadAction(thread, "not_spam");
+      return;
+    }
+    void runThreadAction(thread, "spam");
+  };
+
+  const listTrashMode =
+    folder === "trash"
+      ? "delete_forever"
+      : folder === "spam"
+        ? "not_spam"
+        : "trash";
+
+  const showReportSpam = listOrganizeEnabled && folder === "inbox";
+
+  const buildMessagePaneActions = (
+    t: MailThread,
+  ): MailMessagePaneActions | undefined => {
+    if (isMailDraftListId(t.id)) return undefined;
+    const base: MailMessagePaneActions = {
+      isStarred: t.is_starred,
+      onToggleStar: () => handleListStar(t),
+    };
+    if (folder === "trash") {
+      return {
+        ...base,
+        onRestore: () => handleListRestore(t),
+        onDeleteForever: () => handleListTrash(t),
+      };
+    }
+    if (folder === "spam") {
+      return {
+        ...base,
+        onNotSpam: () => handleListSpam(t),
+      };
+    }
+    if (folder === "inbox" && listFilter === "archived") {
+      return {
+        ...base,
+        onUnarchive: () => handleListArchive(t),
+        onMoveToTrash: () => handleListTrash(t),
+      };
+    }
+    if (folder === "inbox") {
+      return {
+        ...base,
+        onArchive: () => handleListArchive(t),
+        onMoveToTrash: () => handleListTrash(t),
+        onReportSpam: () => handleListSpam(t),
+      };
+    }
+    return base;
+  };
+
   return (
     <div className="flex h-full min-h-0 overflow-hidden rounded-lg border bg-background">
       <MailFolderRail
@@ -333,6 +521,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         folder={folder}
         onFolderChange={(f) => {
           setFolder(f);
+          writeMailFolder(f);
           setListFilter("all");
           setSelected(null);
           setMobileShowThread(false);
@@ -341,6 +530,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         accountFilter={accountFilter}
         onAccountFilterChange={(id) => {
           setAccountFilter(id);
+          writeMailAccountFilter(id);
           setSelected(null);
           setLabelId(null);
         }}
@@ -364,7 +554,9 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
           <Select
             value={folder}
             onValueChange={(v) => {
-              setFolder(v as MailFolderId);
+              const next = v as MailFolderId;
+              setFolder(next);
+              writeMailFolder(next);
               setListFilter("all");
               setLabelId(null);
               setSelected(null);
@@ -380,6 +572,32 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
                   {f.label}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={accountFilter === "all" ? "all" : String(accountFilter)}
+            onValueChange={(v) => {
+              const next =
+                v === "all" ? ("all" as const) : Number(v);
+              setAccountFilter(next);
+              writeMailAccountFilter(next);
+              setSelected(null);
+              setLabelId(null);
+              setMobileShowThread(false);
+            }}
+          >
+            <SelectTrigger className="h-8 min-w-0 flex-1">
+              <SelectValue placeholder="Mailbox" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All mailboxes</SelectItem>
+              {accounts
+                .filter((a) => a.status === "connected")
+                .map((account) => (
+                  <SelectItem key={account.id} value={String(account.id)}>
+                    {account.display_name?.trim() || account.email}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>
@@ -416,34 +634,82 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
                 : `${threads.length} conversation${threads.length === 1 ? "" : "s"}`}
             </span>
             {selectedIds.size > 0 ? (
-              <div className="flex gap-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => void bulkUpdate({ is_starred: true })}
-                >
-                  Star
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => void bulkUpdate({ is_archived: true })}
-                >
-                  Archive
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => void bulkUpdate({ is_trashed: true })}
-                >
-                  Trash
-                </Button>
+              <div className="flex flex-wrap justify-end gap-1">
+                {folder !== "trash" && folder !== "spam" ? (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => void runBulkAction("star")}
+                    >
+                      Star
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => void runBulkAction("archive")}
+                    >
+                      Archive
+                    </Button>
+                    {folder === "inbox" ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => void runBulkAction("spam")}
+                      >
+                        Spam
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => void runBulkAction("trash")}
+                    >
+                      Trash
+                    </Button>
+                  </>
+                ) : null}
+                {folder === "trash" ? (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => void runBulkAction("untrash")}
+                    >
+                      Restore
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => void runBulkAction("delete_forever")}
+                    >
+                      Delete forever
+                    </Button>
+                  </>
+                ) : null}
+                {folder === "spam" ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => void runBulkAction("not_spam")}
+                  >
+                    Not spam
+                  </Button>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -456,6 +722,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
             threads={threads}
             selectedId={selected?.id ?? null}
             selectedIds={selectedIds}
+            showOrganizeActions={listOrganizeEnabled}
             onToggleSelect={(id, on) => {
               setSelectedIds((prev) => {
                 const next = new Set(prev);
@@ -465,12 +732,40 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
               });
             }}
             onSelect={(thread) => {
+              if (isMailDraftListId(thread.id)) {
+                void openDraftFromList(thread);
+                return;
+              }
               setSelected(thread);
               setMobileShowThread(true);
               if (thread.is_unread) {
-                void updateThread(thread, { is_unread: false });
+                void runThreadAction(thread, "mark_read");
               }
             }}
+            onStar={listOrganizeEnabled ? handleListStar : undefined}
+            onArchive={
+              listOrganizeEnabled && folder !== "spam" && folder !== "trash"
+                ? handleListArchive
+                : undefined
+            }
+            onRestore={
+              listOrganizeEnabled && folder === "trash"
+                ? handleListRestore
+                : undefined
+            }
+            onTrash={listOrganizeEnabled ? handleListTrash : undefined}
+            onSpam={showReportSpam ? handleListSpam : undefined}
+            trashMode={listTrashMode}
+            onReply={
+              listOrganizeEnabled
+                ? (t) => openCompose("reply", t)
+                : undefined
+            }
+            onForward={
+              listOrganizeEnabled
+                ? (t) => openCompose("forward", t)
+                : undefined
+            }
           />
           </div>
         )}
@@ -483,22 +778,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         )}
       >
         <MailDetailToolbar
-          thread={selected}
           syncing={syncing}
-          onReply={() => openCompose("reply")}
-          onForward={() => openCompose("forward")}
-          onToggleStar={() => {
-            if (!selected) return;
-            void updateThread(selected, { is_starred: !selected.is_starred });
-          }}
-          onArchive={() => {
-            if (!selected) return;
-            void updateThread(selected, { is_archived: true });
-          }}
-          onTrash={() => {
-            if (!selected) return;
-            void updateThread(selected, { is_trashed: true });
-          }}
           onSync={() => {
             void runQuickSync();
           }}
@@ -513,7 +793,12 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
 
         <div className="min-h-0 flex-1">
           <MailMessagePane
-            thread={selected}
+            thread={
+              selected && !isMailDraftListId(selected.id) ? selected : null
+            }
+            threadActions={
+              selected ? buildMessagePaneActions(selected) : undefined
+            }
             onBack={() => setMobileShowThread(false)}
             onReply={() => openCompose("reply")}
             onReplyAll={() => openCompose("reply_all")}
@@ -535,7 +820,14 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
 
       <MailComposeDialog
         open={composeOpen}
-        onOpenChange={setComposeOpen}
+        onOpenChange={(open) => {
+          setComposeOpen(open);
+          if (!open) {
+            setComposeDraftId(null);
+            setComposeAccountId(undefined);
+            setComposeThreadId(undefined);
+          }
+        }}
         accounts={accounts}
         replyTo={composeMode === "new" ? null : selected}
         mode={composeMode}
@@ -543,6 +835,10 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         initialCc={composeCc}
         initialSubject={composeSubject}
         initialBody={composeBody}
+        initialInReplyTo={composeInReplyTo}
+        initialDraftId={composeDraftId}
+        initialAccountId={composeAccountId}
+        initialThreadId={composeThreadId}
       />
 
       <MailSyncRangeDialog

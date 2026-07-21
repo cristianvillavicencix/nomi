@@ -10,6 +10,10 @@ const supabaseUrl = process.env.SUPABASE_URL || "";
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const SMTP_CONNECT_MS = 25_000;
+const MAIL_ATTACHMENTS_BUCKET = "mail-attachments";
+const MAX_MAIL_ATTACHMENTS = 5;
+const MAX_MAIL_FILE_BYTES = 4 * 1024 * 1024;
+const MAX_MAIL_TOTAL_BYTES = 8 * 1024 * 1024;
 const SENT_FOLDER_CANDIDATES = [
   "Sent",
   "Sent Items",
@@ -91,6 +95,73 @@ async function createWorkingTransporter({ host, preferredPort, user, pass }) {
   );
 }
 
+function sanitizeAttachmentFilename(name) {
+  return (
+    String(name || "attachment")
+      .replace(/[\r\n"\\]/g, "_")
+      .replace(/\//g, "_")
+      .slice(0, 180) || "attachment"
+  );
+}
+
+async function syncImapMessageAttachments(sb, account, messageId, attachments) {
+  if (!messageId || !attachments?.length) return;
+
+  const { data: existingRows } = await sb
+    .from("mail_attachments")
+    .select("id")
+    .eq("message_id", messageId)
+    .not("storage_path", "is", null)
+    .limit(1);
+  if (existingRows?.length) return;
+
+  let totalBytes = 0;
+  let count = 0;
+  for (const att of attachments) {
+    if (count >= MAX_MAIL_ATTACHMENTS) break;
+    const content = att.content;
+    if (!content?.length) continue;
+    if (content.length > MAX_MAIL_FILE_BYTES) continue;
+    if (totalBytes + content.length > MAX_MAIL_TOTAL_BYTES) break;
+
+    const filename = sanitizeAttachmentFilename(
+      att.filename || `attachment-${count + 1}`,
+    );
+    const providerId = String(
+      att.contentId || att.checksum || att.cid || `imap-${count}`,
+    ).replace(/[<>]/g, "");
+    const storagePath = `${account.org_id}/${account.id}/${messageId}/${providerId}-${filename}`;
+
+    const { error: uploadError } = await sb.storage
+      .from(MAIL_ATTACHMENTS_BUCKET)
+      .upload(storagePath, content, {
+        contentType: att.contentType || "application/octet-stream",
+        upsert: true,
+      });
+    if (uploadError) {
+      console.error("imap_attachment_upload_failed", uploadError.message);
+      continue;
+    }
+
+    const { error: insertError } = await sb.from("mail_attachments").insert({
+      message_id: messageId,
+      account_id: account.id,
+      org_id: account.org_id,
+      provider_attachment_id: providerId,
+      filename,
+      mime_type: att.contentType || null,
+      size_bytes: content.length,
+      storage_path: storagePath,
+    });
+    if (insertError) {
+      console.error("imap_attachment_row_failed", insertError.message);
+      continue;
+    }
+    totalBytes += content.length;
+    count += 1;
+  }
+}
+
 async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
   const fromEmail = (parsed.from?.value?.[0]?.address || "").toLowerCase() || null;
   const fromName = parsed.from?.value?.[0]?.name || null;
@@ -157,6 +228,13 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
     .eq("provider_message_id", providerMessageId)
     .maybeSingle();
 
+  const attachmentList = (parsed.attachments || []).filter(
+    (att) => att.content?.length && att.filename,
+  );
+  const hasAttachments = attachmentList.length > 0;
+
+  let messageId = existingMsg?.id;
+
   if (!existingMsg) {
     const rawHtml = parsed.html || null;
     const bodyHtml = rawHtml
@@ -165,28 +243,46 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
           .replace(/\bsrc\s*=\s*(["'])cid:[^"']+\1/gi, "src=$1$1")
           .replace(/url\((["']?)cid:[^)"']+\1\)/gi, "none")
       : null;
-    await sb.from("mail_messages").insert({
-      thread_id: threadId,
-      account_id: account.id,
-      org_id: account.org_id,
-      provider_message_id: providerMessageId,
-      direction,
-      from_email: fromEmail,
-      from_name: fromName,
-      to_emails: toEmails,
-      cc_emails: ccEmails,
-      subject,
-      body_html: bodyHtml,
-      body_text: parsed.text || null,
-      sent_at: sentAt,
-      is_read: direction === "outbound",
-      has_attachments: (parsed.attachments?.length || 0) > 0,
-      send_status: direction === "outbound" ? "sent" : null,
-    });
+    const { data: insertedMsg, error: msgError } = await sb
+      .from("mail_messages")
+      .insert({
+        thread_id: threadId,
+        account_id: account.id,
+        org_id: account.org_id,
+        provider_message_id: providerMessageId,
+        direction,
+        from_email: fromEmail,
+        from_name: fromName,
+        to_emails: toEmails,
+        cc_emails: ccEmails,
+        subject,
+        body_html: bodyHtml,
+        body_text: parsed.text || null,
+        sent_at: sentAt,
+        is_read: direction === "outbound",
+        has_attachments: hasAttachments,
+        send_status: direction === "outbound" ? "sent" : null,
+        in_reply_to: parsed.inReplyTo || null,
+        raw_headers: {
+          "Message-ID": parsed.messageId || providerMessageId,
+          imap_uid: rawUid,
+          imap_mailbox: mailbox,
+        },
+      })
+      .select("id")
+      .single();
+    if (msgError) throw msgError;
+    messageId = insertedMsg.id;
     await sb
       .from("mail_threads")
       .update({ message_count: (existingThread?.message_count ?? 0) + 1 })
       .eq("id", threadId);
+  } else {
+    messageId = existingMsg.id;
+  }
+
+  if (hasAttachments && messageId) {
+    await syncImapMessageAttachments(sb, account, messageId, attachmentList);
   }
 }
 
@@ -361,6 +457,242 @@ async function sendAccount(body) {
   return { ok: true, smtp_port: smtpPort };
 }
 
+const TRASH_FOLDER_CANDIDATES = [
+  "Trash",
+  "INBOX.Trash",
+  "[Gmail]/Trash",
+  "Deleted Items",
+  "Deleted Messages",
+  "Bin",
+];
+const JUNK_FOLDER_CANDIDATES = [
+  "Junk",
+  "Spam",
+  "INBOX.Spam",
+  "[Gmail]/Spam",
+  "Junk E-mail",
+  "Bulk Mail",
+];
+const ARCHIVE_FOLDER_CANDIDATES = [
+  "Archive",
+  "Archives",
+  "INBOX.Archive",
+  "[Gmail]/All Mail",
+];
+
+async function listAllMailboxes(client) {
+  const boxes = await client.list();
+  const flat = [];
+  const walk = (list) => {
+    for (const box of list || []) {
+      flat.push(box);
+      if (box.folders?.length) walk(box.folders);
+    }
+  };
+  walk(boxes);
+  return flat;
+}
+
+async function resolveMailboxPath(client, candidates, fuzzy) {
+  const flat = await listAllMailboxes(client);
+  for (const name of candidates) {
+    const hit = flat.find(
+      (b) => b.path === name || b.name === name || b.path?.endsWith(name),
+    );
+    if (hit?.path) return hit.path;
+  }
+  if (fuzzy) {
+    const hit = flat.find(fuzzy);
+    if (hit?.path) return hit.path;
+  }
+  return null;
+}
+
+async function imapConnectAccount(account) {
+  const password = account.token_payload?.password;
+  const user = account.imap_username || account.email;
+  if (!password || !account.imap_host) {
+    throw new Error("Missing IMAP credentials on account");
+  }
+  const client = new ImapFlow({
+    host: account.imap_host,
+    port: account.imap_port || 993,
+    secure: true,
+    auth: { user, pass: password },
+    logger: false,
+  });
+  await client.connect();
+  return client;
+}
+
+async function withMailboxLock(client, mailbox, fn) {
+  let lock;
+  try {
+    lock = await client.getMailboxLock(mailbox);
+    return await fn();
+  } finally {
+    lock?.release();
+  }
+}
+
+async function findUidByMessageId(client, mailboxes, messageId) {
+  if (!messageId) return null;
+  const needle = String(messageId).replace(/^<|>$/g, "");
+  for (const mailbox of mailboxes) {
+    try {
+      const hit = await withMailboxLock(client, mailbox, async () => {
+        const uids = await client.search(
+          { header: { "message-id": needle } },
+          { uid: true },
+        );
+        const list = Array.isArray(uids) ? uids : [];
+        return list.length ? { mailbox, uid: list[list.length - 1] } : null;
+      });
+      if (hit) return hit;
+    } catch {
+      /* try next mailbox */
+    }
+  }
+  return null;
+}
+
+async function applyMessageImapAction(client, hit, action) {
+  const { mailbox, uid } = hit;
+  return withMailboxLock(client, mailbox, async () => {
+    switch (action) {
+      case "mark_read":
+        await client.messageFlagsAdd(uid, ["\\Seen"], { uid: true });
+        return;
+      case "mark_unread":
+        await client.messageFlagsRemove(uid, ["\\Seen"], { uid: true });
+        return;
+      case "star":
+        await client.messageFlagsAdd(uid, ["\\Flagged"], { uid: true });
+        return;
+      case "unstar":
+        await client.messageFlagsRemove(uid, ["\\Flagged"], { uid: true });
+        return;
+      case "delete_forever":
+        await client.messageDelete(uid, { uid: true });
+        return;
+      default:
+        throw new Error(`Action ${action} requires folder move`);
+    }
+  });
+}
+
+async function moveMessageImapAction(client, fromMailbox, uid, destPath) {
+  if (!destPath) throw new Error("Destination mailbox not found on server");
+  return withMailboxLock(client, fromMailbox, async () => {
+    await client.messageMove(uid, destPath, { uid: true });
+  });
+}
+
+async function threadActionAccount(body) {
+  const sb = admin();
+  const accountId = Number(body.account_id);
+  const threadId = Number(body.thread_id);
+  const action = String(body.action || "");
+  const allowed = [
+    "trash",
+    "untrash",
+    "archive",
+    "unarchive",
+    "star",
+    "unstar",
+    "mark_read",
+    "mark_unread",
+    "spam",
+    "not_spam",
+    "delete_forever",
+  ];
+  if (!allowed.includes(action)) throw new Error("Invalid action");
+
+  const { data: account, error: accErr } = await sb
+    .from("mail_accounts")
+    .select("*")
+    .eq("id", accountId)
+    .single();
+  if (accErr || !account) throw new Error("Account not found");
+  if (account.provider !== "imap") throw new Error("Not an IMAP account");
+
+  const { data: messages, error: msgErr } = await sb
+    .from("mail_messages")
+    .select("id, provider_message_id, raw_headers")
+    .eq("thread_id", threadId);
+  if (msgErr) throw msgErr;
+  if (!messages?.length) throw new Error("No messages on thread");
+
+  const client = await imapConnectAccount(account);
+  try {
+    const trashPath = await resolveMailboxPath(
+      client,
+      TRASH_FOLDER_CANDIDATES,
+      (b) => /trash|deleted|bin/i.test(b.path || b.name || ""),
+    );
+    const junkPath = await resolveMailboxPath(
+      client,
+      JUNK_FOLDER_CANDIDATES,
+      (b) => /junk|spam/i.test(b.path || b.name || ""),
+    );
+    const archivePath = await resolveMailboxPath(
+      client,
+      ARCHIVE_FOLDER_CANDIDATES,
+      (b) => /archive|all mail/i.test(b.path || b.name || ""),
+    );
+    const searchBoxes = [
+      "INBOX",
+      trashPath,
+      junkPath,
+      archivePath,
+    ].filter(Boolean);
+
+    for (const row of messages) {
+      const headers = row.raw_headers || {};
+      let mailbox = headers.imap_mailbox || "INBOX";
+      let uid = headers.imap_uid;
+      if (!uid) {
+        const messageId =
+          headers["Message-ID"] || row.provider_message_id || null;
+        const found = await findUidByMessageId(client, searchBoxes, messageId);
+        if (!found) continue;
+        mailbox = found.mailbox;
+        uid = found.uid;
+      }
+
+      const hit = { mailbox, uid };
+
+      if (action === "trash" && trashPath) {
+        await moveMessageImapAction(client, mailbox, uid, trashPath);
+      } else if (action === "untrash") {
+        await moveMessageImapAction(client, mailbox, uid, "INBOX");
+      } else if (action === "spam" && junkPath) {
+        await moveMessageImapAction(client, mailbox, uid, junkPath);
+      } else if (action === "not_spam") {
+        await moveMessageImapAction(client, mailbox, uid, "INBOX");
+      } else if (action === "archive" && archivePath) {
+        await moveMessageImapAction(client, mailbox, uid, archivePath);
+      } else if (action === "unarchive") {
+        await moveMessageImapAction(client, mailbox, uid, "INBOX");
+      } else if (
+        action === "mark_read" ||
+        action === "mark_unread" ||
+        action === "star" ||
+        action === "unstar" ||
+        action === "delete_forever"
+      ) {
+        await applyMessageImapAction(client, hit, action);
+      } else {
+        throw new Error(`IMAP server does not support action: ${action}`);
+      }
+    }
+  } finally {
+    await client.logout().catch(() => {});
+  }
+
+  return { ok: true, account_id: accountId, thread_id: threadId, action };
+}
+
 const server = http.createServer(async (req, res) => {
   const send = (status, payload) => {
     res.writeHead(status, { "Content-Type": "application/json" });
@@ -381,6 +713,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "POST" && req.url === "/send") {
       const result = await sendAccount(body);
+      return send(200, result);
+    }
+    if (req.method === "POST" && req.url === "/actions") {
+      const result = await threadActionAccount(body);
       return send(200, result);
     }
     return send(404, { error: "Not found" });

@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { sendMailMessage } from "./mailApi";
+import { sendMailMessage, deleteMailDraft } from "./mailApi";
 import type { MailAccount, MailThread } from "./types";
 
 export type MailComposeMode = "new" | "reply" | "reply_all" | "forward";
@@ -238,6 +238,10 @@ export function MailComposeDialog({
   initialCc = "",
   initialSubject = "",
   initialBody = "",
+  initialInReplyTo,
+  initialDraftId = null,
+  initialAccountId,
+  initialThreadId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -248,6 +252,10 @@ export function MailComposeDialog({
   initialCc?: string;
   initialSubject?: string;
   initialBody?: string;
+  initialInReplyTo?: string;
+  initialDraftId?: number | null;
+  initialAccountId?: number;
+  initialThreadId?: number;
 }) {
   const notify = useNotify();
   const queryClient = useQueryClient();
@@ -264,6 +272,7 @@ export function MailComposeDialog({
   const [subject, setSubject] = useState("");
   const [attachments, setAttachments] = useState<ComposeAttachment[]>([]);
   const [pending, setPending] = useState(false);
+  const [editingDraftId, setEditingDraftId] = useState<number | null>(null);
   const [formatPos, setFormatPos] = useState<{
     top: number;
     left: number;
@@ -271,7 +280,13 @@ export function MailComposeDialog({
 
   useEffect(() => {
     if (!open) return;
-    setAccountId(String(replyTo?.account_id ?? sendable[0]?.id ?? ""));
+    setEditingDraftId(initialDraftId ?? null);
+    const preferredAccount =
+      initialAccountId ??
+      replyTo?.account_id ??
+      sendable[0]?.id ??
+      undefined;
+    setAccountId(preferredAccount != null ? String(preferredAccount) : "");
     setTo(parseEmails(initialTo));
     setCc(parseEmails(initialCc));
     setBcc([]);
@@ -296,7 +311,17 @@ export function MailComposeDialog({
       if (editorRef.current) editorRef.current.innerHTML = html;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, replyTo?.id, mode, initialTo, initialCc, initialSubject, initialBody]);
+  }, [
+    open,
+    replyTo?.id,
+    mode,
+    initialTo,
+    initialCc,
+    initialSubject,
+    initialBody,
+    initialDraftId,
+    initialAccountId,
+  ]);
 
   const updateFormatToolbar = useCallback(() => {
     const sel = window.getSelection();
@@ -386,6 +411,31 @@ export function MailComposeDialog({
     setAttachments(next);
   };
 
+  const handleDiscardDraft = async () => {
+    if (!editingDraftId) {
+      onOpenChange(false);
+      return;
+    }
+    if (
+      !window.confirm("Discard this draft? This cannot be undone.")
+    ) {
+      return;
+    }
+    setPending(true);
+    try {
+      await deleteMailDraft(editingDraftId);
+      notify("Draft discarded", { type: "success" });
+      void queryClient.invalidateQueries({ queryKey: ["mail_threads"] });
+      onOpenChange(false);
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Could not discard draft", {
+        type: "error",
+      });
+    } finally {
+      setPending(false);
+    }
+  };
+
   const handleSend = async (asDraft = false) => {
     const id = Number(accountId);
     const bodyHtml = editorRef.current?.innerHTML?.trim() || "<p></p>";
@@ -397,15 +447,21 @@ export function MailComposeDialog({
     }
     setPending(true);
     try {
-      await sendMailMessage({
+      const result = await sendMailMessage({
         account_id: id,
         to,
         cc,
         bcc: bcc.length ? bcc : undefined,
         subject,
         body_html: bodyHtml,
-        thread_id: mode === "forward" ? undefined : replyTo?.id,
+        thread_id:
+          mode === "forward"
+            ? undefined
+            : replyTo?.id ?? initialThreadId ?? undefined,
+        in_reply_to:
+          mode === "forward" || mode === "new" ? undefined : initialInReplyTo,
         save_draft: asDraft,
+        draft_id: editingDraftId ?? undefined,
         attachments: asDraft
           ? undefined
           : attachments.map(({ filename, content_type, content_base64, size_bytes }) => ({
@@ -415,11 +471,16 @@ export function MailComposeDialog({
               size_bytes,
             })),
       });
+      if (asDraft && result.draft_id) {
+        setEditingDraftId(result.draft_id);
+      }
       notify(asDraft ? "Draft saved" : "Message sent", { type: "success" });
       void queryClient.invalidateQueries({ queryKey: ["mail_threads"] });
       void queryClient.invalidateQueries({ queryKey: ["mail_messages"] });
       void queryClient.invalidateQueries({ queryKey: ["mail_unread_count"] });
-      onOpenChange(false);
+      if (!asDraft) {
+        onOpenChange(false);
+      }
     } catch (e) {
       notify(e instanceof Error ? e.message : "Send failed", { type: "error" });
     } finally {
@@ -600,9 +661,14 @@ export function MailComposeDialog({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => onOpenChange(false)}
+              onClick={() =>
+                editingDraftId
+                  ? void handleDiscardDraft()
+                  : onOpenChange(false)
+              }
+              disabled={pending}
             >
-              Cancel
+              {editingDraftId ? "Discard draft" : "Cancel"}
             </Button>
           </div>
           <div className="flex gap-2">

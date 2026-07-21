@@ -259,6 +259,9 @@ export async function upsertThreadAndMessage(params: {
   hasAttachments?: boolean;
   isTrashed?: boolean;
   isSpam?: boolean;
+  isStarred?: boolean;
+  rfcMessageId?: string | null;
+  inReplyTo?: string | null;
 }) {
   const { account } = params;
   const participants = [
@@ -276,20 +279,23 @@ export async function upsertThreadAndMessage(params: {
     .maybeSingle();
 
   let threadId = existingThread?.id as number | undefined;
+  const threadPatch: Record<string, unknown> = {
+    subject: params.subject,
+    snippet: params.snippet,
+    participants,
+    last_message_at: params.sentAt,
+    updated_at: new Date().toISOString(),
+  };
+  threadPatch.is_unread = params.isUnread;
+  if (params.isTrashed === true) threadPatch.is_trashed = true;
+  else if (params.isTrashed === false) threadPatch.is_trashed = false;
+  if (params.isSpam === true) threadPatch.is_spam = true;
+  else if (params.isSpam === false) threadPatch.is_spam = false;
+  if (params.isStarred === true) threadPatch.is_starred = true;
+  else if (params.isStarred === false) threadPatch.is_starred = false;
+
   if (threadId) {
-    await supabaseAdmin
-      .from("mail_threads")
-      .update({
-        subject: params.subject,
-        snippet: params.snippet,
-        participants,
-        last_message_at: params.sentAt,
-        is_unread: params.isUnread || undefined,
-        is_trashed: params.isTrashed ?? undefined,
-        is_spam: params.isSpam ?? undefined,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", threadId);
+    await supabaseAdmin.from("mail_threads").update(threadPatch).eq("id", threadId);
   } else {
     const { data: inserted, error } = await supabaseAdmin
       .from("mail_threads")
@@ -304,6 +310,7 @@ export async function upsertThreadAndMessage(params: {
         is_unread: params.isUnread,
         is_trashed: params.isTrashed ?? false,
         is_spam: params.isSpam ?? false,
+        is_starred: params.isStarred ?? false,
         message_count: 0,
       })
       .select("id")
@@ -318,6 +325,10 @@ export async function upsertThreadAndMessage(params: {
     .eq("account_id", account.id)
     .eq("provider_message_id", params.providerMessageId)
     .maybeSingle();
+
+  const headerPatch: Record<string, string> = {};
+  if (params.rfcMessageId) headerPatch["Message-ID"] = params.rfcMessageId;
+  if (params.inReplyTo) headerPatch["In-Reply-To"] = params.inReplyTo;
 
   if (!existingMsg) {
     const { data: insertedMsg, error: msgError } = await supabaseAdmin
@@ -339,6 +350,9 @@ export async function upsertThreadAndMessage(params: {
         is_read: !params.isUnread,
         has_attachments: params.hasAttachments ?? false,
         send_status: params.direction === "outbound" ? "sent" : null,
+        in_reply_to: params.inReplyTo ?? null,
+        raw_headers:
+          Object.keys(headerPatch).length > 0 ? headerPatch : undefined,
       })
       .select("id")
       .single();
@@ -365,6 +379,9 @@ export async function upsertThreadAndMessage(params: {
         cc_emails: params.ccEmails,
         is_read: !params.isUnread,
         has_attachments: params.hasAttachments ?? false,
+        in_reply_to: params.inReplyTo ?? undefined,
+        raw_headers:
+          Object.keys(headerPatch).length > 0 ? headerPatch : undefined,
       })
       .eq("id", existingMsg.id);
     return { threadId: threadId!, messageId: existingMsg.id as number };

@@ -76,15 +76,18 @@ const installMailSanitizeHooks = () => {
         node.remove();
         return;
       }
-      node.removeAttribute("width");
-      node.removeAttribute("height");
-      node.style.setProperty("max-width", "100%", "important");
-      node.style.setProperty("height", "auto", "important");
+      if (!node.getAttribute("style")?.includes("max-width")) {
+        node.style.setProperty("max-width", "100%");
+      }
+      if (!node.style.height && !node.getAttribute("height")) {
+        node.style.setProperty("height", "auto");
+      }
     }
 
     if (node.tagName === "TABLE") {
-      node.style.setProperty("max-width", "100%", "important");
-      node.removeAttribute("width");
+      if (!node.getAttribute("style")?.includes("max-width")) {
+        node.style.setProperty("max-width", "100%");
+      }
     }
 
     if (node.tagName === "A") {

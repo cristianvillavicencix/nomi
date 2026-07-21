@@ -2,7 +2,47 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import type { MailFolderId } from "./MailFolderRail";
 import type { MailListFilter } from "./mailListFilters";
-import type { MailAttachment, MailMessage, MailThread } from "./types";
+import type { MailAttachment, MailDraft, MailMessage, MailThread } from "./types";
+
+/** Synthetic list ids for mail_drafts rows (avoid collision with mail_threads.id). */
+export const MAIL_DRAFT_LIST_ID_OFFSET = 1_000_000_000;
+
+export function isMailDraftListId(id: number): boolean {
+  return id >= MAIL_DRAFT_LIST_ID_OFFSET;
+}
+
+export function mailDraftRecordIdFromListId(id: number): number {
+  return id - MAIL_DRAFT_LIST_ID_OFFSET;
+}
+
+function draftToListThread(d: MailDraft, accountEmail?: string): MailThread {
+  const snippet = (d.body_html ?? "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 160);
+  const who =
+    d.to_emails[0] ||
+    accountEmail ||
+    "Draft";
+  return {
+    id: MAIL_DRAFT_LIST_ID_OFFSET + d.id,
+    account_id: d.account_id,
+    org_id: d.org_id,
+    provider_thread_id: `draft-${d.id}`,
+    subject: d.subject,
+    snippet: snippet || null,
+    participants: [{ email: who }],
+    last_message_at: d.updated_at,
+    is_unread: false,
+    is_starred: false,
+    is_draft: true,
+    is_archived: false,
+    is_trashed: false,
+    is_spam: false,
+    message_count: 0,
+  };
+}
 
 async function loadSentThreadIds(
   accountId: number | "all",
@@ -72,6 +112,7 @@ export function useMailThreads(params: {
           .select("*")
           .in("id", sentIds)
           .eq("is_trashed", false)
+          .eq("is_draft", false)
           .order("last_message_at", { ascending: false, nullsFirst: false })
           .limit(100);
         if (accountId !== "all") q = q.eq("account_id", accountId);
@@ -87,16 +128,18 @@ export function useMailThreads(params: {
 
       if (folder === "draft") {
         let q = supabase
-          .from("mail_threads")
-          .select("*")
-          .eq("is_draft", true)
-          .eq("is_trashed", false)
-          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .from("mail_drafts")
+          .select(
+            "id, account_id, org_id, thread_id, to_emails, cc_emails, bcc_emails, subject, body_html, updated_at",
+          )
+          .order("updated_at", { ascending: false, nullsFirst: false })
           .limit(100);
         if (accountId !== "all") q = q.eq("account_id", accountId);
         const { data, error } = await q;
         if (error) throw error;
-        return (data ?? []) as MailThread[];
+        return (data ?? []).map((row) =>
+          draftToListThread(row as MailDraft),
+        );
       }
 
       if (folder === "trash") {
@@ -227,8 +270,9 @@ async function applyFolderFilter(
 export function useMailMessages(threadId: number | null) {
   return useQuery({
     queryKey: ["mail_messages", threadId],
-    enabled: threadId != null,
-    refetchInterval: threadId != null ? 30_000 : false,
+    enabled: threadId != null && !isMailDraftListId(threadId),
+    refetchInterval:
+      threadId != null && !isMailDraftListId(threadId) ? 30_000 : false,
     queryFn: async (): Promise<MailMessage[]> => {
       const { data, error } = await supabase
         .from("mail_messages")
@@ -237,6 +281,24 @@ export function useMailMessages(threadId: number | null) {
         .order("sent_at", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return (data ?? []) as MailMessage[];
+    },
+  });
+}
+
+export function useMailDraft(draftId: number | null) {
+  return useQuery({
+    queryKey: ["mail_draft", draftId],
+    enabled: draftId != null,
+    queryFn: async (): Promise<MailDraft | null> => {
+      const { data, error } = await supabase
+        .from("mail_drafts")
+        .select(
+          "id, account_id, org_id, thread_id, to_emails, cc_emails, bcc_emails, subject, body_html, updated_at",
+        )
+        .eq("id", draftId!)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as MailDraft | null) ?? null;
     },
   });
 }

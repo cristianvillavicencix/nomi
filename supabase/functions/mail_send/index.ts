@@ -9,6 +9,11 @@ import {
   loadMailAccount,
   upsertThreadAndMessage,
 } from "../_shared/mailAccount.ts";
+import { prepareOutboundHtml } from "../_shared/mailOutboundHtml.ts";
+import {
+  decodeBase64ToBytes,
+  storeMailAttachment,
+} from "../_shared/mailAttachmentStorage.ts";
 
 const json = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -183,7 +188,8 @@ Deno.serve(async (req) => {
   const cc = (body.cc as string[] | undefined)?.filter(Boolean) ?? [];
   const bcc = (body.bcc as string[] | undefined)?.filter(Boolean) ?? [];
   const subject = String(body.subject ?? "");
-  const bodyHtml = String(body.body_html ?? "");
+  const bodyHtmlRaw = String(body.body_html ?? "");
+  const draftId = body.draft_id ? Number(body.draft_id) : null;
   const threadId = body.thread_id ? Number(body.thread_id) : null;
   const inReplyTo = body.in_reply_to ? String(body.in_reply_to) : undefined;
   const saveDraft = body.save_draft === true;
@@ -214,30 +220,76 @@ Deno.serve(async (req) => {
   if (denied) return json({ error: denied }, 403);
 
   if (saveDraft) {
+    const draftRow = {
+      account_id: account.id,
+      org_id: account.org_id,
+      owner_member_id: auth.member.id,
+      thread_id: threadId,
+      to_emails: to,
+      cc_emails: cc,
+      bcc_emails: bcc,
+      subject,
+      body_html: bodyHtmlRaw,
+      updated_at: new Date().toISOString(),
+    };
+    if (draftId && Number.isFinite(draftId)) {
+      const { data: existing } = await supabaseAdmin
+        .from("mail_drafts")
+        .select("id")
+        .eq("id", draftId)
+        .eq("owner_member_id", auth.member.id)
+        .eq("account_id", account.id)
+        .maybeSingle();
+      if (!existing) {
+        return json({ error: "Draft not found" }, 404);
+      }
+      const { error } = await supabaseAdmin
+        .from("mail_drafts")
+        .update(draftRow)
+        .eq("id", draftId);
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true, draft_id: draftId });
+    }
     const { data: draft, error } = await supabaseAdmin
       .from("mail_drafts")
-      .insert({
-        account_id: account.id,
-        org_id: account.org_id,
-        owner_member_id: auth.member.id,
-        thread_id: threadId,
-        to_emails: to,
-        cc_emails: cc,
-        bcc_emails: bcc,
-        subject,
-        body_html: bodyHtml,
-      })
+      .insert(draftRow)
       .select("id")
       .single();
     if (error) return json({ error: error.message }, 500);
     return json({ ok: true, draft_id: draft.id });
   }
 
+  const bodyHtml = prepareOutboundHtml(bodyHtmlRaw);
+
   try {
     let providerMessageId = `local-${crypto.randomUUID()}`;
-    let providerThreadId = threadId
-      ? undefined
-      : `local-thread-${crypto.randomUUID()}`;
+    let providerThreadId: string | undefined;
+
+    if (threadId) {
+      const { data: th } = await supabaseAdmin
+        .from("mail_threads")
+        .select("provider_thread_id")
+        .eq("id", threadId)
+        .maybeSingle();
+      const pid = th?.provider_thread_id
+        ? String(th.provider_thread_id)
+        : "";
+      if (pid && !pid.startsWith("local-") && !pid.startsWith("draft-")) {
+        providerThreadId = pid;
+      }
+    }
+    if (!providerThreadId) {
+      providerThreadId = `local-thread-${crypto.randomUUID()}`;
+    }
+
+    let gmailSendThreadId: string | undefined;
+    if (
+      account.provider === "google" &&
+      providerThreadId &&
+      !providerThreadId.startsWith("local-")
+    ) {
+      gmailSendThreadId = providerThreadId;
+    }
 
     if (account.provider === "google") {
       const accessToken = await getFreshGoogleAccessToken(account);
@@ -259,7 +311,10 @@ Deno.serve(async (req) => {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ raw }),
+          body: JSON.stringify({
+            raw,
+            ...(gmailSendThreadId ? { threadId: gmailSendThreadId } : {}),
+          }),
         },
       );
       const sendJson = await sendRes.json();
@@ -349,15 +404,6 @@ Deno.serve(async (req) => {
       throw new Error("Unsupported provider");
     }
 
-    if (!providerThreadId && threadId) {
-      const { data: th } = await supabaseAdmin
-        .from("mail_threads")
-        .select("provider_thread_id")
-        .eq("id", threadId)
-        .maybeSingle();
-      providerThreadId = th?.provider_thread_id ?? `local-${threadId}`;
-    }
-
     const upserted = await upsertThreadAndMessage({
       account,
       providerThreadId: providerThreadId!,
@@ -374,19 +420,32 @@ Deno.serve(async (req) => {
       isUnread: false,
       direction: "outbound",
       hasAttachments: attachments.length > 0,
+      inReplyTo: inReplyTo ?? null,
     });
 
     if (attachments.length > 0 && upserted.messageId) {
-      await supabaseAdmin.from("mail_attachments").insert(
-        attachments.map((file) => ({
-          message_id: upserted.messageId,
-          account_id: account.id,
-          org_id: account.org_id,
+      for (let i = 0; i < attachments.length; i++) {
+        const file = attachments[i];
+        const bytes = decodeBase64ToBytes(file.content_base64);
+        const providerId = `outbound-${i}-${file.filename}`;
+        await storeMailAttachment({
+          orgId: account.org_id,
+          accountId: account.id,
+          messageId: upserted.messageId,
+          providerAttachmentId: providerId,
           filename: file.filename,
-          mime_type: file.content_type,
-          size_bytes: file.size_bytes ?? null,
-        })),
-      );
+          mimeType: file.content_type,
+          bytes,
+        });
+      }
+    }
+
+    if (draftId && Number.isFinite(draftId)) {
+      await supabaseAdmin
+        .from("mail_drafts")
+        .delete()
+        .eq("id", draftId)
+        .eq("owner_member_id", auth.member.id);
     }
 
     return json({ ok: true, provider_message_id: providerMessageId });

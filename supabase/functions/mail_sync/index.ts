@@ -11,6 +11,11 @@ import {
   type MailAccountRow,
 } from "../_shared/mailAccount.ts";
 import { stripCidFromHtml } from "../_shared/stripCidFromHtml.ts";
+import {
+  gmailMessageHasFileAttachments,
+  syncGmailMessageAttachments,
+  syncGraphMessageAttachments,
+} from "../_shared/mailAttachmentSync.ts";
 
 const json = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -190,6 +195,8 @@ async function syncGoogleFolder(
         headers.find((h) => h.name.toLowerCase() === n.toLowerCase())?.value ??
           null;
       const subject = getH("Subject");
+      const rfcMessageId = getH("Message-ID");
+      const inReplyTo = getH("In-Reply-To");
       const fromRaw = getH("From") || "";
       const toRaw = getH("To") || "";
       const ccRaw = getH("Cc") || "";
@@ -224,7 +231,10 @@ async function syncGoogleFolder(
         fromEmail === account.email.toLowerCase() ||
         labelIds.includes("SENT");
 
-      await upsertThreadAndMessage({
+      const payload = detail.payload as GmailPart | undefined;
+      const hasAttachments = gmailMessageHasFileAttachments(payload);
+
+      const upserted = await upsertThreadAndMessage({
         account,
         providerThreadId: String(detail.threadId || msg.threadId),
         providerMessageId: messageId,
@@ -239,14 +249,25 @@ async function syncGoogleFolder(
         sentAt: internalDate,
         isUnread: isOutbound ? false : isUnread,
         direction: isOutbound ? "outbound" : "inbound",
-        isTrashed: labelIds.includes("TRASH") || folder === "trash",
-        isSpam: labelIds.includes("SPAM") || folder === "spam",
-        hasAttachments: Boolean(
-          detail.payload?.parts?.some?.(
-            (p: { filename?: string }) => p.filename,
-          ),
-        ),
+        isTrashed:
+          labelIds.includes("TRASH") || folder === "trash" ? true : undefined,
+        isSpam:
+          labelIds.includes("SPAM") || folder === "spam" ? true : undefined,
+        isStarred: labelIds.includes("STARRED"),
+        rfcMessageId,
+        inReplyTo,
+        hasAttachments,
       });
+
+      if (hasAttachments && upserted.messageId) {
+        await syncGmailMessageAttachments(
+          accessToken,
+          account,
+          messageId,
+          upserted.messageId,
+          payload,
+        );
+      }
       synced += 1;
     }
 
@@ -372,7 +393,8 @@ async function syncMicrosoftFolder(
       const looksHtml =
         contentType === "html" ||
         Boolean(content && /<[a-z][\s\S]*>/i.test(content));
-      await upsertThreadAndMessage({
+      const hasAttachments = Boolean(msg.hasAttachments);
+      const upserted = await upsertThreadAndMessage({
         account,
         providerThreadId: String(msg.conversationId || msg.id),
         providerMessageId: String(msg.id),
@@ -387,8 +409,16 @@ async function syncMicrosoftFolder(
         sentAt: msg.receivedDateTime ?? null,
         isUnread: isOutbound ? false : msg.isRead === false,
         direction: isOutbound ? "outbound" : "inbound",
-        hasAttachments: Boolean(msg.hasAttachments),
+        hasAttachments,
       });
+      if (hasAttachments && upserted.messageId) {
+        await syncGraphMessageAttachments(
+          accessToken,
+          account,
+          String(msg.id),
+          upserted.messageId,
+        );
+      }
       synced += 1;
     }
     nextUrl = listJson["@odata.nextLink"] ?? null;
