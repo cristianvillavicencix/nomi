@@ -32,6 +32,11 @@ import {
 } from "@/modules/tickets/ticketOverviewConfig";
 import { TicketInboxBulkBar } from "@/modules/tickets/TicketInboxBulkBar";
 import { TicketOverviewPreview } from "@/modules/tickets/TicketOverviewPreview";
+import {
+  TICKET_PREVIEW_SHEET_CLASS,
+  TICKET_PREVIEW_SHEET_EXPANDED_CLASS,
+  ticketPreviewSheetTransition,
+} from "@/modules/tickets/ticketContextLayout";
 import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
 import { TicketsKanban } from "@/modules/tickets/TicketsKanban";
 import { TicketsOverviewTable } from "@/modules/tickets/TicketsOverviewTable";
@@ -143,11 +148,16 @@ const TicketsOverviewBody = ({
   const { total, data: tickets = [] } = useListContext<Ticket>();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
+  const [previewContextExpanded, setPreviewContextExpanded] = useState(false);
   const canManage = useMemberCapability("support.tickets.manage");
 
   useEffect(() => {
     setSelectedTicketIds([]);
   }, [view]);
+
+  useEffect(() => {
+    setPreviewContextExpanded(false);
+  }, [selectedTicketId]);
 
   const allTickets = useMemo(
     () =>
@@ -317,12 +327,21 @@ const TicketsOverviewBody = ({
       <Sheet
         open={Boolean(selectedTicketId) && !isMobile}
         onOpenChange={(open) => {
-          if (!open) onClearSelection();
+          if (!open) {
+            setPreviewContextExpanded(false);
+            onClearSelection();
+          }
         }}
       >
         <SheetContent
           side="right"
-          className="w-[min(55vw,44rem)] gap-0 p-0 sm:max-w-none [&>button]:hidden"
+          className={cn(
+            "gap-0 p-0 sm:max-w-none [&>button]:hidden",
+            ticketPreviewSheetTransition,
+            previewContextExpanded
+              ? TICKET_PREVIEW_SHEET_EXPANDED_CLASS
+              : TICKET_PREVIEW_SHEET_CLASS,
+          )}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Ticket preview</SheetTitle>
@@ -334,6 +353,7 @@ const TicketsOverviewBody = ({
             <TicketOverviewPreview
               ticketId={selectedTicketId}
               onClose={onClearSelection}
+              onContextExpandedChange={setPreviewContextExpanded}
             />
           ) : null}
         </SheetContent>

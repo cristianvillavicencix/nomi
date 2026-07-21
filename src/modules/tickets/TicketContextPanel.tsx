@@ -37,6 +37,13 @@ import {
 
 type ContextTab = "billing" | "sms" | "info" | "files";
 
+import {
+  TICKET_CONTEXT_OVERLAY_CLASS,
+  TICKET_CONTEXT_PANEL_CLASS,
+  TICKET_CONTEXT_RAIL_CLASS,
+  ticketContextPanelTransition,
+} from "@/modules/tickets/ticketContextLayout";
+
 const ALL_CONTEXT_TABS: Array<{
   id: ContextTab;
   label: string;
@@ -170,14 +177,14 @@ const TicketContextBody = ({
   );
 };
 
-const TicketContextCollapsedRail = ({
+const TicketContextRailContent = ({
   tabs,
   onOpenTab,
 }: {
   tabs: Array<(typeof ALL_CONTEXT_TABS)[number]>;
   onOpenTab: (tab: ContextTab) => void;
 }) => (
-  <aside className="flex w-11 shrink-0 flex-col self-stretch border-l bg-background">
+  <>
     <div className="flex flex-1 flex-col items-center gap-2 py-3">
       {tabs.map((tab) => {
         const Icon = tab.icon;
@@ -200,6 +207,23 @@ const TicketContextCollapsedRail = ({
     <span className="pb-3 text-center text-[10px] uppercase tracking-wide text-muted-foreground [writing-mode:vertical-rl]">
       Context
     </span>
+  </>
+);
+
+const TicketContextCollapsedRail = ({
+  tabs,
+  onOpenTab,
+}: {
+  tabs: Array<(typeof ALL_CONTEXT_TABS)[number]>;
+  onOpenTab: (tab: ContextTab) => void;
+}) => (
+  <aside
+    className={cn(
+      "flex shrink-0 flex-col self-stretch border-l bg-background",
+      TICKET_CONTEXT_RAIL_CLASS,
+    )}
+  >
+    <TicketContextRailContent tabs={tabs} onOpenTab={onOpenTab} />
   </aside>
 );
 
@@ -208,14 +232,19 @@ export const TicketContextPanel = ({
   company,
   contact,
   className,
-  /** Overlay the panel over the thread instead of shrinking it (preview / split). */
+  /** Overlay the panel over the thread instead of shrinking it (inbox split). */
   overlay = false,
+  /** Animate width when expanding/collapsing (push layout). */
+  animateResize = true,
+  onExpandedChange,
 }: {
   ticket: Ticket;
   company?: Company | null;
   contact?: Contact | null;
   className?: string;
   overlay?: boolean;
+  animateResize?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }) => {
   const canViewAmounts = useCanViewAmounts();
   const contextTabs = useMemo(
@@ -234,6 +263,10 @@ export const TicketContextPanel = ({
     setCollapsed(true);
     setActiveTab(defaultContextTab(contextTabs));
   }, [ticket.id, contextTabs]);
+
+  useEffect(() => {
+    onExpandedChange?.(!collapsed);
+  }, [collapsed, onExpandedChange]);
 
   useEffect(() => {
     const handleOpenBilling = (event: Event) => {
@@ -278,7 +311,12 @@ export const TicketContextPanel = ({
         {/* Rail keeps its width so the thread does not resize on open. */}
         <TicketContextCollapsedRail tabs={contextTabs} onOpenTab={openTab} />
         {!collapsed ? (
-          <aside className="absolute inset-y-0 right-0 z-30 flex w-[min(22rem,calc(100vw-3rem))] flex-col overflow-hidden border-l bg-background shadow-xl">
+          <aside
+            className={cn(
+              "absolute inset-y-0 right-0 z-30 flex flex-col overflow-hidden border-l bg-background shadow-xl",
+              TICKET_CONTEXT_OVERLAY_CLASS,
+            )}
+          >
             {panelBody}
           </aside>
         ) : null}
@@ -286,20 +324,28 @@ export const TicketContextPanel = ({
     );
   }
 
-  if (collapsed) {
-    return (
-      <TicketContextCollapsedRail tabs={contextTabs} onOpenTab={openTab} />
-    );
-  }
-
   return (
     <aside
       className={cn(
-        "flex w-[min(50%,22rem)] shrink-0 flex-col self-stretch overflow-hidden border-l bg-background",
+        "flex shrink-0 flex-col self-stretch overflow-hidden border-l bg-background",
+        animateResize && ticketContextPanelTransition,
+        collapsed ? TICKET_CONTEXT_RAIL_CLASS : TICKET_CONTEXT_PANEL_CLASS,
         className,
       )}
     >
-      {panelBody}
+      {collapsed ? (
+        <TicketContextRailContent tabs={contextTabs} onOpenTab={openTab} />
+      ) : (
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col",
+            animateResize &&
+              "animate-in fade-in slide-in-from-right-3 duration-300 motion-reduce:animate-none",
+          )}
+        >
+          {panelBody}
+        </div>
+      )}
     </aside>
   );
 };

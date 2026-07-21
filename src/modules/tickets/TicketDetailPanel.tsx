@@ -6,11 +6,13 @@ import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Deal, Ticket, TicketMessage } from "@/modules/types";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import { TicketCompactHeader } from "@/modules/tickets/TicketCompactHeader";
 import {
   TicketContextPanel,
   TicketContextSheet,
 } from "@/modules/tickets/TicketContextPanel";
+import { TICKET_PREVIEW_THREAD_CLASS } from "@/modules/tickets/ticketContextLayout";
 import { TicketComposeActionBar } from "@/modules/tickets/TicketComposeActionBar";
 import {
   TicketReplyForm,
@@ -30,9 +32,14 @@ import { Button } from "@/components/ui/button";
 export const TicketDetailPanel = ({
   ticketId,
   layout = "default",
+  previewMode = false,
+  onContextExpandedChange,
 }: {
   ticketId: string;
   layout?: "default" | "inbox-split";
+  /** Keeps thread width fixed; preview sheet grows when context opens. */
+  previewMode?: boolean;
+  onContextExpandedChange?: (expanded: boolean) => void;
 }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -154,8 +161,23 @@ export const TicketDetailPanel = ({
 
   return (
     <TicketThreadQuoteProvider onQuote={handleQuote}>
-      <div className="relative flex h-full min-h-0 overflow-hidden bg-background">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div
+        className={cn(
+          "relative flex h-full min-h-0 overflow-hidden bg-background",
+          previewMode && !overlayContext && "flex-nowrap",
+        )}
+      >
+        <div
+          className={cn(
+            "flex min-h-0 flex-col overflow-hidden",
+            previewMode && !overlayContext
+              ? TICKET_PREVIEW_THREAD_CLASS
+              : "min-w-0 flex-1",
+            !overlayContext &&
+              !previewMode &&
+              "transition-[flex-grow,width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
+          )}
+        >
           <TicketCompactHeader
             ticket={ticket}
             company={company}
@@ -222,6 +244,12 @@ export const TicketDetailPanel = ({
             company={company}
             contact={contact}
             overlay={overlayContext}
+            animateResize={!overlayContext}
+            onExpandedChange={
+              previewMode && !overlayContext
+                ? onContextExpandedChange
+                : undefined
+            }
           />
         ) : null}
       </div>

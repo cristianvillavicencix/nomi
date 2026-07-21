@@ -42,7 +42,7 @@ const DEFAULT_PREFERENCES: WorkPreferences = {
   priorityFilter: "all",
   projectId: null,
   categories: ALL_CATEGORIES,
-  calendarView: "month",
+  calendarView: "week",
   includeDoneTasks: false,
   includeCompletedReminders: false,
   showSaturday: true,

@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { BellPlus, Plus, Video } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -103,9 +103,7 @@ export const CalendarDayDialog = ({
   events,
   open,
   onOpenChange,
-  onCreateTask,
-  onCreateReminder,
-  onScheduleMeeting,
+  onAddEvent,
   onEditTask,
   onEditReminder,
 }: {
@@ -113,9 +111,7 @@ export const CalendarDayDialog = ({
   events: CalendarEvent[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateTask: (dateKey: string) => void;
-  onCreateReminder: (dateKey: string) => void;
-  onScheduleMeeting?: (dateKey: string) => void;
+  onAddEvent: (dateKey: string) => void;
   onEditTask: (event: Extract<CalendarEvent, { kind: "task" }>) => void;
   onEditReminder: (event: CalendarEntryEvent) => void;
 }) => {
@@ -129,37 +125,15 @@ export const CalendarDayDialog = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Button
-              type="button"
-              variant="secondary"
-              className="justify-start"
-              onClick={() => onCreateTask(dateKey)}
-            >
-              <Plus className="size-4" />
-              Add task
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              className="justify-start"
-              onClick={() => onCreateReminder(dateKey)}
-            >
-              <BellPlus className="size-4" />
-              Add event
-            </Button>
-            {onScheduleMeeting ? (
-              <Button
-                type="button"
-                variant="secondary"
-                className="justify-start sm:col-span-2"
-                onClick={() => onScheduleMeeting(dateKey)}
-              >
-                <Video className="size-4" />
-                Schedule video call
-              </Button>
-            ) : null}
-          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full justify-start"
+            onClick={() => onAddEvent(dateKey)}
+          >
+            <Plus className="size-4" />
+            Add event
+          </Button>
 
           {events.length === 0 ? (
             <p className="text-sm text-muted-foreground">

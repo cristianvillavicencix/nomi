@@ -8,9 +8,11 @@ import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
 export const TicketOverviewPreview = ({
   ticketId,
   onClose,
+  onContextExpandedChange,
 }: {
   ticketId: string;
   onClose: () => void;
+  onContextExpandedChange?: (expanded: boolean) => void;
 }) => (
   <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
     <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
@@ -31,7 +33,9 @@ export const TicketOverviewPreview = ({
       <TicketDetailPanel
         key={ticketId}
         ticketId={ticketId}
-        layout="inbox-split"
+        layout="default"
+        previewMode
+        onContextExpandedChange={onContextExpandedChange}
       />
     </div>
   </div>

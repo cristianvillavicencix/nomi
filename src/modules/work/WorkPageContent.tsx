@@ -10,9 +10,8 @@ import {
   SlidersHorizontal,
   Sun,
 } from "lucide-react";
-import { useGetList } from "ra-core";
+import { useGetList, type Identifier } from "ra-core";
 import type { Deal } from "@/components/atomic-crm/types";
-import { AddWorkDialog } from "@/modules/work/AddWorkDialog";
 import {
   ModuleSearchField,
   ModuleToolbar,
@@ -45,8 +44,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CalendarDayDialog } from "@/modules/calendar/CalendarDayDialog";
-import { CalendarReminderDialog } from "@/modules/calendar/CalendarReminderDialog";
-import { DEFAULT_MEETING_DURATION_MINUTES } from "@/modules/calendar/calendarReminderOptions";
+import { CalendarEventSheet } from "@/modules/calendar/CalendarEventSheet";
+import { CalendarKpiStrip } from "@/modules/calendar/CalendarKpiStrip";
+import {
+  buildCategoryDotsByDate,
+  CalendarMiniMonth,
+} from "@/modules/calendar/CalendarMiniMonth";
+import { CalendarUpcomingPanel } from "@/modules/calendar/CalendarUpcomingPanel";
 import {
   addDays,
   addMonths,
@@ -54,6 +58,7 @@ import {
   formatWeekLabel,
   groupEventsByDate,
   isCalendarEntryEvent,
+  parseDateKey,
   toDateKey,
   type CalendarEntryEvent,
   type CalendarEvent,
@@ -62,6 +67,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { WorkCalendarView } from "@/modules/work/WorkCalendarView";
 import { WorkCategoryChips } from "@/modules/work/WorkCategoryChips";
+import { WORK_CATEGORY_OPTIONS } from "@/modules/work/workCategoryUtils";
 import { groupWorkItems } from "@/modules/work/workCategoryUtils";
 import { WorkListView } from "@/modules/work/WorkListView";
 import { WorkSidebarPanel } from "@/modules/work/WorkSidebarPanel";
@@ -72,7 +78,7 @@ import {
   type WorkPreferences,
 } from "@/modules/work/useWorkPreferences";
 import { useWorkPageData } from "@/modules/work/useWorkPageData";
-import type { WorkItem, WorkViewMode } from "@/modules/work/workTypes";
+import type { WorkCategory, WorkItem, WorkViewMode } from "@/modules/work/workTypes";
 
 const ALL_PROJECTS = "all";
 const getDealLabel = (deal: Deal) => deal.name?.trim() || `Project #${deal.id}`;
@@ -166,23 +172,18 @@ export const WorkPageContent = () => {
 
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
-  const [createTaskOpen, setCreateTaskOpen] = useState(false);
-  const [createTaskDueDate, setCreateTaskDueDate] = useState(() =>
+  const [calendarSelectedDateKey, setCalendarSelectedDateKey] = useState(() =>
     toDateKey(new Date()),
   );
-  const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
-  const [reminderDateKey, setReminderDateKey] = useState(() =>
+  const [eventSheetOpen, setEventSheetOpen] = useState(false);
+  const [eventSheetDateKey, setEventSheetDateKey] = useState(() =>
     toDateKey(new Date()),
   );
-  const [editReminderId, setEditReminderId] = useState<string | number | null>(
-    null,
-  );
-  const [reminderVariant, setReminderVariant] = useState<"event" | "meeting">(
-    "event",
-  );
-  const [reminderInitialRecord, setReminderInitialRecord] = useState<
-    Record<string, unknown> | undefined
-  >();
+  const [eventSheetTime, setEventSheetTime] = useState<string | null>(null);
+  const [eventSheetCategory, setEventSheetCategory] =
+    useState<WorkCategory>("task");
+  const [editEventId, setEditEventId] = useState<Identifier | null>(null);
+  const [editEventIsMeeting, setEditEventIsMeeting] = useState(false);
   const [editTaskId, setEditTaskId] = useState<string | number | null>(null);
   const [editTaskOpen, setEditTaskOpen] = useState(false);
 
@@ -237,43 +238,56 @@ export const WorkPageContent = () => {
 
   const openDay = (dateKey: string) => {
     setSelectedDateKey(dateKey);
+    setCalendarSelectedDateKey(dateKey);
     setDayDialogOpen(true);
   };
 
-  const openCreateTask = (dateKey: string) => {
-    setCreateTaskDueDate(dateKey);
+  const openEventSheet = ({
+    dateKey,
+    time = null,
+    category = "task",
+    eventId = null,
+    isMeeting = false,
+  }: {
+    dateKey: string;
+    time?: string | null;
+    category?: WorkCategory;
+    eventId?: Identifier | null;
+    isMeeting?: boolean;
+  }) => {
+    setEventSheetDateKey(dateKey);
+    setEventSheetTime(time);
+    setEventSheetCategory(category);
+    setEditEventId(eventId);
+    setEditEventIsMeeting(isMeeting);
     setDayDialogOpen(false);
-    setCreateTaskOpen(true);
+    setEventSheetOpen(true);
   };
 
-  const openCreateReminder = (dateKey: string) => {
-    setReminderDateKey(dateKey);
-    setEditReminderId(null);
-    setReminderVariant("event");
-    setReminderInitialRecord(undefined);
-    setDayDialogOpen(false);
-    setReminderDialogOpen(true);
+  const closeEventSheet = (nextOpen: boolean) => {
+    setEventSheetOpen(nextOpen);
+    if (!nextOpen) {
+      setEditEventId(null);
+      setEditEventIsMeeting(false);
+      setEventSheetTime(null);
+      setEventSheetCategory("task");
+    }
   };
 
-  const openScheduleMeeting = (dateKey: string) => {
-    setReminderDateKey(dateKey);
-    setEditReminderId(null);
-    setReminderVariant("meeting");
-    setReminderInitialRecord({
-      duration_minutes: DEFAULT_MEETING_DURATION_MINUTES,
-      meeting_url: null,
-    });
-    setDayDialogOpen(false);
-    setReminderDialogOpen(true);
+  const handleCalendarSelectDay = (dateKey: string) => {
+    setCalendarSelectedDateKey(dateKey);
+    setAnchor(parseDateKey(dateKey));
+    if (preferences.calendarView === "month") {
+      openDay(dateKey);
+    }
   };
 
   const openEditReminder = (event: CalendarEntryEvent) => {
-    setEditReminderId(event.record.id);
-    setReminderDateKey(event.date);
-    setReminderVariant(event.record.meeting_url?.trim() ? "meeting" : "event");
-    setReminderInitialRecord(undefined);
-    setDayDialogOpen(false);
-    setReminderDialogOpen(true);
+    openEventSheet({
+      dateKey: event.date,
+      eventId: event.record.id,
+      isMeeting: Boolean(event.record.meeting_url?.trim()),
+    });
   };
 
   const handleSelectEvent = (event: CalendarEvent) => {
@@ -315,6 +329,18 @@ export const WorkPageContent = () => {
   const selectedDayEvents = selectedDateKey
     ? (filteredEventsByDate[selectedDateKey] ?? [])
     : [];
+
+  const calendarSidebarEvents =
+    filteredEventsByDate[calendarSelectedDateKey] ?? [];
+
+  const categoryDotsByDate = useMemo(
+    () =>
+      buildCategoryDotsByDate(filteredEventsByDate, (category) =>
+        WORK_CATEGORY_OPTIONS.find((entry) => entry.value === category)
+          ?.dotClass ?? "bg-muted-foreground/50",
+      ),
+    [filteredEventsByDate],
+  );
 
   const hasAdvancedFilters =
     workPreferencesHaveActiveFilters(preferences) ||
@@ -550,8 +576,7 @@ export const WorkPageContent = () => {
             variant="primary"
             size="sm"
             onClick={() => {
-              setCreateTaskDueDate(toDateKey(new Date()));
-              setCreateTaskOpen(true);
+              openEventSheet({ dateKey: toDateKey(new Date()) });
             }}
             aria-label="Add to calendar"
           >
@@ -620,14 +645,46 @@ export const WorkPageContent = () => {
       ) : null}
 
       {preferences.viewMode === "calendar" ? (
-        <WorkCalendarView
-          anchor={anchor}
-          view={preferences.calendarView}
-          eventsByDate={filteredEventsByDate}
-          displayOptions={displayOptions}
-          onSelectDay={openDay}
-          onSelectEvent={handleSelectEvent}
-        />
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[240px_minmax(0,1fr)] xl:items-start">
+          <div className="hidden xl:flex xl:flex-col xl:gap-4">
+            <aside className="rounded-lg border bg-card p-4">
+              <CalendarMiniMonth
+                anchor={anchor}
+                selectedDateKey={calendarSelectedDateKey}
+                dotsByDate={categoryDotsByDate}
+                onSelectDay={handleCalendarSelectDay}
+                onAnchorChange={setAnchor}
+              />
+            </aside>
+            <CalendarUpcomingPanel
+              selectedDateKey={calendarSelectedDateKey}
+              events={calendarSidebarEvents}
+              onSelectEvent={handleSelectEvent}
+              onAddEvent={(dateKey) => openEventSheet({ dateKey })}
+            />
+          </div>
+
+          <div className="min-w-0 space-y-3">
+            <CalendarKpiStrip
+              open={stats.open}
+              done={stats.done}
+              overdue={stats.overdue}
+              dueToday={filteredGroupedItems.today.length}
+            />
+            <WorkCalendarView
+              anchor={anchor}
+              view={preferences.calendarView}
+              eventsByDate={filteredEventsByDate}
+              displayOptions={displayOptions}
+              selectedDateKey={calendarSelectedDateKey}
+              onSelectDay={handleCalendarSelectDay}
+              onSelectEvent={handleSelectEvent}
+              onSelectSlot={(dateKey, time) => {
+                openEventSheet({ dateKey, time, category: "activity" });
+              }}
+            />
+          </div>
+        </div>
       ) : null}
 
       {preferences.viewMode === "today" ? (
@@ -648,34 +705,19 @@ export const WorkPageContent = () => {
         events={selectedDayEvents}
         open={dayDialogOpen}
         onOpenChange={setDayDialogOpen}
-        onCreateTask={openCreateTask}
-        onCreateReminder={openCreateReminder}
-        onScheduleMeeting={openScheduleMeeting}
+        onAddEvent={(dateKey) => openEventSheet({ dateKey })}
         onEditTask={(event) => handleSelectEvent(event)}
         onEditReminder={openEditReminder}
       />
 
-      <CalendarReminderDialog
-        open={reminderDialogOpen}
-        onOpenChange={(nextOpen) => {
-          setReminderDialogOpen(nextOpen);
-          if (!nextOpen) {
-            setEditReminderId(null);
-            setReminderInitialRecord(undefined);
-            setReminderVariant("event");
-          }
-        }}
-        dateKey={reminderDateKey}
-        reminderId={editReminderId}
-        variant={reminderVariant}
-        initialRecord={reminderInitialRecord}
-      />
-
-      <AddWorkDialog
-        open={createTaskOpen}
-        onOpenChange={setCreateTaskOpen}
-        dueDate={createTaskDueDate}
-        onScheduleMeeting={openScheduleMeeting}
+      <CalendarEventSheet
+        open={eventSheetOpen}
+        onOpenChange={closeEventSheet}
+        dateKey={eventSheetDateKey}
+        initialTime={eventSheetTime}
+        initialCategory={eventSheetCategory}
+        editEventId={editEventId}
+        editIsMeeting={editEventIsMeeting}
       />
 
       {editTaskId != null ? (

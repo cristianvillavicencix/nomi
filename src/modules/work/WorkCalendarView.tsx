@@ -1,5 +1,5 @@
 import { CalendarMonthGrid } from "@/modules/calendar/CalendarMonthGrid";
-import { CalendarWeekGrid } from "@/modules/calendar/CalendarWeekGrid";
+import { CalendarTimeWeekGrid } from "@/modules/calendar/CalendarTimeWeekGrid";
 import {
   startOfWeek,
   type CalendarDisplayOptions,
@@ -12,15 +12,19 @@ export const WorkCalendarView = ({
   view,
   eventsByDate,
   displayOptions,
+  selectedDateKey,
   onSelectDay,
   onSelectEvent,
+  onSelectSlot,
 }: {
   anchor: Date;
   view: CalendarView;
   eventsByDate: Record<string, CalendarEvent[]>;
   displayOptions: CalendarDisplayOptions;
+  selectedDateKey?: string | null;
   onSelectDay: (dateKey: string) => void;
   onSelectEvent: (event: CalendarEvent) => void;
+  onSelectSlot?: (dateKey: string, time: string) => void;
 }) =>
   view === "month" ? (
     <CalendarMonthGrid
@@ -31,11 +35,13 @@ export const WorkCalendarView = ({
       onSelectEvent={onSelectEvent}
     />
   ) : (
-    <CalendarWeekGrid
+    <CalendarTimeWeekGrid
       anchor={startOfWeek(anchor)}
       eventsByDate={eventsByDate}
       displayOptions={displayOptions}
+      selectedDateKey={selectedDateKey}
       onSelectDay={onSelectDay}
       onSelectEvent={onSelectEvent}
+      onSelectSlot={onSelectSlot}
     />
   );
