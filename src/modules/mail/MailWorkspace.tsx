@@ -532,7 +532,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
 
       <div
         className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col md:flex-none md:w-[320px] md:max-w-[360px] md:shrink-0",
+          "flex min-h-0 min-w-0 flex-1 flex-col md:flex-none md:w-[320px] md:max-w-[360px] md:shrink-0 md:border-r md:border-border/60",
           "bg-muted/15 md:bg-muted/20",
           mobileShowThread && "hidden md:flex",
         )}

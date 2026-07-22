@@ -5,6 +5,8 @@ import { MailAccountAvatar } from "./mailAccountAvatar";
 import type { MailAccount, MailThread } from "./types";
 import { Star } from "@phosphor-icons/react";
 
+const RECENT_UNREAD_HOURS = 4;
+
 function formatListDate(iso: string | null) {
   if (!iso) return "";
   const d = new Date(iso);
@@ -17,6 +19,13 @@ function formatListDate(iso: string | null) {
     return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   }
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+function isRecentThread(iso: string | null): boolean {
+  if (!iso) return false;
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return false;
+  return Date.now() - t <= RECENT_UNREAD_HOURS * 60 * 60 * 1000;
 }
 
 function mailboxLabel(account: MailAccount): string {
@@ -62,6 +71,8 @@ export function MailThreadList({
         const active = thread.id === selectedId;
         const checked = selectedIds?.has(thread.id) ?? false;
         const mailboxAccount = accountById.get(thread.account_id);
+        const unread = thread.is_unread && !active;
+        const recentUnread = unread && isRecentThread(thread.last_message_at);
         const who =
           thread.participants
             ?.map((p) => p.name || p.email)
@@ -73,11 +84,19 @@ export function MailThreadList({
           <li
             key={thread.id}
             className={cn(
-              "relative flex items-stretch",
-              active && "bg-muted/80",
-              thread.is_unread && !active && "bg-primary/[0.03]",
+              "relative flex items-stretch border-b border-border/40 transition-colors duration-150",
+              active && "bg-primary/10 shadow-[inset_0_0_0_1px] shadow-primary/10",
+              recentUnread && "bg-primary/10",
+              unread && !recentUnread && "bg-primary/8",
+              !active && "hover:bg-muted/45",
             )}
           >
+            {active ? (
+              <span
+                className="absolute inset-y-0 left-0 z-[2] w-[3px] rounded-r-sm bg-primary"
+                aria-hidden
+              />
+            ) : null}
             {onToggleSelect ? (
               <div className="relative z-[1] flex items-start pt-3 pl-2">
                 <Checkbox
@@ -98,22 +117,41 @@ export function MailThreadList({
                   : `${who} — ${subject}`
               }
               className={cn(
-                "relative z-0 flex min-w-0 flex-1 gap-2 py-2.5 pr-3 text-left transition-colors",
-                onToggleSelect ? "pl-1" : "pl-3",
-                !active && "hover:bg-muted/50",
+                "relative z-0 flex min-w-0 flex-1 gap-2 py-2.5 pr-3 text-left transition-colors duration-150",
+                onToggleSelect ? "pl-2" : "pl-3",
               )}
             >
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div className="flex min-w-0 items-center gap-2">
+                  {unread ? (
+                    <span
+                      className="size-2 shrink-0 rounded-full bg-primary"
+                      aria-label="Unread"
+                    />
+                  ) : null}
                   <span
                     className={cn(
                       "min-w-0 flex-1 truncate text-sm",
-                      thread.is_unread ? "font-semibold" : "font-medium",
+                      unread || active
+                        ? "font-semibold text-foreground"
+                        : "font-medium text-muted-foreground",
                     )}
                   >
                     {who}
                   </span>
-                  <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                  {recentUnread ? (
+                    <span className="shrink-0 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                      New
+                    </span>
+                  ) : null}
+                  <span
+                    className={cn(
+                      "shrink-0 text-[11px] tabular-nums",
+                      unread
+                        ? "font-medium text-foreground/80"
+                        : "text-muted-foreground",
+                    )}
+                  >
                     {formatListDate(thread.last_message_at)}
                   </span>
                   {thread.is_starred ? (
@@ -126,13 +164,20 @@ export function MailThreadList({
                 <span
                   className={cn(
                     "truncate text-sm",
-                    thread.is_unread ? "font-medium" : "text-muted-foreground",
+                    unread
+                      ? "font-medium text-foreground"
+                      : "text-muted-foreground",
                   )}
                 >
                   {subject}
                 </span>
                 {thread.snippet ? (
-                  <span className="line-clamp-1 text-xs text-muted-foreground">
+                  <span
+                    className={cn(
+                      "line-clamp-1 text-xs",
+                      unread ? "text-foreground/70" : "text-muted-foreground",
+                    )}
+                  >
                     {thread.snippet}
                   </span>
                 ) : null}
