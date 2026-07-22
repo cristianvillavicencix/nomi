@@ -1,6 +1,8 @@
 import type { Task } from "@/components/atomic-crm/types";
 import { applyMentionIdsToTaskData } from "@/components/atomic-crm/tasks/taskMentions";
 import { syncTaskOwnerFromAssignees } from "@/components/atomic-crm/tasks/normalizeTaskAssignees";
+import { combineTaskDueDateTime } from "@/components/atomic-crm/tasks/taskDueDateTime";
+import { normalizeReminderOffsetsMinutes } from "@/modules/calendar/calendarReminderWriteUtils";
 
 export const TASK_PRIORITIES = [
   { value: "low", label: "Low" },
@@ -51,19 +53,29 @@ const toNumericIdArray = (value: unknown): number[] => {
     .filter((item) => Number.isFinite(item));
 };
 
+const stripVirtualTaskLinkFields = (data: Record<string, unknown>) => {
+  const next = { ...data };
+  delete next.company_id;
+  delete next.additional_contact_ids;
+  return next;
+};
+
 export const normalizeTaskCreateData = (data: Record<string, unknown>) => {
-  const dueDate = new Date(String(data.due_date));
-  dueDate.setHours(0, 0, 0, 0);
-  const withMentions = applyMentionIdsToTaskData(data);
-  const assigneePersonIds = toNumericIdArray(withMentions.assignee_person_ids);
+  const dueTime = data.due_time;
+  const withMentions = applyMentionIdsToTaskData(stripVirtualTaskLinkFields(data));
+  const { due_time: _formDueTime, ...taskFields } = withMentions as Record<
+    string,
+    unknown
+  > & { due_time?: unknown };
+  const assigneePersonIds = toNumericIdArray(taskFields.assignee_person_ids);
   const assigneeSet = new Set(assigneePersonIds);
   const collaboratorPersonIds = toNumericIdArray(
-    withMentions.collaborator_person_ids,
+    taskFields.collaborator_person_ids,
   ).filter((id) => !assigneeSet.has(id));
-  let mentionedMemberIds = toNumericIdArray(withMentions.mentioned_member_ids);
-  const organizationMemberId = Number(withMentions.organization_member_id);
+  let mentionedMemberIds = toNumericIdArray(taskFields.mentioned_member_ids);
+  const organizationMemberId = Number(taskFields.organization_member_id);
 
-  const rawContactId = withMentions.contact_id;
+  const rawContactId = taskFields.contact_id;
   const contact_id =
     rawContactId === "" || rawContactId == null ? null : rawContactId;
 
@@ -77,14 +89,17 @@ export const normalizeTaskCreateData = (data: Record<string, unknown>) => {
   }
 
   return syncTaskOwnerFromAssignees({
-    ...withMentions,
+    ...taskFields,
     contact_id,
-    type: withMentions.type || "none",
-    priority: withMentions.priority || "normal",
-    internal: Boolean(withMentions.internal),
+    type: taskFields.type || "none",
+    priority: taskFields.priority || "normal",
+    internal: Boolean(taskFields.internal),
     assignee_person_ids: assigneePersonIds,
     collaborator_person_ids: collaboratorPersonIds,
     mentioned_member_ids: mentionedMemberIds,
-    due_date: dueDate.toISOString(),
+    due_date: combineTaskDueDateTime(taskFields.due_date, dueTime),
+    reminder_offsets_minutes: normalizeReminderOffsetsMinutes(
+      taskFields.reminder_offsets_minutes,
+    ),
   });
 };

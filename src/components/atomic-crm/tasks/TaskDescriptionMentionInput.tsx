@@ -22,7 +22,6 @@ import {
   FormField,
   FormLabel,
 } from "@/components/admin/form";
-import { InputHelperText } from "@/components/admin/input-helper-text";
 import { cn } from "@/lib/utils";
 import type { Deal, OrganizationMember } from "@/components/atomic-crm/types";
 import {
@@ -310,7 +309,7 @@ export const TaskDescriptionMentionInput = ({
               "border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] whitespace-pre-wrap break-words empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)]",
               minHeightClass,
             )}
-            data-placeholder="Describe the task. Type @ to tag someone, e.g. @Cristina has to send the invoice."
+            data-placeholder="Describe the task…"
             onInput={handleInput}
             onClick={updateMentionState}
             onKeyUp={updateMentionState}
@@ -321,7 +320,6 @@ export const TaskDescriptionMentionInput = ({
         </div>
       </FormControl>
       {mentionDropdown}
-      <InputHelperText helperText="Use @ to tag team members directly in the description." />
       <FormError />
     </FormField>
   );

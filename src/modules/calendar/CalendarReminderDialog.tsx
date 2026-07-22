@@ -144,7 +144,7 @@ const CalendarEventForm = ({
       </ReferenceInput>
       <TeamMemberMultiSelect
         source="assignee_member_ids"
-        label="Assignees"
+        label="Team members"
         required
       />
     </div>

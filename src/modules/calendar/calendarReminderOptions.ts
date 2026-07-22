@@ -1,4 +1,5 @@
 import type { CalendarEventRecord } from "@/components/atomic-crm/types";
+import { isMeetingRecord } from "@/modules/meetings/meetingFormat";
 
 export type CalendarEntryKind =
   | "activity"
@@ -36,7 +37,7 @@ export const DEFAULT_MEETING_DURATION_MINUTES = 60;
 export const getCalendarEntryKind = (
   record: CalendarEventRecord,
 ): CalendarEntryKind => {
-  if (record.meeting_url?.trim()) return "meeting";
+  if (isMeetingRecord(record)) return "meeting";
   if (record.contact_id || record.deal_id) return "activity";
   if (record.organization_member_id) return "scheduled_task";
   return "reminder";

@@ -19,6 +19,7 @@ export type TaskStats = {
   open: number;
   overdue: number;
   dueThisWeek: number;
+  done: number;
 };
 
 export const computeTaskStats = (tasks: Task[]): TaskStats => {
@@ -27,5 +28,6 @@ export const computeTaskStats = (tasks: Task[]): TaskStats => {
     open: openTasks.length,
     overdue: openTasks.filter(isTaskOverdue).length,
     dueThisWeek: openTasks.filter(isTaskDueThisWeek).length,
+    done: tasks.length - openTasks.length,
   };
 };

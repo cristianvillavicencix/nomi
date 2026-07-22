@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Company, Contact } from "@/components/atomic-crm/types";
+import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import {
   getContactEmail,
   getContactFullName,
@@ -30,6 +31,21 @@ const ReferenceOptionSingleLine = ({
     <span className="font-medium">{title}</span>
     {meta ? <span className="text-muted-foreground"> · {meta}</span> : null}
   </p>
+);
+
+const ReferenceOptionWithAvatar = ({
+  avatar,
+  title,
+  meta,
+}: {
+  avatar: ReactNode;
+  title: string;
+  meta?: string;
+}) => (
+  <div className="flex min-w-0 items-center gap-3 text-left">
+    <span className="shrink-0">{avatar}</span>
+    <ReferenceOptionSingleLine title={title} meta={meta} />
+  </div>
 );
 
 export const contactReferenceShortLabel = (contact?: Partial<Contact> | null) =>
@@ -73,7 +89,13 @@ export const renderContactReferenceOption = (contact: Contact): ReactNode => {
 export const renderCompanyReferenceOption = (company: Company): ReactNode => {
   const title = companyReferenceShortLabel(company) || "—";
   const meta = buildCompanySearchMeta(company);
-  return <ReferenceOptionSingleLine title={title} meta={meta || undefined} />;
+  return (
+    <ReferenceOptionWithAvatar
+      avatar={<CompanyAvatar record={company} width={25} />}
+      title={title}
+      meta={meta || undefined}
+    />
+  );
 };
 
 export const renderReferenceOptionContent = (
@@ -108,4 +130,4 @@ export const getReferenceOptionShortLabel = (
 
 /** Shared width class for searchable entity pickers. */
 export const entitySearchPopoverClassName =
-  "p-0 w-[max(var(--radix-popover-trigger-width),min(28rem,calc(100vw-2rem)))]";
+  "w-[max(var(--radix-popover-trigger-width),min(28rem,calc(100vw-2rem)))] overflow-hidden p-0";

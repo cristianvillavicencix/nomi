@@ -136,6 +136,7 @@ export const AutocompleteInput = (
   const [filterValue, setFilterValue] = React.useState("");
   const [open, setOpen] = React.useState(false);
   const anchorRef = React.useRef<HTMLDivElement>(null);
+  const listRef = React.useRef<HTMLDivElement>(null);
   const suppressCloseRef = React.useRef(false);
   const selectedChoice = allChoices.find(
     (choice) => getChoiceValue(choice) === field.value,
@@ -314,6 +315,11 @@ export const AutocompleteInput = (
     );
   }, [filterValue, finalChoices, getChoiceText, isFromReference]);
 
+  React.useEffect(() => {
+    if (!open) return;
+    listRef.current?.scrollTo({ top: 0 });
+  }, [open, visibleChoices.length]);
+
   return (
     <>
       <FormField className={props.className} id={id} name={source}>
@@ -361,6 +367,9 @@ export const AutocompleteInput = (
                   popoverContentClassName,
                 )}
                 align="start"
+                side="bottom"
+                sideOffset={4}
+                collisionPadding={12}
                 onOpenAutoFocus={(event) => event.preventDefault()}
                 onCloseAutoFocus={(event) => event.preventDefault()}
                 onInteractOutside={handlePopoverInteractOutside}
@@ -369,8 +378,13 @@ export const AutocompleteInput = (
                 onTouchMove={stopScrollPropagation}
               >
                 <Command shouldFilter={false}>
-                  <CommandList className="max-h-[min(18rem,50vh)]">
-                    <CommandEmpty>No matching item found.</CommandEmpty>
+                  <CommandList
+                    ref={listRef}
+                    className="max-h-[min(18rem,50vh)] scroll-py-0"
+                  >
+                    {visibleChoices.length === 0 ? (
+                      <CommandEmpty>No matching item found.</CommandEmpty>
+                    ) : null}
                     <CommandGroup>
                       {visibleChoices.map((choice) => {
                         const isCreateItem =

@@ -2,6 +2,7 @@ import { DeleteButton } from "@/components/admin";
 import { type Identifier, useGetOne } from "ra-core";
 import { EditSheet } from "../misc/EditSheet";
 import { TaskFormContent } from "./TaskFormContent";
+import { normalizeTaskCreateData } from "./taskConstants";
 import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordModal";
 import type { Task } from "../types";
 
@@ -37,6 +38,7 @@ export const TaskEditSheet = ({
     <EditSheet
       resource="tasks"
       id={taskId}
+      transform={normalizeTaskCreateData}
       title={
         <div className="flex items-center justify-between gap-2 pr-10">
           <h1 className="truncate text-xl font-semibold">Edit task</h1>

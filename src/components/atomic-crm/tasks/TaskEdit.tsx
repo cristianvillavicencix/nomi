@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { normalizeTaskCreateData } from "@/components/atomic-crm/tasks/taskConstants";
 
 import { TaskFormContent } from "./TaskFormContent";
 
@@ -28,6 +29,7 @@ export const TaskEdit = ({
           id={taskId}
           resource="tasks"
           className="mt-0"
+          transform={normalizeTaskCreateData}
           mutationOptions={{
             onSuccess: () => {
               close();

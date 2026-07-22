@@ -131,10 +131,11 @@ export const AddTask = ({
               : {}),
             deal_id: dealId ?? null,
             due_date: defaultDueDate,
+            due_time: null,
             organization_member_id: identity.id,
             assignee_person_ids: [],
             collaborator_person_ids: [],
-            priority: "normal",
+            reminder_offsets_minutes: [15],
             internal: false,
           }}
           transform={(data) =>
