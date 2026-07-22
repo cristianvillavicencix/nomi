@@ -45,6 +45,7 @@ export const CalendarInteractiveEventChip = ({
       onEdit={onEdit}
       outsideBusinessHours={outsideBusinessHours}
       membersById={membersById}
+      enabled={enablePreview}
     >
       {chip}
     </CalendarEventPreviewPopover>

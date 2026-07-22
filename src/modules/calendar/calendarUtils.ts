@@ -4,6 +4,7 @@ import type {
   Task,
 } from "@/components/atomic-crm/types";
 import { isTaskOverdue } from "@/components/atomic-crm/tasks/taskStats";
+import { extractTaskDueTime } from "@/components/atomic-crm/tasks/taskDueDateTime";
 import { getProjectDeliveryDate } from "@/modules/deals/projectDeliveryDate";
 import {
   formatEventTimeLabel,
@@ -78,6 +79,7 @@ export type CalendarEvent =
       kind: "task";
       id: string;
       date: string;
+      time?: string | null;
       title: string;
       task: Task;
       overdue: boolean;
@@ -248,6 +250,7 @@ export const buildTaskCalendarEvent = (task: Task): CalendarEvent | null => {
     kind: "task",
     id: `task:${task.id}`,
     date,
+    time: extractTaskDueTime(task.due_date),
     title: task.text?.trim() || "Task",
     task,
     overdue: isTaskOverdue(task),
@@ -339,18 +342,30 @@ export const groupEventsByDate = (events: CalendarEvent[]) => {
   return grouped;
 };
 
-export const getVisibleRange = (anchor: Date, view: CalendarView) => {
+export const getVisibleRange = (
+  anchor: Date,
+  view: CalendarView,
+  options?: { expandMonths?: number },
+) => {
+  let start: Date;
+  let end: Date;
+
   if (view === "week") {
-    const start = startOfWeek(anchor);
-    const end = endOfWeek(anchor);
-    return { start: toDateKey(start), end: toDateKey(end) };
+    start = startOfWeek(anchor);
+    end = endOfWeek(anchor);
+  } else {
+    const days = getMonthGridDays(anchor);
+    start = days[0];
+    end = days[days.length - 1];
   }
 
-  const days = getMonthGridDays(anchor);
-  return {
-    start: toDateKey(days[0]),
-    end: toDateKey(days[days.length - 1]),
-  };
+  const expandMonths = options?.expandMonths ?? 0;
+  if (expandMonths > 0) {
+    start = addMonths(start, -expandMonths);
+    end = addMonths(end, expandMonths);
+  }
+
+  return { start: toDateKey(start), end: toDateKey(end) };
 };
 
 export const getEventClassName = (event: CalendarEvent) => {
@@ -391,6 +406,149 @@ export const getEventClassName = (event: CalendarEvent) => {
     return "border-yellow-200 bg-yellow-50 text-yellow-950 dark:border-yellow-900/50 dark:bg-yellow-950/40 dark:text-yellow-100";
   }
   return "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-100";
+};
+
+const GENERIC_EVENT_TITLES = new Set([
+  "reminder",
+  "task",
+  "activity",
+  "meeting",
+  "follow up",
+  "follow-up",
+  "followup",
+  "event",
+  "scheduled task",
+  "scheduled",
+]);
+
+const isGenericEventTitle = (title: string | null | undefined) => {
+  const normalized = title?.trim().toLowerCase() ?? "";
+  return !normalized || GENERIC_EVENT_TITLES.has(normalized);
+};
+
+const truncatePreviewText = (text: string, maxLength = 52) => {
+  const trimmed = text.trim();
+  if (!trimmed) return "";
+  return trimmed.length > maxLength
+    ? `${trimmed.slice(0, maxLength - 1)}…`
+    : trimmed;
+};
+
+const firstLineOfDescription = (
+  description: string | null | undefined,
+  maxLength = 52,
+) => {
+  const line = description?.split(/\r?\n/)[0]?.trim() ?? "";
+  if (!line) return null;
+  return truncatePreviewText(line, maxLength);
+};
+
+const textIncludesName = (text: string, name: string) =>
+  text.toLowerCase().includes(name.toLowerCase());
+
+const getCalendarEntryDisplayTime = (
+  event: Extract<
+    CalendarEvent,
+    { kind: "activity" | "meeting" | "scheduled_task" | "reminder" }
+  >,
+) => {
+  const timeLabel = formatEventTimeLabel(event.time);
+  const timeRangeLabel = formatEventTimeRange(
+    event.record.event_time,
+    event.record.duration_minutes,
+  );
+  return timeRangeLabel ?? timeLabel;
+};
+
+/** What the event is about — shown first on chips so truncation keeps the useful part. */
+const buildCalendarEntryChipPreview = (
+  event: Extract<
+    CalendarEvent,
+    { kind: "activity" | "meeting" | "scheduled_task" | "reminder" }
+  >,
+) => {
+  const title = event.title?.trim() ?? "";
+  const descriptionLine = firstLineOfDescription(event.record.description);
+  const contactName = event.contactName?.trim();
+  const assignedName = event.assignedName?.trim();
+  const parts: string[] = [];
+
+  if (title && !isGenericEventTitle(title)) {
+    parts.push(truncatePreviewText(title));
+  } else if (descriptionLine) {
+    parts.push(descriptionLine);
+  } else if (title) {
+    parts.push(title);
+  }
+
+  if (contactName && !parts.some((part) => textIncludesName(part, contactName))) {
+    parts.push(contactName);
+  }
+
+  if (parts.length === 0 && descriptionLine) {
+    parts.push(descriptionLine);
+  }
+
+  if (parts.length === 0 && assignedName) {
+    parts.push(assignedName);
+  }
+
+  if (parts.length === 0) {
+    parts.push("Scheduled");
+  }
+
+  return parts.join(" · ");
+};
+
+/** Compact label for calendar grid chips — preview first, type conveyed by chip color. */
+export const getEventChipLabel = (event: CalendarEvent) => {
+  if (event.kind === "task") {
+    const shortTime = formatEventTimeLabel(event.time);
+    return shortTime ? `${event.title} · ${shortTime}` : event.title;
+  }
+  if (event.kind === "project_delivery" || event.kind === "project_start") {
+    return event.title;
+  }
+  if (
+    event.kind === "activity" ||
+    event.kind === "meeting" ||
+    event.kind === "scheduled_task" ||
+    event.kind === "reminder"
+  ) {
+    const preview = buildCalendarEntryChipPreview(event);
+    const shortTime = formatEventTimeLabel(event.time);
+    return shortTime ? `${preview} · ${shortTime}` : preview;
+  }
+  return event.title;
+};
+
+/** Full hover text for truncated chips. */
+export const getEventChipTooltip = (event: CalendarEvent) => {
+  if (event.kind === "task") {
+    const timeLabel = formatEventTimeLabel(event.time);
+    return timeLabel ? `${event.title} · ${timeLabel}` : event.title;
+  }
+  if (event.kind === "project_delivery" || event.kind === "project_start") {
+    return event.title;
+  }
+  if (
+    event.kind === "activity" ||
+    event.kind === "meeting" ||
+    event.kind === "scheduled_task" ||
+    event.kind === "reminder"
+  ) {
+    const preview = buildCalendarEntryChipPreview(event);
+    const displayTime = getCalendarEntryDisplayTime(event);
+    const descriptionLine = firstLineOfDescription(
+      event.record.description,
+      120,
+    );
+    const details = [preview, displayTime, descriptionLine]
+      .filter(Boolean)
+      .filter((value, index, array) => array.indexOf(value) === index);
+    return details.join(" · ");
+  }
+  return getEventChipLabel(event);
 };
 
 export const getEventLabel = (event: CalendarEvent) => {

@@ -71,6 +71,7 @@ export const ModuleSearchField = ({
   itemPlural,
   className,
   inputClassName,
+  fillHeight = false,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -80,6 +81,8 @@ export const ModuleSearchField = ({
   itemPlural?: string;
   className?: string;
   inputClassName?: string;
+  /** Stretch input to fill parent height (e.g. KPI strip row). */
+  fillHeight?: boolean;
 }) => {
   const countLabel =
     itemSingular != null
@@ -93,15 +96,20 @@ export const ModuleSearchField = ({
     : basePlaceholder;
 
   return (
-    <div className={cn("min-w-0 flex-1", className)}>
-      <div className="relative w-full sm:max-w-lg">
+    <div className={cn("min-w-0 flex-1", fillHeight && "flex h-full", className)}>
+      <div
+        className={cn(
+          "relative w-full",
+          fillHeight ? "h-full" : "sm:max-w-lg",
+        )}
+      >
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           aria-label={ariaLabel}
-          className={cn("h-8 pl-9", inputClassName)}
+          className={cn(fillHeight ? "h-full min-h-[44px]" : "h-8", "pl-9", inputClassName)}
         />
       </div>
     </div>

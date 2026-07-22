@@ -37,6 +37,7 @@ export const hasCalendarScheduleChanged = (
   return prevTitle !== nextTitle;
 };
 
-export const isVideoMeetingRecord = (record: {
-  meeting_url?: string | null;
-}) => Boolean(String(record.meeting_url ?? "").trim());
+export {
+  isMeetingRecord,
+  isVideoMeetingRecord,
+} from "@/modules/meetings/meetingFormat";

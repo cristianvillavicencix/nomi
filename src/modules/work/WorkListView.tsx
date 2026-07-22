@@ -79,7 +79,7 @@ const WorkListItemBody = ({
   </button>
 );
 
-const WorkTaskRow = ({
+export const WorkTaskRow = ({
   item,
   task,
   participants,
@@ -128,7 +128,7 @@ const WorkTaskRow = ({
   );
 };
 
-const WorkEventRow = ({
+export const WorkEventRow = ({
   item,
   onSelect,
 }: {

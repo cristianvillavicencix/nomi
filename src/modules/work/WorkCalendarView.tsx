@@ -20,6 +20,7 @@ export const WorkCalendarView = ({
   onSelectEvent,
   onEditEvent,
   onSelectSlot,
+  onRescheduleEvent,
   showAssigneeAvatars = false,
   membersById,
 }: {
@@ -33,6 +34,11 @@ export const WorkCalendarView = ({
   onSelectEvent: (event: CalendarEvent) => void;
   onEditEvent: (event: CalendarEvent) => void;
   onSelectSlot?: (dateKey: string, time: string) => void;
+  onRescheduleEvent?: (
+    event: CalendarEvent,
+    targetDateKey: string,
+    targetTime?: string | null,
+  ) => void | Promise<void>;
   showAssigneeAvatars?: boolean;
   membersById?: Map<string, OrganizationMember>;
 }) =>
@@ -45,6 +51,7 @@ export const WorkCalendarView = ({
       onSelectDay={onSelectDay}
       onSelectEvent={onSelectEvent}
       onEditEvent={onEditEvent}
+      onRescheduleEvent={onRescheduleEvent}
       showAssigneeAvatars={showAssigneeAvatars}
       membersById={membersById}
     />
@@ -59,6 +66,7 @@ export const WorkCalendarView = ({
       onSelectEvent={onSelectEvent}
       onEditEvent={onEditEvent}
       onSelectSlot={onSelectSlot}
+      onRescheduleEvent={onRescheduleEvent}
       showAssigneeAvatars={showAssigneeAvatars}
       membersById={membersById}
     />

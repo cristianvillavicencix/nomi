@@ -4,6 +4,8 @@ import {
   CheckCheck,
   ChevronLeft,
   ChevronRight,
+  LayoutGrid,
+  List,
   Plus,
   SlidersHorizontal,
 } from "lucide-react";
@@ -12,11 +14,10 @@ import type { Deal, OrganizationMember } from "@/components/atomic-crm/types";
 import { getMemberName } from "@/components/atomic-crm/tasks/taskMemberOptions";
 import {
   ModuleSearchField,
-  ModuleToolbar,
-  ModuleToolbarActions,
 } from "@/components/atomic-crm/layout/ModuleToolbar";
 import { TaskEdit } from "@/components/atomic-crm/tasks/TaskEdit";
 import { TaskEditSheet } from "@/components/atomic-crm/tasks/TaskEditSheet";
+import { useTaskParticipantsByTaskIds } from "@/components/atomic-crm/tasks/useTaskParticipants";
 import {
   useMarkTaskTagNotificationsRead,
   useUnreadTaskTagNotifications,
@@ -39,14 +40,12 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CalendarDayPanel } from "@/modules/calendar/CalendarDayPanel";
+import { useCalendarEventReschedule } from "@/modules/calendar/useCalendarEventReschedule";
+import { isMeetingRecord } from "@/modules/meetings/meetingFormat";
 import { CalendarEventSheet } from "@/modules/calendar/CalendarEventSheet";
 import { CalendarKpiStrip } from "@/modules/calendar/CalendarKpiStrip";
-import {
-  buildCategoryDotsByDate,
-  CalendarMiniMonth,
-} from "@/modules/calendar/CalendarMiniMonth";
-import { CalendarUpcomingPanel } from "@/modules/calendar/CalendarUpcomingPanel";
 import {
   addDays,
   addMonths,
@@ -64,17 +63,22 @@ import { useCalendarBusinessHours } from "@/modules/calendar/useCalendarBusiness
 import { useCalendarAssigneeMembers } from "@/modules/calendar/useCalendarAssigneeMembers";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useIsAdminLevel } from "@/lib/permissions/useIsAdminLevel";
+import { WorkCalendarListView } from "@/modules/work/WorkCalendarListView";
 import { WorkCalendarView } from "@/modules/work/WorkCalendarView";
 import { WorkCategoryChips } from "@/modules/work/WorkCategoryChips";
-import { WORK_CATEGORY_OPTIONS } from "@/modules/work/workCategoryUtils";
-import { groupWorkItems } from "@/modules/work/workCategoryUtils";
+import {
+  filterWorkItemsByCalendarPeriod,
+  groupWorkItems,
+} from "@/modules/work/workCategoryUtils";
+import { filterWorkItemsBySearch } from "@/modules/work/workItemSearch";
 import {
   useWorkPreferences,
   workPreferencesHaveActiveFilters,
   type WorkPreferences,
 } from "@/modules/work/useWorkPreferences";
 import { useWorkPageData } from "@/modules/work/useWorkPageData";
-import type { WorkCategory } from "@/modules/work/workTypes";
+import type { WorkCreateCategory } from "@/modules/work/workCreateCategories";
+import type { WorkItem } from "@/modules/work/workTypes";
 
 const ALL_PROJECTS = "all";
 const ALL_TEAM_MEMBERS = "all";
@@ -100,27 +104,30 @@ export const WorkPageContent = () => {
     }
   }, [searchParams, preferences.viewMode, setPreferences, setSearchParams]);
 
+  const searchActive = Boolean(searchQuery.trim());
+
   const {
     memberId,
     eventsByDate,
     workItems,
+    searchableWorkItems,
+    contactsById,
     categoryCounts,
     groupedItems,
     stats,
     isPending,
-  } = useWorkPageData({ preferences, anchor });
+  } = useWorkPageData({ preferences, anchor, searchActive });
+
+  const { rescheduleEvent } = useCalendarEventReschedule();
 
   const filteredWorkItems = useMemo(() => {
-    const trimmed = searchQuery.trim().toLowerCase();
-    if (!trimmed) return workItems;
-    return workItems.filter((item) => {
-      const haystack = [item.title, item.dealName]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(trimmed);
-    });
-  }, [workItems, searchQuery]);
+    if (!searchActive) return workItems;
+    return filterWorkItemsBySearch(
+      searchableWorkItems,
+      searchQuery,
+      contactsById,
+    );
+  }, [contactsById, searchActive, searchQuery, searchableWorkItems, workItems]);
 
   const filteredEventsByDate = useMemo(
     () =>
@@ -147,6 +154,29 @@ export const WorkPageContent = () => {
     [filteredWorkItems, groupedItems, preferences.status, searchQuery],
   );
 
+  const periodWorkItems = useMemo(
+    () =>
+      searchActive
+        ? filteredWorkItems
+        : filterWorkItemsByCalendarPeriod(
+            filteredWorkItems,
+            anchor,
+            preferences.calendarView,
+          ),
+    [anchor, filteredWorkItems, preferences.calendarView, searchActive],
+  );
+
+  const periodTaskIds = useMemo(
+    () =>
+      periodWorkItems
+        .filter((item) => item.event.kind === "task")
+        .map((item) => item.event.task.id),
+    [periodWorkItems],
+  );
+
+  const { participantsByTaskId } =
+    useTaskParticipantsByTaskIds(periodTaskIds);
+
   const {
     notifications: unreadTagNotifications,
     total: unreadTaggedCount,
@@ -165,7 +195,7 @@ export const WorkPageContent = () => {
   );
   const [eventSheetTime, setEventSheetTime] = useState<string | null>(null);
   const [eventSheetCategory, setEventSheetCategory] =
-    useState<WorkCategory>("task");
+    useState<WorkCreateCategory>("task");
   const [editEventId, setEditEventId] = useState<Identifier | null>(null);
   const [editEventIsMeeting, setEditEventIsMeeting] = useState(false);
   const [editTaskId, setEditTaskId] = useState<string | number | null>(null);
@@ -247,7 +277,7 @@ export const WorkPageContent = () => {
   }: {
     dateKey: string;
     time?: string | null;
-    category?: WorkCategory;
+    category?: WorkCreateCategory;
     eventId?: Identifier | null;
     isMeeting?: boolean;
   }) => {
@@ -278,7 +308,7 @@ export const WorkPageContent = () => {
     openEventSheet({
       dateKey: event.date,
       eventId: event.record.id,
-      isMeeting: Boolean(event.record.meeting_url?.trim()),
+      isMeeting: isMeetingRecord(event.record),
     });
   };
 
@@ -309,22 +339,14 @@ export const WorkPageContent = () => {
     ) {
       return;
     }
-    openEventSheet({ dateKey, time, category: "activity" });
+    openEventSheet({ dateKey, time, category: "scheduled_event" });
+  };
+
+  const handleSelectWorkItem = (item: WorkItem) => {
+    handleSelectEvent(item.event);
   };
 
   const dayPanelEvents = filteredEventsByDate[dayPanelDateKey] ?? [];
-
-  const calendarSidebarEvents =
-    filteredEventsByDate[calendarSelectedDateKey] ?? [];
-
-  const categoryDotsByDate = useMemo(
-    () =>
-      buildCategoryDotsByDate(filteredEventsByDate, (category) =>
-        WORK_CATEGORY_OPTIONS.find((entry) => entry.value === category)
-          ?.dotClass ?? "bg-muted-foreground/50",
-      ),
-    [filteredEventsByDate],
-  );
 
   const markAllTaggedRead = async () => {
     await markRead(unreadTagNotifications);
@@ -351,34 +373,8 @@ export const WorkPageContent = () => {
 
   return (
     <div className="space-y-3">
-      <ModuleToolbar className="shrink-0">
-        <ModuleSearchField
-          value={searchQuery}
-          onChange={setSearchQuery}
-          basePlaceholder="Search tasks, meetings, or projects"
-          total={filteredWorkItems.length}
-          itemSingular="item"
-        />
-        <ModuleToolbarActions>
-          {preferences.scope === "tagged" &&
-          unreadTagNotifications.length > 0 ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={markAllTaggedRead}
-            >
-              <CheckCheck className="size-4" />
-              Mark all read
-            </Button>
-          ) : null}
-        </ModuleToolbarActions>
-      </ModuleToolbar>
-
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <p className="text-sm text-muted-foreground">{stats.open} open</p>
-
           <div className="flex items-center gap-1 rounded-sm border bg-background px-1 py-0.5">
             <IconButton
               onClick={() => shiftPeriod(-1)}
@@ -396,9 +392,47 @@ export const WorkPageContent = () => {
               <ChevronRight className="size-4" />
             </IconButton>
           </div>
+
+          <ToggleGroup
+            type="single"
+            value={preferences.calendarDisplay}
+            onValueChange={(value) => {
+              if (value === "calendar" || value === "list") {
+                setPreferences({ calendarDisplay: value });
+              }
+            }}
+            className="rounded-sm border bg-background p-0.5"
+          >
+            <ToggleGroupItem
+              value="calendar"
+              aria-label="Calendar view"
+              className="px-2.5"
+            >
+              <LayoutGrid className="size-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="list"
+              aria-label="List view"
+              className="px-2.5"
+            >
+              <List className="size-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+          {preferences.scope === "tagged" &&
+          unreadTagNotifications.length > 0 ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={markAllTaggedRead}
+            >
+              <CheckCheck className="size-4" />
+              Mark all read
+            </Button>
+          ) : null}
           <WorkCategoryChips
             selected={preferences.categories}
             onChange={(categories) => setPreferences({ categories })}
@@ -551,7 +585,7 @@ export const WorkPageContent = () => {
               </div>
 
               <div className="space-y-2">
-                <Label>Calendar layout</Label>
+                <Label>Period layout</Label>
                 <Select
                   value={preferences.calendarView}
                   onValueChange={(value) =>
@@ -644,62 +678,67 @@ export const WorkPageContent = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[240px_minmax(0,1fr)] xl:items-start">
-        <div className="hidden xl:flex xl:flex-col xl:gap-4">
-          <aside className="rounded-lg border bg-card p-4">
-            <CalendarMiniMonth
-              anchor={anchor}
-              selectedDateKey={calendarSelectedDateKey}
-              dotsByDate={categoryDotsByDate}
-              onSelectDay={handleCalendarSelectDay}
-              onAnchorChange={setAnchor}
+      <div className="relative min-w-0 space-y-3">
+        <CalendarKpiStrip
+          open={stats.open}
+          done={stats.done}
+          overdue={stats.overdue}
+          dueToday={filteredGroupedItems.today.length}
+          trailing={
+            <ModuleSearchField
+              value={searchQuery}
+              onChange={setSearchQuery}
+              basePlaceholder="Search title, contact, notes, or category"
+              total={filteredWorkItems.length}
+              itemSingular="item"
+              fillHeight
+              className="h-full w-full flex-none"
             />
-          </aside>
-          <CalendarUpcomingPanel
-            selectedDateKey={calendarSelectedDateKey}
-            events={calendarSidebarEvents}
-            onSelectEvent={handleSelectEvent}
-            onAddEvent={(dateKey) => openEventSheet({ dateKey })}
-            showAssigneeAvatars={showAssigneeAvatars}
-            membersById={membersById}
+          }
+        />
+        {preferences.calendarDisplay === "calendar" ? (
+          <>
+            <WorkCalendarView
+              anchor={anchor}
+              view={preferences.calendarView}
+              eventsByDate={filteredEventsByDate}
+              displayOptions={displayOptions}
+              schedule={businessHoursSchedule}
+              selectedDateKey={calendarSelectedDateKey}
+              onSelectDay={handleCalendarSelectDay}
+              onSelectEvent={handleSelectEvent}
+              onEditEvent={handleEditEvent}
+              onSelectSlot={handleSelectSlot}
+              onRescheduleEvent={rescheduleEvent}
+              showAssigneeAvatars={showAssigneeAvatars}
+              membersById={membersById}
+            />
+            <CalendarDayPanel
+              dateKey={dayPanelDateKey}
+              events={dayPanelEvents}
+              schedule={businessHoursSchedule}
+              open={dayPanelOpen}
+              onClose={closeDayPanel}
+              onSelectEvent={handleSelectEvent}
+              onEditEvent={handleEditEvent}
+              onSelectSlot={handleSelectSlot}
+              onAddEvent={(dateKey) => openEventSheet({ dateKey })}
+              showAssigneeAvatars={showAssigneeAvatars}
+              membersById={membersById}
+            />
+          </>
+        ) : (
+          <WorkCalendarListView
+            items={periodWorkItems}
+            participantsByTaskId={participantsByTaskId}
+            onSelectItem={handleSelectWorkItem}
+            emptyMessage={
+              searchActive
+                ? "No matches for this search."
+                : "Nothing scheduled in this period."
+            }
           />
-        </div>
-
-        <div className="relative min-w-0 space-y-3">
-          <CalendarKpiStrip
-            open={stats.open}
-            done={stats.done}
-            overdue={stats.overdue}
-            dueToday={filteredGroupedItems.today.length}
-          />
-          <WorkCalendarView
-            anchor={anchor}
-            view={preferences.calendarView}
-            eventsByDate={filteredEventsByDate}
-            displayOptions={displayOptions}
-            schedule={businessHoursSchedule}
-            selectedDateKey={calendarSelectedDateKey}
-            onSelectDay={handleCalendarSelectDay}
-            onSelectEvent={handleSelectEvent}
-            onEditEvent={handleEditEvent}
-            onSelectSlot={handleSelectSlot}
-            showAssigneeAvatars={showAssigneeAvatars}
-            membersById={membersById}
-          />
-          <CalendarDayPanel
-            dateKey={dayPanelDateKey}
-            events={dayPanelEvents}
-            schedule={businessHoursSchedule}
-            open={dayPanelOpen}
-            onClose={closeDayPanel}
-            onSelectEvent={handleSelectEvent}
-            onEditEvent={handleEditEvent}
-            onSelectSlot={handleSelectSlot}
-            onAddEvent={(dateKey) => openEventSheet({ dateKey })}
-            showAssigneeAvatars={showAssigneeAvatars}
-            membersById={membersById}
-          />
-        </div>
+        )}
       </div>
 
       <CalendarEventSheet

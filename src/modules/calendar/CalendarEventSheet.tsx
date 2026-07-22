@@ -1,11 +1,5 @@
+import { useEffect, useState } from "react";
 import {
-  WorkCreateEventFields,
-  WorkCreateTaskFields,
-} from "@/modules/work/WorkCreateFormFields";
-import { useEffect, useState, type ReactNode } from "react";
-import { useFormContext } from "react-hook-form";
-import {
-  CreateBase,
   EditBase,
   Form,
   required,
@@ -18,15 +12,11 @@ import {
 } from "ra-core";
 import { useQuery } from "@tanstack/react-query";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import { DialogSaveButton } from "@/components/admin/form-guard";
 import { SaveButton } from "@/components/admin/form";
 import { DateInput } from "@/components/admin/date-input";
-import { ReferenceInput } from "@/components/admin/reference-input";
 import { TextInput } from "@/components/admin/text-input";
-import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { BooleanInput } from "@/components/admin/boolean-input";
 import { SelectInput } from "@/components/admin/select-input";
-import { normalizeTaskCreateData } from "@/components/atomic-crm/tasks/taskConstants";
 import {
   Dialog,
   DialogContent,
@@ -34,23 +24,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type {
-  CalendarEventRecord,
-  Contact,
-  OrganizationMember,
-} from "@/components/atomic-crm/types";
+import type { CalendarEventRecord } from "@/components/atomic-crm/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
-import { formatOrganizationMemberName } from "@/modules/billing/billingUtils";
 import { CalendarEventDeleteButton } from "@/modules/calendar/CalendarEventDeleteButton";
+import { CalendarEventFormInitializer } from "@/modules/calendar/CalendarEventFormInitializer";
 import { prepareCalendarEventWriteData } from "@/modules/calendar/calendarEventWriteData";
 import { CalendarTimeInput } from "@/modules/calendar/CalendarTimeInput";
 import {
-  DEFAULT_MEETING_DURATION_MINUTES,
   DURATION_CHOICES,
   DURATION_NONE,
-  getContactDisplayName,
-  REMIND_BEFORE_CHOICES,
-  REMIND_BEFORE_NONE,
 } from "@/modules/calendar/calendarReminderOptions";
 import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone/usTimezone";
 import { MeetingScheduleForm } from "@/modules/meetings/MeetingScheduleForm";
@@ -59,33 +41,13 @@ import { sendCalendarEventUpdateNotifications } from "@/modules/calendar/sendCal
 import { DEFAULT_MEETING_NOTIFICATION_SETTINGS } from "@/modules/meetings/meetingNotificationSettings";
 import { useOrganizationMeetingNotificationSettings } from "@/modules/settings/useOrganizationMeetingNotificationSettings";
 import {
-  isMeetingWorkCategory,
-  isTaskWorkCategory,
-  WorkCreateCategoryPicker,
-} from "@/modules/work/WorkCreateCategoryPicker";
+  isMeetingCreateCategory,
+  type WorkCreateCategory,
+} from "@/modules/work/workCreateCategories";
 import { CalendarReminderOffsetsInput } from "@/modules/calendar/CalendarReminderOffsetsInput";
-import {
-  TeamMemberMultiSelect,
-} from "@/modules/shared/TeamMemberMultiSelect";
-
-const dealOptionText = (choice: {
-  name?: string | null;
-  id?: number | string;
-}) => choice.name?.trim() || `Project #${choice.id}`;
-
-const contactOptionText = (contact: Contact) => getContactDisplayName(contact);
-
-const memberOptionText = (member: OrganizationMember) =>
-  formatOrganizationMemberName(member) ?? `Member #${member.id}`;
-
-const formatRemindBefore = (value?: number | null) =>
-  value == null ? REMIND_BEFORE_NONE : value;
-
-const parseRemindBefore = (value: string | number) => {
-  if (value === REMIND_BEFORE_NONE || value === "" || value == null)
-    return null;
-  return Number(value);
-};
+import { TeamMemberMultiSelect } from "@/modules/shared/TeamMemberMultiSelect";
+import { WorkCreateAccountLinkFields } from "@/modules/work/WorkCreateAccountLinkFields";
+import { WorkCreateDialog } from "@/modules/work/WorkCreateDialog";
 
 const formatDuration = (value?: number | null) =>
   value == null ? DURATION_NONE : value;
@@ -93,40 +55,6 @@ const formatDuration = (value?: number | null) =>
 const parseDuration = (value: string | number) => {
   if (value === DURATION_NONE || value === "" || value == null) return null;
   return Number(value);
-};
-
-const getCategoryHint = (category: WorkCategory) => {
-  if (category === "task") return "Task shows due date and priority.";
-  if (category === "meeting") return "Video call with optional client invite.";
-  if (category === "delivery") return "Delivery uses date only — no time.";
-  if (category === "activity") return "Activity can be linked to a contact or project.";
-  return "Follow up uses a due date and optional time.";
-};
-
-const CalendarEventFormInitializer = () => {
-  const { getValues, setValue } = useFormContext();
-
-  useEffect(() => {
-    const assignees = getValues("assignee_member_ids");
-    if (!Array.isArray(assignees) || assignees.length === 0) {
-      const owner = getValues("organization_member_id");
-      if (owner != null && owner !== "") {
-        setValue("assignee_member_ids", [owner], { shouldDirty: false });
-      }
-    }
-
-    const offsets = getValues("reminder_offsets_minutes");
-    if (!Array.isArray(offsets) || offsets.length === 0) {
-      const legacy = getValues("remind_before_minutes");
-      if (legacy != null && legacy !== "") {
-        setValue("reminder_offsets_minutes", [Number(legacy)], {
-          shouldDirty: false,
-        });
-      }
-    }
-  }, [getValues, setValue]);
-
-  return null;
 };
 
 const CalendarEventEditForm = ({
@@ -181,29 +109,10 @@ const CalendarEventEditForm = ({
       />
 
       <div className="space-y-3 rounded-md border p-3">
-        <p className="text-sm font-medium">Link to (optional)</p>
-        <ReferenceInput source="contact_id" reference="contacts_summary">
-          <AutocompleteInput
-            label="Contact"
-            optionText={contactOptionText}
-            inputText={contactOptionText}
-            helperText={false}
-            modal
-            filterToQuery={(searchText) => ({ q: searchText })}
-          />
-        </ReferenceInput>
-        <ReferenceInput source="deal_id" reference="deals">
-          <AutocompleteInput
-            label="Project"
-            optionText={dealOptionText}
-            helperText={false}
-            modal
-            filterToQuery={(searchText) => ({ q: searchText })}
-          />
-        </ReferenceInput>
+        <WorkCreateAccountLinkFields />
         <TeamMemberMultiSelect
           source="assignee_member_ids"
-          label="Assignees"
+          label="Team members"
           required
         />
       </div>
@@ -227,36 +136,6 @@ const CalendarEventEditForm = ({
   );
 };
 
-const CalendarEventCreateShell = ({
-  category,
-  onCategoryChange,
-  dealId,
-  categoryHint,
-  children,
-}: {
-  category: WorkCategory;
-  onCategoryChange: (next: WorkCategory) => void;
-  dealId?: Identifier;
-  categoryHint: string;
-  children: ReactNode;
-}) => (
-  <DialogContent className="top-1/20 max-h-9/10 translate-y-0 overflow-y-auto lg:max-w-xl">
-    <Form className="flex flex-col gap-4">
-      <DialogHeader>
-        <DialogTitle>Add to calendar</DialogTitle>
-      </DialogHeader>
-      <WorkCreateCategoryPicker value={category} onChange={onCategoryChange} />
-      {children}
-      <p className="rounded-sm border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
-        {categoryHint}
-      </p>
-      <DialogFooter className="w-full justify-end gap-2">
-        <DialogSaveButton label="Create" />
-      </DialogFooter>
-    </Form>
-  </DialogContent>
-);
-
 export const CalendarEventSheet = ({
   open,
   onOpenChange,
@@ -271,7 +150,7 @@ export const CalendarEventSheet = ({
   onOpenChange: (open: boolean) => void;
   dateKey: string;
   initialTime?: string | null;
-  initialCategory?: WorkCategory;
+  initialCategory?: WorkCreateCategory;
   dealId?: Identifier;
   editEventId?: Identifier | null;
   editIsMeeting?: boolean;
@@ -284,11 +163,11 @@ export const CalendarEventSheet = ({
   const workspaceTimezone =
     String(config.companyTimezone ?? "").trim() || DEFAULT_ORG_TIMEZONE;
   const isEdit = editEventId != null;
-  const [category, setCategory] = useState<WorkCategory>(initialCategory);
+  const [category, setCategory] = useState<WorkCreateCategory>(initialCategory);
 
   const { data: meetingNotifySettings } =
     useOrganizationMeetingNotificationSettings(
-      open && (isEdit ? editIsMeeting : category === "meeting"),
+      open && (isEdit ? editIsMeeting : isMeetingCreateCategory(category)),
     );
   const [shareEmail, setShareEmail] = useState(
     DEFAULT_MEETING_NOTIFICATION_SETTINGS.client_invite_email_default,
@@ -306,7 +185,7 @@ export const CalendarEventSheet = ({
   const { data: emailSettings } = useQuery({
     queryKey: ["email-delivery-settings"],
     queryFn: () => dataProvider.getEmailDeliverySettings(),
-    enabled: open && !isEdit && category === "meeting" && !!identity?.id,
+    enabled: open && !isEdit && isMeetingCreateCategory(category) && !!identity?.id,
     staleTime: 60_000,
   });
 
@@ -379,12 +258,14 @@ export const CalendarEventSheet = ({
   const handleEventCreateSuccess = async (
     record?: Record<string, unknown>,
   ) => {
-    if (category === "meeting" && record) {
+    if (isMeetingCreateCategory(category) && record) {
       await notifyMeetingShare(record);
     }
     closeSheet();
     refresh();
-    notify(category === "meeting" ? "Meeting scheduled" : "Event added");
+    notify(
+      isMeetingCreateCategory(category) ? "Meeting scheduled" : "Event added",
+    );
   };
 
   const handleEventEditSuccess = async (record?: Record<string, unknown>) => {
@@ -451,127 +332,24 @@ export const CalendarEventSheet = ({
     );
   }
 
-  if (isTaskWorkCategory(category)) {
-    return (
-      <CreateBase
-        key={`task-${category}-${dateKey}-${initialTime ?? ""}`}
-        resource="tasks"
-        record={{
-          type: "none",
-          deal_id: dealId ?? null,
-          due_date: dateKey,
-          organization_member_id: identity.id,
-          assignee_person_ids: [identity.id],
-          collaborator_person_ids: [],
-          priority: "normal",
-          internal: false,
-        }}
-        transform={(data) =>
-          normalizeTaskCreateData({
-            ...data,
-            deal_id: dealId ?? data.deal_id ?? null,
-          })
-        }
-        mutationOptions={{ onSuccess: handleTaskSuccess }}
-      >
-        <Dialog open={open} onOpenChange={onOpenChange}>
-          <CalendarEventCreateShell
-            category={category}
-            onCategoryChange={setCategory}
-            dealId={dealId}
-            categoryHint={getCategoryHint(category)}
-          >
-            <WorkCreateTaskFields category={category} defaultDealId={dealId} />
-          </CalendarEventCreateShell>
-        </Dialog>
-      </CreateBase>
-    );
-  }
-
-  if (isMeetingWorkCategory(category)) {
-    return (
-      <CreateBase
-        key={`meeting-${dateKey}-${initialTime ?? ""}`}
-        resource="calendar_events"
-        record={{
-          title: "",
-          event_date: dateKey,
-          event_time: initialTime,
-          duration_minutes: DEFAULT_MEETING_DURATION_MINUTES,
-          reminder_offsets_minutes: [15],
-          remind_before_minutes: 15,
-          description: "",
-          meeting_url: null,
-          contact_id: null,
-          deal_id: dealId ?? null,
-          organization_member_id: identity.id,
-          assignee_member_ids: [identity.id],
-          completed_at: null,
-        }}
-        transform={transformCalendarEvent}
-        mutationMode="pessimistic"
-        mutationOptions={{
-          onSuccess: (record) => {
-            void handleEventCreateSuccess(record as Record<string, unknown>);
-          },
-          onError: handleMutationError,
-        }}
-        redirect={false}
-      >
-        <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
-            <div className="flex flex-col gap-4">
-              <WorkCreateCategoryPicker
-                value={category}
-                onChange={setCategory}
-              />
-              <MeetingScheduleForm isEdit={false} {...meetingFormProps} />
-            </div>
-          </DialogContent>
-        </Dialog>
-      </CreateBase>
-    );
-  }
-
   return (
-    <CreateBase
-      key={`event-${category}-${dateKey}-${initialTime ?? ""}`}
-      resource="calendar_events"
-      record={{
-        title: "",
-        event_date: dateKey,
-        event_time: initialTime,
-        duration_minutes: null,
-        reminder_offsets_minutes:
-          category === "follow_up" ? [15] : [],
-        remind_before_minutes: category === "follow_up" ? 15 : null,
-        description: "",
-        contact_id: null,
-        deal_id: dealId ?? null,
-        organization_member_id: identity.id,
-        assignee_member_ids: [identity.id],
-        completed_at: null,
+    <WorkCreateDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) closeSheet();
+        else onOpenChange(next);
       }}
-      transform={transformCalendarEvent}
-      mutationMode="pessimistic"
-      mutationOptions={{
-        onSuccess: (record) => {
-          void handleEventCreateSuccess(record as Record<string, unknown>);
-        },
-        onError: handleMutationError,
-      }}
-      redirect={false}
-    >
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <CalendarEventCreateShell
-          category={category}
-          onCategoryChange={setCategory}
-          dealId={dealId}
-          categoryHint={getCategoryHint(category)}
-        >
-          <WorkCreateEventFields category={category} />
-        </CalendarEventCreateShell>
-      </Dialog>
-    </CreateBase>
+      category={category}
+      onCategoryChange={setCategory}
+      dateKey={dateKey}
+      initialTime={initialTime}
+      dealId={dealId}
+      memberId={identity.id}
+      onTaskSuccess={handleTaskSuccess}
+      onEventSuccess={handleEventCreateSuccess}
+      transformCalendarEvent={transformCalendarEvent}
+      meetingFormProps={meetingFormProps}
+      onError={handleMutationError}
+    />
   );
 };

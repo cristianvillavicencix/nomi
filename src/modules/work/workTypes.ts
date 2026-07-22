@@ -3,6 +3,9 @@ import type { Task } from "@/components/atomic-crm/types";
 
 export type WorkViewMode = "list" | "calendar" | "today";
 
+/** Main work calendar area: grid (month/week) or row list for the selected period. */
+export type WorkCalendarDisplay = "calendar" | "list";
+
 export type WorkCategory =
   | "task"
   | "meeting"

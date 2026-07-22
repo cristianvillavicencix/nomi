@@ -271,6 +271,7 @@ export type Task = {
   assignee_person_ids?: Identifier[];
   collaborator_person_ids?: Identifier[];
   mentioned_member_ids?: Identifier[];
+  reminder_offsets_minutes?: number[];
   priority?: string;
   internal?: boolean;
 } & Pick<RaRecord, "id">;
@@ -309,6 +310,8 @@ export type CalendarEventRecord = {
   reminder_sent_at?: string[];
   description?: string | null;
   meeting_url?: string | null;
+  meeting_format?: string | null;
+  location?: string | null;
   timezone?: string | null;
   deal_id?: Identifier | null;
   contact_id?: Identifier | null;

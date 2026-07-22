@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Activity,
   Bell,
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/popover";
 import { CalendarEventAssigneeAvatars } from "@/modules/calendar/CalendarEventAssigneeAvatars";
 import { getCalendarEventMemberIds } from "@/modules/calendar/calendarEventAssignees";
+import { calendarEventPreviewController } from "@/modules/calendar/calendarEventPreviewController";
 import {
   getCalendarEntryMeta,
   getEventLabel,
@@ -28,6 +28,7 @@ import {
 } from "@/modules/calendar/calendarUtils";
 import { formatEventTimeRange } from "@/modules/calendar/calendarReminderOptions";
 import { formatReminderOffsetsSummary } from "@/modules/calendar/calendarReminderWriteUtils";
+import { useCalendarEventPreviewOpen } from "@/modules/calendar/useCalendarEventPreviewOpen";
 import { cn } from "@/lib/utils";
 
 const getEventTypeMeta = (event: CalendarEvent) => {
@@ -71,14 +72,17 @@ export const CalendarEventPreviewPopover = ({
   onEdit,
   outsideBusinessHours = false,
   membersById,
+  enabled = true,
 }: {
   event: CalendarEvent;
   children: React.ReactNode;
   onEdit: (event: CalendarEvent) => void;
   outsideBusinessHours?: boolean;
   membersById?: Map<string, OrganizationMember>;
+  enabled?: boolean;
 }) => {
-  const [open, setOpen] = useState(false);
+  const eventId = String(event.id);
+  const open = useCalendarEventPreviewOpen(eventId, enabled);
   const { label: typeLabel, icon: TypeIcon } = getEventTypeMeta(event);
   const title = getEventLabel(event);
   const reminderSummary = getReminderSummary(event);
@@ -97,14 +101,33 @@ export const CalendarEventPreviewPopover = ({
       : null;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          calendarEventPreviewController.closeImmediately(eventId);
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <div
           className="min-w-0"
-          onMouseEnter={() => setOpen(true)}
-          onMouseLeave={() => setOpen(false)}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setOpen(false)}
+          onMouseEnter={() => {
+            if (!enabled) return;
+            calendarEventPreviewController.scheduleOpen(eventId);
+          }}
+          onMouseLeave={() => {
+            if (!enabled) return;
+            calendarEventPreviewController.scheduleClose(eventId);
+          }}
+          onFocus={() => {
+            if (!enabled) return;
+            calendarEventPreviewController.scheduleOpen(eventId);
+          }}
+          onBlur={() => {
+            if (!enabled) return;
+            calendarEventPreviewController.scheduleClose(eventId);
+          }}
         >
           {children}
         </div>
@@ -112,12 +135,17 @@ export const CalendarEventPreviewPopover = ({
       <PopoverContent
         side="top"
         align="start"
-        sideOffset={6}
+        sideOffset={4}
         collisionPadding={16}
         avoidCollisions
-        className="z-50 w-72 p-0"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
+        className="z-[100] w-72 p-0"
+        onMouseEnter={() => {
+          calendarEventPreviewController.cancelClose();
+          calendarEventPreviewController.scheduleOpen(eventId);
+        }}
+        onMouseLeave={() => {
+          calendarEventPreviewController.scheduleClose(eventId);
+        }}
       >
         <div className="space-y-3 p-3">
           <div className="flex items-start gap-2">
@@ -139,7 +167,7 @@ export const CalendarEventPreviewPopover = ({
               size="icon-sm"
               aria-label="Edit event"
               onClick={() => {
-                setOpen(false);
+                calendarEventPreviewController.closeImmediately(eventId);
                 onEdit(event);
               }}
             >

@@ -3,7 +3,7 @@ import type { Identifier } from "ra-core";
 import type { TaskStatusFilter } from "@/components/atomic-crm/tasks/taskConstants";
 import type { TaskScopeFilter } from "@/components/atomic-crm/tasks/scopedTasks";
 import type { CalendarView } from "@/modules/calendar/calendarUtils";
-import type { WorkCategory, WorkViewMode } from "@/modules/work/workTypes";
+import type { WorkCategory, WorkCalendarDisplay, WorkViewMode } from "@/modules/work/workTypes";
 
 const LS_KEY = "nomi-crm:workPreferences";
 const LEGACY_TASK_KEY = "nomi-crm:taskPreferences";
@@ -19,6 +19,7 @@ export type WorkPreferences = {
   teamMemberId: Identifier | null;
   categories: WorkCategory[];
   calendarView: CalendarView;
+  calendarDisplay: WorkCalendarDisplay;
   includeDoneTasks: boolean;
   includeCompletedReminders: boolean;
   showSaturday: boolean;
@@ -45,6 +46,7 @@ const DEFAULT_PREFERENCES: WorkPreferences = {
   teamMemberId: null,
   categories: ALL_CATEGORIES,
   calendarView: "week",
+  calendarDisplay: "calendar",
   includeDoneTasks: false,
   includeCompletedReminders: false,
   showSaturday: true,
@@ -130,6 +132,8 @@ const readPreferences = (): WorkPreferences => {
       teamMemberId: parsed.teamMemberId ?? null,
       categories: categories.length > 0 ? categories : ALL_CATEGORIES,
       calendarView: parsed.calendarView === "week" ? "week" : "month",
+      calendarDisplay:
+        parsed.calendarDisplay === "list" ? "list" : "calendar",
       includeDoneTasks: Boolean(parsed.includeDoneTasks),
       includeCompletedReminders: Boolean(parsed.includeCompletedReminders),
       showSaturday: parsed.showSaturday !== false,

@@ -1,8 +1,21 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import type { OrganizationMember } from "@/components/atomic-crm/types";
-import { CalendarInteractiveEventChip } from "@/modules/calendar/CalendarInteractiveEventChip";
+import { CalendarEventChip } from "@/modules/calendar/CalendarEventChip";
+import { CalendarEventStack, CalendarTimedEventStack } from "@/modules/calendar/CalendarEventStack";
+import { CalendarWeekHourDropZone } from "@/modules/calendar/CalendarWeekHourDropZone";
+import { parseCalendarDropTarget } from "@/modules/calendar/calendarEventReschedule";
+import { calendarEventPreviewController } from "@/modules/calendar/calendarEventPreviewController";
+import { groupEventsByTimeSlot, groupTimedBlocksByStart } from "@/modules/calendar/calendarEventStackUtils";
 import type { CalendarBusinessHoursSchedule } from "@/modules/calendar/calendarBusinessHours";
-import { isEventOutsideBusinessHours } from "@/modules/calendar/calendarBusinessHours";
 import {
   GRID_COLUMN_CLASS,
   getVisibleColumnCount,
@@ -39,6 +52,7 @@ export const CalendarTimeWeekGrid = ({
   onSelectEvent,
   onEditEvent,
   onSelectSlot,
+  onRescheduleEvent,
   showAssigneeAvatars = false,
   membersById,
 }: {
@@ -51,9 +65,20 @@ export const CalendarTimeWeekGrid = ({
   onSelectEvent: (event: CalendarEvent) => void;
   onEditEvent: (event: CalendarEvent) => void;
   onSelectSlot?: (dateKey: string, time: string) => void;
+  onRescheduleEvent?: (
+    event: CalendarEvent,
+    targetDateKey: string,
+    targetTime?: string | null,
+  ) => void | Promise<void>;
   showAssigneeAvatars?: boolean;
   membersById?: Map<string, OrganizationMember>;
 }) => {
+  const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
+  const dragEnabled = Boolean(onRescheduleEvent);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
+
   const today = new Date();
   const todayKey = toDateKey(today);
   const gridStartHour = schedule.gridStartHour;
@@ -85,10 +110,12 @@ export const CalendarTimeWeekGrid = ({
           day,
           daySchedule,
           untimed,
-          timedBlocks: layoutTimedEvents(timed, {
-            startHour: gridStartHour,
-            endHour: gridEndHour,
-          }),
+          timedBlocks: groupTimedBlocksByStart(
+            layoutTimedEvents(timed, {
+              startHour: gridStartHour,
+              endHour: gridEndHour,
+            }),
+          ),
           occupancy: computeHourOccupancy({
             events: dayEvents,
             startHour: gridStartHour,
@@ -99,7 +126,28 @@ export const CalendarTimeWeekGrid = ({
     [days, eventsByDate, gridEndHour, gridStartHour, schedule],
   );
 
-  return (
+  const handleDragStart = (event: DragStartEvent) => {
+    calendarEventPreviewController.closeImmediately();
+    const dragged = event.active.data.current?.event as CalendarEvent | undefined;
+    setActiveEvent(dragged ?? null);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveEvent(null);
+    if (!onRescheduleEvent || !event.over) return;
+
+    const dragged = event.active.data.current?.event as CalendarEvent | undefined;
+    const target = parseCalendarDropTarget(String(event.over.id));
+    if (!dragged || !target) return;
+
+    await onRescheduleEvent(
+      dragged,
+      target.dateKey,
+      target.time,
+    );
+  };
+
+  const grid = (
     <div className="overflow-hidden rounded-lg border">
       <div className={cn("grid border-b bg-muted/40", gridColsClass)}>
         <div className="border-r bg-muted/40" aria-hidden />
@@ -116,7 +164,9 @@ export const CalendarTimeWeekGrid = ({
               className={cn(
                 "px-1.5 py-2 text-center transition-colors hover:bg-muted/30",
                 getWeekendCellClassName(day),
-                isSelected && "bg-primary/5",
+                isToday &&
+                  "bg-primary/[0.06] ring-2 ring-inset ring-primary/30",
+                isSelected && !isToday && "bg-primary/5",
               )}
             >
               <div className="text-[11px] text-muted-foreground">
@@ -184,28 +234,25 @@ export const CalendarTimeWeekGrid = ({
                   className={cn(
                     "relative border-r last:border-r-0",
                     getWeekendCellClassName(day),
+                    isToday &&
+                      "bg-primary/[0.04] ring-2 ring-inset ring-primary/20",
                   )}
                   style={{ height: totalGridHeight }}
                 >
                   {untimed.length > 0 ? (
                     <div className="absolute inset-x-0 top-0 z-20 space-y-0.5 border-b bg-background/95 p-1">
-                      {untimed.map((event) => (
-                        <CalendarInteractiveEventChip
-                          key={event.id}
-                          event={event}
+                      {groupEventsByTimeSlot(untimed).map((group) => (
+                        <CalendarEventStack
+                          key={group.map((event) => event.id).join("-")}
+                          events={group}
                           compact
-                          onClick={onSelectEvent}
-                          onEdit={onEditEvent}
+                          fanDirection="horizontal"
+                          onSelectEvent={onSelectEvent}
+                          onEditEvent={onEditEvent}
                           showAssigneeAvatars={showAssigneeAvatars}
                           membersById={membersById}
-                          outsideBusinessHours={isEventOutsideBusinessHours(
-                            {
-                              date: event.date,
-                              time:
-                                "time" in event ? event.time : null,
-                            },
-                            schedule,
-                          )}
+                          schedule={schedule}
+                          enableDrag={dragEnabled}
                         />
                       ))}
                     </div>
@@ -214,6 +261,7 @@ export const CalendarTimeWeekGrid = ({
                   {Array.from({ length: gridEndHour - gridStartHour }).map(
                     (_, hourIndex) => {
                       const hour = gridStartHour + hourIndex;
+                      const slotTime = formatMinutesAsTime(hour * 60);
                       const withinDay =
                         hour >= daySchedule.startHour &&
                         hour < daySchedule.endHour;
@@ -222,9 +270,11 @@ export const CalendarTimeWeekGrid = ({
                       );
 
                       return (
-                        <button
+                        <CalendarWeekHourDropZone
                           key={hourIndex}
-                          type="button"
+                          dateKey={dateKey}
+                          time={slotTime}
+                          enabled={dragEnabled && withinDay}
                           disabled={!withinDay}
                           className={cn(
                             "absolute inset-x-0 border-b border-border/40 transition-colors",
@@ -238,10 +288,7 @@ export const CalendarTimeWeekGrid = ({
                           }}
                           onClick={() => {
                             if (!withinDay) return;
-                            onSelectSlot?.(
-                              dateKey,
-                              formatMinutesAsTime(hour * 60),
-                            );
+                            onSelectSlot?.(dateKey, slotTime);
                           }}
                           aria-label={`Add event at ${hourLabels[hourIndex]}`}
                         />
@@ -249,27 +296,17 @@ export const CalendarTimeWeekGrid = ({
                     },
                   )}
 
-                  {timedBlocks.map(({ event, topPx, heightPx }) => (
-                    <div
-                      key={event.id}
-                      className="absolute inset-x-1 z-10 overflow-hidden"
-                      style={{ top: topPx, height: heightPx }}
-                    >
-                      <CalendarInteractiveEventChip
-                        event={event}
-                        onClick={onSelectEvent}
-                        onEdit={onEditEvent}
-                        showAssigneeAvatars={showAssigneeAvatars}
-                        membersById={membersById}
-                        outsideBusinessHours={isEventOutsideBusinessHours(
-                          {
-                            date: event.date,
-                            time: "time" in event ? event.time : null,
-                          },
-                          schedule,
-                        )}
-                      />
-                    </div>
+                  {timedBlocks.map((blockGroup) => (
+                    <CalendarTimedEventStack
+                      key={blockGroup.map((block) => block.event.id).join("-")}
+                      blocks={blockGroup}
+                      onSelectEvent={onSelectEvent}
+                      onEditEvent={onEditEvent}
+                      showAssigneeAvatars={showAssigneeAvatars}
+                      membersById={membersById}
+                      schedule={schedule}
+                      enableDrag={dragEnabled}
+                    />
                   ))}
 
                   {isToday && nowIndicator ? (
@@ -293,5 +330,24 @@ export const CalendarTimeWeekGrid = ({
         </div>
       </div>
     </div>
+  );
+
+  if (!dragEnabled) return grid;
+
+  return (
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={(event) => {
+        void handleDragEnd(event);
+      }}
+    >
+      {grid}
+      <DragOverlay dropAnimation={null}>
+        {activeEvent ? (
+          <CalendarEventChip event={activeEvent} compact static />
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 };

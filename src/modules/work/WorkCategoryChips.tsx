@@ -1,32 +1,17 @@
 import { cn } from "@/lib/utils";
-import { WORK_CATEGORY_OPTIONS } from "@/modules/work/workCategoryUtils";
 import {
   ALL_WORK_CATEGORIES,
   areAllWorkCategoriesSelected,
-  soloWorkCategory,
-  toggleWorkCategory,
 } from "@/modules/work/useWorkPreferences";
 import type { WorkCategory } from "@/modules/work/workTypes";
-
-const resolveCategorySelection = (
-  selected: WorkCategory[],
-  category: WorkCategory,
-): WorkCategory[] => {
-  const allSelected = areAllWorkCategoriesSelected(selected);
-  const onlyThis =
-    selected.length === 1 && selected[0] === category;
-
-  // From full set → show only this type (what users expect for "Meetings").
-  if (allSelected) {
-    return soloWorkCategory(category);
-  }
-  // Already solo on this type → back to all.
-  if (onlyThis) {
-    return [...ALL_WORK_CATEGORIES];
-  }
-  // Otherwise toggle visibility among a partial set.
-  return toggleWorkCategory(selected, category);
-};
+import {
+  getFilterGroupCount,
+  isFilterGroupFullySelected,
+  isOnlyFilterGroupSelected,
+  resolveFilterGroupSelection,
+  WORK_CALENDAR_FILTER_GROUPS,
+  type WorkCalendarFilterGroup,
+} from "@/modules/work/workCalendarFilterGroups";
 
 export const WorkCategoryChips = ({
   selected,
@@ -50,32 +35,29 @@ export const WorkCategoryChips = ({
           All
         </button>
       ) : null}
-      {WORK_CATEGORY_OPTIONS.map((option) => {
-        const active = selected.includes(option.value);
-        const solo =
-          selected.length === 1 && selected[0] === option.value;
-        const count = counts?.[option.value];
+      {WORK_CALENDAR_FILTER_GROUPS.map((group) => {
+        const active = isFilterGroupFullySelected(selected, group);
+        const solo = isOnlyFilterGroupSelected(selected, group);
+        const count = counts ? getFilterGroupCount(counts, group) : undefined;
+
         return (
           <button
-            key={option.value}
+            key={group.id}
             type="button"
-            title={
-              allSelected
-                ? "Show only this type"
-                : solo
-                  ? "Click again to show all types"
-                  : active
-                    ? "Click to hide this type"
-                    : "Click to show this type"
-            }
+            title={group.title}
             aria-pressed={active}
             onClick={() =>
-              onChange(resolveCategorySelection(selected, option.value))
+              onChange(
+                resolveFilterGroupSelection(
+                  selected,
+                  group.id as WorkCalendarFilterGroup,
+                ),
+              )
             }
             className={cn(
               "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors",
               active
-                ? option.chipClass
+                ? group.chipClass
                 : "border-transparent bg-muted/30 text-muted-foreground opacity-55 hover:opacity-80",
               solo && "ring-2 ring-primary/30 ring-offset-1",
             )}
@@ -83,11 +65,11 @@ export const WorkCategoryChips = ({
             <span
               className={cn(
                 "size-2 shrink-0 rounded-full",
-                active ? option.dotClass : "bg-muted-foreground/40",
+                active ? group.dotClass : "bg-muted-foreground/40",
               )}
               aria-hidden
             />
-            {option.label}
+            {group.label}
             {typeof count === "number" ? (
               <span
                 className={cn(

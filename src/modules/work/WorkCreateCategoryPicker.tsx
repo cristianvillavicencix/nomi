@@ -1,32 +1,30 @@
 import {
-  Activity,
+  CalendarClock,
   CheckSquare,
-  Package,
-  Phone,
   Users,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { WORK_CATEGORY_OPTIONS } from "@/modules/work/workCategoryUtils";
-import type { WorkCategory } from "@/modules/work/workTypes";
+import {
+  WORK_CREATE_CATEGORY_OPTIONS,
+  type WorkCreateCategory,
+} from "@/modules/work/workCreateCategories";
 
-const CATEGORY_ICONS: Record<WorkCategory, LucideIcon> = {
+const CATEGORY_ICONS: Record<WorkCreateCategory, LucideIcon> = {
   task: CheckSquare,
   meeting: Users,
-  delivery: Package,
-  activity: Activity,
-  follow_up: Phone,
+  scheduled_event: CalendarClock,
 };
 
 export const WorkCreateCategoryPicker = ({
   value,
   onChange,
 }: {
-  value: WorkCategory;
-  onChange: (next: WorkCategory) => void;
+  value: WorkCreateCategory;
+  onChange: (next: WorkCreateCategory) => void;
 }) => (
-  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-    {WORK_CATEGORY_OPTIONS.map((option) => {
+  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+    {WORK_CREATE_CATEGORY_OPTIONS.map((option) => {
       const Icon = CATEGORY_ICONS[option.value];
       const active = value === option.value;
       return (
@@ -48,9 +46,3 @@ export const WorkCreateCategoryPicker = ({
     })}
   </div>
 );
-
-export const isTaskWorkCategory = (category: WorkCategory) =>
-  category === "task" || category === "delivery";
-
-export const isMeetingWorkCategory = (category: WorkCategory) =>
-  category === "meeting";

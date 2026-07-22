@@ -28,10 +28,17 @@ describe("calendarEventScheduleUtils", () => {
     ).toBe(true);
   });
 
-  it("identifies video meetings by meeting_url", () => {
+  it("identifies video meetings by format or legacy meeting_url", () => {
+    expect(
+      isVideoMeetingRecord({
+        meeting_format: "video",
+        meeting_url: "https://meet.jit.si/demo",
+      }),
+    ).toBe(true);
     expect(isVideoMeetingRecord({ meeting_url: "https://meet.jit.si/demo" })).toBe(
       true,
     );
+    expect(isVideoMeetingRecord({ meeting_format: "phone" })).toBe(false);
     expect(isVideoMeetingRecord({ meeting_url: null })).toBe(false);
   });
 });

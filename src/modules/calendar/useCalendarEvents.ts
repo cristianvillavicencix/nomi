@@ -30,14 +30,23 @@ export const useCalendarEvents = ({
   includeDoneTasks = false,
   includeCompletedReminders = false,
   projectId = null,
+  expandRangeMonths = 0,
 }: {
   anchor: Date;
   view: CalendarView;
   includeDoneTasks?: boolean;
   includeCompletedReminders?: boolean;
   projectId?: Identifier | null;
+  /** Widen the fetched date range (e.g. while searching). */
+  expandRangeMonths?: number;
 }) => {
-  const range = useMemo(() => getVisibleRange(anchor, view), [anchor, view]);
+  const range = useMemo(
+    () =>
+      getVisibleRange(anchor, view, {
+        expandMonths: expandRangeMonths > 0 ? expandRangeMonths : undefined,
+      }),
+    [anchor, expandRangeMonths, view],
+  );
   const projectFilter =
     projectId != null && projectId !== "" ? { "deal_id@eq": projectId } : {};
 

@@ -1,36 +1,79 @@
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+
+const KPI_CARDS = [
+  {
+    label: "Open",
+    subtitle: "Tasks not marked done",
+    tooltip: "Count of tasks that have not been marked complete.",
+    accent: "text-primary",
+  },
+  {
+    label: "Due today",
+    subtitle: "Scheduled for today",
+    tooltip: "Tasks and calendar items on today's date.",
+    accent: "text-foreground",
+  },
+  {
+    label: "Overdue",
+    subtitle: "Past due, still open",
+    tooltip: "Open tasks whose due date is before today.",
+    accent: "text-red-600 dark:text-red-400",
+  },
+  {
+    label: "Done",
+    subtitle: "Completed tasks",
+    tooltip: "Tasks marked complete.",
+    accent: "text-muted-foreground",
+  },
+] as const;
 
 export const CalendarKpiStrip = ({
   open,
   done,
   overdue,
   dueToday,
+  trailing,
 }: {
   open: number;
   done: number;
   overdue: number;
   dueToday: number;
+  trailing?: ReactNode;
 }) => {
-  const cards = [
-    { label: "Open", value: open, accent: "text-primary" },
-    { label: "Due today", value: dueToday, accent: "text-foreground" },
-    { label: "Overdue", value: overdue, accent: "text-red-600 dark:text-red-400" },
-    { label: "Done", value: done, accent: "text-muted-foreground" },
-  ];
+  const values = [open, dueToday, overdue, done];
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      {cards.map((card) => (
+    <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch lg:gap-2">
+      <div className="grid min-w-0 flex-1 grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-4">
+      {KPI_CARDS.map((card, index) => (
         <div
           key={card.label}
-          className="rounded-lg border bg-card px-3 py-2.5"
+          title={card.tooltip}
+          className="flex min-h-[44px] items-center gap-1.5 rounded-md border bg-card px-2 py-1.5"
         >
-          <p className="text-xs text-muted-foreground">{card.label}</p>
-          <p className={cn("mt-0.5 text-xl font-semibold tabular-nums", card.accent)}>
-            {card.value}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium leading-none text-foreground">
+              {card.label}
+            </p>
+            <p className="mt-0.5 truncate text-[10px] leading-tight text-muted-foreground">
+              {card.subtitle}
+            </p>
+          </div>
+          <p
+            className={cn(
+              "shrink-0 text-sm font-semibold tabular-nums leading-none",
+              card.accent,
+            )}
+          >
+            {values[index]}
           </p>
         </div>
       ))}
+      </div>
+      {trailing ? (
+        <div className="flex w-full shrink-0 lg:w-80 xl:w-96">{trailing}</div>
+      ) : null}
     </div>
   );
 };

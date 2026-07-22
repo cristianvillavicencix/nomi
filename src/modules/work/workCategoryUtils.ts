@@ -1,4 +1,10 @@
-import type { CalendarEvent } from "@/modules/calendar/calendarUtils";
+import type { CalendarEvent, CalendarView } from "@/modules/calendar/calendarUtils";
+import {
+  addDays,
+  parseDateKey,
+  startOfWeek,
+  toDateKey,
+} from "@/modules/calendar/calendarUtils";
 import { formatEventTimeLabel } from "@/modules/calendar/calendarReminderOptions";
 import type { OrganizationMember } from "@/components/atomic-crm/types";
 import { formatOrganizationMemberName } from "@/modules/billing/billingUtils";
@@ -7,7 +13,6 @@ import type {
   WorkItem,
   WorkListGroup,
 } from "@/modules/work/workTypes";
-import { toDateKey } from "@/modules/calendar/calendarUtils";
 
 export const WORK_CATEGORY_OPTIONS: Array<{
   value: WorkCategory;
@@ -184,6 +189,59 @@ export const groupWorkItems = (
   upcoming.sort(sortByDateTime);
 
   return { overdue, today, upcoming };
+};
+
+const sortWorkItemsByDateTime = (left: WorkItem, right: WorkItem) => {
+  const dateDiff = left.date.localeCompare(right.date);
+  if (dateDiff !== 0) return dateDiff;
+  return (left.time ?? "99:99").localeCompare(right.time ?? "99:99");
+};
+
+export const filterWorkItemsByCalendarPeriod = (
+  items: WorkItem[],
+  anchor: Date,
+  view: CalendarView,
+) => {
+  if (view === "month") {
+    const year = anchor.getFullYear();
+    const month = anchor.getMonth();
+    return items
+      .filter((item) => {
+        const date = parseDateKey(item.date);
+        return date.getFullYear() === year && date.getMonth() === month;
+      })
+      .sort(sortWorkItemsByDateTime);
+  }
+
+  const weekStart = startOfWeek(anchor);
+  const weekEnd = addDays(weekStart, 6);
+  const weekStartKey = toDateKey(weekStart);
+  const weekEndKey = toDateKey(weekEnd);
+
+  return items
+    .filter(
+      (item) => item.date >= weekStartKey && item.date <= weekEndKey,
+    )
+    .sort(sortWorkItemsByDateTime);
+};
+
+export const groupWorkItemsByDateKey = (items: WorkItem[]) => {
+  const grouped = new Map<string, WorkItem[]>();
+  for (const item of items) {
+    const bucket = grouped.get(item.date);
+    if (bucket) {
+      bucket.push(item);
+    } else {
+      grouped.set(item.date, [item]);
+    }
+  }
+
+  return Array.from(grouped.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([dateKey, dateItems]) => ({
+      dateKey,
+      items: [...dateItems].sort(sortWorkItemsByDateTime),
+    }));
 };
 
 export const filterWorkItemsByCategories = (

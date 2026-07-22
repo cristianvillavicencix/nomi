@@ -3,9 +3,9 @@ import { Plus, X } from "lucide-react";
 import type { OrganizationMember } from "@/components/atomic-crm/types";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
-import { CalendarInteractiveEventChip } from "@/modules/calendar/CalendarInteractiveEventChip";
+import { CalendarEventStack, CalendarTimedEventStack } from "@/modules/calendar/CalendarEventStack";
+import { groupEventsByTimeSlot, groupTimedBlocksByStart } from "@/modules/calendar/calendarEventStackUtils";
 import type { CalendarBusinessHoursSchedule } from "@/modules/calendar/calendarBusinessHours";
-import { isEventOutsideBusinessHours } from "@/modules/calendar/calendarBusinessHours";
 import {
   formatMinutesAsTime,
   getCurrentTimeIndicator,
@@ -56,10 +56,12 @@ export const CalendarDayPanel = ({
   const totalHeight = (gridEndHour - gridStartHour) * HOUR_SLOT_HEIGHT_PX;
   const hourLabels = getHourLabels(gridStartHour, gridEndHour);
   const { timed, untimed } = splitTimedAndUntimedEvents(events);
-  const timedBlocks = layoutTimedEvents(timed, {
-    startHour: gridStartHour,
-    endHour: gridEndHour,
-  });
+  const timedBlockGroups = groupTimedBlocksByStart(
+    layoutTimedEvents(timed, {
+      startHour: gridStartHour,
+      endHour: gridEndHour,
+    }),
+  );
   const isToday = dateKey === toDateKey(new Date());
   const nowIndicator = isToday
     ? getCurrentTimeIndicator(new Date(), {
@@ -115,19 +117,17 @@ export const CalendarDayPanel = ({
                 <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                   All day
                 </p>
-                {untimed.map((event) => (
-                  <CalendarInteractiveEventChip
-                    key={event.id}
-                    event={event}
+                {groupEventsByTimeSlot(untimed).map((group) => (
+                  <CalendarEventStack
+                    key={group.map((event) => event.id).join("-")}
+                    events={group}
                     compact
-                    onClick={onSelectEvent}
-                    onEdit={onEditEvent}
+                    fanDirection="horizontal"
+                    onSelectEvent={onSelectEvent}
+                    onEditEvent={onEditEvent}
                     showAssigneeAvatars={showAssigneeAvatars}
                     membersById={membersById}
-                    outsideBusinessHours={isEventOutsideBusinessHours(
-                      { date: event.date, time: "time" in event ? event.time : null },
-                      schedule,
-                    )}
+                    schedule={schedule}
                   />
                 ))}
               </div>
@@ -198,27 +198,16 @@ export const CalendarDayPanel = ({
                   },
                 )}
 
-                {timedBlocks.map(({ event, topPx, heightPx }) => (
-                  <div
-                    key={event.id}
-                    className="absolute inset-x-1 z-10 overflow-hidden"
-                    style={{ top: topPx, height: heightPx }}
-                  >
-                    <CalendarInteractiveEventChip
-                      event={event}
-                      onClick={onSelectEvent}
-                      onEdit={onEditEvent}
-                      showAssigneeAvatars={showAssigneeAvatars}
-                      membersById={membersById}
-                      outsideBusinessHours={isEventOutsideBusinessHours(
-                        {
-                          date: event.date,
-                          time: "time" in event ? event.time : null,
-                        },
-                        schedule,
-                      )}
-                    />
-                  </div>
+                {timedBlockGroups.map((blockGroup) => (
+                  <CalendarTimedEventStack
+                    key={blockGroup.map((block) => block.event.id).join("-")}
+                    blocks={blockGroup}
+                    onSelectEvent={onSelectEvent}
+                    onEditEvent={onEditEvent}
+                    showAssigneeAvatars={showAssigneeAvatars}
+                    membersById={membersById}
+                    schedule={schedule}
+                  />
                 ))}
 
                 {nowIndicator ? (

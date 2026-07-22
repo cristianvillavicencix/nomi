@@ -3,8 +3,9 @@ import type { CalendarEvent } from "@/modules/calendar/calendarUtils";
 import { CalendarEventAssigneeAvatars } from "@/modules/calendar/CalendarEventAssigneeAvatars";
 import { getCalendarEventAssigneeColorClassName } from "@/modules/calendar/calendarAssigneeColors";
 import {
+  getEventChipLabel,
+  getEventChipTooltip,
   getEventClassName,
-  getEventLabel,
 } from "@/modules/calendar/calendarUtils";
 import { cn } from "@/lib/utils";
 
@@ -37,7 +38,8 @@ export const CalendarEventChip = ({
     isMuted ? typeClassName : (assigneeClassName ?? typeClassName),
     extraClassName,
   );
-  const label = getEventLabel(event);
+  const label = getEventChipLabel(event);
+  const tooltip = getEventChipTooltip(event);
   const content = (
     <span className="flex min-w-0 items-center gap-1">
       {showAssigneeAvatars && membersById ? (
@@ -53,7 +55,7 @@ export const CalendarEventChip = ({
 
   if (isStatic || !onClick) {
     return (
-      <div className={className} title={label}>
+      <div className={className} title={tooltip}>
         {content}
       </div>
     );
@@ -67,7 +69,7 @@ export const CalendarEventChip = ({
         onClick(event);
       }}
       className={className}
-      title={label}
+      title={tooltip}
     >
       {content}
     </button>

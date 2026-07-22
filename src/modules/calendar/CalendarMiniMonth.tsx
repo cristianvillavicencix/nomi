@@ -87,7 +87,11 @@ export const CalendarMiniMonth = ({
                     className={cn(
                       "flex min-h-[42px] flex-col items-center gap-0.5 border-b border-r px-1 py-1 text-xs transition-colors last:border-r-0 hover:bg-muted/40",
                       !inMonth && "text-muted-foreground/50",
-                      isSelected && "bg-primary/5 ring-1 ring-inset ring-primary/20",
+                      isToday &&
+                        "bg-primary/[0.06] ring-2 ring-inset ring-primary/30",
+                      isSelected &&
+                        !isToday &&
+                        "bg-primary/5 ring-1 ring-inset ring-primary/20",
                     )}
                   >
                     <span

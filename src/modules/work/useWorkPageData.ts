@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { useGetMany } from "ra-core";
-import type { Deal } from "@/components/atomic-crm/types";
+import { useGetMany, type Identifier } from "ra-core";
+import type { Contact, Deal } from "@/components/atomic-crm/types";
 import { useCurrentOrganizationMember } from "@/components/atomic-crm/tasks/useCurrentOrganizationMember";
 import {
   useMyProjectDealIds,
@@ -10,6 +10,7 @@ import {
   buildTaskCalendarEvent,
   groupEventsByDate,
   toDateKey,
+  type CalendarEvent,
 } from "@/modules/calendar/calendarUtils";
 import { calendarEventInvolvesMember } from "@/modules/calendar/calendarEventAssignees";
 import { useCalendarEvents } from "@/modules/calendar/useCalendarEvents";
@@ -22,12 +23,35 @@ import {
 import type { WorkPreferences } from "@/modules/work/useWorkPreferences";
 import type { WorkCategory } from "@/modules/work/workTypes";
 
+/** Extra months loaded on each side of the visible range while searching. */
+export const WORK_SEARCH_RANGE_EXPAND_MONTHS = 3;
+
+const collectContactIds = (events: CalendarEvent[], tasks: { contact_id?: Identifier | null }[]) => {
+  const ids = new Set<string>();
+
+  for (const event of events) {
+    if ("record" in event && event.record.contact_id != null) {
+      ids.add(String(event.record.contact_id));
+    }
+  }
+
+  for (const task of tasks) {
+    if (task.contact_id != null) {
+      ids.add(String(task.contact_id));
+    }
+  }
+
+  return Array.from(ids);
+};
+
 export const useWorkPageData = ({
   preferences,
   anchor,
+  searchActive = false,
 }: {
   preferences: WorkPreferences;
   anchor: Date;
+  searchActive?: boolean;
 }) => {
   const { memberId, isPending: isMemberPending } =
     useCurrentOrganizationMember();
@@ -47,6 +71,7 @@ export const useWorkPageData = ({
     includeDoneTasks: includeDoneForCalendar,
     includeCompletedReminders: preferences.includeCompletedReminders,
     projectId: preferences.projectId,
+    expandRangeMonths: searchActive ? WORK_SEARCH_RANGE_EXPAND_MONTHS : 0,
   });
 
   const { data: scopedTasksResult, isPending: isTasksPending } = useScopedTasks(
@@ -87,15 +112,31 @@ export const useWorkPageData = ({
     [events],
   );
 
+  const contactIds = useMemo(
+    () => collectContactIds(events, tasks),
+    [events, tasks],
+  );
+
   const { data: deals = [] } = useGetMany<Deal>(
     "deals",
     { ids: dealIds },
     { enabled: dealIds.length > 0, staleTime: 60_000 },
   );
 
+  const { data: contacts = [] } = useGetMany<Contact>(
+    "contacts",
+    { ids: contactIds },
+    { enabled: contactIds.length > 0, staleTime: 60_000 },
+  );
+
   const dealsById = useMemo(
     () => new Map(deals.map((deal) => [String(deal.id), deal])),
     [deals],
+  );
+
+  const contactsById = useMemo(
+    () => new Map(contacts.map((contact) => [String(contact.id), contact])),
+    [contacts],
   );
 
   const allWorkItems = useMemo(() => {
@@ -134,21 +175,25 @@ export const useWorkPageData = ({
     return items;
   }, [dealsById, events, tasks]);
 
-  const workItems = useMemo(
-    () => filterWorkItemsByCategories(allWorkItems, preferences.categories),
-    [allWorkItems, preferences.categories],
-  );
-
-  const memberFilteredWorkItems = useMemo(() => {
-    if (preferences.teamMemberId == null) return workItems;
-    return workItems.filter((item) =>
+  const memberFilteredAllWorkItems = useMemo(() => {
+    if (preferences.teamMemberId == null) return allWorkItems;
+    return allWorkItems.filter((item) =>
       calendarEventInvolvesMember(item.event, preferences.teamMemberId!),
     );
-  }, [preferences.teamMemberId, workItems]);
+  }, [allWorkItems, preferences.teamMemberId]);
+
+  const workItems = useMemo(
+    () =>
+      filterWorkItemsByCategories(
+        memberFilteredAllWorkItems,
+        preferences.categories,
+      ),
+    [memberFilteredAllWorkItems, preferences.categories],
+  );
 
   const filteredEvents = useMemo(
-    () => memberFilteredWorkItems.map((item) => item.event),
-    [memberFilteredWorkItems],
+    () => workItems.map((item) => item.event),
+    [workItems],
   );
 
   /** Calendar / sidebar / day dialog — same category filter as the list. */
@@ -159,18 +204,18 @@ export const useWorkPageData = ({
 
   const categoryCounts = useMemo(() => {
     const counts = {} as Record<WorkCategory, number>;
-    for (const item of allWorkItems) {
+    for (const item of memberFilteredAllWorkItems) {
       counts[item.category] = (counts[item.category] ?? 0) + 1;
     }
     return counts;
-  }, [allWorkItems]);
+  }, [memberFilteredAllWorkItems]);
 
   const groupedItems = useMemo(
     () =>
-      groupWorkItems(memberFilteredWorkItems, toDateKey(new Date()), {
+      groupWorkItems(workItems, toDateKey(new Date()), {
         includeDone: preferences.status === "done",
       }),
-    [memberFilteredWorkItems, preferences.status],
+    [workItems, preferences.status],
   );
 
   const stats = useMemo(() => computeTaskStats(tasks), [tasks]);
@@ -186,7 +231,9 @@ export const useWorkPageData = ({
     tasks,
     events: filteredEvents,
     eventsByDate,
-    workItems: memberFilteredWorkItems,
+    workItems,
+    searchableWorkItems: memberFilteredAllWorkItems,
+    contactsById,
     categoryCounts,
     groupedItems,
     stats,
