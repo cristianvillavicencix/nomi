@@ -445,3 +445,6 @@ verify_jwt = false
 
 [functions.mail_imap]
 verify_jwt = false
+
+[functions.mail_account_shares]
+verify_jwt = false

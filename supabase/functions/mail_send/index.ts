@@ -3,7 +3,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
   authenticateMailMember,
-  assertAccountAccess,
+  assertAccountAccessAsync,
   getFreshGoogleAccessToken,
   getFreshMicrosoftAccessToken,
   loadMailAccount,
@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
   if (!account || account.org_id !== auth.member.org_id) {
     return json({ error: "Not found" }, 404);
   }
-  const denied = assertAccountAccess(
+  const denied = await assertAccountAccessAsync(
     auth.member,
     account,
     saveDraft ? "view" : "send",

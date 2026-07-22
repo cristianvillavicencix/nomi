@@ -85,9 +85,10 @@ const MATRIX_ROWS: Array<{ id: string; area: string; label: string; scopeable?: 
   { id: "messaging.status.change", area: "Messaging", label: "Change conversation status", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "messaging.settings.manage", area: "Messaging", label: "Configure communications (Twilio, WhatsApp, Voice)", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   // Area 3d — Mail (multi-account inbox; separate from ticket inbound)
-  { id: "mail.org.view", area: "Mail", label: "View organization mailboxes", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
+  { id: "mail.org.view", area: "Mail", label: "View organization mailboxes", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "mail.org.send", area: "Mail", label: "Send from organization mailboxes", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "mail.org.manage", area: "Mail", label: "Connect organization mailboxes", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "mail.org.share", area: "Mail", label: "Share organization mailboxes", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "mail.personal.view", area: "Mail", label: "View personal mailboxes", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
   { id: "mail.personal.send", area: "Mail", label: "Send from personal mailboxes", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "mail.personal.manage", area: "Mail", label: "Connect personal mailboxes", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
@@ -160,17 +161,17 @@ export const CAPABILITY_IDS = CAPABILITIES.map((c) => c.id);
 
 const ROLE_DESCRIPTIONS: Record<RoleSlug, { label: string; description: string }> = {
   super_admin: {
-    label: "Super Admin",
+    label: "Owner",
     description: "Full access including billing and critical workspace settings",
   },
   admin: {
     label: "Admin",
-    description: "Manage users and operations; no billing or critical settings",
+    description: "Manage users, mail sharing, and operations; no billing or critical settings",
   },
   user: {
-    label: "User",
+    label: "Junior",
     description:
-      "Assigned projects only — tasks, calendar, and messaging on those projects; no leads, clients, proposals, tickets, or amounts unless granted",
+      "Assigned projects only — shared org mail when granted; personal mailboxes; no leads, clients, proposals, tickets, or amounts unless granted",
   },
   read_only: {
     label: "Read-only",

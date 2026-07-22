@@ -24,6 +24,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { useMemberRoleLabel } from "@/hooks/useMemberRoleLabel";
 import { BrandWordmark } from "./BrandWordmark";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { useConfigurationLoader } from "../root/useConfigurationLoader";
@@ -108,11 +109,8 @@ const SidebarThemeSwitcher = ({ collapsed }: { collapsed: boolean }) => {
 
 const SidebarUserIdentity = ({ collapsed }: { collapsed: boolean }) => {
   const { data: identity } = useGetIdentity();
+  const roleLabel = useMemberRoleLabel();
   const fullName = identity?.fullName ?? "User";
-  const role =
-    (identity as any)?.role ??
-    ((identity as any)?.administrator ? "Admin" : null) ??
-    "User";
   const triggerClassName = collapsed
     ? "h-10 w-10 rounded-full p-0"
     : "h-auto w-full justify-start rounded-md p-2";
@@ -131,7 +129,7 @@ const SidebarUserIdentity = ({ collapsed }: { collapsed: boolean }) => {
                 {fullName}
               </span>
               <span className="block truncate text-xs text-muted-foreground">
-                {role}
+                {roleLabel}
               </span>
             </span>
           ) : null}

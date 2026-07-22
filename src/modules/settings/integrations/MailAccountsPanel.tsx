@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useGetIdentity, useNotify } from "ra-core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
-import { EnvelopeSimple, ArrowsClockwise, Plugs } from "@phosphor-icons/react";
+import { EnvelopeSimple, ArrowsClockwise, Plugs, Share2 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,6 +28,7 @@ import {
   MAIL_BRAND_LABELS,
   resolveMailBrand,
 } from "@/modules/mail/mailProviderBrand";
+import { MailAccountShareDialog } from "@/modules/mail/MailAccountShareDialog";
 
 function SyncHealthPanel({ orgAccounts }: { orgAccounts: MailAccount[] }) {
   const { data: jobs = [] } = useQuery({
@@ -99,12 +100,16 @@ function SyncHealthPanel({ orgAccounts }: { orgAccounts: MailAccount[] }) {
 function AccountRows({
   accounts,
   canManage,
+  canShare = false,
+  onShare,
   scope,
   onRefresh,
   onRequestSync,
 }: {
   accounts: MailAccount[];
   canManage: boolean;
+  canShare?: boolean;
+  onShare?: (account: MailAccount) => void;
   scope: "org" | "personal";
   onRefresh: () => void;
   onRequestSync: (account: MailAccount) => void;
@@ -194,7 +199,7 @@ function AccountRows({
                   ) : null}
                 </div>
               </div>
-              {canManage ? (
+              {(canManage || canShare) ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -207,6 +212,14 @@ function AccountRows({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    {canShare && scope === "org" && onShare ? (
+                      <DropdownMenuItem onClick={() => onShare(account)}>
+                        <Share2 className="size-4" />
+                        Share with team…
+                      </DropdownMenuItem>
+                    ) : null}
+                    {canManage ? (
+                      <>
                     <DropdownMenuItem onClick={() => onRequestSync(account)}>
                       <ArrowsClockwise className="size-4" />
                       Sync now…
@@ -231,6 +244,8 @@ function AccountRows({
                     >
                       Disconnect
                     </DropdownMenuItem>
+                      </>
+                    ) : null}
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : null}
@@ -263,8 +278,10 @@ export function MailAccountsPanel() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: accounts = [], refetch, isPending } = useMailAccounts();
   const [syncTarget, setSyncTarget] = useState<MailAccount | null>(null);
+  const [shareTarget, setShareTarget] = useState<MailAccount | null>(null);
 
   const canOrgManage = hasMemberCapability(identity as any, "mail.org.manage");
+  const canOrgShare = hasMemberCapability(identity as any, "mail.org.share");
   const canOrgView = hasMemberCapability(identity as any, "mail.org.view");
   const canPersonalManage = hasMemberCapability(
     identity as any,
@@ -337,7 +354,7 @@ export function MailAccountsPanel() {
     (a) => a.owner_member_id != null && a.owner_member_id === identity?.id,
   );
 
-  if (!canOrgView && !canPersonalView) {
+  if (!canOrgView && !canPersonalView && orgAccounts.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
         You do not have permission to view mailboxes.
@@ -355,15 +372,21 @@ export function MailAccountsPanel() {
         </p>
       </div>
 
-      {canOrgView ? (
+      {canOrgView || canOrgManage || canOrgShare || orgAccounts.length > 0 ? (
         <section className="space-y-3">
           <h3 className="text-sm font-medium">Organization</h3>
+          <p className="text-xs text-muted-foreground">
+            Shared organization mailboxes. Admins connect accounts; access is
+            granted per mailbox via Share.
+          </p>
           {isPending ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : (
             <AccountRows
               accounts={orgAccounts}
               canManage={canOrgManage}
+              canShare={canOrgShare || canOrgManage}
+              onShare={setShareTarget}
               scope="org"
               onRefresh={refresh}
               onRequestSync={setSyncTarget}
@@ -389,9 +412,17 @@ export function MailAccountsPanel() {
         </section>
       ) : null}
 
-      {isAdmin || canOrgManage ? (
+      {isAdmin || canOrgManage || canOrgShare ? (
         <SyncHealthPanel orgAccounts={orgAccounts} />
       ) : null}
+
+      <MailAccountShareDialog
+        account={shareTarget}
+        open={shareTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setShareTarget(null);
+        }}
+      />
 
       <MailSyncRangeDialog
         open={syncTarget != null}

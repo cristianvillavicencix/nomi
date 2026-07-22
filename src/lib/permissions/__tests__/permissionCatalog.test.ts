@@ -10,7 +10,7 @@ import {
   ROLE_PRESETS,
 } from "../permissionCatalog";
 
-assert.equal(CAPABILITIES.length, 81, "expected 81 catalog capabilities");
+assert.equal(CAPABILITIES.length, 92, "expected 92 catalog capabilities");
 assert.equal(CAPABILITY_IDS.length, CAPABILITIES.length);
 
 for (const role of ["super_admin", "admin", "user", "read_only"] as const) {

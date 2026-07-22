@@ -1,5 +1,10 @@
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 import { getUserOrganizationMember } from "./getUserOrganizationMember.ts";
+import {
+  assertOrgMailAccountAccess,
+  loadMailAccountShare,
+  memberIsOrgMailAdmin,
+} from "./mailAccountShare.ts";
 
 export type MailMember = {
   id: number;
@@ -93,7 +98,6 @@ export function assertAccountAccess(
   const isPersonal = account.owner_member_id != null;
   if (isPersonal) {
     if (account.owner_member_id !== member.id && mode !== "manage") {
-      // Admins may disconnect personal but not read/send
       if (!(mode === "manage" && member.administrator)) {
         return "Forbidden";
       }
@@ -109,17 +113,24 @@ export function assertAccountAccess(
     }
     return null;
   }
-  const cap =
-    mode === "view"
-      ? "mail.org.view"
-      : mode === "send"
-      ? "mail.org.send"
-      : "mail.org.manage";
-  if (!memberHasCapability(member, cap) && !member.administrator) {
-    return "Forbidden";
-  }
   return null;
 }
+
+export async function assertAccountAccessAsync(
+  member: MailMember,
+  account: MailAccountRow,
+  mode: "view" | "send" | "manage",
+): Promise<string | null> {
+  if (member.user_id === "service_role") return null;
+  if (account.org_id !== member.org_id) return "Forbidden";
+  const isPersonal = account.owner_member_id != null;
+  if (isPersonal) {
+    return assertAccountAccess(member, account, mode);
+  }
+  return assertOrgMailAccountAccess(member, account, mode);
+}
+
+export { loadMailAccountShare, memberIsOrgMailAdmin };
 
 export async function getFreshGoogleAccessToken(
   account: MailAccountRow,
