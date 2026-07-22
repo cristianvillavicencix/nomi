@@ -28,6 +28,25 @@ type SyncOptions = {
   maxResults: number;
 };
 
+type SyncStats = {
+  synced: number;
+  new_messages: number;
+};
+
+function emptySyncStats(): SyncStats {
+  return { synced: 0, new_messages: 0 };
+}
+
+function mergeSyncStats(...parts: SyncStats[]): SyncStats {
+  return parts.reduce(
+    (acc, part) => ({
+      synced: acc.synced + part.synced,
+      new_messages: acc.new_messages + part.new_messages,
+    }),
+    emptySyncStats(),
+  );
+}
+
 type GmailPart = {
   mimeType?: string;
   filename?: string;
@@ -155,10 +174,11 @@ async function syncGoogleFolder(
   folder: "inbox" | "sent" | "spam" | "trash",
   opts: SyncOptions,
   seen: Set<string>,
-): Promise<number> {
+): Promise<SyncStats> {
   const q = encodeURIComponent(gmailFolderQuery(folder, opts.since));
   let pageToken: string | undefined;
   let synced = 0;
+  let newMessages = 0;
 
   while (synced < opts.maxResults) {
     const pageSize = Math.min(100, opts.maxResults - synced);
@@ -276,13 +296,14 @@ async function syncGoogleFolder(
         );
       }
       synced += 1;
+      if (upserted.messageCreated) newMessages += 1;
     }
 
     pageToken = listJson.nextPageToken;
     if (!pageToken) break;
   }
 
-  return synced;
+  return { synced, new_messages: newMessages };
 }
 
 async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
@@ -290,34 +311,11 @@ async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
   const seen = new Set<string>();
   const perFolder = Math.max(10, Math.ceil(opts.maxResults / 4));
   const folderOpts = { ...opts, maxResults: perFolder };
-  let synced = 0;
-  synced += await syncGoogleFolder(
-    account,
-    accessToken,
-    "inbox",
-    folderOpts,
-    seen,
-  );
-  synced += await syncGoogleFolder(
-    account,
-    accessToken,
-    "sent",
-    folderOpts,
-    seen,
-  );
-  synced += await syncGoogleFolder(
-    account,
-    accessToken,
-    "spam",
-    folderOpts,
-    seen,
-  );
-  synced += await syncGoogleFolder(
-    account,
-    accessToken,
-    "trash",
-    folderOpts,
-    seen,
+  const stats = mergeSyncStats(
+    await syncGoogleFolder(account, accessToken, "inbox", folderOpts, seen),
+    await syncGoogleFolder(account, accessToken, "sent", folderOpts, seen),
+    await syncGoogleFolder(account, accessToken, "spam", folderOpts, seen),
+    await syncGoogleFolder(account, accessToken, "trash", folderOpts, seen),
   );
 
   const labelsRes = await fetch(
@@ -340,7 +338,7 @@ async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
     }
   }
 
-  return synced;
+  return stats;
 }
 
 async function syncMicrosoftFolder(
@@ -348,8 +346,9 @@ async function syncMicrosoftFolder(
   accessToken: string,
   folder: "inbox" | "sentitems",
   opts: SyncOptions,
-): Promise<number> {
+): Promise<SyncStats> {
   let synced = 0;
+  let newMessages = 0;
   let nextUrl: string | null =
     `https://graph.microsoft.com/v1.0/me/mailFolders/${folder}/messages?$top=${
       Math.min(50, opts.maxResults)
@@ -431,36 +430,27 @@ async function syncMicrosoftFolder(
         );
       }
       synced += 1;
+      if (upserted.messageCreated) newMessages += 1;
     }
     nextUrl = listJson["@odata.nextLink"] ?? null;
   }
-  return synced;
+  return { synced, new_messages: newMessages };
 }
 
 async function syncMicrosoft(account: MailAccountRow, opts: SyncOptions) {
   const accessToken = await getFreshMicrosoftAccessToken(account);
   const perFolder = Math.max(10, Math.ceil(opts.maxResults / 2));
   const folderOpts = { ...opts, maxResults: perFolder };
-  let synced = 0;
-  synced += await syncMicrosoftFolder(
-    account,
-    accessToken,
-    "inbox",
-    folderOpts,
+  return mergeSyncStats(
+    await syncMicrosoftFolder(account, accessToken, "inbox", folderOpts),
+    await syncMicrosoftFolder(account, accessToken, "sentitems", folderOpts),
   );
-  synced += await syncMicrosoftFolder(
-    account,
-    accessToken,
-    "sentitems",
-    folderOpts,
-  );
-  return synced;
 }
 
 async function syncImap(
   account: MailAccountRow,
   opts: SyncOptions,
-) {
+): Promise<SyncStats> {
   const workerUrl = Deno.env.get("MAIL_IMAP_WORKER_URL")?.trim();
   const workerSecret = Deno.env.get("MAIL_IMAP_WORKER_SECRET")?.trim();
   if (!workerUrl) {
@@ -485,7 +475,10 @@ async function syncImap(
     throw new Error(text || "IMAP worker sync failed");
   }
   const payload = await res.json().catch(() => ({}));
-  return Number(payload.synced ?? 0);
+  return {
+    synced: Number(payload.synced ?? 0),
+    new_messages: Number(payload.new_messages ?? 0),
+  };
 }
 
 async function runSync(accountId: number, opts: SyncOptions) {
@@ -500,7 +493,13 @@ async function runSync(accountId: number, opts: SyncOptions) {
     .limit(1)
     .maybeSingle();
   if (running?.id) {
-    return { ok: true, synced: 0, skipped: true, reason: "sync_already_running" };
+    return {
+      ok: true,
+      synced: 0,
+      new_messages: 0,
+      skipped: true,
+      reason: "sync_already_running",
+    };
   }
 
   const { data: job } = await supabaseAdmin
@@ -517,13 +516,13 @@ async function runSync(accountId: number, opts: SyncOptions) {
     .single();
 
   try {
-    let synced = 0;
+    let stats = emptySyncStats();
     if (account.provider === "google") {
-      synced = await syncGoogle(account, opts);
+      stats = await syncGoogle(account, opts);
     } else if (account.provider === "microsoft") {
-      synced = await syncMicrosoft(account, opts);
+      stats = await syncMicrosoft(account, opts);
     } else if (account.provider === "imap") {
-      synced = await syncImap(account, opts);
+      stats = await syncImap(account, opts);
     } else {
       throw new Error(`Unsupported provider: ${account.provider}`);
     }
@@ -542,7 +541,8 @@ async function runSync(accountId: number, opts: SyncOptions) {
           ...prevCursor,
           last_since: opts.since,
           last_max_results: opts.maxResults,
-          last_synced_count: synced,
+          last_synced_count: stats.synced,
+          last_new_messages: stats.new_messages,
         },
         updated_at: new Date().toISOString(),
       })
@@ -555,14 +555,20 @@ async function runSync(accountId: number, opts: SyncOptions) {
           status: "succeeded",
           finished_at: new Date().toISOString(),
           meta: {
-            synced,
+            synced: stats.synced,
+            new_messages: stats.new_messages,
             since: opts.since,
             max_results: opts.maxResults,
           },
         })
         .eq("id", job.id);
     }
-    return { ok: true, synced, since: opts.since };
+    return {
+      ok: true,
+      synced: stats.synced,
+      new_messages: stats.new_messages,
+      since: opts.since,
+    };
   } catch (e) {
     const message =
       e instanceof Error

@@ -252,6 +252,33 @@ export async function getFreshMicrosoftAccessToken(
   return String(json.access_token);
 }
 
+async function recomputeThreadUnread(threadId: number): Promise<void> {
+  const { count, error } = await supabaseAdmin
+    .from("mail_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("thread_id", threadId)
+    .eq("is_read", false);
+  if (error) throw new Error(error.message);
+  const { error: updateError } = await supabaseAdmin
+    .from("mail_threads")
+    .update({ is_unread: (count ?? 0) > 0 })
+    .eq("id", threadId);
+  if (updateError) throw new Error(updateError.message);
+}
+
+function shouldAdvanceThreadLastMessageAt(
+  currentLastMessageAt: string | null | undefined,
+  messageSentAt: string | null,
+): boolean {
+  if (!messageSentAt) return false;
+  const messageTime = new Date(messageSentAt).getTime();
+  if (!Number.isFinite(messageTime)) return false;
+  if (!currentLastMessageAt) return true;
+  const currentTime = new Date(String(currentLastMessageAt)).getTime();
+  if (!Number.isFinite(currentTime)) return true;
+  return messageTime >= currentTime;
+}
+
 export async function upsertThreadAndMessage(params: {
   account: MailAccountRow;
   providerThreadId: string;
@@ -284,7 +311,7 @@ export async function upsertThreadAndMessage(params: {
 
   const { data: existingThread } = await supabaseAdmin
     .from("mail_threads")
-    .select("id, message_count")
+    .select("id, message_count, last_message_at")
     .eq("account_id", account.id)
     .eq("provider_thread_id", params.providerThreadId)
     .maybeSingle();
@@ -294,10 +321,18 @@ export async function upsertThreadAndMessage(params: {
     subject: params.subject,
     snippet: params.snippet,
     participants,
-    last_message_at: params.sentAt,
     updated_at: new Date().toISOString(),
   };
-  threadPatch.is_unread = params.isUnread;
+  if (
+    shouldAdvanceThreadLastMessageAt(
+      existingThread?.last_message_at as string | null | undefined,
+      params.sentAt,
+    )
+  ) {
+    threadPatch.last_message_at = params.sentAt;
+  } else if (!threadId) {
+    threadPatch.last_message_at = params.sentAt;
+  }
   if (params.isTrashed === true) threadPatch.is_trashed = true;
   else if (params.isTrashed === false) threadPatch.is_trashed = false;
   if (params.isSpam === true) threadPatch.is_spam = true;
@@ -332,7 +367,7 @@ export async function upsertThreadAndMessage(params: {
 
   const { data: existingMsg } = await supabaseAdmin
     .from("mail_messages")
-    .select("id")
+    .select("id, is_read")
     .eq("account_id", account.id)
     .eq("provider_message_id", params.providerMessageId)
     .maybeSingle();
@@ -372,29 +407,42 @@ export async function upsertThreadAndMessage(params: {
       .from("mail_threads")
       .update({
         message_count: (existingThread?.message_count ?? 0) + 1,
-        is_unread: params.isUnread,
       })
       .eq("id", threadId);
-    return { threadId: threadId!, messageId: insertedMsg.id as number };
+    await recomputeThreadUnread(threadId!);
+    return {
+      threadId: threadId!,
+      messageId: insertedMsg.id as number,
+      messageCreated: true,
+    };
   } else {
     // Refresh bodies on re-sync (fixes UTF-8 / provider content updates).
+    const msgPatch: Record<string, unknown> = {
+      subject: params.subject,
+      body_html: params.bodyHtml,
+      body_text: params.bodyText,
+      from_email: params.fromEmail,
+      from_name: params.fromName,
+      to_emails: params.toEmails,
+      cc_emails: params.ccEmails,
+      has_attachments: params.hasAttachments ?? false,
+      in_reply_to: params.inReplyTo ?? undefined,
+      raw_headers:
+        Object.keys(headerPatch).length > 0 ? headerPatch : undefined,
+    };
+    const locallyRead = existingMsg.is_read === true;
+    if (!(locallyRead && params.isUnread)) {
+      msgPatch.is_read = !params.isUnread;
+    }
     await supabaseAdmin
       .from("mail_messages")
-      .update({
-        subject: params.subject,
-        body_html: params.bodyHtml,
-        body_text: params.bodyText,
-        from_email: params.fromEmail,
-        from_name: params.fromName,
-        to_emails: params.toEmails,
-        cc_emails: params.ccEmails,
-        is_read: !params.isUnread,
-        has_attachments: params.hasAttachments ?? false,
-        in_reply_to: params.inReplyTo ?? undefined,
-        raw_headers:
-          Object.keys(headerPatch).length > 0 ? headerPatch : undefined,
-      })
+      .update(msgPatch)
       .eq("id", existingMsg.id);
-    return { threadId: threadId!, messageId: existingMsg.id as number };
+    await recomputeThreadUnread(threadId!);
+    return {
+      threadId: threadId!,
+      messageId: existingMsg.id as number,
+      messageCreated: false,
+    };
   }
 }

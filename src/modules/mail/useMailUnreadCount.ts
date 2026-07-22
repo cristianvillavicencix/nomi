@@ -18,7 +18,37 @@ export function useMailUnreadCount() {
         .from("mail_threads")
         .select("id", { count: "exact", head: true })
         .eq("is_unread", true)
-        .eq("is_trashed", false);
+        .eq("is_trashed", false)
+        .eq("is_archived", false)
+        .eq("is_draft", false)
+        .eq("is_spam", false);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+}
+
+export function useMailInboxUnreadCount(accountId: number | "all") {
+  const { identity } = useGetIdentity();
+  const canView =
+    hasMemberCapability(identity as any, "mail.org.view") ||
+    hasMemberCapability(identity as any, "mail.personal.view");
+
+  return useQuery({
+    queryKey: ["mail_inbox_unread_count", identity?.id, accountId],
+    enabled: Boolean(identity?.id) && canView,
+    refetchInterval: 60_000,
+    queryFn: async (): Promise<number> => {
+      let q = supabase
+        .from("mail_threads")
+        .select("id", { count: "exact", head: true })
+        .eq("is_unread", true)
+        .eq("is_trashed", false)
+        .eq("is_archived", false)
+        .eq("is_draft", false)
+        .eq("is_spam", false);
+      if (accountId !== "all") q = q.eq("account_id", accountId);
+      const { count, error } = await q;
       if (error) throw error;
       return count ?? 0;
     },

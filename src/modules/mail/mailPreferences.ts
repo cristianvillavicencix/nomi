@@ -1,12 +1,9 @@
+import type { MailFolderId } from "./MailFolderRail";
+
 const MAIL_ACCOUNT_FILTER_KEY = "nomi.mail.accountFilter";
 const MAIL_FOLDER_KEY = "nomi.mail.folder";
 
-export type MailFolderPreference =
-  | "inbox"
-  | "sent"
-  | "draft"
-  | "trash"
-  | "spam";
+export type MailFolderPreference = MailFolderId;
 
 export function readMailAccountFilter(): number | "all" {
   if (typeof window === "undefined") return "all";
@@ -40,8 +37,10 @@ export function readMailFolder(): MailFolderPreference {
     const raw = localStorage.getItem(MAIL_FOLDER_KEY);
     if (
       raw === "inbox" ||
+      raw === "starred" ||
       raw === "sent" ||
       raw === "draft" ||
+      raw === "archive" ||
       raw === "trash" ||
       raw === "spam"
     ) {

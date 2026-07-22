@@ -8,6 +8,8 @@ import {
   Plus,
   CaretDown,
   Check,
+  Star,
+  Archive,
 } from "@phosphor-icons/react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
@@ -27,16 +29,26 @@ import {
 import { mailboxesSettingsPath } from "./mailSettingsPath";
 import type { MailAccount, MailLabel } from "./types";
 
-export type MailFolderId = "inbox" | "sent" | "draft" | "trash" | "spam";
+export type MailFolderId =
+  | "inbox"
+  | "starred"
+  | "sent"
+  | "draft"
+  | "archive"
+  | "spam"
+  | "trash";
 
 const FOLDERS: Array<{
   id: MailFolderId;
   label: string;
   icon: typeof Tray;
+  showUnreadBadge?: boolean;
 }> = [
-  { id: "inbox", label: "Inbox", icon: Tray },
+  { id: "inbox", label: "Inbox", icon: Tray, showUnreadBadge: true },
+  { id: "starred", label: "Starred", icon: Star },
   { id: "sent", label: "Sent", icon: PaperPlaneTilt },
   { id: "draft", label: "Drafts", icon: PencilSimpleLine },
+  { id: "archive", label: "Archive", icon: Archive },
   { id: "spam", label: "Spam", icon: Prohibit },
   { id: "trash", label: "Trash", icon: Trash },
 ];
@@ -140,6 +152,7 @@ export function MailFolderRail({
   labelId,
   onLabelChange,
   onCompose,
+  inboxUnreadCount = 0,
   className,
 }: {
   folder: MailFolderId;
@@ -151,6 +164,7 @@ export function MailFolderRail({
   labelId: number | null;
   onLabelChange: (id: number | null) => void;
   onCompose: () => void;
+  inboxUnreadCount?: number;
   className?: string;
 }) {
   const selectedAccount =
@@ -200,7 +214,12 @@ export function MailFolderRail({
                   className="size-4 shrink-0"
                   weight={active ? "fill" : "regular"}
                 />
-                {item.label}
+                <span className="flex-1 truncate text-left">{item.label}</span>
+                {item.showUnreadBadge && inboxUnreadCount > 0 ? (
+                  <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-primary">
+                    {inboxUnreadCount > 99 ? "99+" : inboxUnreadCount}
+                  </span>
+                ) : null}
               </button>
             );
           })}

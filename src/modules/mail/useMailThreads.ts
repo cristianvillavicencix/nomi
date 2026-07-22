@@ -177,6 +177,36 @@ export function useMailThreads(params: {
         return rows;
       }
 
+      if (folder === "starred") {
+        let q = supabase
+          .from("mail_threads")
+          .select("*")
+          .eq("is_trashed", false)
+          .eq("is_starred", true)
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .limit(100);
+        if (accountId !== "all") q = q.eq("account_id", accountId);
+        if (labelId != null) q = q.contains("label_ids", [labelId]);
+        const { data, error } = await q;
+        if (error) throw error;
+        return (data ?? []) as MailThread[];
+      }
+
+      if (folder === "archive") {
+        let q = supabase
+          .from("mail_threads")
+          .select("*")
+          .eq("is_trashed", false)
+          .eq("is_archived", true)
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .limit(100);
+        if (accountId !== "all") q = q.eq("account_id", accountId);
+        if (labelId != null) q = q.contains("label_ids", [labelId]);
+        const { data, error } = await q;
+        if (error) throw error;
+        return (data ?? []) as MailThread[];
+      }
+
       let q = supabase
         .from("mail_threads")
         .select("*")
@@ -233,6 +263,10 @@ async function applyFolderFilter(
       return rows.filter((t) => t.is_trashed);
     case "spam":
       return rows.filter((t) => t.is_spam && !t.is_trashed);
+    case "starred":
+      return rows.filter((t) => !t.is_trashed && t.is_starred);
+    case "archive":
+      return rows.filter((t) => !t.is_trashed && t.is_archived);
     case "sent": {
       const sentIds = new Set(await loadSentThreadIds(accountId));
       let filtered = rows.filter((t) => !t.is_trashed && sentIds.has(t.id));

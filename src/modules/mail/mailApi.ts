@@ -63,7 +63,7 @@ export async function syncMailAccount(
     }),
   });
   const raw = await res.text();
-  let json: { ok?: boolean; synced?: number; error?: string } = {};
+  let json: { ok?: boolean; synced?: number; new_messages?: number; error?: string } = {};
   try {
     json = raw ? (JSON.parse(raw) as typeof json) : {};
   } catch {

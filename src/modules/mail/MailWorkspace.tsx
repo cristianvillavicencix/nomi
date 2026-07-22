@@ -44,14 +44,17 @@ import {
   isMailDraftListId,
   mailDraftRecordIdFromListId,
 } from "./useMailThreads";
+import { useMailInboxUnreadCount } from "./useMailUnreadCount";
 import { useMailLabels } from "./useMailLabels";
 import { incrementalMailSyncRange } from "./mailSyncRange";
 import type { MailAccount, MailMessage, MailThread } from "./types";
 
 const MOBILE_FOLDERS: Array<{ id: MailFolderId; label: string }> = [
   { id: "inbox", label: "Inbox" },
+  { id: "starred", label: "Starred" },
   { id: "sent", label: "Sent" },
   { id: "draft", label: "Drafts" },
+  { id: "archive", label: "Archive" },
   { id: "spam", label: "Spam" },
   { id: "trash", label: "Trash" },
 ];
@@ -92,6 +95,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     labelId,
   });
   const { data: labels = [] } = useMailLabels(accountFilter);
+  const { data: inboxUnreadCount = 0 } = useMailInboxUnreadCount(accountFilter);
 
   useEffect(() => {
     writeMailFolder(folder);
@@ -119,16 +123,17 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     if (action === "delete_forever") return true;
     if (action === "trash" && folder !== "trash") return true;
     if (action === "untrash" && folder === "trash") return true;
-    if (action === "archive" && folder === "inbox" && listFilter !== "archived") {
+    if (action === "archive" && folder !== "archive") {
       return true;
     }
-    if (action === "unarchive" && listFilter === "archived") return true;
-    if (action === "spam" && folder === "inbox") return true;
+    if (action === "unarchive" && folder === "archive") return true;
+    if (action === "spam" && (folder === "inbox" || folder === "starred")) return true;
     if (action === "not_spam" && folder === "spam") return true;
-    if (action === "unstar" && listFilter === "starred") return true;
+    if (action === "unstar" && folder === "starred") return true;
     if (
       action === "mark_read" &&
-      listFilter === "unread"
+      listFilter === "unread" &&
+      (folder === "trash" || folder === "spam")
     ) {
       return true;
     }
@@ -242,6 +247,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["mail_threads"] });
     void queryClient.invalidateQueries({ queryKey: ["mail_unread_count"] });
+    void queryClient.invalidateQueries({ queryKey: ["mail_inbox_unread_count"] });
     void queryClient.invalidateQueries({ queryKey: ["mail_messages"] });
     void queryClient.invalidateQueries({ queryKey: ["mail_attachments"] });
   };
@@ -348,7 +354,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const runQuickSync = async () => {
     if (accountsToSync.length === 0 || syncing) return;
     setSyncing(true);
-    let total = 0;
+    let totalNew = 0;
     try {
       for (const account of accountsToSync) {
         const range = incrementalMailSyncRange(account.last_sync_at);
@@ -356,12 +362,16 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
           since: range.since,
           max_results: range.max_results,
         });
-        total += result.synced ?? 0;
+        totalNew += result.new_messages ?? 0;
       }
-      notify(
-        `Synced ${total} message${total === 1 ? "" : "s"}`,
-        { type: "success" },
-      );
+      if (totalNew > 0) {
+        notify(
+          `${totalNew} new message${totalNew === 1 ? "" : "s"}`,
+          { type: "success" },
+        );
+      } else {
+        notify("Inbox is up to date", { type: "info" });
+      }
       invalidate();
       void queryClient.invalidateQueries({ queryKey: ["mail_accounts_safe"] });
     } catch (e) {
@@ -386,7 +396,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     if (folder === "spam" || folder === "trash") return;
     void runThreadAction(
       thread,
-      listFilter === "archived" || thread.is_archived ? "unarchive" : "archive",
+      folder === "archive" || thread.is_archived ? "unarchive" : "archive",
     );
   };
 
@@ -435,14 +445,14 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         onNotSpam: () => handleListSpam(t),
       };
     }
-    if (folder === "inbox" && listFilter === "archived") {
+    if (folder === "archive") {
       return {
         ...base,
         onUnarchive: () => handleListArchive(t),
         onMoveToTrash: () => handleListTrash(t),
       };
     }
-    if (folder === "inbox") {
+    if (folder === "inbox" || folder === "starred") {
       return {
         ...base,
         onArchive: () => handleListArchive(t),
@@ -480,6 +490,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
           setListFilter("all");
         }}
         onCompose={() => openCompose("new")}
+        inboxUnreadCount={inboxUnreadCount}
       />
 
       <div
