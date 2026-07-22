@@ -55,7 +55,7 @@ Deno.serve(
       const { data: event, error: eventError } = await supabaseAdmin
         .from("calendar_events")
         .select(
-          "id, title, description, event_date, event_time, duration_minutes, meeting_url, timezone, org_id",
+          "id, title, description, event_date, event_time, duration_minutes, meeting_url, meeting_format, location, timezone, org_id",
         )
         .eq("id", tokenRow.calendar_event_id)
         .eq("org_id", tokenRow.org_id)
@@ -90,6 +90,8 @@ Deno.serve(
           event_time: event.event_time,
           duration_minutes: event.duration_minutes ?? 60,
           meeting_url: event.meeting_url ?? null,
+          meeting_format: event.meeting_format ?? null,
+          location: event.location ?? null,
           timezone: timezone || "America/New_York",
           org_name: org?.name?.trim() || null,
           short_code: tokenRow.short_code,

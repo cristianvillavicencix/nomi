@@ -7,6 +7,7 @@ import {
   normalizeReminderOffsetsMinutes,
 } from "@/modules/calendar/calendarReminderWriteUtils";
 import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone/usTimezone";
+import { normalizeMeetingFormatWriteData } from "@/modules/meetings/meetingFormat";
 
 const NULLABLE_ID_FIELDS = [
   "contact_id",
@@ -119,5 +120,5 @@ export const prepareCalendarEventWriteData = (
   delete next._meeting_contact_name;
   delete next._meeting_link_seed;
 
-  return next;
+  return normalizeMeetingFormatWriteData(next);
 };

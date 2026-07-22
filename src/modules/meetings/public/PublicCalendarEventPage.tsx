@@ -4,7 +4,7 @@ import { PRODUCT_NAME } from "@/lib/branding";
 import { BrandWordmark } from "@/components/atomic-crm/layout/BrandWordmark";
 import { BookingAddToCalendar } from "@/modules/booking/public/BookingAddToCalendar";
 import { Button } from "@/components/ui/button";
-import { Video } from "lucide-react";
+import { Video, MapPin, Phone } from "lucide-react";
 
 type PublicCalendarEventPayload = {
   title: string;
@@ -13,6 +13,8 @@ type PublicCalendarEventPayload = {
   event_time?: string | null;
   duration_minutes?: number | null;
   meeting_url?: string | null;
+  meeting_format?: string | null;
+  location?: string | null;
   timezone?: string | null;
   org_name?: string | null;
 };
@@ -68,21 +70,27 @@ export const PublicCalendarEventPage = () => {
 
   const calendarEvent = useMemo(() => {
     if (!payload) return null;
+    const meetingUrl = payload.meeting_url?.trim() || null;
+    const location = payload.location?.trim() || null;
     const details = [
       payload.description?.trim(),
-      payload.meeting_url?.trim()
-        ? `Join video call: ${payload.meeting_url.trim()}`
+      meetingUrl ? `Join video call: ${meetingUrl}` : null,
+      location && payload.meeting_format === "in_person"
+        ? `Address: ${location}`
+        : null,
+      location && payload.meeting_format === "phone"
+        ? `Phone notes: ${location}`
         : null,
     ]
       .filter(Boolean)
       .join("\n\n");
     return {
-      title: payload.title || "Video call",
+      title: payload.title || "Meeting",
       date: String(payload.event_date).slice(0, 10),
       time: (payload.event_time ?? "09:00").toString().slice(0, 5),
       durationMinutes: Number(payload.duration_minutes) || 60,
       description: details || undefined,
-      location: payload.meeting_url?.trim() || undefined,
+      location: location || meetingUrl || undefined,
       timezone: payload.timezone ?? "America/New_York",
     };
   }, [payload]);
@@ -132,9 +140,27 @@ export const PublicCalendarEventPage = () => {
             rel="noopener noreferrer"
           >
             <Video className="mr-2 size-4" />
-            Join video call
+            {payload.meeting_format === "custom_link"
+              ? "Open meeting link"
+              : "Join video call"}
           </a>
         </Button>
+      ) : null}
+
+      {payload.meeting_format === "in_person" && payload.location?.trim() ? (
+        <div className="flex items-start gap-2 rounded-md border bg-muted/20 p-3 text-sm">
+          <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <span>{payload.location.trim()}</span>
+        </div>
+      ) : null}
+
+      {payload.meeting_format === "phone" ? (
+        <div className="flex items-start gap-2 rounded-md border bg-muted/20 p-3 text-sm">
+          <Phone className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <span>
+            {payload.location?.trim() || "Phone call — details in your invite."}
+          </span>
+        </div>
       ) : null}
 
       <BookingAddToCalendar event={calendarEvent} />

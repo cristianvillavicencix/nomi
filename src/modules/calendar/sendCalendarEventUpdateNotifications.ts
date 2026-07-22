@@ -2,6 +2,7 @@ import type { Identifier, NotificationOptions } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import {
   hasCalendarScheduleChanged,
+  isMeetingRecord,
   isVideoMeetingRecord,
 } from "@/modules/calendar/calendarEventScheduleUtils";
 import { sendMeetingRescheduleNotifications } from "@/modules/meetings/sendMeetingRescheduleNotifications";
@@ -13,6 +14,8 @@ type CalendarEventRecord = {
   event_time?: string | null;
   duration_minutes?: number | null;
   meeting_url?: string | null;
+  meeting_format?: string | null;
+  location?: string | null;
 };
 
 export const sendCalendarEventUpdateNotifications = async ({
@@ -74,16 +77,54 @@ export const sendCalendarEventUpdateNotifications = async ({
     );
   }
 
-  if (isVideoMeetingRecord(updated) || isVideoMeetingRecord(previous)) {
-    const { errors } = await sendMeetingRescheduleNotifications({
-      record: updated,
-      shareEmail,
-      shareSms,
-      dataProvider,
-      notify,
-    });
-    warnings.push(...errors);
-    return { notified: true as const, kind: "meeting" as const, warnings };
+  if (isMeetingRecord(updated) || isMeetingRecord(previous)) {
+    const shareableUrl = String(
+      updated.meeting_url ?? previous.meeting_url ?? "",
+    ).trim();
+
+    if (
+      shareableUrl &&
+      (isVideoMeetingRecord(updated) ||
+        isVideoMeetingRecord(previous) ||
+        updated.meeting_format === "custom_link" ||
+        previous.meeting_format === "custom_link")
+    ) {
+      const { errors } = await sendMeetingRescheduleNotifications({
+        record: updated,
+        shareEmail,
+        shareSms,
+        dataProvider,
+        notify,
+      });
+      warnings.push(...errors);
+      return { notified: true as const, kind: "meeting" as const, warnings };
+    }
+
+    try {
+      const result = await dataProvider.notifyFollowUp({
+        calendarEventId: eventId,
+        kind: "rescheduled",
+        appBaseUrl:
+          typeof window !== "undefined" ? window.location.origin : undefined,
+      });
+      if (result.sent) {
+        notify?.("Assignee notified about the schedule change", { type: "info" });
+      } else if (
+        result.reason &&
+        result.reason !== "missing_contact_or_assignee" &&
+        result.reason !== "sms_not_configured"
+      ) {
+        warnings.push(`Internal notify: ${result.reason}`);
+      }
+      return { notified: true as const, kind: "follow_up" as const, warnings };
+    } catch (error) {
+      warnings.push(
+        error instanceof Error
+          ? error.message
+          : "Could not notify assignee",
+      );
+      return { notified: false as const, warnings };
+    }
   }
 
   try {

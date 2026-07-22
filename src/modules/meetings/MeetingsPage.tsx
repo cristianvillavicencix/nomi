@@ -85,7 +85,7 @@ export const MeetingsPage = () => {
   const { data: meetings = [], isPending } = useGetList<CalendarEventRecord>(
     "calendar_events",
     {
-      filter: { "meeting_url@not.is": null },
+      filter: { "meeting_format@not.is": null },
       pagination: { page: 1, perPage: 200 },
       sort: { field: "event_date", order: tab === "upcoming" ? "ASC" : "DESC" },
     },
@@ -159,6 +159,8 @@ export const MeetingsPage = () => {
       contact_id: null,
       deal_id: null,
       meeting_url: null,
+      meeting_format: "video",
+      location: null,
       completed_at: null,
     }),
     [todayKey],

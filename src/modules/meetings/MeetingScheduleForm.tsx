@@ -1,54 +1,28 @@
-import { useState, type ReactNode } from "react";
-import type { Identifier } from "ra-core";
+import type { ReactNode } from "react";
 import { Form } from "ra-core";
-import { useFormContext } from "react-hook-form";
-import { Plus } from "lucide-react";
 import { CalendarEventDeleteButton } from "@/modules/calendar/CalendarEventDeleteButton";
 import { DateInput } from "@/components/admin/date-input";
 import { SaveButton } from "@/components/admin/form";
-import { ReferenceInput } from "@/components/admin/reference-input";
 import { TextInput } from "@/components/admin/text-input";
-import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { BooleanInput } from "@/components/admin/boolean-input";
 import { SelectInput } from "@/components/admin/select-input";
-
-import { IconButton } from "@/components/ui/icon-button";
 import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import type { Contact } from "@/components/atomic-crm/types";
 import { CalendarTimeInput } from "@/modules/calendar/CalendarTimeInput";
 import {
-  getContactDisplayName,
   DURATION_CHOICES,
   DURATION_NONE,
-  REMIND_BEFORE_CHOICES,
-  REMIND_BEFORE_NONE,
 } from "@/modules/calendar/calendarReminderOptions";
 import { MeetingContactTitleSync } from "@/modules/meetings/meetingFormUtils";
+import { MeetingFormatFields } from "@/modules/meetings/MeetingFormatFields";
 import { MeetingShareOptions } from "@/modules/meetings/MeetingShareOptions";
-import { MeetingVideoCallSection } from "@/modules/meetings/MeetingVideoCallSection";
 import { CalendarReminderOffsetsInput } from "@/modules/calendar/CalendarReminderOffsetsInput";
 import { TeamMemberMultiSelect } from "@/modules/shared/TeamMemberMultiSelect";
-
-const dealOptionText = (choice: {
-  name?: string | null;
-  id?: number | string;
-}) => choice.name?.trim() || `Project #${choice.id}`;
-
-const contactOptionText = (contact: Contact) => getContactDisplayName(contact);
-
-const formatRemindBefore = (value?: number | null) =>
-  value == null ? REMIND_BEFORE_NONE : value;
-
-const parseRemindBefore = (value: string | number) => {
-  if (value === REMIND_BEFORE_NONE || value === "" || value == null)
-    return null;
-  return Number(value);
-};
+import { WorkCreateAccountLinkFields } from "@/modules/work/WorkCreateAccountLinkFields";
 
 const formatDuration = (value?: number | null) =>
   value == null ? DURATION_NONE : value;
@@ -73,8 +47,9 @@ const MeetingFormRow = ({
   </TableRow>
 );
 
-const MeetingScheduleFormFields = ({
+export const MeetingScheduleFormFields = ({
   isEdit,
+  embedded = false,
   onDeleteSuccess,
   onDeleteError,
   emailConfigured = false,
@@ -85,6 +60,7 @@ const MeetingScheduleFormFields = ({
   showShareOptions = false,
 }: {
   isEdit: boolean;
+  embedded?: boolean;
   onDeleteSuccess?: () => void;
   onDeleteError?: (error: unknown) => void;
   emailConfigured?: boolean;
@@ -94,77 +70,28 @@ const MeetingScheduleFormFields = ({
   onShareSmsChange?: (value: boolean) => void;
   showShareOptions?: boolean;
 }) => {
-  const { setValue } = useFormContext();
-  const [createContactOpen, setCreateContactOpen] = useState(false);
-  const [createContactSeed, setCreateContactSeed] = useState("");
-
-  const openCreateContact = (searchText?: string) => {
-    setCreateContactSeed(searchText?.trim() ?? "");
-    setCreateContactOpen(true);
-  };
-
   return (
     <>
       <MeetingContactTitleSync />
 
-      <DialogHeader>
-        <DialogTitle>
-          {isEdit ? "Edit meeting" : "Schedule meeting"}
-        </DialogTitle>
-      </DialogHeader>
+      {!embedded ? (
+        <DialogHeader>
+          <DialogTitle>
+            {isEdit ? "Edit meeting" : "Schedule meeting"}
+          </DialogTitle>
+        </DialogHeader>
+      ) : null}
 
       <Table>
         <TableBody>
-          <MeetingFormRow label="Contact">
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <ReferenceInput
-                  source="contact_id"
-                  reference="contacts_summary"
-                >
-                  <AutocompleteInput
-                    label={false}
-                    optionText={contactOptionText}
-                    inputText={contactOptionText}
-                    helperText={false}
-                    modal
-                    placeholder="Search or add contact…"
-                    validate={(value) => (value ? undefined : "Required")}
-                    filterToQuery={(searchText) => ({ q: searchText })}
-                    createLabel="Add new contact"
-                    createItemLabel={(filter) =>
-                      `Add "${filter}" as new contact`
-                    }
-                    onCreate={(filter) => {
-                      openCreateContact(filter);
-                      return undefined;
-                    }}
-                  />
-                </ReferenceInput>
-              </div>
-              <IconButton
-                variant="secondary"
-                className="mt-0.5 shrink-0"
-                title="Add new contact"
-                aria-label="Add new contact"
-                onClick={() => openCreateContact()}
-              >
-                <Plus className="size-4" />
-              </IconButton>
-            </div>
-          </MeetingFormRow>
-
-          <MeetingFormRow label="Project">
-            <ReferenceInput source="deal_id" reference="deals">
-              <AutocompleteInput
-                label={false}
-                optionText={dealOptionText}
-                helperText={false}
-                modal
-                filterToQuery={(searchText) => ({ q: searchText })}
-              />
-            </ReferenceInput>
-          </MeetingFormRow>
+          <WorkCreateAccountLinkFields
+            requireContact
+            showCreateContact
+            title={null}
+            renderRow={(label, children) => (
+              <MeetingFormRow label={label}>{children}</MeetingFormRow>
+            )}
+          />
 
           <MeetingFormRow label="Team">
             <TeamMemberMultiSelect
@@ -212,7 +139,7 @@ const MeetingScheduleFormFields = ({
           </MeetingFormRow>
 
           <MeetingFormRow label="Reminders">
-            <CalendarReminderOffsetsInput label={false} />
+            <CalendarReminderOffsetsInput label={false} showLabel={false} />
           </MeetingFormRow>
 
           <MeetingFormRow label="Notes">
@@ -224,8 +151,8 @@ const MeetingScheduleFormFields = ({
             />
           </MeetingFormRow>
 
-          <MeetingFormRow label="Video call">
-            <MeetingVideoCallSection />
+          <MeetingFormRow label="Where">
+            <MeetingFormatFields />
           </MeetingFormRow>
         </TableBody>
       </Table>
@@ -240,7 +167,7 @@ const MeetingScheduleFormFields = ({
         />
       ) : null}
 
-      {isEdit ? (
+      {isEdit && !embedded ? (
         <BooleanInput
           source="completed_at"
           label="Mark as done"
@@ -250,37 +177,38 @@ const MeetingScheduleFormFields = ({
         />
       ) : null}
 
-      <DialogFooter className="w-full sm:justify-between gap-4">
-        {isEdit ? (
-          <CalendarEventDeleteButton
-            onSuccess={onDeleteSuccess}
-            onError={onDeleteError}
-            label="Delete meeting"
+      {!embedded ? (
+        <DialogFooter className="w-full sm:justify-between gap-4">
+          {isEdit ? (
+            <CalendarEventDeleteButton
+              onSuccess={onDeleteSuccess}
+              onError={onDeleteError}
+              label="Delete meeting"
+            />
+          ) : (
+            <span />
+          )}
+          <SaveButton
+            type="button"
+            label={isEdit ? "Save meeting" : "Schedule meeting"}
           />
-        ) : (
-          <span />
-        )}
-        <SaveButton
-          type="button"
-          label={isEdit ? "Save meeting" : "Schedule meeting"}
-        />
-      </DialogFooter>
-
-      <QuickMeetingContactCreateDialog
-        open={createContactOpen}
-        onOpenChange={setCreateContactOpen}
-        initialName={createContactSeed}
-        leadSourceOther="Schedule meeting"
-        description="Save and select them for this meeting"
-        onCreated={(created) => {
-          setValue("contact_id", created.id as Identifier, {
-            shouldDirty: true,
-            shouldValidate: true,
-          });
-        }}
-      />
+        </DialogFooter>
+      ) : null}
     </>
   );
+};
+
+export type MeetingScheduleFormFieldsProps = {
+  isEdit: boolean;
+  embedded?: boolean;
+  onDeleteSuccess?: () => void;
+  onDeleteError?: (error: unknown) => void;
+  emailConfigured?: boolean;
+  shareEmail?: boolean;
+  shareSms?: boolean;
+  onShareEmailChange?: (value: boolean) => void;
+  onShareSmsChange?: (value: boolean) => void;
+  showShareOptions?: boolean;
 };
 
 export const MeetingScheduleForm = ({

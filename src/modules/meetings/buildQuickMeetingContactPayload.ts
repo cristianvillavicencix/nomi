@@ -12,7 +12,7 @@ export type QuickMeetingContactFormValues = {
 export const buildQuickMeetingContactPayload = (
   values: QuickMeetingContactFormValues,
   organizationMemberId?: Identifier | null,
-  options?: { leadSourceOther?: string },
+  options?: { leadSourceOther?: string; companyId?: Identifier | null },
 ) => {
   const now = new Date().toISOString();
   const email = values.email.trim();
@@ -27,7 +27,7 @@ export const buildQuickMeetingContactPayload = (
     lead_stage: "new",
     lead_source: LBS_LEAD_SOURCE_OTHER,
     lead_source_other: options?.leadSourceOther?.trim() || "Quick call",
-    company_id: null,
+    company_id: options?.companyId ?? null,
     title: "",
     background: "",
     interested_service: null,

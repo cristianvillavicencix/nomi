@@ -7,6 +7,7 @@ import {
   useGetIdentity,
   useNotify,
   useRefresh,
+  type Identifier,
 } from "ra-core";
 import { EmailInput } from "@/components/admin/email-input";
 import { PhoneInput } from "@/components/admin/phone-input";
@@ -42,6 +43,7 @@ export type QuickMeetingContactCreateDialogProps = {
   onOpenChange: (open: boolean) => void;
   onCreated: (contact: Contact) => void;
   initialName?: string;
+  companyId?: Identifier | null;
   /** Stored on the lead as lead_source_other (default: Quick call). */
   leadSourceOther?: string;
   description?: string;
@@ -52,6 +54,7 @@ export const QuickMeetingContactCreateDialog = ({
   onOpenChange,
   onCreated,
   initialName = "",
+  companyId = null,
   leadSourceOther = "Quick call",
   description = "Save and use them for this call",
 }: QuickMeetingContactCreateDialogProps) => {
@@ -85,6 +88,7 @@ export const QuickMeetingContactCreateDialog = ({
       {
         data: buildQuickMeetingContactPayload(values, identity?.id, {
           leadSourceOther,
+          companyId,
         }),
       },
       { returnPromise: true },
