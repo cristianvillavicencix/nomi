@@ -1,6 +1,11 @@
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { BillToSelection } from "@/modules/billing/BillToClientSearch";
 import { parseLbsClientContextLinks } from "@/modules/clients/clientContextLinks";
+import {
+  formatUsPhoneDisplayFromAny,
+  isValidUsPhone,
+  normalizeUsPhoneToE164,
+} from "@/utils/phone";
 
 export const formatContactName = (contact?: Contact | null) =>
   [contact?.first_name, contact?.last_name].filter(Boolean).join(" ") || null;
@@ -229,11 +234,47 @@ export const resolveTicketInvoiceRecipientPhone = ({
 
 const invoiceEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const parseInvoiceEmailList = (value: string) =>
+export const splitInvoiceListInput = (value: string) =>
   value
     .split(/[,;]/)
-    .map((entry) => entry.trim().toLowerCase())
-    .filter((entry) => entry.length > 0 && invoiceEmailPattern.test(entry));
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+export const parseInvoiceEmailList = (value: string) =>
+  splitInvoiceListInput(value)
+    .map((entry) => entry.toLowerCase())
+    .filter((entry) => invoiceEmailPattern.test(entry));
+
+export const getInvalidInvoiceEmails = (value: string) =>
+  splitInvoiceListInput(value).filter(
+    (entry) => !invoiceEmailPattern.test(entry.toLowerCase()),
+  );
+
+export const parseInvoicePhoneList = (value: string) => {
+  const seen = new Set<string>();
+  const phones: string[] = [];
+  for (const entry of splitInvoiceListInput(value)) {
+    const e164 = normalizeUsPhoneToE164(entry);
+    if (!e164 || seen.has(e164)) continue;
+    seen.add(e164);
+    phones.push(e164);
+  }
+  return phones;
+};
+
+export const getInvalidInvoicePhones = (value: string) =>
+  splitInvoiceListInput(value).filter((entry) => !isValidUsPhone(entry));
+
+export const formatInvoicePhoneListInput = (value: string): string => {
+  const parts = splitInvoiceListInput(value);
+  if (parts.length === 0) return value.trim();
+  return parts
+    .map((part) => {
+      const formatted = formatUsPhoneDisplayFromAny(part);
+      return formatted === "—" ? part : formatted;
+    })
+    .join(", ");
+};
 
 export const billToSelectionFromClient = ({
   company,

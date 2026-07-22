@@ -14,7 +14,6 @@ import {
   CreditCard,
   Eye,
   FileText,
-  X,
   ChevronDown,
   Clock,
 } from "lucide-react";
@@ -62,6 +61,10 @@ import {
   resolveInvoiceRecipientPhone,
   formatOrganizationMemberName,
   parseInvoiceEmailList,
+  parseInvoicePhoneList,
+  getInvalidInvoiceEmails,
+  getInvalidInvoicePhones,
+  formatInvoicePhoneListInput,
 } from "@/modules/billing/billingUtils";
 import {
   canChargeClientInvoice,
@@ -156,12 +159,24 @@ export const SendInvoiceDialog = ({
   const [bcc, setBcc] = useState("");
   const [showCc, setShowCc] = useState(false);
   const [showBcc, setShowBcc] = useState(false);
-  const [editingTo, setEditingTo] = useState(false);
   const [phone, setPhone] = useState("");
   const [channel, setChannel] =
     useState<InvoiceDeliveryChannel>(deliveryChannel);
   const [subject, setSubject] = useState("");
   const [pdfPreviewPending, setPdfPreviewPending] = useState(false);
+
+  const parsedEmails = useMemo(() => parseInvoiceEmailList(to), [to]);
+  const invalidEmails = useMemo(() => getInvalidInvoiceEmails(to), [to]);
+  const invalidPhones = useMemo(() => getInvalidInvoicePhones(phone), [phone]);
+  const parsedPhones = useMemo(() => parseInvoicePhoneList(phone), [phone]);
+  const primaryBillToEmail = parsedEmails[0] ?? to.trim();
+  const previewEmailTo = parsedEmails.length > 0 ? parsedEmails.join(", ") : to.trim();
+  const previewPhoneTo =
+    parsedPhones.length > 0
+      ? parsedPhones
+          .map((entry) => formatUsPhoneDisplayFromAny(entry))
+          .join(", ")
+      : phone.trim();
 
   const { data: lineItems = [] } = useGetList<ClientInvoiceLineItem>(
     "client_invoice_line_items",
@@ -265,7 +280,7 @@ export const SendInvoiceDialog = ({
       company,
       contact,
       lineItems,
-      billToEmail: to,
+      billToEmail: primaryBillToEmail,
     });
   }, [
     invoice,
@@ -275,7 +290,7 @@ export const SendInvoiceDialog = ({
     company,
     contact,
     lineItems,
-    to,
+    primaryBillToEmail,
   ]);
 
   const { data: pdfMeta } = useQuery({
@@ -321,13 +336,16 @@ export const SendInvoiceDialog = ({
         fallbackEmail: invoice.recipient_email,
       }),
     );
-    setPhone(defaultPhone);
+    setPhone(
+      defaultPhone && formatUsPhoneDisplayFromAny(defaultPhone) !== "—"
+        ? formatUsPhoneDisplayFromAny(defaultPhone)
+        : defaultPhone,
+    );
     setChannel(deliveryChannel);
     setCc("");
     setBcc("");
     setShowCc(false);
     setShowBcc(false);
-    setEditingTo(false);
     setSubject(buildDefaultInvoiceEmailSubject(invoice, organizationName));
   }, [open, invoice, company, contact, organizationName, deliveryChannel]);
 
@@ -341,11 +359,26 @@ export const SendInvoiceDialog = ({
         throw new Error("Payment link is not ready yet");
       }
 
+      if (sendEmail && (parsedEmails.length === 0 || invalidEmails.length > 0)) {
+        throw new Error(
+          invalidEmails.length > 0
+            ? `Invalid email: ${invalidEmails.join(", ")}`
+            : "Enter at least one recipient email",
+        );
+      }
+      if (sendSms && (parsedPhones.length === 0 || invalidPhones.length > 0)) {
+        throw new Error(
+          invalidPhones.length > 0
+            ? `Each number must be 10 digits (US): ${invalidPhones.join(", ")}`
+            : "Enter at least one mobile number",
+        );
+      }
+
       if (channel === "sms") {
         return dataProvider.sendClientInvoice({
           invoiceId: invoice.id,
           to: "",
-          smsTo: phone.trim(),
+          smsTo: previewPhoneTo,
           smsBody: smsText,
           contactId: contact?.id ?? invoice.contact_id ?? undefined,
           smsOnly: true,
@@ -361,13 +394,13 @@ export const SendInvoiceDialog = ({
           company,
           contact,
           lineItems,
-          billToEmail: to,
+          billToEmail: primaryBillToEmail,
         }),
       );
       const pdfBase64 = await blobToBase64(blob);
       return dataProvider.sendClientInvoice({
         invoiceId: invoice.id,
-        to,
+        to: previewEmailTo,
         subject: subject.trim(),
         message: buildInvoiceEmailPlainText(emailTemplateContext),
         htmlMessage: buildInvoiceEmailHtml(emailTemplateContext),
@@ -375,9 +408,9 @@ export const SendInvoiceDialog = ({
         filename: `${invoice.invoice_number}.pdf`,
         cc: parseInvoiceEmailList(cc),
         bcc: parseInvoiceEmailList(bcc),
-        ...(sendSms && phone.trim()
+        ...(sendSms && parsedPhones.length > 0
           ? {
-              smsTo: phone.trim(),
+              smsTo: previewPhoneTo,
               smsBody: smsText,
               contactId: contact?.id ?? invoice.contact_id ?? undefined,
             }
@@ -429,16 +462,20 @@ export const SendInvoiceDialog = ({
 
   if (!invoice) return null;
 
+  const emailReady =
+    parsedEmails.length > 0 &&
+    invalidEmails.length === 0 &&
+    Boolean(subject.trim());
+  const phoneReady =
+    parsedPhones.length > 0 && invalidPhones.length === 0;
+
   const canSend =
     !shareLinkPending &&
     Boolean(paymentUrl) &&
     Boolean(emailTemplateContext) &&
-    ((channel === "email" && Boolean(to.trim()) && Boolean(subject.trim())) ||
-      (channel === "sms" && Boolean(phone.trim())) ||
-      (channel === "both" &&
-        Boolean(to.trim()) &&
-        Boolean(subject.trim()) &&
-        Boolean(phone.trim())));
+    ((channel === "email" && emailReady) ||
+      (channel === "sms" && phoneReady) ||
+      (channel === "both" && emailReady && phoneReady));
 
   const channelOptions: Array<{
     id: InvoiceDeliveryChannel;
@@ -524,48 +561,24 @@ export const SendInvoiceDialog = ({
             {sendEmail ? (
               <div className="space-y-2">
                 <Label htmlFor="invoice-send-to">To</Label>
-                <div className="rounded-md border px-2 py-1.5 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-                  {to.trim() && !editingTo ? (
-                    <div className="flex min-h-8 items-center gap-1">
-                      <Badge
-                        variant="secondary"
-                        className="max-w-full gap-1 bg-primary/10 font-normal text-primary hover:bg-primary/15"
-                      >
-                        <span className="truncate">{to}</span>
-                        <IconButton
-                          className="size-4 min-h-4 min-w-4 opacity-70 hover:bg-transparent hover:opacity-100"
-                          aria-label="Clear recipient email"
-                          onClick={() => {
-                            setTo("");
-                            setEditingTo(true);
-                          }}
-                        >
-                          <X className="size-3" />
-                        </IconButton>
-                      </Badge>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="ml-auto h-auto px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
-                        onClick={() => setEditingTo(true)}
-                      >
-                        Edit
-                      </Button>
-                    </div>
-                  ) : (
-                    <Input
-                      id="invoice-send-to"
-                      type="email"
-                      value={to}
-                      onChange={(event) => setTo(event.target.value)}
-                      onBlur={() => setEditingTo(false)}
-                      className="h-8 border-0 px-1 shadow-none focus-visible:ring-0"
-                      placeholder="Recipient email"
-                      autoFocus={editingTo}
-                    />
-                  )}
-                </div>
+                <Input
+                  id="invoice-send-to"
+                  type="text"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="client@example.com, billing@company.com"
+                  value={to}
+                  onChange={(event) => setTo(event.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Separate multiple emails with commas.
+                </p>
+                {invalidEmails.length > 0 ? (
+                  <p className="text-xs text-destructive">
+                    Invalid email{invalidEmails.length === 1 ? "" : "s"}:{" "}
+                    {invalidEmails.join(", ")}
+                  </p>
+                ) : null}
                 {!showCc || !showBcc ? (
                   <div className="flex gap-3">
                     {!showCc ? (
@@ -670,14 +683,20 @@ export const SendInvoiceDialog = ({
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel"
-                  placeholder="(203) 555-0100"
+                  placeholder="(203) 555-0100, (203) 555-0101"
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
-                  onBlur={() => {
-                    const formatted = formatUsPhoneDisplayFromAny(phone);
-                    if (formatted !== "—") setPhone(formatted);
-                  }}
+                  onBlur={() => setPhone(formatInvoicePhoneListInput(phone))}
                 />
+                <p className="text-xs text-muted-foreground">
+                  US mobile numbers only · 10 digits each · separate with commas.
+                </p>
+                {invalidPhones.length > 0 ? (
+                  <p className="text-xs text-destructive">
+                    Invalid number{invalidPhones.length === 1 ? "" : "s"}:{" "}
+                    {invalidPhones.join(", ")}
+                  </p>
+                ) : null}
               </div>
             ) : null}
 
@@ -700,8 +719,8 @@ export const SendInvoiceDialog = ({
                 subject={subject}
                 emailHtml={emailHtml}
                 smsText={smsText}
-                emailTo={to}
-                smsTo={phone}
+                emailTo={previewEmailTo}
+                smsTo={previewPhoneTo}
                 sendSms={sendSms}
                 sendEmail={sendEmail}
               />

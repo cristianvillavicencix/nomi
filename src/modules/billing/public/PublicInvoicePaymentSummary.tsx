@@ -6,7 +6,6 @@ import {
 import type { PublicInvoicePayload } from "@/modules/billing/public/publicInvoiceApi";
 import {
   buildPublicInvoiceDeliveryReadyMessage,
-  formatPublicInvoiceLineSubtext,
   formatPublicInvoiceLineTitle,
   type PublicInvoiceDeliveryInfo,
 } from "@/modules/billing/public/publicInvoiceDeliveryMessage";
@@ -92,9 +91,7 @@ export const PublicInvoicePaymentSummary = ({
         {lines.map((line) => {
           const lineTotal = line.quantity * line.unit_price;
           const title = formatPublicInvoiceLineTitle(line.title);
-          const subtext =
-            line.item_detail?.trim() ||
-            formatPublicInvoiceLineSubtext(line.title, deliveryInfo);
+          const subtext = line.item_detail?.trim() || null;
 
           return (
             <div

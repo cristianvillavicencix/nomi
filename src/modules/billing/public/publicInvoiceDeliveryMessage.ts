@@ -43,30 +43,13 @@ export const buildPublicInvoiceDeliveryReadyMessage = (
 };
 
 export const formatPublicInvoiceLineSubtext = (
-  lineDescription: string,
-  delivery?: PublicInvoiceDeliveryInfo | null,
+  _lineDescription: string,
+  _delivery?: PublicInvoiceDeliveryInfo | null,
 ) => {
-  const parts: string[] = [];
-  const address = delivery?.property_address?.trim();
-  if (
-    address &&
-    lineDescription.toLowerCase().includes(address.toLowerCase())
-  ) {
-    parts.push(address);
-  }
-
-  const supplementItem = delivery?.items?.find(
-    (item) => item.kind === "supplement",
-  );
-  if (supplementItem?.line_count != null && supplementItem.line_count > 0) {
-    const lineLabel =
-      supplementItem.line_count === 1
-        ? "1 line"
-        : `${supplementItem.line_count} lines`;
-    parts.push(lineLabel);
-  }
-
-  return parts.length ? parts.join(" · ") : null;
+  // Customer-facing pay page: line counts and property address belong in the
+  // title/description only — avoid duplicating the address or exposing internal
+  // supplement line counts used for staff pricing.
+  return null;
 };
 
 export const formatPublicInvoiceLineTitle = (description: string) =>

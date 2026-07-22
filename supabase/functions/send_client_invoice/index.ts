@@ -40,14 +40,33 @@ type SendBody = {
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const normalizeEmailList = (values?: string[]) =>
-  (values ?? [])
-    .map((entry) =>
-      String(entry ?? "")
-        .trim()
-        .toLowerCase(),
-    )
+const normalizeEmailList = (values?: string[] | string) => {
+  const list = Array.isArray(values)
+    ? values
+    : String(values ?? "")
+        .split(/[,;]/)
+        .map((entry) => entry.trim());
+  return list
+    .map((entry) => entry.toLowerCase())
     .filter((entry) => entry.length > 0 && emailRegex.test(entry));
+};
+
+const parseSmsPhoneList = (value: string): string[] => {
+  const seen = new Set<string>();
+  const phones: string[] = [];
+  for (const part of value.split(/[,;]/)) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const normalized = normalizeUsPhoneToE164(trimmed);
+    if (!normalized) {
+      throw new Error(`Enter a valid 10-digit US number: ${trimmed}`);
+    }
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    phones.push(normalized);
+  }
+  return phones;
+};
 
 async function sendInvoiceSms(params: {
   orgId: number;
@@ -159,11 +178,9 @@ Deno.serve(
         const invoiceId = Number(body.invoice_id);
         const linkOnly = body.link_only === true;
         const smsOnly = body.sms_only === true;
-        const to = String(body.to ?? "")
-          .trim()
-          .toLowerCase();
+        const toList = normalizeEmailList(String(body.to ?? ""));
         const pdfBase64 = String(body.pdf_base64 ?? "").trim();
-        const smsTo = String(body.sms_to ?? "").trim();
+        const smsToRaw = String(body.sms_to ?? "").trim();
         const smsBody = String(body.sms_body ?? "").trim();
         const contactId =
           body.contact_id != null && Number.isFinite(Number(body.contact_id))
@@ -177,7 +194,16 @@ Deno.serve(
         }
 
         if (linkOnly || smsOnly) {
-          if (!smsTo || !smsBody) {
+          let smsPhones: string[] = [];
+          try {
+            smsPhones = parseSmsPhoneList(smsToRaw);
+          } catch (error) {
+            return createErrorResponse(
+              400,
+              error instanceof Error ? error.message : "Invalid phone number",
+            );
+          }
+          if (!smsPhones.length || !smsBody) {
             return createErrorResponse(
               400,
               "sms_to and sms_body are required for text delivery",
@@ -206,13 +232,19 @@ Deno.serve(
             );
           }
 
-          const smsOutcome = await sendInvoiceSms({
-            orgId: member.org_id,
-            memberId: Number(member.id),
-            phoneRaw: smsTo,
-            body: smsBody,
-            contactId: contactId ?? invoice.contact_id ?? null,
-          });
+          let smsSent = false;
+          let smsSkipped = false;
+          for (const smsPhone of smsPhones) {
+            const smsOutcome = await sendInvoiceSms({
+              orgId: member.org_id,
+              memberId: Number(member.id),
+              phoneRaw: smsPhone,
+              body: smsBody,
+              contactId: contactId ?? invoice.contact_id ?? null,
+            });
+            if (smsOutcome.sent) smsSent = true;
+            if (smsOutcome.skipped) smsSkipped = true;
+          }
 
           if (smsOnly) {
             let recipientEmail = String(invoice.recipient_email ?? "").trim();
@@ -244,7 +276,7 @@ Deno.serve(
               supabaseAdmin,
               invoiceId,
               member.org_id,
-              recipientEmail || smsTo,
+              recipientEmail || smsPhones[0] || "",
             );
 
             return new Response(
@@ -253,8 +285,8 @@ Deno.serve(
                 sent: true,
                 email_sent: false,
                 email_skipped: true,
-                sms_sent: smsOutcome.sent,
-                sms_skipped: smsOutcome.skipped,
+                sms_sent: smsSent,
+                sms_skipped: smsSkipped,
                 sms_only: true,
               }),
               {
@@ -269,8 +301,8 @@ Deno.serve(
               sent: true,
               email_sent: false,
               email_skipped: true,
-              sms_sent: smsOutcome.sent,
-              sms_skipped: smsOutcome.skipped,
+              sms_sent: smsSent,
+              sms_skipped: smsSkipped,
               link_only: true,
             }),
             {
@@ -279,10 +311,10 @@ Deno.serve(
           );
         }
 
-        if (!to || !emailRegex.test(to)) {
+        if (!toList.length) {
           return createErrorResponse(
             400,
-            "Invalid invoice_id or recipient email",
+            "Enter at least one valid recipient email",
           );
         }
 
@@ -290,7 +322,19 @@ Deno.serve(
           return createErrorResponse(400, "pdf_base64 is required");
         }
 
-        if (smsTo && !smsBody) {
+        let smsPhones: string[] = [];
+        if (smsToRaw) {
+          try {
+            smsPhones = parseSmsPhoneList(smsToRaw);
+          } catch (error) {
+            return createErrorResponse(
+              400,
+              error instanceof Error ? error.message : "Invalid phone number",
+            );
+          }
+        }
+
+        if (smsToRaw && !smsBody) {
           return createErrorResponse(
             400,
             "sms_body is required when sms_to is set",
@@ -346,7 +390,7 @@ Deno.serve(
           await sendTransactionalEmail({
             orgId: member.org_id,
             orgName: org?.name ?? null,
-            to,
+            to: toList,
             cc: cc.length ? cc : undefined,
             bcc: bcc.length ? bcc : undefined,
             subject,
@@ -371,22 +415,24 @@ Deno.serve(
           );
         }
 
-        if (smsTo) {
+        if (smsPhones.length > 0) {
           try {
-            const smsOutcome = await sendInvoiceSms({
-              orgId: member.org_id,
-              memberId: Number(member.id),
-              phoneRaw: smsTo,
-              body: smsBody,
-              contactId: contactId ?? invoice.contact_id ?? null,
-            });
-            smsSent = smsOutcome.sent;
-            smsSkipped = smsOutcome.skipped;
-            if (smsOutcome.skipped) {
-              console.warn(
-                "send_client_invoice.sms_skipped",
-                smsOutcome.reason,
-              );
+            for (const smsPhone of smsPhones) {
+              const smsOutcome = await sendInvoiceSms({
+                orgId: member.org_id,
+                memberId: Number(member.id),
+                phoneRaw: smsPhone,
+                body: smsBody,
+                contactId: contactId ?? invoice.contact_id ?? null,
+              });
+              if (smsOutcome.sent) smsSent = true;
+              if (smsOutcome.skipped) smsSkipped = true;
+              if (smsOutcome.skipped) {
+                console.warn(
+                  "send_client_invoice.sms_skipped",
+                  smsOutcome.reason,
+                );
+              }
             }
           } catch (smsError) {
             console.warn("send_client_invoice.sms_error", smsError);
@@ -401,7 +447,7 @@ Deno.serve(
           supabaseAdmin,
           invoiceId,
           member.org_id,
-          to,
+          toList.join(", "),
         );
 
         return new Response(
