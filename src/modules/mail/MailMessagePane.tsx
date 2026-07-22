@@ -27,7 +27,8 @@ import {
   isDownloadableMailAttachment,
   useResolvedMailHtml,
 } from "./useMailInlineHtml";
-import type { MailAttachment, MailMessage, MailThread } from "./types";
+import type { MailAttachment, MailAccount, MailMessage, MailThread } from "./types";
+import { MailAccountAvatar } from "./mailAccountAvatar";
 
 export type MailMessagePaneActions = {
   isStarred: boolean;
@@ -264,6 +265,7 @@ function MessageHtmlBody({
 export function MailMessagePane({
   thread,
   threadActions,
+  mailboxAccount,
   onReply,
   onReplyAll,
   onForward,
@@ -271,6 +273,7 @@ export function MailMessagePane({
 }: {
   thread: MailThread | null;
   threadActions?: MailMessagePaneActions;
+  mailboxAccount?: MailAccount | null;
   onReply?: () => void;
   onReplyAll?: () => void;
   onForward?: () => void;
@@ -330,7 +333,19 @@ export function MailMessagePane({
           <h2 className="truncate text-base font-semibold leading-snug">
             {thread.subject || "(No subject)"}
           </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          {mailboxAccount ? (
+            <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+              <MailAccountAvatar
+                account={mailboxAccount}
+                size="xs"
+                className="ring-1 ring-border/60"
+              />
+              <span className="truncate">
+                {mailboxAccount.display_name?.trim() || mailboxAccount.email}
+              </span>
+            </p>
+          ) : null}
+          <p className={cn("text-xs text-muted-foreground", mailboxAccount ? "mt-1" : "mt-0.5")}>
             {soleMessage && !isPending ? (
               <>
                 <span className="text-foreground/90">

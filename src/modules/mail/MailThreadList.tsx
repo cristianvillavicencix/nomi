@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import type { MailThread } from "./types";
+import { MailAccountAvatar } from "./mailAccountAvatar";
+import type { MailAccount, MailThread } from "./types";
 import { Star } from "@phosphor-icons/react";
 
 function formatListDate(iso: string | null) {
@@ -17,19 +19,32 @@ function formatListDate(iso: string | null) {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+function mailboxLabel(account: MailAccount): string {
+  return account.display_name?.trim() || account.email;
+}
+
 export function MailThreadList({
   threads,
   selectedId,
   selectedIds,
   onToggleSelect,
   onSelect,
+  accounts = [],
+  showMailboxAvatar = false,
 }: {
   threads: MailThread[];
   selectedId: number | null;
   selectedIds?: Set<number>;
   onToggleSelect?: (id: number, on: boolean) => void;
   onSelect: (thread: MailThread) => void;
+  accounts?: MailAccount[];
+  showMailboxAvatar?: boolean;
 }) {
+  const accountById = useMemo(
+    () => new Map(accounts.map((account) => [account.id, account])),
+    [accounts],
+  );
+
   if (threads.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
@@ -46,6 +61,7 @@ export function MailThreadList({
       {threads.map((thread) => {
         const active = thread.id === selectedId;
         const checked = selectedIds?.has(thread.id) ?? false;
+        const mailboxAccount = accountById.get(thread.account_id);
         const who =
           thread.participants
             ?.map((p) => p.name || p.email)
@@ -76,43 +92,61 @@ export function MailThreadList({
             <button
               type="button"
               onClick={() => onSelect(thread)}
-              title={`${who} — ${subject}`}
+              title={
+                showMailboxAvatar && mailboxAccount
+                  ? `${mailboxLabel(mailboxAccount)} · ${who} — ${subject}`
+                  : `${who} — ${subject}`
+              }
               className={cn(
-                "relative z-0 flex min-w-0 flex-1 flex-col gap-0.5 py-2.5 pr-3 text-left transition-colors",
+                "relative z-0 flex min-w-0 flex-1 gap-2 py-2.5 pr-3 text-left transition-colors",
                 onToggleSelect ? "pl-1" : "pl-3",
                 !active && "hover:bg-muted/50",
               )}
             >
-              <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    className={cn(
+                      "min-w-0 flex-1 truncate text-sm",
+                      thread.is_unread ? "font-semibold" : "font-medium",
+                    )}
+                  >
+                    {who}
+                  </span>
+                  <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                    {formatListDate(thread.last_message_at)}
+                  </span>
+                  {thread.is_starred ? (
+                    <Star
+                      className="size-3.5 shrink-0 text-amber-500"
+                      weight="fill"
+                    />
+                  ) : null}
+                </div>
                 <span
                   className={cn(
-                    "min-w-0 flex-1 truncate text-sm",
-                    thread.is_unread ? "font-semibold" : "font-medium",
+                    "truncate text-sm",
+                    thread.is_unread ? "font-medium" : "text-muted-foreground",
                   )}
                 >
-                  {who}
+                  {subject}
                 </span>
-                <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
-                  {formatListDate(thread.last_message_at)}
-                </span>
-                {thread.is_starred ? (
-                  <Star
-                    className="size-3.5 shrink-0 text-amber-500"
-                    weight="fill"
-                  />
+                {thread.snippet ? (
+                  <span className="line-clamp-1 text-xs text-muted-foreground">
+                    {thread.snippet}
+                  </span>
                 ) : null}
               </div>
-              <span
-                className={cn(
-                  "truncate text-sm",
-                  thread.is_unread ? "font-medium" : "text-muted-foreground",
-                )}
-              >
-                {subject}
-              </span>
-              {thread.snippet ? (
-                <span className="line-clamp-1 text-xs text-muted-foreground">
-                  {thread.snippet}
+              {showMailboxAvatar && mailboxAccount ? (
+                <span
+                  className="mt-0.5 shrink-0 self-start"
+                  title={mailboxLabel(mailboxAccount)}
+                >
+                  <MailAccountAvatar
+                    account={mailboxAccount}
+                    size="xs"
+                    className="ring-1 ring-border/60 shadow-sm"
+                  />
                 </span>
               ) : null}
             </button>

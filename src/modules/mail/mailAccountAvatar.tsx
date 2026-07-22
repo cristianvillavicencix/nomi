@@ -30,11 +30,13 @@ export function MailAccountAvatar({
 }: {
   account: MailAccount;
   className?: string;
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
 }) {
   const brand = resolveMailBrand(account);
-  const sizeClass = size === "md" ? "size-8" : "size-7";
-  const logoClass = size === "md" ? "size-5" : "size-[18px]";
+  const sizeClass =
+    size === "md" ? "size-8" : size === "xs" ? "size-5" : "size-7";
+  const logoClass =
+    size === "md" ? "size-5" : size === "xs" ? "size-3" : "size-[18px]";
   const hostingerOrYahoo = brand === "hostinger" || brand === "yahoo";
 
   return (

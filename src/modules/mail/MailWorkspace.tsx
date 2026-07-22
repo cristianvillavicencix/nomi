@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNotify } from "ra-core";
+import { useNotify, useGetIdentity } from "ra-core";
 import { MailEmptyState } from "./MailEmptyState";
 import { MailThreadList } from "./MailThreadList";
 import { MailMessagePane, type MailMessagePaneActions } from "./MailMessagePane";
@@ -47,6 +47,7 @@ import {
 import { useMailInboxUnreadCount } from "./useMailUnreadCount";
 import { useMailLabels } from "./useMailLabels";
 import { incrementalMailSyncRange } from "./mailSyncRange";
+import { applyOptimisticMailThreadAction } from "./mailQueryCache";
 import type { MailAccount, MailMessage, MailThread } from "./types";
 
 const MOBILE_FOLDERS: Array<{ id: MailFolderId; label: string }> = [
@@ -61,6 +62,7 @@ const MOBILE_FOLDERS: Array<{ id: MailFolderId; label: string }> = [
 
 export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const notify = useNotify();
+  const { identity } = useGetIdentity();
   const queryClient = useQueryClient();
   const [accountFilter, setAccountFilter] = useState<number | "all">(() =>
     readMailAccountFilter(),
@@ -140,6 +142,13 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     return false;
   };
 
+  const removeThreadFromListCache = (threadId: number) => {
+    queryClient.setQueriesData<MailThread[]>(
+      { queryKey: ["mail_threads"] },
+      (old) => old?.filter((t) => t.id !== threadId) ?? old,
+    );
+  };
+
   const runThreadAction = async (
     thread: MailThread,
     action: MailThreadAction,
@@ -155,26 +164,47 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     ) {
       return;
     }
+
+    const optimisticPatch = applyOptimisticMailThreadAction(
+      queryClient,
+      action,
+      thread,
+      { identityId: identity?.id, accountFilter },
+    );
+    if (optimisticPatch) {
+      if (leavesFolderForAction(action, thread)) {
+        removeThreadFromListCache(thread.id);
+      }
+      setSelected((prev) => {
+        if (prev?.id === thread.id) return { ...prev, ...optimisticPatch };
+        if (action === "mark_read") return { ...thread, ...optimisticPatch };
+        return prev;
+      });
+    }
+
     try {
       await applyMailThreadAction(thread.id, action);
       if (selected?.id === thread.id && leavesFolderForAction(action, thread)) {
         selectNeighborAfterRemoval(thread.id);
-      } else if (selected?.id === thread.id && action !== "delete_forever") {
+      } else if (
+        selected?.id === thread.id &&
+        action !== "delete_forever" &&
+        !optimisticPatch
+      ) {
         const patch: Partial<MailThread> = {};
-        if (action === "star") patch.is_starred = true;
-        if (action === "unstar") patch.is_starred = false;
-        if (action === "mark_read") patch.is_unread = false;
-        if (action === "mark_unread") patch.is_unread = true;
-        if (action === "archive") patch.is_archived = true;
         if (action === "unarchive") patch.is_archived = false;
-        if (action === "trash") patch.is_trashed = true;
         if (action === "untrash") patch.is_trashed = false;
-        if (action === "spam") patch.is_spam = true;
         if (action === "not_spam") patch.is_spam = false;
-        setSelected({ ...thread, ...patch });
+        if (Object.keys(patch).length > 0) {
+          setSelected({ ...thread, ...patch });
+        }
+      }
+      if (action === "mark_read" || action === "mark_unread") {
+        return;
       }
       invalidate();
     } catch (e) {
+      invalidate();
       notify(e instanceof Error ? e.message : "Action failed", { type: "error" });
     }
   };
@@ -380,6 +410,13 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
       setSyncing(false);
     }
   };
+
+  const selectedMailboxAccount = useMemo(() => {
+    if (accountFilter !== "all" || !selected || isMailDraftListId(selected.id)) {
+      return null;
+    }
+    return accounts.find((a) => a.id === selected.account_id) ?? null;
+  }, [accountFilter, accounts, selected]);
 
   if (accounts.length === 0) {
     return <MailEmptyState />;
@@ -678,6 +715,8 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
             threads={threads}
             selectedId={selected?.id ?? null}
             selectedIds={selectedIds}
+            accounts={accounts}
+            showMailboxAvatar={accountFilter === "all"}
             onToggleSelect={(id, on) => {
               setSelectedIds((prev) => {
                 const next = new Set(prev);
@@ -691,7 +730,8 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
                 void openDraftFromList(thread);
                 return;
               }
-              setSelected(thread);
+              const next = thread.is_unread ? { ...thread, is_unread: false } : thread;
+              setSelected(next);
               setMobileShowThread(true);
               if (thread.is_unread) {
                 void runThreadAction(thread, "mark_read");
@@ -713,6 +753,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
             thread={
               selected && !isMailDraftListId(selected.id) ? selected : null
             }
+            mailboxAccount={selectedMailboxAccount}
             threadActions={
               selected ? buildMessagePaneActions(selected) : undefined
             }
