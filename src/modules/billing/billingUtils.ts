@@ -1,5 +1,11 @@
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { BillToSelection } from "@/modules/billing/BillToClientSearch";
+import {
+  getContactPrimaryEmail,
+  getContactPrimaryPhone,
+  resolveBillingRecipientEmail,
+  resolveBillingRecipientPhone,
+} from "@/modules/billing/billingRecipientResolution";
 import { parseLbsClientContextLinks } from "@/modules/clients/clientContextLinks";
 import {
   formatUsPhoneDisplayFromAny,
@@ -23,38 +29,27 @@ export const formatOrganizationMemberName = (
   return name || member?.email?.trim() || null;
 };
 
-export const getContactEmail = (contact?: Contact | null) => {
-  const rows = contact?.email_jsonb ?? [];
-  const primary = rows.find(
-    (row) => row.isPrimary && row.email?.trim(),
-  )?.email?.trim();
-  if (primary) return primary;
-  return rows.find((row) => row.email?.trim())?.email?.trim() ?? "";
-};
+export const getContactEmail = getContactPrimaryEmail;
+export const getContactPhone = getContactPrimaryPhone;
 
-export const getContactPhone = (contact?: Contact | null) => {
-  const rows = contact?.phone_jsonb ?? [];
-  const primary = rows.find(
-    (row) => row.isPrimary && row.number?.trim(),
-  )?.number?.trim();
-  if (primary) return primary;
-  return rows.find((row) => row.number?.trim())?.number?.trim() ?? "";
-};
-
-/** Prefer linked contact channels when prefilling invoice send (re-send picks up primary changes). */
+/** Prefill invoice send using company billing first (Option A). */
 export const resolveInvoiceSendRecipientEmail = ({
   company,
   contact,
   fallbackEmail,
+  ticketRequesterEmail,
 }: {
   company?: Company | null;
   contact?: Contact | null;
   fallbackEmail?: string | null;
-}) => {
-  const contactEmail = getContactEmail(contact);
-  if (contactEmail) return contactEmail;
-  return resolveInvoiceRecipientEmail({ company, contact, fallbackEmail });
-};
+  ticketRequesterEmail?: string | null;
+}) =>
+  resolveBillingRecipientEmail({
+    company,
+    contact,
+    ticketRequesterEmail,
+    fallbackEmail,
+  });
 
 export const resolveInvoiceSendRecipientPhone = ({
   company,
@@ -63,25 +58,10 @@ export const resolveInvoiceSendRecipientPhone = ({
   company?: Company | null;
   contact?: Contact | null;
 }) => {
-  const contactPhone = getContactPhone(contact);
-  if (contactPhone) {
-    const formatted = formatUsPhoneDisplayFromAny(contactPhone);
-    return formatted === "—" ? contactPhone : formatted;
-  }
-  const resolved = resolveInvoiceRecipientPhone({ company, contact });
+  const resolved = resolveBillingRecipientPhone({ company, contact });
   if (!resolved) return "";
   const formatted = formatUsPhoneDisplayFromAny(resolved);
   return formatted === "—" ? resolved : formatted;
-};
-
-const getPrimaryContactEmail = (company?: Company | null) => {
-  const rows = company?.primary_contact_email_jsonb ?? [];
-  return rows.find((row) => row.email?.trim())?.email?.trim() ?? "";
-};
-
-const getPrimaryContactPhone = (company?: Company | null) => {
-  const rows = company?.primary_contact_phone_jsonb ?? [];
-  return rows.find((row) => row.number?.trim())?.number?.trim() ?? "";
 };
 
 export type BillToDisplay = {
@@ -199,19 +179,8 @@ export const resolveBillToDisplay = (
     addressLines.push(contact.address.trim());
   }
 
-  const email =
-    ctx.invoiceEmail?.trim() ||
-    getContactEmail(contact) ||
-    getPrimaryContactEmail(company) ||
-    ctx.businessEmail?.trim() ||
-    null;
-
-  const phone =
-    ctx.invoicePhone?.trim() ||
-    getContactPhone(contact) ||
-    getPrimaryContactPhone(company) ||
-    company?.phone_number?.trim() ||
-    null;
+  const email = resolveBillingRecipientEmail({ company, contact }) || null;
+  const phone = resolveBillingRecipientPhone({ company, contact }) || null;
 
   return {
     companyName,
@@ -242,16 +211,19 @@ export const resolveInvoiceRecipientEmail = ({
   company,
   contact,
   fallbackEmail,
+  ticketRequesterEmail,
 }: {
   company?: Company | null;
   contact?: Contact | null;
   fallbackEmail?: string | null;
-}) => {
-  const display = resolveBillToDisplay(company, contact);
-  if (display.email) return display.email;
-  if (fallbackEmail?.trim()) return fallbackEmail.trim();
-  return "";
-};
+  ticketRequesterEmail?: string | null;
+}) =>
+  resolveBillingRecipientEmail({
+    company,
+    contact,
+    ticketRequesterEmail,
+    fallbackEmail,
+  });
 
 export const resolveInvoiceRecipientPhone = ({
   company,
@@ -259,23 +231,9 @@ export const resolveInvoiceRecipientPhone = ({
 }: {
   company?: Company | null;
   contact?: Contact | null;
-}) => {
-  const display = resolveBillToDisplay(company, contact);
-  return display.phone?.trim() ?? "";
-};
+}) => resolveBillingRecipientPhone({ company, contact });
 
-/** Ticket invoices bill a specific contact — prefer their phone over company billing overrides. */
-export const resolveTicketInvoiceRecipientPhone = ({
-  company,
-  contact,
-}: {
-  company?: Company | null;
-  contact?: Contact | null;
-}) => {
-  const contactPhone = getContactPhone(contact);
-  if (contactPhone) return contactPhone;
-  return resolveInvoiceRecipientPhone({ company, contact });
-};
+export const resolveTicketInvoiceRecipientPhone = resolveInvoiceRecipientPhone;
 
 const invoiceEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

@@ -12,7 +12,8 @@ import {
 } from "@/modules/clients/applyGooglePlaceToClientForm";
 import type { ClientCreateFormValues } from "@/modules/clients/ClientCreateForm";
 import { clearStreamlinedCompanyDependentFields } from "@/modules/clients/clientFormValues";
-import { CompanyChannelsInput } from "@/modules/clients/CompanyChannelsInput";
+import { COMPANY_CHANNEL_TYPE_CHOICES } from "@/modules/clients/clientChannels";
+import { ProgressiveMultiChannelInput } from "@/modules/shared/ProgressiveMultiChannelInput";
 import { PrimaryContactReferenceCard } from "@/modules/clients/PrimaryContactReferenceCard";
 import {
   getPrimaryContactDraftFromFormValues,
@@ -173,15 +174,21 @@ export const ClientCreateStreamlinedFields = ({
         placeholder="https://"
       />
 
-      <CompanyChannelsInput
+      <ProgressiveMultiChannelInput<ClientCreateFormValues>
         source="company_emails"
         kind="email"
         label="Email"
+        valueKey="value"
+        typeChoices={COMPANY_CHANNEL_TYPE_CHOICES}
+        addLabel="+ Add email"
       />
-      <CompanyChannelsInput
+      <ProgressiveMultiChannelInput<ClientCreateFormValues>
         source="company_phones"
         kind="phone"
         label="Phone"
+        valueKey="value"
+        typeChoices={COMPANY_CHANNEL_TYPE_CHOICES}
+        addLabel="+ Add phone"
       />
 
       {placesEnabled ? (

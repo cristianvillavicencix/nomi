@@ -16,6 +16,7 @@ import {
 } from "./messagingConversations.ts";
 import { sanitizeMessageBody } from "./messagingUtils.ts";
 import { resolveContactEmail } from "./clientProposalBilling.ts";
+import { resolveBillingRecipientEmailFromParts } from "./billingRecipientResolution.ts";
 import { INVOICE_ORGANIZATION_NAME } from "./invoiceOrganizationInfo.ts";
 import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
 import {
@@ -398,15 +399,43 @@ async function loadTicketForInvoice(
     throw new Error("Link a company or contact before sending an invoice");
   }
 
-  const contactEmail = ticket.contact_id
-    ? await resolveContactEmail(supabase, ticket.contact_id)
+  const contactEmails = ticket.contact_id
+    ? (
+        await supabase
+          .from("contacts")
+          .select("email_jsonb")
+          .eq("id", ticket.contact_id)
+          .eq("org_id", orgId)
+          .maybeSingle()
+      ).data?.email_jsonb
     : null;
-  const recipientEmail =
-    ticket.requester_email?.trim().toLowerCase() ||
-    contactEmail?.trim().toLowerCase() ||
-    "";
 
-  if (!recipientEmail || !emailRegex.test(recipientEmail)) {
+  let companyContextLinks: string[] | null = null;
+  let primaryContactEmails: Array<{ email?: string; isPrimary?: boolean }> | null =
+    null;
+  if (ticket.company_id) {
+    const { data: company } = await supabase
+      .from("companies_summary")
+      .select("context_links, primary_contact_email_jsonb")
+      .eq("id", ticket.company_id)
+      .eq("org_id", orgId)
+      .maybeSingle();
+    companyContextLinks = (company?.context_links as string[] | null) ?? null;
+    primaryContactEmails =
+      (company?.primary_contact_email_jsonb as Array<{
+        email?: string;
+        isPrimary?: boolean;
+      }> | null) ?? null;
+  }
+
+  const recipientEmail = resolveBillingRecipientEmailFromParts({
+    companyContextLinks,
+    primaryContactEmails,
+    contactEmails: contactEmails as Array<{ email?: string; isPrimary?: boolean }> | null,
+    ticketRequesterEmail: ticket.requester_email,
+  });
+
+  if (!recipientEmail || !emailRegex.test(recipientEmail.split(",")[0]?.trim() ?? "")) {
     throw new Error("Add a valid recipient email before sending an invoice");
   }
 

@@ -29,7 +29,7 @@ describe("invoice recipient phone", () => {
     );
   });
 
-  it("prefers linked contact phone for ticket invoices", () => {
+  it("uses company billing phone for ticket invoices too", () => {
     const company = {
       id: 1,
       name: "Acme",
@@ -43,7 +43,7 @@ describe("invoice recipient phone", () => {
     } as Contact;
 
     expect(resolveTicketInvoiceRecipientPhone({ company, contact })).toBe(
-      "2036141494",
+      "2035546470",
     );
   });
 });

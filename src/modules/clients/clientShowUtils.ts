@@ -1,5 +1,9 @@
 import type { Contact } from "@/components/atomic-crm/types";
 import { formatPhoneDisplay } from "@/utils/phone";
+import {
+  getContactPrimaryEmail,
+  getContactPrimaryPhone,
+} from "@/modules/billing/billingRecipientResolution";
 
 export const CLIENT_TABS = [
   "activity",
@@ -84,12 +88,10 @@ export const formatDateTime = (value?: string | null) => {
 };
 
 export const getContactEmail = (contact: Contact) =>
-  contact.email_jsonb?.find((entry) => entry.email?.trim())?.email?.trim() ||
-  "—";
+  getContactPrimaryEmail(contact) || "—";
 
 export const getContactPhoneRaw = (contact: Contact) =>
-  contact.phone_jsonb?.find((entry) => entry.number?.trim())?.number?.trim() ||
-  "";
+  getContactPrimaryPhone(contact);
 
 export const getContactPhone = (contact: Contact) => {
   const raw = getContactPhoneRaw(contact);

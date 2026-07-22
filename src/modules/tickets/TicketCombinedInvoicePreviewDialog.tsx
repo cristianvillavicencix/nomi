@@ -17,7 +17,7 @@ import {
   resolveInvoiceOrganizationName,
 } from "@/modules/billing/invoiceEmailTemplate";
 import {
-  getContactEmail,
+  resolveInvoiceSendRecipientEmail,
   resolveInvoiceSendRecipientPhone,
 } from "@/modules/billing/billingUtils";
 import { InvoiceRecipientChipInput } from "@/modules/billing/InvoiceRecipientChipInput";
@@ -189,14 +189,18 @@ export const TicketCombinedInvoicePreviewDialog = ({
       setDraftInvoice(data.invoice as ClientInvoice);
       setLineItems((data.line_items ?? []) as ClientInvoiceLineItem[]);
       setPaymentUrl(data.payment_url);
-      const liveEmail =
-        getContactEmail(contact) ||
-        data.to ||
-        (primaryTicket
-          ? resolveTicketRequesterEmail(primaryTicket, company, contact)
-          : "") ||
-        selectedRecipientEmail.trim() ||
-        "";
+      const preparedInvoice = data.invoice as ClientInvoice;
+      const liveEmail = resolveInvoiceSendRecipientEmail({
+        company,
+        contact,
+        ticketRequesterEmail:
+          data.to ||
+          (primaryTicket
+            ? resolveTicketRequesterEmail(primaryTicket, company, contact)
+            : "") ||
+          selectedRecipientEmail.trim(),
+        fallbackEmail: preparedInvoice.recipient_email,
+      });
       setToEmails(liveEmail ? [liveEmail.toLowerCase()] : []);
       applyPaymentCopy(unbilledDeliverables);
       refresh();

@@ -1,9 +1,8 @@
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
+import { resolveBillingRecipientEmail, resolveBillingRecipientPhone } from "@/modules/billing/billingRecipientResolution";
 import {
-  getContactEmail,
   getContactFullName,
-  getContactPhoneRaw,
 } from "@/modules/clients/clientShowUtils";
 import { getPrimaryContactFullName } from "@/modules/clients/clientProfile";
 
@@ -72,22 +71,17 @@ export const getTicketListMeta = (
   company?: Company | null,
   contact?: Contact | null,
 ) => {
-  const contactEmail =
-    contact != null ? normalizeOptional(getContactEmail(contact)) : null;
-  const contactPhone =
-    contact != null ? normalizeOptional(getContactPhoneRaw(contact)) : null;
-
-  const companyEmail = normalizeOptional(
-    company?.primary_contact_email_jsonb
-      ?.find((entry) => entry.email?.trim())
-      ?.email?.trim(),
+  const email = normalizeOptional(
+    resolveBillingRecipientEmail({
+      company,
+      contact,
+      ticketRequesterEmail: ticket.requester_email,
+    }),
   );
-  const companyPhone = normalizeOptional(company?.phone_number);
 
-  const email =
-    normalizeOptional(ticket.requester_email) ?? contactEmail ?? companyEmail;
-
-  const phone = contactPhone ?? companyPhone;
+  const phone = normalizeOptional(
+    resolveBillingRecipientPhone({ company, contact }),
+  );
 
   const subject = ticket.subject?.trim() ?? "";
   const website =
