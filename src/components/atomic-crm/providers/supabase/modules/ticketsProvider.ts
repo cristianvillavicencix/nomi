@@ -164,6 +164,7 @@ export const ticketsProvider = {
     baseUrl,
     message,
     subject,
+    recipientEmail,
     smsTo,
     sendSms,
   }: {
@@ -171,6 +172,7 @@ export const ticketsProvider = {
     baseUrl?: string;
     message?: string;
     subject?: string;
+    recipientEmail?: string;
     smsTo?: string;
     sendSms?: boolean;
   }) {
@@ -185,6 +187,9 @@ export const ticketsProvider = {
         ...(baseUrl ? { base_url: baseUrl } : {}),
         ...(message ? { message } : {}),
         ...(subject ? { subject } : {}),
+        ...(recipientEmail?.trim()
+          ? { recipient_email: recipientEmail.trim() }
+          : {}),
         ...(smsTo ? { sms_to: smsTo } : {}),
         ...(sendSms ? { send_sms: true } : {}),
       },

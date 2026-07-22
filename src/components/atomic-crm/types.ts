@@ -143,11 +143,13 @@ export type Company = {
 export type EmailAndType = {
   email: string;
   type: "Work" | "Home" | "Other";
+  isPrimary?: boolean;
 };
 
 export type PhoneNumberAndType = {
   number: string;
   type: "Work" | "Home" | "Other";
+  isPrimary?: boolean;
 };
 
 export type Contact = {

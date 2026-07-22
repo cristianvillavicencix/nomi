@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { required } from "ra-core";
 import { useWatch } from "react-hook-form";
 import { ChevronDown } from "lucide-react";
-import { EmailInput } from "@/components/admin/email-input";
-import { PhoneInput } from "@/components/admin/phone-input";
 import { TextInput } from "@/components/admin/text-input";
 import { Button } from "@/components/ui/button";
 import type { Identifier } from "ra-core";
 import { ContactCompanyPickerField } from "@/modules/contacts/ContactCompanyPickerField";
+import { buildContactChannelTypeChoices } from "@/modules/contacts/contactChannelTypeChoices";
 import type { PersonFormValues } from "@/modules/contacts/personFormTypes";
+import { ProgressiveMultiChannelInput } from "@/modules/shared/ProgressiveMultiChannelInput";
 
 type PersonCompactPreviewProps = {
   lockCompanyId?: Identifier;
@@ -19,7 +19,23 @@ type PersonCompactPreviewProps = {
 export const PersonCompactPreview = ({
   lockCompanyId,
   onExpand,
-}: PersonCompactPreviewProps) => (
+}: PersonCompactPreviewProps) => {
+  const emailEntries = useWatch<PersonFormValues, "email_jsonb">({
+    name: "email_jsonb",
+  });
+  const phoneEntries = useWatch<PersonFormValues, "phone_jsonb">({
+    name: "phone_jsonb",
+  });
+  const emailTypeChoices = useMemo(
+    () => buildContactChannelTypeChoices(emailEntries),
+    [emailEntries],
+  );
+  const phoneTypeChoices = useMemo(
+    () => buildContactChannelTypeChoices(phoneEntries),
+    [phoneEntries],
+  );
+
+  return (
   <div className="flex flex-col gap-4">
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
@@ -36,15 +52,21 @@ export const PersonCompactPreview = ({
           helperText={false}
         />
       </div>
-      <EmailInput
-        source="email_jsonb.0.email"
+      <ProgressiveMultiChannelInput
+        source="email_jsonb"
+        kind="email"
         label="Email"
-        helperText={false}
+        valueKey="email"
+        typeChoices={emailTypeChoices}
+        addLabel="+ Add email"
       />
-      <PhoneInput
-        source="phone_jsonb.0.number"
+      <ProgressiveMultiChannelInput
+        source="phone_jsonb"
+        kind="phone"
         label="Phone"
-        helperText={false}
+        valueKey="number"
+        typeChoices={phoneTypeChoices}
+        addLabel="+ Add phone"
       />
       {lockCompanyId != null ? null : <ContactCompanyPickerField />}
     </div>
@@ -59,7 +81,8 @@ export const PersonCompactPreview = ({
       Show more fields
     </Button>
   </div>
-);
+  );
+};
 
 /** Watches form values needed for compact → full transition visibility. */
 export const usePersonFormWatchValues = () => {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import type { ClipboardEventHandler, FocusEvent } from "react";
-import { X } from "lucide-react";
+import { Star, X } from "lucide-react";
 import { useInput } from "ra-core";
 import {
   useFieldArray,
@@ -216,6 +216,8 @@ export const ProgressiveMultiChannelInput = <T extends FieldValues>({
     }
   };
 
+  const primaryControlWidth = "size-9";
+
   return (
     <div className="space-y-2">
       {multi ? (
@@ -265,22 +267,31 @@ export const ProgressiveMultiChannelInput = <T extends FieldValues>({
 
               <div className="flex h-9 shrink-0 items-center gap-1">
                 {index === 0 ? (
-                  <span className="min-w-[4.75rem] text-center text-xs text-muted-foreground">
-                    Primary
-                  </span>
-                ) : (
-                  <Button
+                  <IconButton
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-9 min-w-[4.75rem] px-1 text-xs text-muted-foreground"
+                    className={cn(primaryControlWidth, "text-amber-500")}
+                    aria-label="Primary"
+                    title="Primary"
+                    disabled
+                  >
+                    <Star className="size-4 fill-current" />
+                  </IconButton>
+                ) : (
+                  <IconButton
+                    type="button"
+                    className={cn(
+                      primaryControlWidth,
+                      "text-muted-foreground hover:text-amber-500",
+                    )}
+                    aria-label="Set as primary"
+                    title="Set as primary"
                     onClick={() => makePrimary(index)}
                   >
-                    Make primary
-                  </Button>
+                    <Star className="size-4" />
+                  </IconButton>
                 )}
                 <IconButton
-                  className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
+                  className={cn(primaryControlWidth, "text-muted-foreground hover:text-destructive")}
                   onClick={() => handleRemove(index)}
                   aria-label={`Remove ${kind}`}
                 >

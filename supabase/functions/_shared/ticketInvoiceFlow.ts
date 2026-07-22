@@ -881,15 +881,22 @@ export async function sendTicketInvoicePaymentLink(
     baseUrl?: string;
     message?: string;
     subject?: string;
+    recipientEmail?: string;
     smsTo?: string;
     sendSms?: boolean;
   },
 ) {
-  const { ticket, recipientEmail } = await loadTicketForInvoice(
+  const { ticket, recipientEmail: resolvedEmail } = await loadTicketForInvoice(
     supabase,
     params.orgId,
     params.ticketId,
   );
+  const recipientEmail =
+    params.recipientEmail?.trim().toLowerCase() || resolvedEmail;
+
+  if (!recipientEmail || !emailRegex.test(recipientEmail.split(",")[0]?.trim() ?? "")) {
+    throw new Error("Add a valid recipient email before sending an invoice");
+  }
 
   if (!ticket.invoice_id) {
     throw new Error("Prepare the invoice before sending");
@@ -1015,6 +1022,7 @@ export async function sendTicketInvoicePaymentLink(
     .update({
       status: "sent",
       sent_at: now,
+      recipient_email: recipientEmail,
       updated_at: now,
     })
     .eq("id", invoice.id)

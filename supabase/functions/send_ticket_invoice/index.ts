@@ -12,6 +12,7 @@ type SendBody = {
   base_url?: string;
   message?: string;
   subject?: string;
+  recipient_email?: string;
   sms_to?: string;
   send_sms?: boolean;
 };
@@ -60,6 +61,7 @@ Deno.serve(
           baseUrl: body.base_url,
           message: body.message,
           subject: body.subject,
+          recipientEmail: body.recipient_email,
           smsTo: body.sms_to,
           sendSms: body.send_sms === true,
         });

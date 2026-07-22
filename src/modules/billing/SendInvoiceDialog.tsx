@@ -58,19 +58,16 @@ import {
   canSendClientInvoice,
   canVoidClientInvoice,
   resolveInvoiceRecipientEmail,
-  resolveInvoiceRecipientPhone,
+  resolveInvoiceSendRecipientEmail,
+  resolveInvoiceSendRecipientPhone,
   formatOrganizationMemberName,
-  parseInvoiceEmailList,
   parseInvoicePhoneList,
-  getInvalidInvoiceEmails,
-  getInvalidInvoicePhones,
-  formatInvoicePhoneListInput,
 } from "@/modules/billing/billingUtils";
+import { InvoiceRecipientChipInput } from "@/modules/billing/InvoiceRecipientChipInput";
 import {
   canChargeClientInvoice,
   computeInvoiceBalanceDue,
 } from "@/modules/billing/invoicePaymentUtils";
-import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Badge } from "@/components/ui/badge";
@@ -154,29 +151,25 @@ export const SendInvoiceDialog = ({
     () => buildOrganizationEmailTagline(),
     [],
   );
-  const [to, setTo] = useState("");
-  const [cc, setCc] = useState("");
-  const [bcc, setBcc] = useState("");
+  const [toEmails, setToEmails] = useState<string[]>([]);
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [bccEmails, setBccEmails] = useState<string[]>([]);
   const [showCc, setShowCc] = useState(false);
   const [showBcc, setShowBcc] = useState(false);
-  const [phone, setPhone] = useState("");
+  const [phones, setPhones] = useState<string[]>([]);
   const [channel, setChannel] =
     useState<InvoiceDeliveryChannel>(deliveryChannel);
   const [subject, setSubject] = useState("");
   const [pdfPreviewPending, setPdfPreviewPending] = useState(false);
 
-  const parsedEmails = useMemo(() => parseInvoiceEmailList(to), [to]);
-  const invalidEmails = useMemo(() => getInvalidInvoiceEmails(to), [to]);
-  const invalidPhones = useMemo(() => getInvalidInvoicePhones(phone), [phone]);
-  const parsedPhones = useMemo(() => parseInvoicePhoneList(phone), [phone]);
-  const primaryBillToEmail = parsedEmails[0] ?? to.trim();
-  const previewEmailTo = parsedEmails.length > 0 ? parsedEmails.join(", ") : to.trim();
-  const previewPhoneTo =
-    parsedPhones.length > 0
-      ? parsedPhones
-          .map((entry) => formatUsPhoneDisplayFromAny(entry))
-          .join(", ")
-      : phone.trim();
+  const parsedEmails = toEmails;
+  const parsedPhones = useMemo(
+    () => parseInvoicePhoneList(phones.join(", ")),
+    [phones],
+  );
+  const primaryBillToEmail = parsedEmails[0] ?? "";
+  const previewEmailTo = parsedEmails.join(", ");
+  const previewPhoneTo = phones.join(", ");
 
   const { data: lineItems = [] } = useGetList<ClientInvoiceLineItem>(
     "client_invoice_line_items",
@@ -294,7 +287,7 @@ export const SendInvoiceDialog = ({
   ]);
 
   const { data: pdfMeta } = useQuery({
-    queryKey: ["invoice-send-pdf-meta", invoice?.id, to],
+    queryKey: ["invoice-send-pdf-meta", invoice?.id, toEmails.join(",")],
     queryFn: async () => {
       const blob = await generateClientInvoicePdfBlob(invoicePdfContext!);
       return { sizeLabel: formatPdfSize(blob.size) };
@@ -328,24 +321,20 @@ export const SendInvoiceDialog = ({
   useEffect(() => {
     if (!open || !invoice) return;
 
-    const defaultPhone = resolveInvoiceRecipientPhone({ company, contact });
-    setTo(
-      resolveInvoiceRecipientEmail({
-        company,
-        contact,
-        fallbackEmail: invoice.recipient_email,
-      }),
-    );
-    setPhone(
-      defaultPhone && formatUsPhoneDisplayFromAny(defaultPhone) !== "—"
-        ? formatUsPhoneDisplayFromAny(defaultPhone)
-        : defaultPhone,
-    );
-    setChannel(deliveryChannel);
-    setCc("");
-    setBcc("");
+    const defaultEmail = resolveInvoiceSendRecipientEmail({
+      company,
+      contact,
+      fallbackEmail: invoice.recipient_email,
+    });
+    setToEmails(defaultEmail ? [defaultEmail.toLowerCase()] : []);
+
+    const formattedPhone = resolveInvoiceSendRecipientPhone({ company, contact });
+    setPhones(formattedPhone ? [formattedPhone] : []);
+    setCcEmails([]);
+    setBccEmails([]);
     setShowCc(false);
     setShowBcc(false);
+    setChannel(deliveryChannel);
     setSubject(buildDefaultInvoiceEmailSubject(invoice, organizationName));
   }, [open, invoice, company, contact, organizationName, deliveryChannel]);
 
@@ -359,19 +348,11 @@ export const SendInvoiceDialog = ({
         throw new Error("Payment link is not ready yet");
       }
 
-      if (sendEmail && (parsedEmails.length === 0 || invalidEmails.length > 0)) {
-        throw new Error(
-          invalidEmails.length > 0
-            ? `Invalid email: ${invalidEmails.join(", ")}`
-            : "Enter at least one recipient email",
-        );
+      if (sendEmail && parsedEmails.length === 0) {
+        throw new Error("Enter at least one recipient email");
       }
-      if (sendSms && (parsedPhones.length === 0 || invalidPhones.length > 0)) {
-        throw new Error(
-          invalidPhones.length > 0
-            ? `Each number must be 10 digits (US): ${invalidPhones.join(", ")}`
-            : "Enter at least one mobile number",
-        );
+      if (sendSms && parsedPhones.length === 0) {
+        throw new Error("Enter at least one mobile number");
       }
 
       if (channel === "sms") {
@@ -406,8 +387,8 @@ export const SendInvoiceDialog = ({
         htmlMessage: buildInvoiceEmailHtml(emailTemplateContext),
         pdfBase64,
         filename: `${invoice.invoice_number}.pdf`,
-        cc: parseInvoiceEmailList(cc),
-        bcc: parseInvoiceEmailList(bcc),
+        cc: ccEmails,
+        bcc: bccEmails,
         ...(sendSms && parsedPhones.length > 0
           ? {
               smsTo: previewPhoneTo,
@@ -438,7 +419,7 @@ export const SendInvoiceDialog = ({
         notify("Invoice marked as sent. Text message delivered.", {
           type: "success",
         });
-      } else if (result.sms_skipped && sendSms && phone.trim()) {
+      } else if (result.sms_skipped && sendSms && phones.length > 0) {
         notify(
           result.email_sent
             ? "Invoice emailed. SMS was not sent — check Communications settings."
@@ -462,12 +443,8 @@ export const SendInvoiceDialog = ({
 
   if (!invoice) return null;
 
-  const emailReady =
-    parsedEmails.length > 0 &&
-    invalidEmails.length === 0 &&
-    Boolean(subject.trim());
-  const phoneReady =
-    parsedPhones.length > 0 && invalidPhones.length === 0;
+  const emailReady = parsedEmails.length > 0 && Boolean(subject.trim());
+  const phoneReady = parsedPhones.length > 0;
 
   const canSend =
     !shareLinkPending &&
@@ -560,25 +537,15 @@ export const SendInvoiceDialog = ({
 
             {sendEmail ? (
               <div className="space-y-2">
-                <Label htmlFor="invoice-send-to">To</Label>
-                <Input
+                <InvoiceRecipientChipInput
                   id="invoice-send-to"
-                  type="text"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="client@example.com, billing@company.com"
-                  value={to}
-                  onChange={(event) => setTo(event.target.value)}
+                  label="To"
+                  mode="email"
+                  values={toEmails}
+                  onChange={setToEmails}
+                  placeholder="client@example.com"
+                  helperText="Press comma or Enter to add another recipient."
                 />
-                <p className="text-xs text-muted-foreground">
-                  Separate multiple emails with commas.
-                </p>
-                {invalidEmails.length > 0 ? (
-                  <p className="text-xs text-destructive">
-                    Invalid email{invalidEmails.length === 1 ? "" : "s"}:{" "}
-                    {invalidEmails.join(", ")}
-                  </p>
-                ) : null}
                 {!showCc || !showBcc ? (
                   <div className="flex gap-3">
                     {!showCc ? (
@@ -648,56 +615,37 @@ export const SendInvoiceDialog = ({
             ) : null}
 
             {sendEmail && showCc ? (
-              <div className="space-y-2">
-                <Label htmlFor="invoice-send-cc">Cc</Label>
-                <Input
-                  id="invoice-send-cc"
-                  type="text"
-                  inputMode="email"
-                  placeholder="Separate with commas"
-                  value={cc}
-                  onChange={(event) => setCc(event.target.value)}
-                />
-              </div>
+              <InvoiceRecipientChipInput
+                id="invoice-send-cc"
+                label="Cc"
+                mode="email"
+                values={ccEmails}
+                onChange={setCcEmails}
+                placeholder="cc@example.com"
+              />
             ) : null}
 
             {sendEmail && showBcc ? (
-              <div className="space-y-2">
-                <Label htmlFor="invoice-send-bcc">Bcc</Label>
-                <Input
-                  id="invoice-send-bcc"
-                  type="text"
-                  inputMode="email"
-                  placeholder="Separate with commas"
-                  value={bcc}
-                  onChange={(event) => setBcc(event.target.value)}
-                />
-              </div>
+              <InvoiceRecipientChipInput
+                id="invoice-send-bcc"
+                label="Bcc"
+                mode="email"
+                values={bccEmails}
+                onChange={setBccEmails}
+                placeholder="bcc@example.com"
+              />
             ) : null}
 
             {sendSms ? (
-              <div className="space-y-2">
-                <Label htmlFor="invoice-send-phone">Text message to</Label>
-                <Input
-                  id="invoice-send-phone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  placeholder="(203) 555-0100, (203) 555-0101"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  onBlur={() => setPhone(formatInvoicePhoneListInput(phone))}
-                />
-                <p className="text-xs text-muted-foreground">
-                  US mobile numbers only · 10 digits each · separate with commas.
-                </p>
-                {invalidPhones.length > 0 ? (
-                  <p className="text-xs text-destructive">
-                    Invalid number{invalidPhones.length === 1 ? "" : "s"}:{" "}
-                    {invalidPhones.join(", ")}
-                  </p>
-                ) : null}
-              </div>
+              <InvoiceRecipientChipInput
+                id="invoice-send-phone"
+                label="Text message to"
+                mode="phone"
+                values={phones}
+                onChange={setPhones}
+                placeholder="(203) 555-0100"
+                helperText="US mobile numbers only · 10 digits each · press comma or Enter to add another."
+              />
             ) : null}
 
             {shareLinkPending ? (

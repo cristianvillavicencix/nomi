@@ -23,11 +23,56 @@ export const formatOrganizationMemberName = (
   return name || member?.email?.trim() || null;
 };
 
-export const getContactEmail = (contact?: Contact | null) =>
-  contact?.email_jsonb?.find((row) => row.email?.trim())?.email?.trim() ?? "";
+export const getContactEmail = (contact?: Contact | null) => {
+  const rows = contact?.email_jsonb ?? [];
+  const primary = rows.find(
+    (row) => row.isPrimary && row.email?.trim(),
+  )?.email?.trim();
+  if (primary) return primary;
+  return rows.find((row) => row.email?.trim())?.email?.trim() ?? "";
+};
 
-export const getContactPhone = (contact?: Contact | null) =>
-  contact?.phone_jsonb?.find((row) => row.number?.trim())?.number?.trim() ?? "";
+export const getContactPhone = (contact?: Contact | null) => {
+  const rows = contact?.phone_jsonb ?? [];
+  const primary = rows.find(
+    (row) => row.isPrimary && row.number?.trim(),
+  )?.number?.trim();
+  if (primary) return primary;
+  return rows.find((row) => row.number?.trim())?.number?.trim() ?? "";
+};
+
+/** Prefer linked contact channels when prefilling invoice send (re-send picks up primary changes). */
+export const resolveInvoiceSendRecipientEmail = ({
+  company,
+  contact,
+  fallbackEmail,
+}: {
+  company?: Company | null;
+  contact?: Contact | null;
+  fallbackEmail?: string | null;
+}) => {
+  const contactEmail = getContactEmail(contact);
+  if (contactEmail) return contactEmail;
+  return resolveInvoiceRecipientEmail({ company, contact, fallbackEmail });
+};
+
+export const resolveInvoiceSendRecipientPhone = ({
+  company,
+  contact,
+}: {
+  company?: Company | null;
+  contact?: Contact | null;
+}) => {
+  const contactPhone = getContactPhone(contact);
+  if (contactPhone) {
+    const formatted = formatUsPhoneDisplayFromAny(contactPhone);
+    return formatted === "—" ? contactPhone : formatted;
+  }
+  const resolved = resolveInvoiceRecipientPhone({ company, contact });
+  if (!resolved) return "";
+  const formatted = formatUsPhoneDisplayFromAny(resolved);
+  return formatted === "—" ? resolved : formatted;
+};
 
 const getPrimaryContactEmail = (company?: Company | null) => {
   const rows = company?.primary_contact_email_jsonb ?? [];

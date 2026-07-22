@@ -6,13 +6,13 @@ import { TextInput } from "@/components/admin/text-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { LeadChannelsInput } from "./LeadChannelsInput";
 import {
   LBS_CONTACT_ROLE_CHOICES,
   LEAD_EMAIL_TYPES,
   LEAD_PHONE_TYPES,
 } from "./leadFormConstants";
 import { applyGoogleAddressToContactLeadForm } from "./applyGoogleBusinessToLeadForm";
+import { ProgressiveMultiChannelInput } from "@/modules/shared/ProgressiveMultiChannelInput";
 import type { NewLeadFormValues } from "./newLeadFormTypes";
 
 export const LeadContactSection = () => {
@@ -91,17 +91,21 @@ export const LeadContactSection = () => {
         <TextInput source="last_name" label="Last name" helperText={false} />
       </div>
 
-      <LeadChannelsInput
+      <ProgressiveMultiChannelInput
         source="email_jsonb"
         kind="email"
         label="Email"
+        valueKey="email"
         typeChoices={[...LEAD_EMAIL_TYPES]}
+        addLabel="+ Add email"
       />
-      <LeadChannelsInput
+      <ProgressiveMultiChannelInput
         source="phone_jsonb"
         kind="phone"
         label="Phone"
+        valueKey="number"
         typeChoices={[...LEAD_PHONE_TYPES]}
+        addLabel="+ Add phone"
       />
 
       <GooglePlacesAutocompleteInput

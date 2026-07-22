@@ -48,14 +48,28 @@ export const compactContactFieldsToPayload = (
     | undefined;
   const emailValue = String(emailRows?.[0]?.email ?? "").trim();
   const phoneValue = String(phoneRows?.[0]?.number ?? "").trim();
+  const emailJsonb =
+    emailRows
+      ?.map((row) => ({
+        email: String(row.email ?? "").trim(),
+        type: (row.type as "Work" | "Home" | "Other") || "Work",
+      }))
+      .filter((row) => row.email.length > 0) ?? [];
+  const phoneJsonb =
+    phoneRows
+      ?.map((row) => ({
+        number: String(row.number ?? "").trim(),
+        type: (row.type as "Work" | "Home" | "Other") || "Work",
+      }))
+      .filter((row) => row.number.length > 0) ?? [];
 
   return {
     first_name: firstName,
     last_name: lastName,
-    email_jsonb: emailValue
+    email_jsonb: emailJsonb.length > 0 ? emailJsonb : emailValue
       ? [{ email: emailValue, type: "Work" as const }]
       : [],
-    phone_jsonb: phoneValue
+    phone_jsonb: phoneJsonb.length > 0 ? phoneJsonb : phoneValue
       ? [{ number: phoneValue, type: "Work" as const }]
       : [],
   };

@@ -1,14 +1,9 @@
 import { useMemo } from "react";
-import { email } from "ra-core";
 import type { ClipboardEventHandler, FocusEvent } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { EmailInput } from "@/components/admin/email-input";
-import { PhoneInput } from "@/components/admin/phone-input";
-import { SelectInput } from "@/components/admin/select-input";
-import { ArrayInput } from "@/components/admin/array-input";
-import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
 import { buildContactChannelTypeChoices } from "@/modules/contacts/contactChannelTypeChoices";
 import { PersonFormSection } from "@/modules/contacts/personFormSections/PersonFormSection";
+import { ProgressiveMultiChannelInput } from "@/modules/shared/ProgressiveMultiChannelInput";
 
 export const PersonContactSection = () => {
   const { getValues, setValue, control } = useFormContext();
@@ -54,71 +49,24 @@ export const PersonContactSection = () => {
 
   return (
     <PersonFormSection title="Contact">
-      <ArrayInput
+      <ProgressiveMultiChannelInput
         source="email_jsonb"
+        kind="email"
         label="Email addresses"
-        helperText={false}
-        resource="contacts"
-      >
-        <SimpleFormIterator
-          resource="contacts"
-          inline
-          disableReordering
-          disableClear
-          className="[&>ul>li]:border-b-0 [&>ul>li]:pb-0"
-        >
-          <EmailInput
-            source="email"
-            className="w-full"
-            helperText={false}
-            label={false}
-            placeholder="Email"
-            validate={email()}
-            onPaste={handleEmailPaste}
-            onBlur={handleEmailBlur}
-          />
-          <SelectInput
-            source="type"
-            helperText={false}
-            label={false}
-            optionText="id"
-            choices={emailTypeChoices}
-            defaultValue="Work"
-            className="w-24 min-w-24"
-          />
-        </SimpleFormIterator>
-      </ArrayInput>
-      <ArrayInput
+        valueKey="email"
+        typeChoices={emailTypeChoices}
+        addLabel="+ Add email"
+        onFirstEmailBlur={handleEmailBlur}
+        onFirstEmailPaste={handleEmailPaste}
+      />
+      <ProgressiveMultiChannelInput
         source="phone_jsonb"
+        kind="phone"
         label="Phone numbers"
-        helperText={false}
-        resource="contacts"
-      >
-        <SimpleFormIterator
-          resource="contacts"
-          inline
-          disableReordering
-          disableClear
-          className="[&>ul>li]:border-b-0 [&>ul>li]:pb-0"
-        >
-          <PhoneInput
-            source="number"
-            className="w-full"
-            helperText={false}
-            label={false}
-            placeholder="Phone number"
-          />
-          <SelectInput
-            source="type"
-            helperText={false}
-            label={false}
-            optionText="id"
-            choices={phoneTypeChoices}
-            defaultValue="Work"
-            className="w-24 min-w-24"
-          />
-        </SimpleFormIterator>
-      </ArrayInput>
+        valueKey="number"
+        typeChoices={phoneTypeChoices}
+        addLabel="+ Add phone"
+      />
     </PersonFormSection>
   );
 };

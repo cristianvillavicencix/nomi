@@ -5,7 +5,6 @@ import {
   FileText,
   Loader2,
   Send,
-  X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDataProvider, useGetList, useNotify, useRefresh } from "ra-core";
@@ -17,7 +16,11 @@ import {
   formatInvoiceDueDate,
   resolveInvoiceOrganizationName,
 } from "@/modules/billing/invoiceEmailTemplate";
-import { resolveTicketInvoiceRecipientPhone } from "@/modules/billing/billingUtils";
+import {
+  resolveInvoiceSendRecipientPhone,
+  getContactEmail,
+} from "@/modules/billing/billingUtils";
+import { InvoiceRecipientChipInput } from "@/modules/billing/InvoiceRecipientChipInput";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
 import type {
   ClientInvoice,
@@ -38,7 +41,6 @@ import { buildTicketPaymentCopyFromDeliverables } from "@/modules/tickets/ticket
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -51,7 +53,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { cn } from "@/lib/utils";
 
 type PreviewStep = "invoice" | "email";
@@ -103,17 +104,19 @@ export const TicketInvoicePreviewDialog = ({
   const [draftInvoice, setDraftInvoice] = useState<ClientInvoice | null>(null);
   const [lineItems, setLineItems] = useState<ClientInvoiceLineItem[]>([]);
   const [paymentUrl, setPaymentUrl] = useState("");
-  const [recipientEmail, setRecipientEmail] = useState("");
-  const [editingTo, setEditingTo] = useState(false);
+  const [toEmails, setToEmails] = useState<string[]>([]);
   const [subject, setSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState(
     DEFAULT_TICKET_PAYMENT_EMAIL_MESSAGE,
   );
   const [deliverySubject, setDeliverySubject] = useState("");
   const [serviceLines, setServiceLines] = useState<string[]>([]);
-  const [phone, setPhone] = useState("");
+  const [phones, setPhones] = useState<string[]>([]);
   const [sendSms, setSendSms] = useState(false);
   const sentRef = useRef(false);
+
+  const recipientEmail = toEmails.join(", ");
+  const phone = phones.join(", ");
 
   const { data: deliverables = [] } = useGetList<TicketDeliverable>(
     "ticket_deliverables",
@@ -156,9 +159,12 @@ export const TicketInvoicePreviewDialog = ({
       setDraftInvoice(data.invoice as ClientInvoice);
       setLineItems((data.line_items ?? []) as ClientInvoiceLineItem[]);
       setPaymentUrl(data.payment_url);
-      setRecipientEmail(
-        data.to || resolveTicketRequesterEmail(ticket, company, contact) || "",
-      );
+      const liveEmail =
+        getContactEmail(contact) ||
+        data.to ||
+        resolveTicketRequesterEmail(ticket, company, contact) ||
+        "";
+      setToEmails(liveEmail ? [liveEmail.toLowerCase()] : []);
       applyPaymentCopy(unbilledDeliverables);
       refresh();
     },
@@ -175,7 +181,8 @@ export const TicketInvoicePreviewDialog = ({
         baseUrl: window.location.origin,
         message: emailMessage,
         subject: subject.trim(),
-        smsTo: sendSms ? phone.trim() : undefined,
+        recipientEmail,
+        smsTo: sendSms ? phone : undefined,
         sendSms,
       }),
     onSuccess: () => {
@@ -204,13 +211,10 @@ export const TicketInvoicePreviewDialog = ({
     setSubject("");
     setDeliverySubject("");
     setServiceLines([]);
-    const defaultPhone = resolveTicketInvoiceRecipientPhone({
-      company,
-      contact,
-    });
-    setPhone(defaultPhone);
-    setSendSms(Boolean(defaultPhone.trim()));
-    setEditingTo(false);
+    const formattedPhone = resolveInvoiceSendRecipientPhone({ company, contact });
+    setPhones(formattedPhone ? [formattedPhone] : []);
+    setSendSms(Boolean(formattedPhone.trim()));
+    setToEmails([]);
     setDraftInvoice(null);
     setLineItems([]);
     prepareMutation.mutate();
@@ -274,10 +278,10 @@ export const TicketInvoicePreviewDialog = ({
 
   const isLoading = prepareMutation.isPending || !draftInvoice;
   const canSend =
-    Boolean(recipientEmail.trim()) &&
+    toEmails.length > 0 &&
     Boolean(subject.trim()) &&
     Boolean(paymentUrl) &&
-    (!sendSms || Boolean(phone.trim()));
+    (!sendSms || phones.length > 0);
 
   const dialogWidthClass =
     step === "invoice"
@@ -355,53 +359,14 @@ export const TicketInvoicePreviewDialog = ({
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="ticket-invoice-send-to">To</Label>
-                  <div className="rounded-md border px-2 py-1.5 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-                    {recipientEmail.trim() && !editingTo ? (
-                      <div className="flex min-h-8 items-center gap-1">
-                        <Badge
-                          variant="secondary"
-                          className="max-w-full gap-1 bg-primary/10 font-normal text-primary hover:bg-primary/15"
-                        >
-                          <span className="truncate">{recipientEmail}</span>
-                          <IconButton
-                            className="size-4 min-h-4 min-w-4 opacity-70 hover:bg-transparent hover:opacity-100"
-                            aria-label="Clear recipient email"
-                            onClick={() => {
-                              setRecipientEmail("");
-                              setEditingTo(true);
-                            }}
-                          >
-                            <X className="size-3" />
-                          </IconButton>
-                        </Badge>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="ml-auto h-auto px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
-                          onClick={() => setEditingTo(true)}
-                        >
-                          Edit
-                        </Button>
-                      </div>
-                    ) : (
-                      <Input
-                        id="ticket-invoice-send-to"
-                        type="email"
-                        value={recipientEmail}
-                        onChange={(event) =>
-                          setRecipientEmail(event.target.value)
-                        }
-                        onBlur={() => setEditingTo(false)}
-                        className="h-8 border-0 px-1 shadow-none focus-visible:ring-0"
-                        placeholder="Recipient email"
-                        autoFocus={editingTo}
-                      />
-                    )}
-                  </div>
-                </div>
+                <InvoiceRecipientChipInput
+                  id="ticket-invoice-send-to"
+                  label="To"
+                  mode="email"
+                  values={toEmails}
+                  onChange={setToEmails}
+                  placeholder="client@example.com"
+                />
 
                 <div className="space-y-2">
                   <Label htmlFor="ticket-invoice-send-subject">Subject</Label>
@@ -452,22 +417,19 @@ export const TicketInvoicePreviewDialog = ({
                       id="ticket-invoice-send-sms"
                       checked={sendSms}
                       onCheckedChange={setSendSms}
-                      disabled={!phone.trim()}
+                      disabled={phones.length === 0}
                     />
                   </div>
-                  <Input
-                    id="ticket-invoice-send-phone"
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    placeholder="(203) 555-0100"
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                    onBlur={() => {
-                      const formatted = formatUsPhoneDisplayFromAny(phone);
-                      if (formatted !== "—") setPhone(formatted);
-                    }}
-                  />
+                  {sendSms ? (
+                    <InvoiceRecipientChipInput
+                      id="ticket-invoice-send-phone"
+                      label="Text message to"
+                      mode="phone"
+                      values={phones}
+                      onChange={setPhones}
+                      placeholder="(203) 555-0100"
+                    />
+                  ) : null}
                 </div>
               </div>
 

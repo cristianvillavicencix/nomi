@@ -19,7 +19,7 @@ import type {
 } from "@/modules/contacts/personFormTypes";
 import { PersonAssignmentSection } from "@/modules/contacts/personFormSections/PersonAssignmentSection";
 import { LeadReferrerInputs } from "@/modules/leads/LeadReferrerInputs";
-import { LeadChannelsInput } from "@/modules/leads/LeadChannelsInput";
+import { ProgressiveMultiChannelInput } from "@/modules/shared/ProgressiveMultiChannelInput";
 import {
   LBS_CONTACT_ROLE_CHOICES,
   LBS_INTERESTED_SERVICE_CHOICES,
@@ -235,17 +235,21 @@ export const PersonFormCreateLayout = ({
           <TextInput source="last_name" label="Last name" helperText={false} />
         </CreateFormFieldRow>
 
-        <LeadChannelsInput
+        <ProgressiveMultiChannelInput
           source="email_jsonb"
           kind="email"
           label="Email"
+          valueKey="email"
           typeChoices={[...LEAD_EMAIL_TYPES]}
+          addLabel="+ Add email"
         />
-        <LeadChannelsInput
+        <ProgressiveMultiChannelInput
           source="phone_jsonb"
           kind="phone"
           label="Phone"
+          valueKey="number"
           typeChoices={[...LEAD_PHONE_TYPES]}
+          addLabel="+ Add phone"
         />
 
         {visibility.companySection === "picker" ? (
@@ -280,17 +284,21 @@ export const PersonFormCreateLayout = ({
           <TextInput source="last_name" label="Last name" helperText={false} />
         </CreateFormFieldRow>
 
-        <LeadChannelsInput
+        <ProgressiveMultiChannelInput
           source="email_jsonb"
           kind="email"
           label="Email"
+          valueKey="email"
           typeChoices={[...LEAD_EMAIL_TYPES]}
+          addLabel="+ Add email"
         />
-        <LeadChannelsInput
+        <ProgressiveMultiChannelInput
           source="phone_jsonb"
           kind="phone"
           label="Phone"
+          valueKey="number"
           typeChoices={[...LEAD_PHONE_TYPES]}
+          addLabel="+ Add phone"
         />
 
         {visibility.companySection === "inline_draft" ? (
