@@ -46,6 +46,7 @@ import {
   REMIND_BEFORE_NONE,
 } from "@/modules/calendar/calendarReminderOptions";
 import { MeetingScheduleForm } from "@/modules/meetings/MeetingScheduleForm";
+import { DEFAULT_MEETING_NOTIFICATION_SETTINGS } from "@/modules/meetings/meetingNotificationSettings";
 import { sendMeetingShareNotifications } from "@/modules/meetings/sendMeetingShareNotifications";
 import { sendCalendarEventUpdateNotifications } from "@/modules/calendar/sendCalendarEventUpdateNotifications";
 import { useOrganizationMeetingNotificationSettings } from "@/modules/settings/useOrganizationMeetingNotificationSettings";
