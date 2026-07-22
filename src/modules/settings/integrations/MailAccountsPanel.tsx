@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useGetIdentity, useNotify } from "ra-core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
-import { EnvelopeSimple, ArrowsClockwise, Plugs, Share2 } from "@phosphor-icons/react";
+import { EnvelopeSimple, ArrowsClockwise, Plugs, ShareNetwork } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -214,7 +214,7 @@ function AccountRows({
                   <DropdownMenuContent align="end">
                     {canShare && scope === "org" && onShare ? (
                       <DropdownMenuItem onClick={() => onShare(account)}>
-                        <Share2 className="size-4" />
+                        <ShareNetwork className="size-4" />
                         Share with team…
                       </DropdownMenuItem>
                     ) : null}
