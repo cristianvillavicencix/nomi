@@ -88,10 +88,10 @@ export const ClientWebsiteSection = ({
     window.setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     setDownloadingPdf(true);
     try {
-      downloadPortalDeliveryPdf({
+      await downloadPortalDeliveryPdf({
         projectName: project.name,
         delivery,
         siteUrl,

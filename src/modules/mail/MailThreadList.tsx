@@ -56,7 +56,7 @@ export function MailThreadList({
 
   if (threads.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
+      <div className="flex min-h-[240px] flex-col items-center justify-center px-6 py-12 text-center">
         <p className="text-sm font-medium">No conversations</p>
         <p className="mt-1 text-xs text-muted-foreground">
           Sync a mailbox or try another folder.
@@ -66,7 +66,7 @@ export function MailThreadList({
   }
 
   return (
-    <ul className="min-h-0 flex-1 overflow-y-auto">
+    <ul>
       {threads.map((thread) => {
         const active = thread.id === selectedId;
         const checked = selectedIds?.has(thread.id) ?? false;

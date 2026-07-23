@@ -1,5 +1,5 @@
 import type { TDocumentDefinitions } from "pdfmake/interfaces";
-import { pdfMake } from "@/modules/proposals/pdf/initPdfMake";
+import { getPdfMake } from "@/modules/proposals/pdf/initPdfMake";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import {
   formatBillToNameLine,
@@ -376,6 +376,7 @@ export const generateClientInvoicePdfBlob = async (
   ctx: ClientInvoicePdfContext,
 ): Promise<Blob> => {
   const doc = buildDocDefinition(ctx);
+  const pdfMake = await getPdfMake();
   const pdf = pdfMake.createPdf(doc);
   return pdf.getBlob();
 };

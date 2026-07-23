@@ -1,4 +1,3 @@
-import { jsPDF } from "jspdf";
 import { getPortalHandoffExpectations } from "@/modules/portal/portalHandoffExpectations";
 import type { PortalLocale } from "@/modules/portal/portalI18n";
 import {
@@ -60,7 +59,7 @@ export type PortalDeliveryPdfInput = {
   locale: PortalLocale;
 };
 
-export const downloadPortalDeliveryPdf = ({
+export const downloadPortalDeliveryPdf = async ({
   projectName,
   delivery,
   siteUrl,
@@ -68,6 +67,7 @@ export const downloadPortalDeliveryPdf = ({
   credentials,
   locale,
 }: PortalDeliveryPdfInput) => {
+  const { jsPDF } = await import("jspdf");
   const labels = pdfCopy[locale];
   const handoff = getPortalHandoffExpectations(locale);
   const localeTag = locale === "es" ? "es-US" : "en-US";

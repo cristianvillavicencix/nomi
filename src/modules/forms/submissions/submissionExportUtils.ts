@@ -1,4 +1,3 @@
-import * as XLSX from "xlsx";
 import type { FormInstance, FormSubmissionV2 } from "@/modules/forms/types";
 import { collectSchemaFields } from "@/modules/forms/submissions/submissionAnswerRenderer";
 
@@ -123,13 +122,14 @@ export const exportSubmissionsCsv = (
   );
 };
 
-export const exportSubmissionsExcel = (
+export const exportSubmissionsExcel = async (
   submissions: FormSubmissionV2[],
   formsById: Map<number, FormInstance>,
 ) => {
   const rows = buildExportRows(submissions, formsById);
   if (rows.length === 0) return;
 
+  const XLSX = await import("xlsx");
   const worksheet = XLSX.utils.json_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Submissions");

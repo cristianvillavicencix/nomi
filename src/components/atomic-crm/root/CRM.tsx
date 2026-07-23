@@ -7,7 +7,7 @@ import {
   useCanAccess,
 } from "ra-core";
 import { browserReactRouterProvider } from "@/lib/browserReactRouterProvider";
-import { useEffect, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo } from "react";
 import { Route } from "react-router";
 import { Navigate } from "react-router";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
@@ -33,8 +33,7 @@ import {
 } from "../providers/supabase";
 import organizationMembers from "../organizationMembers";
 import { ProfilePage } from "../settings/ProfilePage";
-import { SettingsPage } from "../settings/SettingsPage";
-import { ReportsPage } from "@/reports";
+import { LazyRouteFallback } from "@/app/LazyRouteFallback";
 import {
   CONFIGURATION_STORE_KEY,
   type ConfigurationContextValue,
@@ -71,6 +70,19 @@ import { ContactShow } from "../contacts/ContactShow.tsx";
 import { CompanyShow } from "../companies/CompanyShow.tsx";
 import { NoteShowPage } from "../notes/NoteShowPage.tsx";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const SettingsPage = lazy(() =>
+  import("../settings/SettingsPage").then((module) => ({
+    default: module.SettingsPage,
+  })),
+);
+const ReportsPage = lazy(() =>
+  import("@/reports/ReportsPage").then((module) => ({
+    default: module.ReportsPage,
+  })),
+);
+
+const SETTINGS_PATH = "/settings";
 
 const defaultStore = localStorageStore(undefined, "CRM");
 
@@ -292,10 +304,14 @@ const DesktopAdmin = (props: CoreAdminProps) => {
       <CustomRoutes>
         <Route path={ProfilePage.path} element={<ProfilePage />} />
         <Route
-          path={SettingsPage.path}
+          path={SETTINGS_PATH}
           element={
             <SettingsProtectedRoute>
-              <SettingsPage />
+              <Suspense
+                fallback={<LazyRouteFallback label="Loading settings…" />}
+              >
+                <SettingsPage />
+              </Suspense>
             </SettingsProtectedRoute>
           }
         />
@@ -303,7 +319,11 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           path="/reports"
           element={
             <ProtectedRoute resource="reports" action="list">
-              <ReportsPage />
+              <Suspense
+                fallback={<LazyRouteFallback label="Loading reports…" />}
+              >
+                <ReportsPage />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -311,7 +331,11 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           path="/reports/web-agency-metrics"
           element={
             <ProtectedRoute resource="reports" action="list">
-              <ReportsPage initialTab="web-agency-metrics" />
+              <Suspense
+                fallback={<LazyRouteFallback label="Loading reports…" />}
+              >
+                <ReportsPage initialTab="web-agency-metrics" />
+              </Suspense>
             </ProtectedRoute>
           }
         />

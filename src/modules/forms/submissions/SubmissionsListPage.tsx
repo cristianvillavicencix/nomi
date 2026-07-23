@@ -78,6 +78,7 @@ export const SubmissionsListPage = () => {
   }));
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkPending, setBulkPending] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
 
   const listFilter = useMemo(
     () => buildSubmissionListFilter(filters),
@@ -240,10 +241,14 @@ export const SubmissionsListPage = () => {
             type="button"
             variant="secondary"
             size="sm"
-            disabled={selectedSubmissions.length === 0}
-            onClick={() =>
-              exportSubmissionsExcel(selectedSubmissions, formsById)
-            }
+            disabled={selectedSubmissions.length === 0 || isExportingExcel}
+            isLoading={isExportingExcel}
+            onClick={() => {
+              setIsExportingExcel(true);
+              void exportSubmissionsExcel(selectedSubmissions, formsById).finally(
+                () => setIsExportingExcel(false),
+              );
+            }}
           >
             <FileSpreadsheet className="mr-2 size-4" />
             Export Excel

@@ -29,7 +29,8 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MoneyText } from "@/lib/permissions/MoneyText";
-import { mailtoHref } from "@/lib/linking";
+import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
+import { useOpenCrmEmail } from "@/modules/mail/openCrmEmail";
 import {
   resolveCompanyEmailForDisplay,
   resolveCompanyPhoneRaw,
@@ -128,6 +129,8 @@ export const AccountsCompanyOverviewPreview = ({
     { enabled: Boolean(companyId), staleTime: 30_000 },
   );
 
+  const openCrmEmail = useOpenCrmEmail();
+
   const openPerson = (contact: Contact) => {
     if (isMobile) {
       navigate(getPersonShowPath(contact));
@@ -163,7 +166,6 @@ export const AccountsCompanyOverviewPreview = ({
   const websiteHref = normalizeWebsiteHref(website);
   const phone = resolveCompanyPhoneRaw(company);
   const email = resolveCompanyEmailForDisplay(company);
-  const emailHref = mailtoHref(email);
   const address = formatCompanyLocation(company);
   const sectorLabel = company.sector
     ? (companySectors.find((s) => s.value === company.sector)?.label ??
@@ -220,10 +222,14 @@ export const AccountsCompanyOverviewPreview = ({
               <CrmPhoneLink phone={phone} className="link-action" />
             </EntityMetaItem>
             <EntityMetaItem label="Email">
-              {emailHref && email !== "—" ? (
-                <a href={emailHref} className="link-action truncate">
+              {email && email !== "—" ? (
+                <OpenMailComposeLink
+                  to={email}
+                  companyId={company.id}
+                  className="link-action truncate"
+                >
                   {email}
-                </a>
+                </OpenMailComposeLink>
               ) : (
                 <span className="text-muted-foreground">—</span>
               )}
@@ -250,17 +256,17 @@ export const AccountsCompanyOverviewPreview = ({
                 Call
               </CrmPhoneLink>
             ) : null}
-            {emailHref && email !== "—" ? (
+            {email && email !== "—" ? (
               <Button
                 variant="secondary"
                 size="sm"
                 className="h-8 gap-1.5"
-                asChild
+                onClick={() => {
+                  openCrmEmail({ to: email, companyId: company.id });
+                }}
               >
-                <a href={emailHref}>
-                  <Mail className="size-3.5" />
-                  Email
-                </a>
+                <Mail className="size-3.5" />
+                Email
               </Button>
             ) : null}
           </div>

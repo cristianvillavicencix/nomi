@@ -1,4 +1,3 @@
-import { jsPDF } from "jspdf";
 import type { FormInstance, FormSubmissionV2 } from "@/modules/forms/types";
 import { collectSchemaFields } from "@/modules/forms/submissions/submissionAnswerRenderer";
 
@@ -16,10 +15,11 @@ const readAnswer = (value: unknown): string => {
   return String(value);
 };
 
-export const exportSubmissionPdf = (
+export const exportSubmissionPdf = async (
   submission: FormSubmissionV2,
   form?: FormInstance | null,
 ) => {
+  const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const margin = 48;
   let y = margin;

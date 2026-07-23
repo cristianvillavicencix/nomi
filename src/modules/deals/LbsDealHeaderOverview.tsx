@@ -14,6 +14,7 @@ import {
 } from "@/modules/deals/githubRepo";
 import { DealClientSmsButton } from "@/modules/deals/DealClientSmsButton";
 import { ProjectPortalLinkButton } from "@/modules/portal/ProjectPortalLinkButton";
+import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
 import { getClientShowPath } from "@/app/routing";
 import type { LbsDeal } from "@/modules/types";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
@@ -133,14 +134,17 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
           },
           {
             key: "email",
-            node: contactEmail ? (
-              <a
-                href={`mailto:${contactEmail}`}
-                className="link-action truncate"
-              >
-                {contactEmail}
-              </a>
-            ) : null,
+            node:
+              contactEmail && contactEmail !== "—" ? (
+                <OpenMailComposeLink
+                  to={contactEmail}
+                  contactId={mainContactId ?? undefined}
+                  companyId={record.company_id ?? undefined}
+                  className="truncate"
+                >
+                  {contactEmail}
+                </OpenMailComposeLink>
+              ) : null,
           },
           {
             key: "phone",

@@ -30,6 +30,7 @@ import { contactHasSmsPhone } from "@/modules/messages/messageContactUtils";
 import { useSendClientSms } from "@/modules/messages/useClientSms";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
 import { mailtoHref } from "@/lib/linking";
+import { useOpenCrmEmail } from "@/modules/mail/openCrmEmail";
 import { ProposalSendExpiryDialog } from "@/modules/proposals/ProposalSendExpiryDialog";
 import type {
   Proposal,
@@ -61,6 +62,7 @@ export const ProposalSendActions = ({
   const { data: identity } = useGetIdentity();
   const recipient = useProposalRecipient(proposal);
   const sendClientSms = useSendClientSms();
+  const openCrmEmail = useOpenCrmEmail();
   const { smsEnabled } = useMessagingEnabled();
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [clientUrl, setClientUrl] = useState("");
@@ -126,11 +128,13 @@ export const ProposalSendActions = ({
       notify("Generate the link first", { type: "warning" });
       return;
     }
-    const subject = encodeURIComponent(
-      `Proposal: ${proposal.title}${proposal.proposal_number ? ` (${proposal.proposal_number})` : ""}`,
-    );
-    const body = encodeURIComponent(`${shareMessage.trim()}\n\n${clientUrl}`);
-    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+    openCrmEmail({
+      to: email,
+      contactId: recipient.contactId ?? undefined,
+      companyId: recipient.companyId ?? undefined,
+      subject: `Proposal: ${proposal.title}${proposal.proposal_number ? ` (${proposal.proposal_number})` : ""}`,
+      body: `${shareMessage.trim()}\n\n${clientUrl}`,
+    });
   };
 
   const handleSms = async () => {

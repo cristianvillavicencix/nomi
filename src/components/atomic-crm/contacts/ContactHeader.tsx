@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router";
 
-import { mailtoHref, mapsHref } from "@/lib/linking";
+import { mapsHref } from "@/lib/linking";
+import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import { useGetIdentity, useGetOne } from "ra-core";
 import type { Company, Contact } from "../types";
@@ -42,7 +43,7 @@ export const ContactHeader = ({
   const primaryPhone =
     record.phone_jsonb?.find((entry) => entry.number?.trim())?.number?.trim() ??
     "";
-  const emailLink = primaryEmail ? mailtoHref(primaryEmail) : "";
+  const emailLink = primaryEmail ? primaryEmail : "";
   const phoneLink = primaryPhone ? primaryPhone : null;
   const address = record.address?.trim() ?? "";
   const statusLabel = record.status
@@ -106,9 +107,14 @@ export const ContactHeader = ({
               <span className="inline-flex items-center gap-2">
                 <Mail className="size-4" />
                 {emailLink ? (
-                  <a href={emailLink} className="link-action break-all">
+                  <OpenMailComposeLink
+                    to={emailLink}
+                    contactId={record.id}
+                    companyId={record.company_id ?? undefined}
+                    className="break-all"
+                  >
                     {primaryEmail}
-                  </a>
+                  </OpenMailComposeLink>
                 ) : (
                   "—"
                 )}

@@ -1,16 +1,13 @@
-import { TicketsOverview } from "./TicketsOverview";
-import { TicketShow } from "./TicketShow";
+import * as React from "react";
+
+const TicketsOverview = React.lazy(() =>
+  import("./TicketsOverview").then((m) => ({ default: m.TicketsOverview })),
+);
+const TicketShow = React.lazy(() =>
+  import("./TicketShow").then((m) => ({ default: m.TicketShow })),
+);
 
 export default {
   list: TicketsOverview,
   show: TicketShow,
 };
-
-export { TicketsOverview } from "./TicketsOverview";
-export { TicketsInbox } from "./TicketsInbox";
-export { TicketsList } from "./TicketsList";
-export { TicketShow } from "./TicketShow";
-export { TicketCreate } from "./TicketCreate";
-export { TicketReplyForm } from "./TicketReplyForm";
-export { CreateTicketButton } from "./CreateTicketButton";
-export { NewTicketDialog } from "./NewTicketDialog";

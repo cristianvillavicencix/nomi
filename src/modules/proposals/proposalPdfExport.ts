@@ -11,7 +11,7 @@ import {
 import { applyProposalPrintStressTest } from "@/modules/proposals/pdf/applyProposalPrintStressTest";
 import { buildProposalPrintModel } from "@/modules/proposals/pdf/buildProposalPrintModel";
 import { buildProposalPdfDocument } from "@/modules/proposals/pdf/buildProposalPdfDocument";
-import { pdfMake } from "@/modules/proposals/pdf/initPdfMake";
+import { getPdfMake } from "@/modules/proposals/pdf/initPdfMake";
 
 /** @deprecated DOM capture root — print/PDF now uses flowing pdfmake layout. */
 export const PROPOSAL_PDF_ROOT_ID = "proposal-pdf-root";
@@ -62,6 +62,7 @@ export const generateProposalPdfBlob = async (
   }
 
   const docDefinition = buildProposalPdfDocument(model);
+  const pdfMake = await getPdfMake();
   const pdf = pdfMake.createPdf(docDefinition);
   return pdf.getBlob();
 };

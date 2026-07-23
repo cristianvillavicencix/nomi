@@ -26,7 +26,6 @@ import {
 import { mergeDealIntoIntakeValues } from "@/modules/deals/projectBriefProgress";
 import {
   buildFormulaAnswers,
-  evaluateFormula,
   formatFormulaValue,
 } from "@/lib/forms-v2/formulaEvaluator";
 import {
@@ -120,7 +119,9 @@ const renderFormSection = ({
       </div>
     ))}
     {getVisibleFormulaFields(section, answers).map((field) => {
-      const computed = evaluateFormula(field.formula, formulaAnswers);
+      const raw = formulaAnswers[field.key];
+      const computed =
+        typeof raw === "number" && Number.isFinite(raw) ? raw : null;
       return (
         <FormFieldRenderer
           key={field.key}
@@ -606,10 +607,18 @@ export const PublicFormRenderer = () => {
       : isWizard
         ? undefined
         : sections[0];
-  const formulaAnswers = useMemo(
-    () => buildFormulaAnswers(formPayload?.form.schema, answers),
-    [formPayload?.form.schema, answers],
-  );
+  const [formulaAnswers, setFormulaAnswers] =
+    useState<Record<string, unknown>>(answers);
+
+  useEffect(() => {
+    let cancelled = false;
+    void buildFormulaAnswers(formPayload?.form.schema, answers).then((next) => {
+      if (!cancelled) setFormulaAnswers(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [formPayload?.form.schema, answers]);
 
   const setAnswer = useCallback(
     (key: string, next: unknown) => {
@@ -629,7 +638,7 @@ export const PublicFormRenderer = () => {
     mutationFn: async () => {
       if (!formPayload) throw new Error("Form not loaded");
       const recaptchaToken = await getRecaptchaToken();
-      const payloadAnswers = buildFormulaAnswers(
+      const payloadAnswers = await buildFormulaAnswers(
         formPayload.form.schema,
         answers,
       );

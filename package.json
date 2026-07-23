@@ -7,6 +7,8 @@
     "test:mail": "vitest run src/modules/mail/mailRenderPipeline.test.ts src/modules/mail/mailInlineImages.test.ts supabase/functions/_shared/mailInlineImages.test.ts",
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:analyze": "tsc && CI=1 vite build",
+    "check:bundle-size": "node scripts/check-bundle-size.mjs",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "lint:apply": "eslint . --fix",

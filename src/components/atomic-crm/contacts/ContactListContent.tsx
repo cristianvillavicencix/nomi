@@ -16,7 +16,8 @@ import { RotateCcw } from "lucide-react";
 import type { Contact } from "../types";
 import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import { Avatar } from "./Avatar";
-import { mailtoHref, mapsHref } from "@/lib/linking";
+import { mapsHref } from "@/lib/linking";
+import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 
 const getPrimaryPhone = (contact: Contact) =>
@@ -176,7 +177,6 @@ const ContactItemContent = ({
   const contactPath = getContactRowPath(contact);
   const companyLabel = contact.company_name ?? "—";
   const email = getPrimaryEmail(contact);
-  const emailHref = mailtoHref(email);
 
   return (
     <div
@@ -230,10 +230,15 @@ const ContactItemContent = ({
             className="min-w-0 truncate text-sm text-muted-foreground"
             title={email}
           >
-            {emailHref ? (
-              <PlainAnchor href={emailHref} title={email}>
+            {email && email !== "—" ? (
+              <OpenMailComposeLink
+                to={email}
+                contactId={contact.id}
+                companyId={contact.company_id ?? undefined}
+                onClick={stopRowNavigation}
+              >
                 {email}
-              </PlainAnchor>
+              </OpenMailComposeLink>
             ) : (
               email
             )}
@@ -324,7 +329,6 @@ const ContactItemContentMobile = ({ contact }: { contact: Contact }) => {
     : null;
   const companyLabel = contact.company_name ?? "—";
   const email = getPrimaryEmail(contact);
-  const emailHref = mailtoHref(email);
 
   return (
     <div
@@ -363,10 +367,15 @@ const ContactItemContentMobile = ({ contact }: { contact: Contact }) => {
                 <PhoneText value={getPrimaryPhone(contact)} contactId={contact.id} />
               </span>
               <span className="truncate" title={email}>
-                {emailHref ? (
-                  <PlainAnchor href={emailHref} title={email}>
+                {email && email !== "—" ? (
+                  <OpenMailComposeLink
+                    to={email}
+                    contactId={contact.id}
+                    companyId={contact.company_id ?? undefined}
+                    onClick={stopRowNavigation}
+                  >
                     {email}
-                  </PlainAnchor>
+                  </OpenMailComposeLink>
                 ) : (
                   email
                 )}

@@ -1,3 +1,4 @@
+import { lazy, Suspense, type ReactNode } from "react";
 import { Route, Navigate } from "react-router";
 import { LeadsListPage } from "@/modules/leads/LeadsListPage";
 import { ClientShowPage } from "@/modules/clients/ClientShowPage";
@@ -19,46 +20,15 @@ import { FindDuplicatesPage } from "@/modules/clients/FindDuplicatesPage";
 import { LeadCreatePage } from "@/modules/leads/LeadCreatePage";
 import { LeadShowPage } from "@/modules/leads/LeadShowPage";
 import { LbsContactShowPage } from "@/modules/contacts/ContactShowPage";
-import { TicketCreate } from "@/modules/tickets/TicketCreate";
-import { PublicBookingPage } from "@/modules/booking/public/PublicBookingPage";
-import { BookingShortUrlRedirect } from "@/modules/booking/public/BookingShortUrlRedirect";
-import { PublicCalendarEventPage } from "@/modules/meetings/public/PublicCalendarEventPage";
-import { FormPublicEntry } from "@/modules/forms/public/FormPublicEntry";
-import { ShortUrlRedirect } from "@/modules/forms/public/ShortUrlRedirect";
-import { PublicProposalPage } from "@/modules/proposals/public/PublicProposalPage";
-import { PublicProposalAcceptPageWithLocale } from "@/modules/proposals/public/PublicProposalAcceptPage";
-import { ProposalShortUrlRedirect } from "@/modules/proposals/public/ProposalShortUrlRedirect";
-import { PublicInvoicePage } from "@/modules/billing/public/PublicInvoicePage";
-import { InvoiceShortUrlRedirect } from "@/modules/billing/public/InvoiceShortUrlRedirect";
-import { PortalShortUrlRedirect } from "@/modules/portal/PortalShortUrlRedirect";
-import { ClientPortalPage } from "@/modules/portal/ClientPortalPage";
-import { ClientPortalInvoicePage } from "@/modules/portal/ClientPortalInvoicePage";
 import { PublicShareLayout } from "@/app/PublicShareLayout";
-import { FormsListPage } from "@/modules/forms/FormsListPage";
-import { FormBuilderPage } from "@/modules/forms/builder/FormBuilderPage";
-import { SubmissionsListPage } from "@/modules/forms/submissions/SubmissionsListPage";
-import { SubmissionDetailPage } from "@/modules/forms/submissions/SubmissionDetailPage";
-import { FormAnalyticsPage } from "@/modules/forms/analytics/FormAnalyticsPage";
-import { ProposalsList } from "@/modules/proposals/ProposalsList";
-import { ProposalCreate } from "@/modules/proposals/ProposalCreate";
-import { ProposalEdit } from "@/modules/proposals/ProposalEdit";
-import { ProposalViewPage } from "@/modules/proposals/ProposalViewPage";
-import { ProposalClientPreviewRoute } from "@/modules/proposals/document/ProposalClientPreviewRoute";
-import { ProposalPreviewPage } from "@/modules/proposals/document/ProposalPreviewPage";
-import { ContractsList } from "@/modules/contracts/ContractsList";
-import { ContractShow } from "@/modules/contracts/ContractShow";
-import { ClientBillingPage } from "@/modules/billing/ClientBillingPage";
-import { StandaloneInvoiceCreatePage } from "@/modules/billing/StandaloneInvoiceCreatePage";
-import { InvoiceWorkspaceRedirect } from "@/modules/billing/InvoiceRouteRedirects";
-import { TicketsOverview } from "@/modules/tickets/TicketsOverview";
-import { TicketShow } from "@/modules/tickets/TicketShow";
-import { lazy, Suspense } from "react";
-import { CalendarPage } from "@/modules/calendar/CalendarPage";
-import { MeetingsPage } from "@/modules/meetings/MeetingsPage";
-import { MarketingHubPage } from "@/modules/marketing/MarketingHubPage";
-import { WebsiteMonitorQuickCheckPage } from "@/modules/web-monitor/WebsiteMonitorQuickCheckPage";
-import { HostingerHubPage } from "@/modules/hostinger/HostingerHubPage";
+import { LazyRouteFallback } from "@/app/LazyRouteFallback";
 import { isAccountsHubEnabled } from "@/lib/featureFlags";
+import {
+  LegacyCompanyCreateRedirect,
+  LegacyCompanyEditRedirect,
+  LegacyCompanyShowRedirect,
+} from "@/modules/clients/CompanyRouteRedirects";
+
 const MessagesPage = lazy(() =>
   import("@/modules/messages/MessagesPage").then((module) => ({
     default: module.MessagesPage,
@@ -69,11 +39,209 @@ const MailPage = lazy(() =>
     default: module.MailPage,
   })),
 );
-import {
-  LegacyCompanyCreateRedirect,
-  LegacyCompanyEditRedirect,
-  LegacyCompanyShowRedirect,
-} from "@/modules/clients/CompanyRouteRedirects";
+const TicketCreate = lazy(() =>
+  import("@/modules/tickets/TicketCreate").then((module) => ({
+    default: module.TicketCreate,
+  })),
+);
+const TicketsOverview = lazy(() =>
+  import("@/modules/tickets/TicketsOverview").then((module) => ({
+    default: module.TicketsOverview,
+  })),
+);
+const TicketShow = lazy(() =>
+  import("@/modules/tickets/TicketShow").then((module) => ({
+    default: module.TicketShow,
+  })),
+);
+const ClientBillingPage = lazy(() =>
+  import("@/modules/billing/ClientBillingPage").then((module) => ({
+    default: module.ClientBillingPage,
+  })),
+);
+const StandaloneInvoiceCreatePage = lazy(() =>
+  import("@/modules/billing/StandaloneInvoiceCreatePage").then((module) => ({
+    default: module.StandaloneInvoiceCreatePage,
+  })),
+);
+const InvoiceWorkspaceRedirect = lazy(() =>
+  import("@/modules/billing/InvoiceRouteRedirects").then((module) => ({
+    default: module.InvoiceWorkspaceRedirect,
+  })),
+);
+const ProposalsList = lazy(() =>
+  import("@/modules/proposals/ProposalsList").then((module) => ({
+    default: module.ProposalsList,
+  })),
+);
+const ProposalCreate = lazy(() =>
+  import("@/modules/proposals/ProposalCreate").then((module) => ({
+    default: module.ProposalCreate,
+  })),
+);
+const ProposalEdit = lazy(() =>
+  import("@/modules/proposals/ProposalEdit").then((module) => ({
+    default: module.ProposalEdit,
+  })),
+);
+const ProposalViewPage = lazy(() =>
+  import("@/modules/proposals/ProposalViewPage").then((module) => ({
+    default: module.ProposalViewPage,
+  })),
+);
+const ProposalPreviewPage = lazy(() =>
+  import("@/modules/proposals/document/ProposalPreviewPage").then((module) => ({
+    default: module.ProposalPreviewPage,
+  })),
+);
+const ProposalClientPreviewRoute = lazy(() =>
+  import("@/modules/proposals/document/ProposalClientPreviewRoute").then(
+    (module) => ({
+      default: module.ProposalClientPreviewRoute,
+    }),
+  ),
+);
+const ContractsList = lazy(() =>
+  import("@/modules/contracts/ContractsList").then((module) => ({
+    default: module.ContractsList,
+  })),
+);
+const ContractShow = lazy(() =>
+  import("@/modules/contracts/ContractShow").then((module) => ({
+    default: module.ContractShow,
+  })),
+);
+const FormsListPage = lazy(() =>
+  import("@/modules/forms/FormsListPage").then((module) => ({
+    default: module.FormsListPage,
+  })),
+);
+const FormBuilderPage = lazy(() =>
+  import("@/modules/forms/builder/FormBuilderPage").then((module) => ({
+    default: module.FormBuilderPage,
+  })),
+);
+const SubmissionsListPage = lazy(() =>
+  import("@/modules/forms/submissions/SubmissionsListPage").then((module) => ({
+    default: module.SubmissionsListPage,
+  })),
+);
+const SubmissionDetailPage = lazy(() =>
+  import("@/modules/forms/submissions/SubmissionDetailPage").then((module) => ({
+    default: module.SubmissionDetailPage,
+  })),
+);
+const FormAnalyticsPage = lazy(() =>
+  import("@/modules/forms/analytics/FormAnalyticsPage").then((module) => ({
+    default: module.FormAnalyticsPage,
+  })),
+);
+const CalendarPage = lazy(() =>
+  import("@/modules/calendar/CalendarPage").then((module) => ({
+    default: module.CalendarPage,
+  })),
+);
+const MeetingsPage = lazy(() =>
+  import("@/modules/meetings/MeetingsPage").then((module) => ({
+    default: module.MeetingsPage,
+  })),
+);
+const MarketingHubPage = lazy(() =>
+  import("@/modules/marketing/MarketingHubPage").then((module) => ({
+    default: module.MarketingHubPage,
+  })),
+);
+const WebsiteMonitorQuickCheckPage = lazy(() =>
+  import("@/modules/web-monitor/WebsiteMonitorQuickCheckPage").then(
+    (module) => ({
+      default: module.WebsiteMonitorQuickCheckPage,
+    }),
+  ),
+);
+const HostingerHubPage = lazy(() =>
+  import("@/modules/hostinger/HostingerHubPage").then((module) => ({
+    default: module.HostingerHubPage,
+  })),
+);
+const PublicBookingPage = lazy(() =>
+  import("@/modules/booking/public/PublicBookingPage").then((module) => ({
+    default: module.PublicBookingPage,
+  })),
+);
+const BookingShortUrlRedirect = lazy(() =>
+  import("@/modules/booking/public/BookingShortUrlRedirect").then((module) => ({
+    default: module.BookingShortUrlRedirect,
+  })),
+);
+const PublicCalendarEventPage = lazy(() =>
+  import("@/modules/meetings/public/PublicCalendarEventPage").then((module) => ({
+    default: module.PublicCalendarEventPage,
+  })),
+);
+const FormPublicEntry = lazy(() =>
+  import("@/modules/forms/public/FormPublicEntry").then((module) => ({
+    default: module.FormPublicEntry,
+  })),
+);
+const ShortUrlRedirect = lazy(() =>
+  import("@/modules/forms/public/ShortUrlRedirect").then((module) => ({
+    default: module.ShortUrlRedirect,
+  })),
+);
+const PublicProposalPage = lazy(() =>
+  import("@/modules/proposals/public/PublicProposalPage").then((module) => ({
+    default: module.PublicProposalPage,
+  })),
+);
+const PublicProposalAcceptPageWithLocale = lazy(() =>
+  import("@/modules/proposals/public/PublicProposalAcceptPage").then(
+    (module) => ({
+      default: module.PublicProposalAcceptPageWithLocale,
+    }),
+  ),
+);
+const ProposalShortUrlRedirect = lazy(() =>
+  import("@/modules/proposals/public/ProposalShortUrlRedirect").then(
+    (module) => ({
+      default: module.ProposalShortUrlRedirect,
+    }),
+  ),
+);
+const PublicInvoicePage = lazy(() =>
+  import("@/modules/billing/public/PublicInvoicePage").then((module) => ({
+    default: module.PublicInvoicePage,
+  })),
+);
+const InvoiceShortUrlRedirect = lazy(() =>
+  import("@/modules/billing/public/InvoiceShortUrlRedirect").then((module) => ({
+    default: module.InvoiceShortUrlRedirect,
+  })),
+);
+const PortalShortUrlRedirect = lazy(() =>
+  import("@/modules/portal/PortalShortUrlRedirect").then((module) => ({
+    default: module.PortalShortUrlRedirect,
+  })),
+);
+const ClientPortalPage = lazy(() =>
+  import("@/modules/portal/ClientPortalPage").then((module) => ({
+    default: module.ClientPortalPage,
+  })),
+);
+const ClientPortalInvoicePage = lazy(() =>
+  import("@/modules/portal/ClientPortalInvoicePage").then((module) => ({
+    default: module.ClientPortalInvoicePage,
+  })),
+);
+
+const LazyRoute = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) => (
+  <Suspense fallback={<LazyRouteFallback label={label} />}>{children}</Suspense>
+);
 
 type ProtectedRouteProps = {
   resource: string;
@@ -97,31 +265,123 @@ const accountsHub = isAccountsHubEnabled();
 
 export const renderLbsPublicPortalRoutes = () => (
   <Route element={<PublicShareLayout />}>
-    <Route path="/portal" element={<ClientPortalPage />} />
+    <Route
+      path="/portal"
+      element={
+        <LazyRoute label="Loading portal…">
+          <ClientPortalPage />
+        </LazyRoute>
+      }
+    />
     <Route
       path="/portal/invoice/:token"
-      element={<ClientPortalInvoicePage />}
+      element={
+        <LazyRoute label="Loading invoice…">
+          <ClientPortalInvoicePage />
+        </LazyRoute>
+      }
     />
   </Route>
 );
 
 export const renderLbsPublicFormRoute = () => (
   <Route element={<PublicShareLayout />}>
-    <Route path="/b/:shortCode" element={<BookingShortUrlRedirect />} />
-    <Route path="/book/:token" element={<PublicBookingPage />} />
-    <Route path="/c/:shortCode" element={<PublicCalendarEventPage />} />
-    <Route path="/cal/:token" element={<PublicCalendarEventPage />} />
-    <Route path="/f/:shortCode" element={<ShortUrlRedirect />} />
-    <Route path="/pr/:shortCode" element={<ProposalShortUrlRedirect />} />
-    <Route path="/iv/:shortCode" element={<InvoiceShortUrlRedirect />} />
-    <Route path="/invoice/:token" element={<PublicInvoicePage />} />
-    <Route path="/proposal/:token" element={<PublicProposalPage />} />
+    <Route
+      path="/b/:shortCode"
+      element={
+        <LazyRoute label="Loading…">
+          <BookingShortUrlRedirect />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="/book/:token"
+      element={
+        <LazyRoute label="Loading booking…">
+          <PublicBookingPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="/c/:shortCode"
+      element={
+        <LazyRoute label="Loading event…">
+          <PublicCalendarEventPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="/cal/:token"
+      element={
+        <LazyRoute label="Loading event…">
+          <PublicCalendarEventPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="/f/:shortCode"
+      element={
+        <LazyRoute label="Loading…">
+          <ShortUrlRedirect />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="/pr/:shortCode"
+      element={
+        <LazyRoute label="Loading…">
+          <ProposalShortUrlRedirect />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="/iv/:shortCode"
+      element={
+        <LazyRoute label="Loading…">
+          <InvoiceShortUrlRedirect />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="/invoice/:token"
+      element={
+        <LazyRoute label="Loading invoice…">
+          <PublicInvoicePage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="/proposal/:token"
+      element={
+        <LazyRoute label="Loading proposal…">
+          <PublicProposalPage />
+        </LazyRoute>
+      }
+    />
     <Route
       path="/proposal/:token/accept"
-      element={<PublicProposalAcceptPageWithLocale />}
+      element={
+        <LazyRoute label="Loading proposal…">
+          <PublicProposalAcceptPageWithLocale />
+        </LazyRoute>
+      }
     />
-    <Route path="/p/:shortCode" element={<PortalShortUrlRedirect />} />
-    <Route path="/forms/:slug" element={<FormPublicEntry />} />
+    <Route
+      path="/p/:shortCode"
+      element={
+        <LazyRoute label="Loading…">
+          <PortalShortUrlRedirect />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="/forms/:slug"
+      element={
+        <LazyRoute label="Loading form…">
+          <FormPublicEntry />
+        </LazyRoute>
+      }
+    />
   </Route>
 );
 
@@ -129,7 +389,11 @@ export const renderLbsPublicFormRoute = () => (
 export const renderLbsProposalClientPreviewRoute = () => (
   <Route
     path="/proposals/:id/client-preview"
-    element={<ProposalClientPreviewRoute />}
+    element={
+      <LazyRoute label="Loading proposal preview…">
+        <ProposalClientPreviewRoute />
+      </LazyRoute>
+    }
   />
 );
 
@@ -216,7 +480,9 @@ export const renderLbsCustomRoutes = ({
         path="/calendar"
         element={
           <ProtectedRoute resource="tasks" action="list">
-            <CalendarPage />
+            <LazyRoute label="Loading calendar…">
+              <CalendarPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -224,7 +490,9 @@ export const renderLbsCustomRoutes = ({
         path="/meetings"
         element={
           <ProtectedRoute resource="tasks" action="list">
-            <MeetingsPage />
+            <LazyRoute label="Loading meetings…">
+              <MeetingsPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -232,7 +500,9 @@ export const renderLbsCustomRoutes = ({
         path="/marketing"
         element={
           <ProtectedRoute resource="marketing_campaigns" action="list">
-            <MarketingHubPage />
+            <LazyRoute label="Loading marketing…">
+              <MarketingHubPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -240,15 +510,9 @@ export const renderLbsCustomRoutes = ({
         path="/messages"
         element={
           <ProtectedRoute resource="conversations" action="list">
-            <Suspense
-              fallback={
-                <div className="p-6 text-sm text-muted-foreground">
-                  Loading messages…
-                </div>
-              }
-            >
+            <LazyRoute label="Loading messages…">
               <MessagesPage />
-            </Suspense>
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -256,15 +520,9 @@ export const renderLbsCustomRoutes = ({
         path="/mail"
         element={
           <ProtectedRoute resource="mail_threads" action="list">
-            <Suspense
-              fallback={
-                <div className="p-6 text-sm text-muted-foreground">
-                  Loading mail…
-                </div>
-              }
-            >
+            <LazyRoute label="Loading mail…">
               <MailPage />
-            </Suspense>
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -312,7 +570,9 @@ export const renderLbsCustomRoutes = ({
         path="/web-monitor"
         element={
           <ProtectedRoute resource="monitored_websites" action="list">
-            <WebsiteMonitorQuickCheckPage />
+            <LazyRoute label="Loading web monitor…">
+              <WebsiteMonitorQuickCheckPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -320,7 +580,9 @@ export const renderLbsCustomRoutes = ({
         path="/hostinger"
         element={
           <ProtectedRoute resource="hostinger_domains" action="list">
-            <HostingerHubPage />
+            <LazyRoute label="Loading Hostinger…">
+              <HostingerHubPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -358,7 +620,9 @@ export const renderLbsCustomRoutes = ({
         path="/tickets/create"
         element={
           <ProtectedRoute resource="tickets" action="create">
-            <TicketCreate />
+            <LazyRoute label="Loading ticket…">
+              <TicketCreate />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -366,7 +630,9 @@ export const renderLbsCustomRoutes = ({
         path="/proposals"
         element={
           <ProtectedRoute resource="proposals" action="list">
-            <ProposalsList />
+            <LazyRoute label="Loading proposals…">
+              <ProposalsList />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -374,7 +640,9 @@ export const renderLbsCustomRoutes = ({
         path="/proposals/create"
         element={
           <ProtectedRoute resource="proposals" action="create">
-            <ProposalCreate />
+            <LazyRoute label="Loading proposal…">
+              <ProposalCreate />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -382,7 +650,9 @@ export const renderLbsCustomRoutes = ({
         path="/proposals/:id/show"
         element={
           <ProtectedRoute resource="proposals" action="show">
-            <ProposalViewPage />
+            <LazyRoute label="Loading proposal…">
+              <ProposalViewPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -390,7 +660,9 @@ export const renderLbsCustomRoutes = ({
         path="/proposals/:id/edit"
         element={
           <ProtectedRoute resource="proposals" action="edit">
-            <ProposalEdit />
+            <LazyRoute label="Loading proposal…">
+              <ProposalEdit />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -398,7 +670,9 @@ export const renderLbsCustomRoutes = ({
         path="/proposals/:id/preview"
         element={
           <ProtectedRoute resource="proposals" action="edit">
-            <ProposalPreviewPage />
+            <LazyRoute label="Loading proposal preview…">
+              <ProposalPreviewPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -406,7 +680,9 @@ export const renderLbsCustomRoutes = ({
         path="/contracts"
         element={
           <ProtectedRoute resource="contracts" action="list">
-            <ContractsList />
+            <LazyRoute label="Loading contracts…">
+              <ContractsList />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -417,7 +693,9 @@ export const renderLbsCustomRoutes = ({
             resource="proposal_payment_installments"
             action="list"
           >
-            <ClientBillingPage />
+            <LazyRoute label="Loading billing…">
+              <ClientBillingPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -425,7 +703,9 @@ export const renderLbsCustomRoutes = ({
         path="/billing/invoices/new"
         element={
           <ProtectedRoute resource="client_invoices" action="create">
-            <StandaloneInvoiceCreatePage />
+            <LazyRoute label="Loading invoice…">
+              <StandaloneInvoiceCreatePage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -433,7 +713,9 @@ export const renderLbsCustomRoutes = ({
         path="/billing/invoices/:id/show"
         element={
           <ProtectedRoute resource="client_invoices" action="show">
-            <InvoiceWorkspaceRedirect />
+            <LazyRoute label="Loading invoice…">
+              <InvoiceWorkspaceRedirect />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -441,7 +723,9 @@ export const renderLbsCustomRoutes = ({
         path="/billing/invoices/:id/edit"
         element={
           <ProtectedRoute resource="client_invoices" action="edit">
-            <InvoiceWorkspaceRedirect />
+            <LazyRoute label="Loading invoice…">
+              <InvoiceWorkspaceRedirect />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -449,7 +733,9 @@ export const renderLbsCustomRoutes = ({
         path="/contracts/:id/show"
         element={
           <ProtectedRoute resource="contracts" action="show">
-            <ContractShow />
+            <LazyRoute label="Loading contract…">
+              <ContractShow />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -457,7 +743,9 @@ export const renderLbsCustomRoutes = ({
         path="/forms-v2"
         element={
           <ProtectedRoute resource="forms" action="list">
-            <FormsListPage />
+            <LazyRoute label="Loading forms…">
+              <FormsListPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -465,7 +753,9 @@ export const renderLbsCustomRoutes = ({
         path="/forms-v2/new"
         element={
           <ProtectedRoute resource="forms" action="create">
-            <FormBuilderPage />
+            <LazyRoute label="Loading form builder…">
+              <FormBuilderPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -473,7 +763,9 @@ export const renderLbsCustomRoutes = ({
         path="/forms-v2/:id/edit"
         element={
           <ProtectedRoute resource="forms" action="edit">
-            <FormBuilderPage />
+            <LazyRoute label="Loading form builder…">
+              <FormBuilderPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -481,7 +773,9 @@ export const renderLbsCustomRoutes = ({
         path="/forms-v2/submissions/:id"
         element={
           <ProtectedRoute resource="forms" action="list">
-            <SubmissionDetailPage />
+            <LazyRoute label="Loading submission…">
+              <SubmissionDetailPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -489,7 +783,9 @@ export const renderLbsCustomRoutes = ({
         path="/forms-v2/submissions"
         element={
           <ProtectedRoute resource="forms" action="list">
-            <SubmissionsListPage />
+            <LazyRoute label="Loading submissions…">
+              <SubmissionsListPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -497,7 +793,9 @@ export const renderLbsCustomRoutes = ({
         path="/forms-v2/:id/analytics"
         element={
           <ProtectedRoute resource="forms" action="list">
-            <FormAnalyticsPage />
+            <LazyRoute label="Loading analytics…">
+              <FormAnalyticsPage />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -510,7 +808,9 @@ export const renderLbsCustomRoutes = ({
         path="/tickets"
         element={
           <ProtectedRoute resource="tickets" action="list">
-            <TicketsOverview />
+            <LazyRoute label="Loading tickets…">
+              <TicketsOverview />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />
@@ -518,7 +818,9 @@ export const renderLbsCustomRoutes = ({
         path="/tickets/:id/show"
         element={
           <ProtectedRoute resource="tickets" action="show">
-            <TicketShow />
+            <LazyRoute label="Loading ticket…">
+              <TicketShow />
+            </LazyRoute>
           </ProtectedRoute>
         }
       />

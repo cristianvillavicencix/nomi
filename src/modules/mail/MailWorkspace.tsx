@@ -16,10 +16,8 @@ import { useNotify, useGetIdentity } from "ra-core";
 import { MailEmptyState } from "./MailEmptyState";
 import { MailThreadList } from "./MailThreadList";
 import { MailMessagePane, type MailMessagePaneActions } from "./MailMessagePane";
-import {
-  MailComposeDialog,
-  type MailComposeMode,
-} from "./MailComposeDialog";
+import type { MailComposeMode } from "./MailComposeDialog";
+import { useMailCompose } from "./MailComposeProvider";
 import {
   MailFolderRail,
   type MailFolderId,
@@ -73,19 +71,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<MailThread | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [composeOpen, setComposeOpen] = useState(false);
-  const [composeMode, setComposeMode] = useState<MailComposeMode>("new");
-  const [composeTo, setComposeTo] = useState("");
-  const [composeCc, setComposeCc] = useState("");
-  const [composeSubject, setComposeSubject] = useState("");
-  const [composeBody, setComposeBody] = useState("");
-  const [composeQuotedHtml, setComposeQuotedHtml] = useState<string | null>(
-    null,
-  );
-  const [composeInReplyTo, setComposeInReplyTo] = useState<string | undefined>();
-  const [composeDraftId, setComposeDraftId] = useState<number | null>(null);
-  const [composeAccountId, setComposeAccountId] = useState<number | undefined>();
-  const [composeThreadId, setComposeThreadId] = useState<number | undefined>();
+  const { openCompose: openGlobalCompose } = useMailCompose();
   const [syncing, setSyncing] = useState(false);
   const [mobileShowThread, setMobileShowThread] = useState(false);
 
@@ -261,17 +247,18 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     };
     setSelected(thread);
     setMobileShowThread(true);
-    setComposeMode("new");
-    setComposeDraftId(draftId);
-    setComposeAccountId(row.account_id);
-    setComposeThreadId(row.thread_id ?? undefined);
-    setComposeTo(row.to_emails.join(", "));
-    setComposeCc(row.cc_emails.join(", "));
-    setComposeSubject(row.subject ?? "");
-    setComposeBody(row.body_html ?? "<p><br></p>");
-    setComposeQuotedHtml(null);
-    setComposeInReplyTo(undefined);
-    setComposeOpen(true);
+    openGlobalCompose({
+      mode: "new",
+      initialDraftId: draftId,
+      initialAccountId: row.account_id,
+      initialThreadId: row.thread_id ?? undefined,
+      initialTo: row.to_emails.join(", "),
+      initialCc: row.cc_emails.join(", "),
+      initialSubject: row.subject ?? "",
+      initialBody: row.body_html ?? "<p><br></p>",
+      initialQuotedHtml: null,
+      replyTo: thread,
+    });
   };
 
   const invalidate = () => {
@@ -321,57 +308,63 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
 
   const openCompose = (mode: MailComposeMode, contextThread?: MailThread) => {
     const thread = contextThread ?? selected;
-    setComposeMode(mode);
-    setComposeInReplyTo(undefined);
-    setComposeDraftId(null);
-    setComposeAccountId(undefined);
-    setComposeThreadId(undefined);
-    setComposeQuotedHtml(null);
     if (mode === "new") {
-      setComposeTo("");
-      setComposeCc("");
-      setComposeSubject("");
-      setComposeBody("<p><br></p>");
-    } else if (thread && !isMailDraftListId(thread.id)) {
-      const last =
-        thread.id === selected?.id
-          ? selectedMessages[selectedMessages.length - 1]
-          : undefined;
-      const participants = thread.participants ?? [];
-      const fromEmail = last?.from_email || participants[0]?.email || "";
-      const others = [
-        ...(last?.to_emails ?? []),
-        ...(last?.cc_emails ?? []),
-        ...participants.map((p) => p.email).filter(Boolean),
-      ].filter((e): e is string => Boolean(e) && e !== fromEmail);
-
-      if (mode === "reply") {
-        setComposeTo(fromEmail);
-        setComposeCc("");
-        setComposeSubject("");
-        setComposeBody("<p><br></p>");
-        setComposeQuotedHtml(buildReplyQuoteBlock(last, thread.snippet));
-        setComposeInReplyTo(mailRfcMessageId(last));
-      } else if (mode === "reply_all") {
-        setComposeTo(fromEmail);
-        setComposeCc([...new Set(others)].join(", "));
-        setComposeSubject("");
-        setComposeBody("<p><br></p>");
-        setComposeQuotedHtml(buildReplyQuoteBlock(last, thread.snippet));
-        setComposeInReplyTo(mailRfcMessageId(last));
-      } else if (mode === "forward") {
-        setComposeTo("");
-        setComposeCc("");
-        setComposeSubject("");
-        setComposeBody("<p><br></p>");
-        setComposeQuotedHtml(buildForwardQuoteBlock(last, thread.snippet));
-      }
-      if (contextThread) {
-        setSelected(contextThread);
-        setMobileShowThread(true);
-      }
+      openGlobalCompose({ mode: "new" });
+      return;
     }
-    setComposeOpen(true);
+    if (!thread || isMailDraftListId(thread.id)) {
+      return;
+    }
+    const last =
+      thread.id === selected?.id
+        ? selectedMessages[selectedMessages.length - 1]
+        : undefined;
+    const participants = thread.participants ?? [];
+    const fromEmail = last?.from_email || participants[0]?.email || "";
+    const others = [
+      ...(last?.to_emails ?? []),
+      ...(last?.cc_emails ?? []),
+      ...participants.map((p) => p.email).filter(Boolean),
+    ].filter((e): e is string => Boolean(e) && e !== fromEmail);
+
+    if (contextThread) {
+      setSelected(contextThread);
+      setMobileShowThread(true);
+    }
+
+    if (mode === "reply") {
+      openGlobalCompose({
+        mode,
+        replyTo: thread,
+        initialTo: fromEmail,
+        initialCc: "",
+        initialSubject: "",
+        initialBody: "<p><br></p>",
+        initialQuotedHtml: buildReplyQuoteBlock(last, thread.snippet),
+        initialInReplyTo: mailRfcMessageId(last),
+      });
+    } else if (mode === "reply_all") {
+      openGlobalCompose({
+        mode,
+        replyTo: thread,
+        initialTo: fromEmail,
+        initialCc: [...new Set(others)].join(", "),
+        initialSubject: "",
+        initialBody: "<p><br></p>",
+        initialQuotedHtml: buildReplyQuoteBlock(last, thread.snippet),
+        initialInReplyTo: mailRfcMessageId(last),
+      });
+    } else if (mode === "forward") {
+      openGlobalCompose({
+        mode,
+        replyTo: thread,
+        initialTo: "",
+        initialCc: "",
+        initialSubject: "",
+        initialBody: "<p><br></p>",
+        initialQuotedHtml: buildForwardQuoteBlock(last, thread.snippet),
+      });
+    }
   };
 
   const accountsToSync = useMemo(() => {
@@ -532,12 +525,13 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
 
       <div
         className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col md:flex-none md:w-[320px] md:max-w-[360px] md:shrink-0 md:border-r md:border-border/60",
+          "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:flex-none md:w-[320px] md:max-w-[360px] md:shrink-0 md:border-r md:border-border/60",
           "bg-muted/15 md:bg-muted/20",
           mobileShowThread && "hidden md:flex",
         )}
       >
-        <div className="flex items-center gap-2 px-2 py-2 md:hidden">
+        <div className="shrink-0 border-b border-border/40 bg-muted/15 md:bg-muted/20">
+          <div className="flex items-center gap-2 px-2 py-2 md:hidden">
           <Select
             value={folder}
             onValueChange={(v) => {
@@ -589,26 +583,26 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
           </Select>
         </div>
 
-        <MailThreadFilters
-          folder={folder}
-          listFilter={listFilter}
-          onListFilterChange={(next) => {
-            setListFilter(next);
-            setSelected(null);
-            setMobileShowThread(false);
-          }}
-          searchQuery={search}
-          onSearchQueryChange={setSearch}
-          syncToolbar={{
-            syncing,
-            onSync: () => {
-              void runQuickSync();
-            },
-          }}
-        />
+          <MailThreadFilters
+            folder={folder}
+            listFilter={listFilter}
+            onListFilterChange={(next) => {
+              setListFilter(next);
+              setSelected(null);
+              setMobileShowThread(false);
+            }}
+            searchQuery={search}
+            onSearchQueryChange={setSearch}
+            syncToolbar={{
+              syncing,
+              onSync: () => {
+                void runQuickSync();
+              },
+            }}
+          />
 
-        {threads.length > 0 ? (
-          <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
+          {threads.length > 0 ? (
+            <div className="flex items-center gap-2 border-t border-border/30 px-3 py-1.5 text-xs text-muted-foreground">
             <Checkbox
               checked={
                 selectedIds.size > 0 && selectedIds.size === threads.length
@@ -707,37 +701,39 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
             ) : null}
           </div>
         ) : null}
+        </div>
+
         {isPending ? (
           <p className="p-4 text-sm text-muted-foreground">Loading…</p>
         ) : (
-          <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <MailThreadList
-            threads={threads}
-            selectedId={selected?.id ?? null}
-            selectedIds={selectedIds}
-            accounts={accounts}
-            showMailboxAvatar={accountFilter === "all"}
-            onToggleSelect={(id, on) => {
-              setSelectedIds((prev) => {
-                const next = new Set(prev);
-                if (on) next.add(id);
-                else next.delete(id);
-                return next;
-              });
-            }}
-            onSelect={(thread) => {
-              if (isMailDraftListId(thread.id)) {
-                void openDraftFromList(thread);
-                return;
-              }
-              const next = thread.is_unread ? { ...thread, is_unread: false } : thread;
-              setSelected(next);
-              setMobileShowThread(true);
-              if (thread.is_unread) {
-                void runThreadAction(thread, "mark_read");
-              }
-            }}
-          />
+              threads={threads}
+              selectedId={selected?.id ?? null}
+              selectedIds={selectedIds}
+              accounts={accounts}
+              showMailboxAvatar={accountFilter === "all"}
+              onToggleSelect={(id, on) => {
+                setSelectedIds((prev) => {
+                  const next = new Set(prev);
+                  if (on) next.add(id);
+                  else next.delete(id);
+                  return next;
+                });
+              }}
+              onSelect={(thread) => {
+                if (isMailDraftListId(thread.id)) {
+                  void openDraftFromList(thread);
+                  return;
+                }
+                const next = thread.is_unread ? { ...thread, is_unread: false } : thread;
+                setSelected(next);
+                setMobileShowThread(true);
+                if (thread.is_unread) {
+                  void runThreadAction(thread, "mark_read");
+                }
+              }}
+            />
           </div>
         )}
       </div>
@@ -775,30 +771,6 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
       >
         <PencilSimple className="size-5" />
       </Button>
-
-      <MailComposeDialog
-        open={composeOpen}
-        onOpenChange={(open) => {
-          setComposeOpen(open);
-          if (!open) {
-            setComposeDraftId(null);
-            setComposeAccountId(undefined);
-            setComposeQuotedHtml(null);
-          }
-        }}
-        accounts={accounts}
-        replyTo={composeMode === "new" ? null : selected}
-        mode={composeMode}
-        initialTo={composeTo}
-        initialCc={composeCc}
-        initialSubject={composeSubject}
-        initialBody={composeBody}
-        initialQuotedHtml={composeQuotedHtml}
-        initialInReplyTo={composeInReplyTo}
-        initialDraftId={composeDraftId}
-        initialAccountId={composeAccountId}
-        initialThreadId={composeThreadId}
-      />
 
     </div>
   );

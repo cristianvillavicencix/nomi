@@ -24,7 +24,7 @@ import {
   resolveCompanyEmailForDisplay,
   resolveCompanyPhoneRaw,
 } from "@/modules/clients/companyChannelResolvers";
-import { mailtoHref } from "@/lib/linking";
+import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getClientShowPath } from "@/app/routing";
@@ -228,7 +228,6 @@ const AccountsCompaniesListBody = ({
             <TableBody>
               {data.map((company) => {
                 const email = resolveCompanyEmailForDisplay(company);
-                const emailHref = mailtoHref(email);
                 const phone = resolveCompanyPhoneRaw(company);
                 const website = String(company.website ?? "").trim();
                 const websiteHref = normalizeWebsiteHref(website);
@@ -283,13 +282,15 @@ const AccountsCompaniesListBody = ({
                       />
                     </TableCell>
                     <TableCell onClick={(event) => event.stopPropagation()}>
-                      {emailHref && email !== "—" ? (
-                        <a
-                          href={emailHref}
+                      {email && email !== "—" ? (
+                        <OpenMailComposeLink
+                          to={email}
+                          companyId={company.id}
+                          contactId={company.primary_contact_id ?? undefined}
                           className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline"
                         >
                           {email}
-                        </a>
+                        </OpenMailComposeLink>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

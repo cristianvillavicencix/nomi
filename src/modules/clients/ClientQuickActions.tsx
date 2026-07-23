@@ -29,13 +29,14 @@ import { NoteCreateSheet } from "@/components/atomic-crm/notes/NoteCreateSheet";
 import { CalendarReminderDialog } from "@/modules/calendar/CalendarReminderDialog";
 import { NewDealDialog } from "@/modules/deals/NewDealDialog";
 import type { Contact } from "@/components/atomic-crm/types";
-import { mailtoHref, normalizePhoneForTel } from "@/lib/linking";
+import { normalizePhoneForTel } from "@/lib/linking";
+import { resolveBillingRecipientEmail } from "@/modules/billing/billingRecipientResolution";
+import { OpenMailComposeButton } from "@/modules/mail/OpenMailComposeButton";
 import { useCrmPhoneCall } from "@/modules/voice/useCrmPhoneCall";
 import { contactHasSmsPhone } from "@/modules/messages/messageContactUtils";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
 import { useMessagesQuickAccessOptional } from "@/modules/messages/messagesQuickAccessContext";
 import {
-  getPrimaryContactEmailFromContact,
   getPrimaryContactPhoneRaw,
   type CompanyWithPrimaryContact,
 } from "@/modules/clients/clientProfile";
@@ -120,10 +121,10 @@ export const ClientQuickActions = ({
     { enabled: !!primaryContactId },
   );
 
-  const email =
-    getPrimaryContactEmailFromContact(primaryContact) !== "—"
-      ? getPrimaryContactEmailFromContact(primaryContact)
-      : "";
+  const email = resolveBillingRecipientEmail({
+    company: record,
+    contact: primaryContact ?? null,
+  });
   const phoneRaw = getPrimaryContactPhoneRaw(record);
   const phoneLink = phoneRaw ? normalizePhoneForTel(phoneRaw) : null;
   const { canCall, voiceReady, callPhone } = useCrmPhoneCall();
@@ -149,13 +150,13 @@ export const ClientQuickActions = ({
         </LabeledAction>
 
         <LabeledAction label="Email">
-          <CircleButton
-            label="Email"
-            href={email ? mailtoHref(email) : undefined}
-            disabled={!email}
+          <OpenMailComposeButton
+            to={email}
+            companyId={record.id}
+            contactId={primaryContactId ?? undefined}
           >
             <Mail className="size-4" />
-          </CircleButton>
+          </OpenMailComposeButton>
         </LabeledAction>
 
         <LabeledAction label="Call">

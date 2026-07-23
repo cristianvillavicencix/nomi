@@ -42,7 +42,7 @@ import {
 } from "@/modules/clients/companyChannelResolvers";
 import { ClientEditDialog } from "@/modules/clients/ClientEditDialog";
 import { ClientSocialLinksDisplay } from "@/modules/clients/ClientSocialLinksDisplay";
-import { mailtoHref } from "@/lib/linking";
+import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import { getClientShowPath } from "@/app/routing";
 import { NewClientDialog } from "@/modules/clients/NewClientDialog";
@@ -247,16 +247,16 @@ const CompaniesLayout = ({
           label="Email"
           render={(record: CompanyWithPrimaryContact) => {
             const email = getCompanyListEmail(record);
-            const href = mailtoHref(email);
-            if (!href || email === "—") return email;
+            if (!email || email === "—") return email;
             return (
-              <a
-                href={href}
-                className="link-action"
+              <OpenMailComposeLink
+                to={email}
+                companyId={record.id}
+                contactId={record.primary_contact_id ?? undefined}
                 onClick={(event) => event.stopPropagation()}
               >
                 {email}
-              </a>
+              </OpenMailComposeLink>
             );
           }}
         />

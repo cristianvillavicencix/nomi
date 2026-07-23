@@ -33,7 +33,7 @@ import {
 import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import type { Contact } from "@/components/atomic-crm/types";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
-import { mailtoHref } from "@/lib/linking";
+import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import { LBS_CONTACT_STATUSES_FOR_FILTER } from "@/app/navigation";
@@ -230,16 +230,16 @@ const ContactsLayout = ({
           disableSort
           render={(record: Contact) => {
             const email = getPrimaryEmail(record);
-            const href = mailtoHref(email);
-            if (!href || email === "—") return email;
+            if (!email || email === "—") return email;
             return (
-              <a
-                href={href}
-                className="link-action"
+              <OpenMailComposeLink
+                to={email}
+                contactId={record.id}
+                companyId={record.company_id ?? undefined}
                 onClick={(event) => event.stopPropagation()}
               >
                 {email}
-              </a>
+              </OpenMailComposeLink>
             );
           }}
         />

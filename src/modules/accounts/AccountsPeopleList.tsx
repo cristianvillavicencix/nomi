@@ -40,7 +40,7 @@ import {
   LBS_CONTACT_STATUSES_FOR_FILTER,
   LBS_LEAD_STATUSES_FOR_FILTER} from "@/modules/constants/contactStatus";
 import { getClientShowPath, getPersonShowPath } from "@/app/routing";
-import { mailtoHref } from "@/lib/linking";
+import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import { canAccess } from "@/components/atomic-crm/providers/commons/canAccess";
 import type { AccessIdentity } from "@/components/atomic-crm/providers/commons/canAccess";
@@ -374,7 +374,6 @@ const PersonRow = ({
     ? getLeadStageDef(normalizeLeadStage(contact.lead_stage))
     : null;
   const email = getContactEmail(contact);
-  const emailHref = mailtoHref(email);
   const phone = getContactPhoneRaw(contact);
   const companyName = contact.company_name?.trim();
   const companyId = contact.company_id;
@@ -453,10 +452,14 @@ const PersonRow = ({
         className="text-sm"
         onClick={(event) => event.stopPropagation()}
       >
-        {emailHref && email ? (
-          <a href={emailHref} className="link-action">
+        {email && email !== "—" ? (
+          <OpenMailComposeLink
+            to={email}
+            contactId={contact.id}
+            companyId={contact.company_id ?? undefined}
+          >
             {email}
-          </a>
+          </OpenMailComposeLink>
         ) : (
           <span className="text-muted-foreground">—</span>
         )}

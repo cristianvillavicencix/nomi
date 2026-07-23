@@ -27,6 +27,7 @@ import type { SendFormContext } from "@/modules/forms/share/sendFormTypes";
 import { useSendFormRecipient } from "@/modules/forms/share/useSendFormRecipient";
 import { useSendClientSms } from "@/modules/messages/useClientSms";
 import { mailtoHref } from "@/lib/linking";
+import { useOpenCrmEmail } from "@/modules/mail/openCrmEmail";
 import { buildFormShortUrl } from "@/modules/forms/share/formLinkUtils";
 
 type SendFormDialogProps = {
@@ -55,6 +56,7 @@ export const SendFormDialog = ({
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const sendClientSms = useSendClientSms();
+  const openCrmEmail = useOpenCrmEmail();
   const recipient = useSendFormRecipient(context);
 
   const { data: forms = [] } = useGetList<FormInstance>(
@@ -151,9 +153,13 @@ export const SendFormDialog = ({
       return;
     }
     const url = await ensureLink();
-    const subject = encodeURIComponent(`Form: ${selectedForm?.name ?? "Form"}`);
-    const body = encodeURIComponent(`${customMessage.trim()}\n\n${url}`);
-    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+    openCrmEmail({
+      to: email,
+      contactId: recipient.contactId ?? undefined,
+      companyId: recipient.companyId ?? undefined,
+      subject: `Form: ${selectedForm?.name ?? "Form"}`,
+      body: `${customMessage.trim()}\n\n${url}`,
+    });
   };
 
   const handleSms = async () => {

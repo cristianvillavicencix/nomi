@@ -11,7 +11,7 @@ import {
   getContactEmail,
   getContactPhone,
 } from "@/modules/clients/clientShowUtils";
-import { mailtoHref } from "@/lib/linking";
+import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
 
 const pickFirstEmail = (emails?: EmailAndType[] | null) =>
   emails?.find((entry) => String(entry.email ?? "").trim())?.email?.trim() ??
@@ -55,7 +55,7 @@ const MetaItem = ({
   href,
 }: {
   icon: ReactNode;
-  children: string;
+  children: ReactNode;
   href?: string;
 }) => (
   <span className="inline-flex max-w-full items-center gap-1.5">
@@ -89,7 +89,6 @@ export const ProposalCrmLinkedMeta = ({
   const site = company.website?.trim();
   const siteUrl = websiteHref(site);
   const email = resolveLinkedEmail(company, contact);
-  const emailHref = email ? mailtoHref(email) : null;
 
   const contactPhone =
     contact && getContactPhone(contact) !== "—"
@@ -105,9 +104,16 @@ export const ProposalCrmLinkedMeta = ({
       {address ? (
         <MetaItem icon={<MapPin className="size-3.5" />}>{address}</MetaItem>
       ) : null}
-      {email && emailHref ? (
-        <MetaItem icon={<Mail className="size-3.5" />} href={emailHref}>
-          {email}
+      {email ? (
+        <MetaItem icon={<Mail className="size-3.5" />}>
+          <OpenMailComposeLink
+            to={email}
+            companyId={company.id}
+            contactId={contact?.id}
+            className="truncate text-foreground/80 hover:text-primary hover:underline"
+          >
+            {email}
+          </OpenMailComposeLink>
         </MetaItem>
       ) : null}
       {companyPhone ? (

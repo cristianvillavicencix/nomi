@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { useGetIdentity } from "ra-core";
 import { useNavigate } from "react-router";
 import {
@@ -8,7 +8,13 @@ import {
 } from "@/components/atomic-crm/layout/page-shell";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { getAccessRoles } from "@/components/atomic-crm/providers/commons/canAccess";
-import { WebAgencyMetricsReportPage } from "./WebAgencyMetricsReportPage";
+import { LazyRouteFallback } from "@/app/LazyRouteFallback";
+
+const WebAgencyMetricsReportPage = lazy(() =>
+  import("./WebAgencyMetricsReportPage").then((module) => ({
+    default: module.WebAgencyMetricsReportPage,
+  })),
+);
 
 export type ReportTab = "web-agency-metrics";
 
@@ -42,7 +48,11 @@ export const ReportsPage = (_props: { initialTab?: ReportTab }) => {
         </div>
       </StickyPageHeader>
       <ScrollableContentArea>
-        <WebAgencyMetricsReportPage embedded />
+        <Suspense
+          fallback={<LazyRouteFallback label="Loading report data…" />}
+        >
+          <WebAgencyMetricsReportPage embedded />
+        </Suspense>
       </ScrollableContentArea>
     </PageLayout>
   );

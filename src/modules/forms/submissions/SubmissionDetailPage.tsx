@@ -180,7 +180,7 @@ export const SubmissionDetailPage = () => {
             type="button"
             variant="secondary"
             size="sm"
-            onClick={() => exportSubmissionPdf(submission, form)}
+            onClick={() => void exportSubmissionPdf(submission, form)}
           >
             <Download className="mr-2 size-4" />
             Export PDF

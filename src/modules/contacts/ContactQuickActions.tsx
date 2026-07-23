@@ -28,7 +28,8 @@ import { AddTask } from "@/components/atomic-crm/tasks/AddTask";
 import { NoteCreateSheet } from "@/components/atomic-crm/notes/NoteCreateSheet";
 import { CalendarReminderDialog } from "@/modules/calendar/CalendarReminderDialog";
 import type { Contact } from "@/components/atomic-crm/types";
-import { mailtoHref, normalizePhoneForTel } from "@/lib/linking";
+import { normalizePhoneForTel } from "@/lib/linking";
+import { OpenMailComposeButton } from "@/modules/mail/OpenMailComposeButton";
 import { useCrmPhoneCall } from "@/modules/voice/useCrmPhoneCall";
 import { contactHasSmsPhone } from "@/modules/messages/messageContactUtils";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
@@ -139,13 +140,9 @@ export const ContactQuickActions = ({
     smsEnabled && contactHasSmsPhone(contact) && messagesQuickAccess;
 
   const emailButton = (
-    <CircleButton
-      label="Email"
-      href={email ? mailtoHref(email) : undefined}
-      disabled={!email}
-    >
+    <OpenMailComposeButton to={email} contactId={contactId}>
       <Mail className="size-4" />
-    </CircleButton>
+    </OpenMailComposeButton>
   );
 
   const callButton = (

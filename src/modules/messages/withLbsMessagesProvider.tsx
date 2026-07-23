@@ -3,18 +3,21 @@ import { NotificationPrefsProvider } from "@/modules/notifications/NotificationP
 import { AppNotificationsLayer } from "@/modules/notifications/AppNotificationsLayer";
 import { NotificationPreviewLayer } from "@/modules/notifications/NotificationPreviewLayer";
 import { NotificationNavigationListener } from "@/modules/notifications/NotificationNavigationListener";
+import { MailComposeProvider } from "@/modules/mail/MailComposeProvider";
 import { MessagesQuickAccessProvider } from "@/modules/messages/MessagesQuickAccessProvider";
 import { VoiceCallProvider } from "@/modules/voice/VoiceCallProvider";
+import { PwaUpdateNotifier } from "@/components/PwaUpdateNotifier";
 
 export const withLbsMessagesProvider = <P extends { children?: ReactNode }>(
   LayoutComponent: (props: P) => ReactNode,
 ) => {
   const WrappedLayout = (props: P) => (
     <NotificationPrefsProvider>
-      <MessagesQuickAccessProvider>
-        <VoiceCallProvider>
-          <LayoutComponent {...props} />
-        </VoiceCallProvider>
+      <MailComposeProvider>
+        <MessagesQuickAccessProvider>
+          <VoiceCallProvider>
+            <LayoutComponent {...props} />
+          </VoiceCallProvider>
         {/*
           Notification layers need both prefs + messages quick-access.
           Keep them here (not inside MessagesQuickAccessProvider) so the
@@ -23,7 +26,9 @@ export const withLbsMessagesProvider = <P extends { children?: ReactNode }>(
         <AppNotificationsLayer />
         <NotificationPreviewLayer />
         <NotificationNavigationListener />
-      </MessagesQuickAccessProvider>
+        <PwaUpdateNotifier />
+        </MessagesQuickAccessProvider>
+      </MailComposeProvider>
     </NotificationPrefsProvider>
   );
 

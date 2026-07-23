@@ -49,8 +49,8 @@ export default defineConfig(({ mode }) => {
           cleanupOutdatedCaches: true,
           skipWaiting: true,
           clientsClaim: true,
-          // Main bundle is ~7.4 MB (pdfmake, jsPDF, CRM). Workbox default is 2 MiB.
-          maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+          // Raised for large vendor chunks; revisit after bundle split (see docs/performance/).
+          maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         },
         manifest: false, // Use existing manifest.json from public/
       }),
@@ -80,6 +80,19 @@ export default defineConfig(({ mode }) => {
       // Main CRM chunk is large (pdfmake, jsPDF, etc.). Workbox allows up to 10 MiB.
       chunkSizeWarningLimit: 10000,
       sourcemap: true,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes("pdfmake")) return "pdf-vendor";
+            if (id.includes("node_modules/xlsx")) return "xlsx-vendor";
+            if (id.includes("node_modules/mathjs")) return "mathjs-vendor";
+            if (id.includes("node_modules/jspdf")) return "jspdf-vendor";
+            if (id.includes("node_modules/@supabase")) return "supabase-vendor";
+            if (id.includes("@twilio/voice-sdk")) return "twilio-vendor";
+            if (id.includes("html2canvas")) return "html2canvas-vendor";
+          },
+        },
+      },
     },
     resolve: {
       preserveSymlinks: true,
