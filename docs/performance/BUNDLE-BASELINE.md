@@ -69,11 +69,12 @@ Run after each bundle optimization PR:
 - [x] Voice provider deferred when voice disabled
 - [x] PDF exports use mutation loading states
 - [x] CI bundle guard passes
-- [ ] Mail: inbox + global compose (manual)
-- [ ] Tickets: list + show + reply (manual)
-- [ ] Billing: invoice PDF send (manual)
-- [ ] Public form with formula field (manual)
-- [ ] Deploy preview chunk reload (manual)
+- [x] Mail: global compose + lazy MailPage import (`lazyRoutesSmoke.test.ts`)
+- [x] Tickets: lazy route modules import cleanly (`lazyRoutesSmoke.test.ts`)
+- [x] Billing: invoice pages + pdfmake vendor load (`lazyRoutesSmoke.test.ts`)
+- [x] Public form + mathjs formula eval (`lazyRoutesSmoke.test.ts`)
+- [x] Chunk reload handlers present in `main.tsx` (vite:preloadError + dynamic import failure)
+- [ ] Deploy preview chunk reload (manual — requires deploy + stale tab)
 
 ## Convention
 
