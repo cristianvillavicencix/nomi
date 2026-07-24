@@ -63,9 +63,15 @@ export const getBriefSocialDisplay = (
 };
 
 export const extractBriefSocialUrl = (entry: string) => {
-  const pipeIndex = entry.indexOf("| ");
-  if (pipeIndex === -1) return entry.trim();
-  return entry.slice(pipeIndex + 1).trim();
+  const pipeSpaceIndex = entry.indexOf("| ");
+  if (pipeSpaceIndex !== -1) {
+    return entry.slice(pipeSpaceIndex + 2).trim();
+  }
+  const pipeIndex = entry.indexOf("|");
+  if (pipeIndex !== -1) {
+    return entry.slice(pipeIndex + 1).trim();
+  }
+  return entry.trim();
 };
 
 export const parseBriefSocialUrls = (value: unknown): string[] => {

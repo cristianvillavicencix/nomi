@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { describe, it } from "vitest";
 import type { Conversation, ConversationParticipant } from "@/modules/types";
 import {
   computeUnreadConversationCounts,
@@ -27,83 +28,85 @@ const conversation = (
   ...overrides,
 });
 
-assert.equal(
-  isConversationUnread(
-    conversation(1, "2026-01-03T00:00:00.000Z", {
-      last_message_direction: "outbound",
-      last_message_author_member_id: 1,
-    }),
-    [participant(1, "2026-01-02T00:00:00.000Z")],
-  ),
-  false,
-);
+describe("messagesUnreadUtils", () => {
+  it("computes unread state and counts", () => {
+    assert.equal(
+      isConversationUnread(
+        conversation(1, "2026-01-03T00:00:00.000Z", {
+          last_message_direction: "outbound",
+          last_message_author_member_id: 1,
+        }),
+        [participant(1, "2026-01-02T00:00:00.000Z")],
+      ),
+      false,
+    );
 
-assert.equal(
-  isConversationUnread(
-    conversation(2, "2026-01-03T00:00:00.000Z", {
-      last_message_direction: "outbound",
-      last_message_author_member_id: 2,
-    }),
-    [participant(2, "2026-01-02T00:00:00.000Z")],
-  ),
-  false,
-);
+    assert.equal(
+      isConversationUnread(
+        conversation(2, "2026-01-03T00:00:00.000Z", {
+          last_message_direction: "outbound",
+          last_message_author_member_id: 2,
+        }),
+        [participant(2, "2026-01-02T00:00:00.000Z")],
+      ),
+      false,
+    );
 
-assert.equal(
-  isConversationUnread(
-    conversation(1, "2026-01-03T00:00:00.000Z", {
-      last_message_direction: "inbound",
-    }),
-    [participant(1, "2026-01-02T00:00:00.000Z")],
-  ),
-  true,
-);
+    assert.equal(
+      isConversationUnread(
+        conversation(1, "2026-01-03T00:00:00.000Z", {
+          last_message_direction: "inbound",
+        }),
+        [participant(1, "2026-01-02T00:00:00.000Z")],
+      ),
+      true,
+    );
 
-assert.equal(
-  getConversationReadAt(1, [participant(1, "2026-01-02T00:00:00.000Z")]),
-  "2026-01-02T00:00:00.000Z",
-);
+    assert.equal(
+      getConversationReadAt(1, [participant(1, "2026-01-02T00:00:00.000Z")]),
+      "2026-01-02T00:00:00.000Z",
+    );
 
-assert.equal(
-  isConversationUnread(conversation(1, "2026-01-03T00:00:00.000Z"), [
-    participant(1, "2026-01-02T00:00:00.000Z"),
-  ]),
-  true,
-);
+    assert.equal(
+      isConversationUnread(conversation(1, "2026-01-03T00:00:00.000Z"), [
+        participant(1, "2026-01-02T00:00:00.000Z"),
+      ]),
+      true,
+    );
 
-assert.equal(
-  isConversationUnread(conversation(1, "2026-01-01T00:00:00.000Z"), [
-    participant(1, "2026-01-02T00:00:00.000Z"),
-  ]),
-  false,
-);
+    assert.equal(
+      isConversationUnread(conversation(1, "2026-01-01T00:00:00.000Z"), [
+        participant(1, "2026-01-02T00:00:00.000Z"),
+      ]),
+      false,
+    );
 
-assert.equal(
-  isConversationUnread(conversation(1, "2026-01-03T00:00:00.000Z"), []),
-  true,
-);
+    assert.equal(
+      isConversationUnread(conversation(1, "2026-01-03T00:00:00.000Z"), []),
+      true,
+    );
 
-assert.equal(getConversationReadAt(1, []), null);
+    assert.equal(getConversationReadAt(1, []), null);
 
-const counts = computeUnreadConversationCounts(
-  [
-    conversation(1, "2026-01-03T00:00:00.000Z", {
-      last_message_direction: "inbound",
-    }),
-    conversation(2, "2026-01-01T00:00:00.000Z"),
-    conversation(3, "2026-01-03T00:00:00.000Z", {
-      last_message_direction: "outbound",
-      last_message_author_member_id: 1,
-    }),
-  ],
-  [
-    participant(1, "2026-01-02T00:00:00.000Z"),
-    participant(2, "2026-01-02T00:00:00.000Z"),
-    participant(3, "2026-01-02T00:00:00.000Z"),
-  ],
-);
-assert.equal(counts.totalUnread, 1);
-assert.equal(counts.unreadByConversationId["1"], true);
-assert.equal(counts.unreadByConversationId["3"], undefined);
-
-console.warn("messagesUnreadUtils tests passed");
+    const counts = computeUnreadConversationCounts(
+      [
+        conversation(1, "2026-01-03T00:00:00.000Z", {
+          last_message_direction: "inbound",
+        }),
+        conversation(2, "2026-01-01T00:00:00.000Z"),
+        conversation(3, "2026-01-03T00:00:00.000Z", {
+          last_message_direction: "outbound",
+          last_message_author_member_id: 1,
+        }),
+      ],
+      [
+        participant(1, "2026-01-02T00:00:00.000Z"),
+        participant(2, "2026-01-02T00:00:00.000Z"),
+        participant(3, "2026-01-02T00:00:00.000Z"),
+      ],
+    );
+    assert.equal(counts.totalUnread, 1);
+    assert.equal(counts.unreadByConversationId["1"], true);
+    assert.equal(counts.unreadByConversationId["3"], undefined);
+  });
+});

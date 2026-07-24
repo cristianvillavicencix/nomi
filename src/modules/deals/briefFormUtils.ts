@@ -27,6 +27,24 @@ export const computeYearsExperience = (foundedYear: unknown): number | null => {
 
 const URL_ANSWER_KEYS = new Set(["existing_website"]);
 
+const parseBriefSocialEntry = (entry: string) => {
+  const pipeSpaceIndex = entry.indexOf("| ");
+  if (pipeSpaceIndex !== -1) {
+    return {
+      platform: entry.slice(0, pipeSpaceIndex).trim(),
+      url: entry.slice(pipeSpaceIndex + 2).trim(),
+    };
+  }
+  const pipeIndex = entry.indexOf("|");
+  if (pipeIndex !== -1) {
+    return {
+      platform: entry.slice(0, pipeIndex).trim(),
+      url: entry.slice(pipeIndex + 1).trim(),
+    };
+  }
+  return { platform: "", url: entry.trim() };
+};
+
 export const enrichBriefAnswers = (
   answers: Record<string, unknown>,
 ): Record<string, unknown> => {
@@ -57,9 +75,9 @@ export const enrichBriefAnswers = (
     next.social_links = next.social_links
       .map((entry) => {
         if (typeof entry !== "string") return null;
-        const [platform, url] = entry.split("| ");
-        if (!url?.trim()) return null;
-        return `${platform}|${normalizeFlexibleUrl(url)}`;
+        const { platform, url } = parseBriefSocialEntry(entry);
+        if (!url.trim()) return null;
+        return `${platform || "Other"}|${normalizeFlexibleUrl(url)}`;
       })
       .filter(Boolean);
   }

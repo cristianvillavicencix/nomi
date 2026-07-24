@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { describe, it } from "vitest";
 import {
   CAPABILITIES,
   CAPABILITY_IDS,
@@ -10,6 +11,8 @@ import {
   ROLE_PRESETS,
 } from "../permissionCatalog";
 
+describe("permissionCatalog", () => {
+  it("matches catalog invariants", () => {
 assert.equal(CAPABILITIES.length, 92, "expected 92 catalog capabilities");
 assert.equal(CAPABILITY_IDS.length, CAPABILITIES.length);
 
@@ -73,5 +76,5 @@ const legacyUserWithAmounts = resolveEffectivePermissions({
   },
 });
 assert.equal(legacyUserWithAmounts["view_amounts.show"], false);
-
-console.warn("permissionCatalog.test.ts passed");
+  });
+});
