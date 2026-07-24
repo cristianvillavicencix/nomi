@@ -36,8 +36,13 @@ async function attachmentAlreadyStored(
     .eq("provider_attachment_id", providerAttachmentId)
     .maybeSingle();
   if (!data?.id) return false;
-  if (!data.storage_path?.trim()) return false;
-  return storageObjectExists(data.storage_path);
+  if (!data.storage_path?.trim()) {
+    await supabaseAdmin.from("mail_attachments").delete().eq("id", data.id);
+    return false;
+  }
+  if (await storageObjectExists(data.storage_path)) return true;
+  await supabaseAdmin.from("mail_attachments").delete().eq("id", data.id);
+  return false;
 }
 
 async function inlineAlreadyStored(
@@ -53,8 +58,13 @@ async function inlineAlreadyStored(
     .eq("content_id", normalized)
     .maybeSingle();
   if (!data?.id) return false;
-  if (!data.storage_path?.trim()) return false;
-  return storageObjectExists(data.storage_path);
+  if (!data.storage_path?.trim()) {
+    await supabaseAdmin.from("mail_attachments").delete().eq("id", data.id);
+    return false;
+  }
+  if (await storageObjectExists(data.storage_path)) return true;
+  await supabaseAdmin.from("mail_attachments").delete().eq("id", data.id);
+  return false;
 }
 
 async function storageObjectExists(storagePath: string): Promise<boolean> {

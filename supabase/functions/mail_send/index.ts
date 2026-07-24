@@ -431,7 +431,7 @@ Deno.serve(async (req) => {
       for (let i = 0; i < attachments.length; i++) {
         const file = attachments[i];
         const bytes = decodeBase64ToBytes(file.content_base64);
-        const providerId = `outbound-${i}-${file.filename}`;
+        const providerId = `outbound-${i}`;
         await storeMailAttachment({
           orgId: account.org_id,
           accountId: account.id,

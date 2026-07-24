@@ -68,8 +68,8 @@ function AttachmentRow({ file }: { file: MailAttachment }) {
     if (error || !data?.signedUrl) {
       const message = error?.message ?? "Could not open attachment";
       notify(
-        /not found/i.test(message)
-          ? "Attachment file missing. Try syncing this mailbox again."
+        /not found|access denied|permission/i.test(message)
+          ? "Could not open this attachment. Try syncing the mailbox again."
           : message,
         { type: "error" },
       );
