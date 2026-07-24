@@ -39,8 +39,9 @@ End users never paste client IDs. Configure once on the hosted Supabase project:
 ### Microsoft
 
 1. Azure App Registration → Web redirect: same `mail_oauth` URI.
-2. API permissions: `Mail.ReadWrite`, `Mail.Send`, `openid`, `email`, `offline_access`.
-3. Secrets:
+2. API permissions (delegated): `Mail.ReadWrite`, `Mail.Send`, **`User.Read`**, `openid`, `email`, `offline_access`.
+3. Supported account types: org + personal Microsoft accounts if connecting Outlook.com mailboxes.
+4. Secrets:
    - `MAIL_MICROSOFT_CLIENT_ID`
    - `MAIL_MICROSOFT_CLIENT_SECRET`
 

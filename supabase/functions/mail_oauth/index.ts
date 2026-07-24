@@ -3,6 +3,10 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 import { memberHasCapability } from "../_shared/mailAccount.ts";
+import {
+  microsoftMailOAuthScopeString,
+  resolveMicrosoftMailboxEmail,
+} from "../_shared/microsoftMailOAuth.ts";
 
 type Member = {
   id: number;
@@ -155,6 +159,7 @@ Deno.serve(async (req) => {
               client_secret: clientSecret,
               redirect_uri: mailOauthRedirectUri(),
               grant_type: "authorization_code",
+              scope: microsoftMailOAuthScopeString(),
             }),
           },
         );
@@ -172,13 +177,18 @@ Deno.serve(async (req) => {
           ? new Date(Date.now() + tokenJson.expires_in * 1000).toISOString()
           : null;
         scopes = String(tokenJson.scope || "").split(" ").filter(Boolean);
-        const profileRes = await fetch("https://graph.microsoft.com/v1.0/me", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        const profile = await profileRes.json();
-        email = String(
-          profile.mail || profile.userPrincipalName || "",
-        ).toLowerCase();
+        const resolved = await resolveMicrosoftMailboxEmail(
+          accessToken,
+          tokenJson.id_token,
+        );
+        email = resolved.email;
+        if (!email) {
+          return redirect(
+            settingsReturnUrl({
+              mail_error: resolved.error || "No email on Microsoft account",
+            }),
+          );
+        }
       }
 
       if (!email) {
@@ -327,16 +337,7 @@ Deno.serve(async (req) => {
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", mailOauthRedirectUri());
     authUrl.searchParams.set("response_type", "code");
-    authUrl.searchParams.set(
-      "scope",
-      [
-        "openid",
-        "email",
-        "offline_access",
-        "https://graph.microsoft.com/Mail.ReadWrite",
-        "https://graph.microsoft.com/Mail.Send",
-      ].join(" "),
-    );
+    authUrl.searchParams.set("scope", microsoftMailOAuthScopeString());
     authUrl.searchParams.set("state", state);
     return json({ url: authUrl.toString() });
   }

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "./supabaseAdmin.ts";
+import { microsoftMailOAuthScopeString } from "./microsoftMailOAuth.ts";
 import { getUserOrganizationMember } from "./getUserOrganizationMember.ts";
 import {
   assertOrgMailAccountAccess,
@@ -216,13 +217,7 @@ export async function getFreshMicrosoftAccessToken(
         client_secret: clientSecret,
         refresh_token: refresh,
         grant_type: "refresh_token",
-        scope: [
-          "openid",
-          "email",
-          "offline_access",
-          "https://graph.microsoft.com/Mail.ReadWrite",
-          "https://graph.microsoft.com/Mail.Send",
-        ].join(" "),
+        scope: microsoftMailOAuthScopeString(),
       }),
     },
   );
