@@ -25,3 +25,7 @@ export const LEGACY_PRODUCT_TITLES = [
   "NOMI",
   "LBS",
 ] as const;
+
+/** Login split-panel hero (Unsplash — team collaboration). */
+export const LOGIN_HERO_IMAGE_URL =
+  "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1920&q=80";
