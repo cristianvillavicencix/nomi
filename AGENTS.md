@@ -156,6 +156,7 @@ Located in `supabase/functions/`:
 
 - **CRM UI (authenticated):** use `src/lib/supabase/privateStorageFile.ts` — fetch via signed URL in the background, then open/download with `blob:` URLs. Never `window.open(signedUrl)`.
 - **Emails / portal / public links:** create rows in `storage_file_access_tokens` via `supabase/functions/_shared/fileAccessToken.ts` and share `https://www.nomicrm.com/files/{token}` (Vercel rewrite → `file_download` edge function). Do **not** put Supabase Storage signed URLs in outbound email bodies.
+- **Rate limiting:** `file_download` logs requests in `file_download_request_log` and blocks IPs over 30 requests/minute. Expired tokens and old logs are purged daily via pg_cron (`purge_storage_file_access_tokens_daily`).
 
 #### Data Providers
 

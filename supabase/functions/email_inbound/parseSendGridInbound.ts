@@ -1,9 +1,5 @@
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
-  buildStorageObjectReference,
-  createStorageSignedUrl,
-} from "../_shared/storageObjectUrl.ts";
-import {
   assertInboundAttachmentCount,
   assertInboundAttachmentSize,
   MAX_INBOUND_ATTACHMENTS,
@@ -60,12 +56,6 @@ const parseHeadersBlock = (raw: string | null | undefined) => {
   }
   push();
   return headers;
-};
-
-const fixPublicUrl = (url: string) => {
-  const jwtIssuer = Deno.env.get("SB_JWT_ISSUER") ?? "";
-  const localUrl = jwtIssuer.replace("/auth/v1", "");
-  return url.replace("http://kong:8000", localUrl);
 };
 
 const uploadSendGridAttachments = async (form: FormData) => {
@@ -151,23 +141,11 @@ const uploadSendGridAttachments = async (form: FormData) => {
       throw new Error(`Failed to upload attachment "${title}"`);
     }
 
-    const signed = await createStorageSignedUrl(
-      supabaseAdmin,
-      "attachments",
-      fileName,
-      60 * 60 * 24 * 7,
-    );
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const reference = buildStorageObjectReference(
-      supabaseUrl,
-      "attachments",
-      fileName,
-    );
     attachments.push({
       title,
       type,
       path: fileName,
-      src: fixPublicUrl(signed ?? reference),
+      src: fileName,
       contentId: meta["content-id"]?.trim() || null,
     });
   }

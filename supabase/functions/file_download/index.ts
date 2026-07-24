@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { consumeFileAccessToken } from "../_shared/fileAccessToken.ts";
+import { assertFileDownloadRateLimit } from "../_shared/fileDownloadRateLimit.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 
 const MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024;
@@ -40,6 +41,15 @@ Deno.serve(async (req) => {
 
   const inline = url.searchParams.get("disposition") === "inline";
   const ip = clientIp(req);
+
+  const rateLimit = await assertFileDownloadRateLimit(ip);
+  if (!rateLimit.ok) {
+    console.warn("file_download.rate_limited", { ip });
+    const headers = new Headers(corsHeaders);
+    headers.set("Retry-After", "60");
+    headers.set("X-RateLimit-Limit", "30");
+    return new Response("Not found", { status: 404, headers });
+  }
 
   try {
     const row = await consumeFileAccessToken(token);
