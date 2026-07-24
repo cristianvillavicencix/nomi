@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useGetIdentity, useNotify } from "ra-core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
@@ -16,6 +16,8 @@ import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { useMailAccounts } from "@/modules/mail/useMailAccounts";
 import {
   disconnectMailAccount,
+  MAIL_OAUTH_BROADCAST_CHANNEL,
+  type MailOAuthBroadcastMessage,
   startMailOAuth,
   syncMailAccount,
 } from "@/modules/mail/mailApi";
@@ -285,6 +287,12 @@ export function MailAccountsPanel() {
   const [syncTarget, setSyncTarget] = useState<MailAccount | null>(null);
   const [shareTarget, setShareTarget] = useState<MailAccount | null>(null);
 
+  const refresh = useCallback(() => {
+    void refetch();
+    void queryClient.invalidateQueries({ queryKey: ["mail_accounts_safe"] });
+    void queryClient.invalidateQueries({ queryKey: ["mail_threads"] });
+  }, [queryClient, refetch]);
+
   const canOrgManage = hasMemberCapability(identity as any, "mail.org.manage");
   const canOrgShare = hasMemberCapability(identity as any, "mail.org.share");
   const canOrgView = hasMemberCapability(identity as any, "mail.org.view");
@@ -300,9 +308,8 @@ export function MailAccountsPanel() {
     (identity as { administrator?: boolean } | undefined)?.administrator ===
     true;
 
-  useEffect(() => {
-    if (searchParams.get("mail_connected") === "1") {
-      const accountId = Number(searchParams.get("mail_account_id"));
+  const handleOAuthSuccess = useCallback(
+    (accountId: number) => {
       notify("Mailbox connected — choose how far back to sync", {
         type: "success",
       });
@@ -314,26 +321,71 @@ export function MailAccountsPanel() {
           null;
         if (found) setSyncTarget(found);
       });
+      refresh();
+    },
+    [notify, refetch, refresh],
+  );
+
+  const handleOAuthError = useCallback(
+    (message: string) => {
+      notify(message || "Connection failed", { type: "error" });
+      refresh();
+    },
+    [notify, refresh],
+  );
+
+  useEffect(() => {
+    const channel = new BroadcastChannel(MAIL_OAUTH_BROADCAST_CHANNEL);
+    channel.onmessage = (event: MessageEvent<MailOAuthBroadcastMessage>) => {
+      const message = event.data;
+      if (message.type === "connected") {
+        handleOAuthSuccess(message.accountId);
+        return;
+      }
+      if (message.type === "error") {
+        handleOAuthError(message.message);
+      }
+    };
+    return () => channel.close();
+  }, [handleOAuthSuccess, handleOAuthError]);
+
+  useEffect(() => {
+    const clearOAuthParams = () => {
       const next = new URLSearchParams(searchParams);
       next.delete("mail_connected");
       next.delete("mail_account_id");
-      setSearchParams(next, { replace: true });
-    }
-    if (searchParams.get("mail_error")) {
-      notify(searchParams.get("mail_error") || "Connection failed", {
-        type: "error",
-      });
-      const next = new URLSearchParams(searchParams);
       next.delete("mail_error");
       setSearchParams(next, { replace: true });
-    }
-  }, [notify, refetch, searchParams, setSearchParams]);
+    };
 
-  const refresh = () => {
-    void refetch();
-    void queryClient.invalidateQueries({ queryKey: ["mail_accounts_safe"] });
-    void queryClient.invalidateQueries({ queryKey: ["mail_threads"] });
-  };
+    const connected = searchParams.get("mail_connected") === "1";
+    const error = searchParams.get("mail_error");
+
+    if (connected) {
+      const accountId = Number(searchParams.get("mail_account_id"));
+      const channel = new BroadcastChannel(MAIL_OAUTH_BROADCAST_CHANNEL);
+      channel.postMessage({
+        type: "connected",
+        accountId,
+      } satisfies MailOAuthBroadcastMessage);
+      channel.close();
+      window.close();
+      const timer = window.setTimeout(clearOAuthParams, 500);
+      return () => window.clearTimeout(timer);
+    }
+
+    if (error) {
+      const channel = new BroadcastChannel(MAIL_OAUTH_BROADCAST_CHANNEL);
+      channel.postMessage({
+        type: "error",
+        message: error,
+      } satisfies MailOAuthBroadcastMessage);
+      channel.close();
+      window.close();
+      const timer = window.setTimeout(clearOAuthParams, 500);
+      return () => window.clearTimeout(timer);
+    }
+  }, [searchParams, setSearchParams]);
 
   const runSync = async (range: MailSyncRange) => {
     if (!syncTarget) return;

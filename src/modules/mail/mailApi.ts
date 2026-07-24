@@ -20,6 +20,12 @@ async function authHeaders() {
   };
 }
 
+export const MAIL_OAUTH_BROADCAST_CHANNEL = "nomi-mail-oauth";
+
+export type MailOAuthBroadcastMessage =
+  | { type: "connected"; accountId: number }
+  | { type: "error"; message: string };
+
 export async function startMailOAuth(params: {
   provider: "google" | "microsoft";
   scope: "org" | "personal";
@@ -34,7 +40,12 @@ export async function startMailOAuth(params: {
   if (!res.ok || !json.url) {
     throw new Error(json.error ?? "Could not start mailbox connection");
   }
-  window.location.assign(json.url);
+  const opened = window.open(json.url, "_blank", "noopener,noreferrer");
+  if (!opened) {
+    throw new Error(
+      "Could not open a new tab. Allow pop-ups for this site and try again.",
+    );
+  }
 }
 
 export async function disconnectMailAccount(accountId: number) {
