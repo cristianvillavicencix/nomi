@@ -83,6 +83,12 @@ describe("mail render pipeline", () => {
     expect(srcdoc).toContain(HOSTINGER_LOGO_DATA_URI);
     expect(srcdoc).not.toContain("logo-400x400.png");
   });
+
+  it("adds reader padding and paragraph spacing for zero-margin Apple Mail HTML", () => {
+    const srcdoc = buildMailIframeSrcDoc(MAIL_RENDER_FIXTURES.appleMailPlain);
+    expect(srcdoc).toContain("padding: 16px 16px 32px");
+    expect(srcdoc).toContain("margin-block: 0 0.85em !important");
+  });
 });
 
 describe("mail render fixtures sanity", () => {

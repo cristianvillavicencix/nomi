@@ -39,4 +39,11 @@ export const MAIL_RENDER_FIXTURES = {
 <h1>Your domain is ready</h1>
 </td></tr></table>
 </body>`,
+
+  appleMailPlain: `<html><body style="overflow-wrap: break-word;">
+<p style="margin: 0px; margin-block: 0px;">Hola Guillermo,</p>
+<p style="margin: 0px; margin-block: 0px;"><br></p>
+<p style="margin: 0px; margin-block: 0px;">Gracias por tu tiempo.</p>
+<p style="margin: 0px; margin-block: 0px;">Saludos,</p>
+</body></html>`,
 } as const;

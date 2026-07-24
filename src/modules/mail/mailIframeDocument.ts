@@ -15,7 +15,7 @@ const READER_SHELL_FILL = `
   }
   body.mail-reader-shell {
     margin: 0;
-    padding: 16px 0 32px;
+    padding: 16px 16px 32px;
     height: 100%;
     box-sizing: border-box;
     background: #ffffff;
@@ -48,7 +48,7 @@ const READER_SHELL_AUTO = `
   }
   body.mail-reader-shell {
     margin: 0;
-    padding: 16px 0 32px;
+    padding: 16px 16px 32px;
     height: auto !important;
     min-height: 0;
     background: #ffffff;
@@ -68,6 +68,27 @@ const READER_SHELL_AUTO = `
   body.mail-reader-shell .mail-nested-body img {
     max-width: 100%;
   }
+`;
+
+/** Restore readable spacing when senders zero out paragraph margins (Apple Mail, CRM compose). */
+const READER_TYPOGRAPHY = `
+body.mail-reader-shell .mail-body-root,
+body.mail-reader-shell .mail-nested-body {
+  line-height: 1.55;
+  word-wrap: break-word;
+}
+body.mail-reader-shell .mail-body-root p,
+body.mail-reader-shell .mail-nested-body p {
+  margin-block: 0 0.85em !important;
+}
+body.mail-reader-shell .mail-body-root p:last-child,
+body.mail-reader-shell .mail-nested-body p:last-child {
+  margin-block-end: 0 !important;
+}
+body.mail-reader-shell .mail-body-root li,
+body.mail-reader-shell .mail-nested-body li {
+  margin-block: 0.25em 0.25em;
+}
 `;
 
 /** Minimal post-sender overrides for responsive newsletter classes only. */
@@ -123,7 +144,7 @@ export function buildMailIframeSrcDoc(
     : "";
   const readerUnlockCss =
     variant === "reader"
-      ? `<style>${escapeStyleText(READER_LAYOUT_UNLOCK)}</style>`
+      ? `<style>${escapeStyleText(READER_LAYOUT_UNLOCK)}</style><style>${escapeStyleText(READER_TYPOGRAPHY)}</style>`
       : "";
   const viewportMeta =
     variant === "reader"
