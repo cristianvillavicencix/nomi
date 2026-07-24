@@ -408,13 +408,6 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     }
   };
 
-  const selectedMailboxAccount = useMemo(() => {
-    if (accountFilter !== "all" || !selected || isMailDraftListId(selected.id)) {
-      return null;
-    }
-    return accounts.find((a) => a.id === selected.account_id) ?? null;
-  }, [accountFilter, accounts, selected]);
-
   if (accounts.length === 0) {
     return <MailEmptyState />;
   }
@@ -753,7 +746,6 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
             thread={
               selected && !isMailDraftListId(selected.id) ? selected : null
             }
-            mailboxAccount={selectedMailboxAccount}
             threadActions={
               selected ? buildMessagePaneActions(selected) : undefined
             }
