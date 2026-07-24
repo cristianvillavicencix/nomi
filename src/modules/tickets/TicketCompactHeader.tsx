@@ -97,6 +97,7 @@ export const TicketCompactHeader = ({
             <TicketSubjectField
               key={`subject-${ticket.id}`}
               ticket={ticket}
+              onUpdated={onUpdated}
               className="min-w-0 flex-1 text-base font-semibold tracking-tight"
               inputClassName="text-base font-semibold"
             />

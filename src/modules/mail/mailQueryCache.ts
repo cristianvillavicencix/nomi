@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { MailThreadAction } from "./mailApi";
+import type { MailThreadsPageResult } from "./mailListPagination";
 import type { MailThread } from "./types";
 
 export function threadCountsTowardUnreadTotals(thread: MailThread): boolean {
@@ -17,17 +18,17 @@ export function patchMailThreadsInCache(
   threadId: number,
   patch: Partial<MailThread>,
 ) {
-  queryClient.setQueriesData<MailThread[]>(
+  queryClient.setQueriesData<MailThreadsPageResult>(
     { queryKey: ["mail_threads"] },
     (old) => {
       if (!old) return old;
       let changed = false;
-      const next = old.map((t) => {
+      const nextThreads = old.threads.map((t) => {
         if (t.id !== threadId) return t;
         changed = true;
         return { ...t, ...patch };
       });
-      return changed ? next : old;
+      return changed ? { ...old, threads: nextThreads } : old;
     },
   );
 }

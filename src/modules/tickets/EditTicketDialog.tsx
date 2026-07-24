@@ -9,6 +9,7 @@ import {
   useUpdate,
   type Identifier,
 } from "ra-core";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, X } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
@@ -55,6 +56,7 @@ import { requiresTicketStatusNote } from "@/modules/tickets/ticketStatusWorkflow
 import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import { CONTACT_STATUS_FILTER } from "@/modules/shared/relatedFilters";
 import type { Ticket } from "@/modules/types";
+import { patchTicketInQueryCache } from "@/modules/tickets/ticketsRealtimeCache";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -102,6 +104,7 @@ export const EditTicketDialog = ({
   const dataProvider = useDataProvider<CrmDataProvider>();
   const notify = useNotify();
   const refresh = useRefresh();
+  const queryClient = useQueryClient();
   const [update] = useUpdate();
   const [statusChangeRequest, setStatusChangeRequest] =
     useState<TicketStatusChangeRequest | null>(null);
@@ -163,6 +166,15 @@ export const EditTicketDialog = ({
       { returnPromise: true },
     );
 
+    patchTicketInQueryCache(queryClient, ticket.id, {
+      subject: values.subject.trim(),
+      priority: values.priority || "normal",
+      status: values.status || "open",
+      company_id: values.company_id,
+      contact_id: values.contact_id,
+      requester_email: requesterEmail,
+      requester_name: requesterName,
+    });
     refresh();
     onOpenChange(false);
     onSaved?.();

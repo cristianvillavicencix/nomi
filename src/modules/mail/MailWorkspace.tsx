@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNotify, useGetIdentity } from "ra-core";
 import { MailEmptyState } from "./MailEmptyState";
 import { MailThreadList } from "./MailThreadList";
+import { MailThreadListPagination } from "./MailThreadListPagination";
 import { MailMessagePane, type MailMessagePaneActions } from "./MailMessagePane";
 import type { MailComposeMode } from "./MailComposeDialog";
 import { useMailCompose } from "./MailComposeProvider";
@@ -45,6 +46,10 @@ import {
 import { useMailInboxUnreadCount } from "./useMailUnreadCount";
 import { useMailLabels } from "./useMailLabels";
 import { incrementalMailSyncRange } from "./mailSyncRange";
+import {
+  MAIL_THREADS_DEFAULT_PER_PAGE,
+  type MailThreadsPageResult,
+} from "./mailListPagination";
 import { applyOptimisticMailThreadAction } from "./mailQueryCache";
 import type { MailAccount, MailMessage, MailThread } from "./types";
 
@@ -69,21 +74,40 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const [listFilter, setListFilter] = useState<MailListFilter>("all");
   const [labelId, setLabelId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(MAIL_THREADS_DEFAULT_PER_PAGE);
   const [selected, setSelected] = useState<MailThread | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const { openCompose: openGlobalCompose } = useMailCompose();
   const [syncing, setSyncing] = useState(false);
   const [mobileShowThread, setMobileShowThread] = useState(false);
 
-  const { data: threads = [], isPending } = useMailThreads({
+  const { data: threadsPage, isPending } = useMailThreads({
     accountId: accountFilter,
     folder,
     listFilter,
     search,
     labelId,
+    page,
+    perPage,
   });
+  const threads = threadsPage?.threads ?? [];
+  const listPagination: MailThreadsPageResult =
+    threadsPage ?? {
+      threads: [],
+      total: 0,
+      page,
+      perPage,
+      hasNextPage: false,
+      hasPreviousPage: false,
+    };
   const { data: labels = [] } = useMailLabels(accountFilter);
   const { data: inboxUnreadCount = 0 } = useMailInboxUnreadCount(accountFilter);
+
+  useEffect(() => {
+    setPage(1);
+    setSelectedIds(new Set());
+  }, [accountFilter, folder, listFilter, labelId, search, perPage]);
 
   useEffect(() => {
     writeMailFolder(folder);
@@ -129,9 +153,18 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   };
 
   const removeThreadFromListCache = (threadId: number) => {
-    queryClient.setQueriesData<MailThread[]>(
+    queryClient.setQueriesData<MailThreadsPageResult>(
       { queryKey: ["mail_threads"] },
-      (old) => old?.filter((t) => t.id !== threadId) ?? old,
+      (old) => {
+        if (!old) return old;
+        const nextThreads = old.threads.filter((t) => t.id !== threadId);
+        if (nextThreads.length === old.threads.length) return old;
+        return {
+          ...old,
+          threads: nextThreads,
+          total: Math.max(0, old.total - 1),
+        };
+      },
     );
   };
 
@@ -499,6 +532,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
           setFolder(f);
           writeMailFolder(f);
           setListFilter("all");
+          setPage(1);
           setSelected(null);
           setMobileShowThread(false);
         }}
@@ -507,6 +541,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         onAccountFilterChange={(id) => {
           setAccountFilter(id);
           writeMailAccountFilter(id);
+          setPage(1);
           setSelected(null);
           setLabelId(null);
         }}
@@ -515,6 +550,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         onLabelChange={(id) => {
           setLabelId(id);
           setListFilter("all");
+          setPage(1);
         }}
         onCompose={() => openCompose("new")}
         inboxUnreadCount={inboxUnreadCount}
@@ -537,6 +573,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
               writeMailFolder(next);
               setListFilter("all");
               setLabelId(null);
+              setPage(1);
               setSelected(null);
               setMobileShowThread(false);
             }}
@@ -559,6 +596,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
                 v === "all" ? ("all" as const) : Number(v);
               setAccountFilter(next);
               writeMailAccountFilter(next);
+              setPage(1);
               setSelected(null);
               setLabelId(null);
               setMobileShowThread(false);
@@ -585,11 +623,15 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
             listFilter={listFilter}
             onListFilterChange={(next) => {
               setListFilter(next);
+              setPage(1);
               setSelected(null);
               setMobileShowThread(false);
             }}
             searchQuery={search}
-            onSearchQueryChange={setSearch}
+            onSearchQueryChange={(value) => {
+              setSearch(value);
+              setPage(1);
+            }}
             syncToolbar={{
               syncing,
               onSync: () => {
@@ -615,7 +657,9 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
             <span className="flex-1">
               {selectedIds.size > 0
                 ? `${selectedIds.size} selected`
-                : `${threads.length} conversation${threads.length === 1 ? "" : "s"}`}
+                : listPagination.total > 0
+                  ? `${listPagination.total} conversation${listPagination.total === 1 ? "" : "s"}`
+                  : "No conversations"}
             </span>
             {selectedIds.size > 0 ? (
               <div className="flex flex-wrap justify-end gap-1">
@@ -703,35 +747,45 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         {isPending ? (
           <p className="p-4 text-sm text-muted-foreground">Loading…</p>
         ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <MailThreadList
-              threads={threads}
-              selectedId={selected?.id ?? null}
-              selectedIds={selectedIds}
-              accounts={accounts}
-              showMailboxAvatar={accountFilter === "all"}
-              onToggleSelect={(id, on) => {
-                setSelectedIds((prev) => {
-                  const next = new Set(prev);
-                  if (on) next.add(id);
-                  else next.delete(id);
-                  return next;
-                });
-              }}
-              onSelect={(thread) => {
-                if (isMailDraftListId(thread.id)) {
-                  void openDraftFromList(thread);
-                  return;
-                }
-                const next = thread.is_unread ? { ...thread, is_unread: false } : thread;
-                setSelected(next);
-                setMobileShowThread(true);
-                if (thread.is_unread) {
-                  void runThreadAction(thread, "mark_read");
-                }
+          <>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <MailThreadList
+                threads={threads}
+                selectedId={selected?.id ?? null}
+                selectedIds={selectedIds}
+                accounts={accounts}
+                showMailboxAvatar={accountFilter === "all"}
+                onToggleSelect={(id, on) => {
+                  setSelectedIds((prev) => {
+                    const next = new Set(prev);
+                    if (on) next.add(id);
+                    else next.delete(id);
+                    return next;
+                  });
+                }}
+                onSelect={(thread) => {
+                  if (isMailDraftListId(thread.id)) {
+                    void openDraftFromList(thread);
+                    return;
+                  }
+                  const next = thread.is_unread ? { ...thread, is_unread: false } : thread;
+                  setSelected(next);
+                  setMobileShowThread(true);
+                  if (thread.is_unread) {
+                    void runThreadAction(thread, "mark_read");
+                  }
+                }}
+              />
+            </div>
+            <MailThreadListPagination
+              result={listPagination}
+              onPageChange={setPage}
+              onPerPageChange={(next) => {
+                setPerPage(next);
+                setPage(1);
               }}
             />
-          </div>
+          </>
         )}
       </div>
 

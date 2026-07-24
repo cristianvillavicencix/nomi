@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type { TicketMessage } from "@/modules/types";
+import type { TicketMessage, Ticket } from "@/modules/types";
 
 type MessageListCache = {
   data: TicketMessage[];
@@ -70,6 +70,58 @@ export const appendTicketMessageToCache = (
       },
     },
     (old) => mergeMessageIntoList(old, message),
+  );
+};
+
+type TicketListCache = {
+  data?: Ticket[];
+  total?: number;
+};
+
+export const patchTicketInQueryCache = (
+  queryClient: QueryClient,
+  ticketId: string | number,
+  patch: Partial<Ticket>,
+) => {
+  const id = String(ticketId);
+
+  queryClient.setQueriesData<Ticket>(
+    {
+      queryKey: ["tickets", "getOne"],
+      predicate: (query) => {
+        const params = query.queryKey[2] as { id?: string } | undefined;
+        return params?.id === id;
+      },
+    },
+    (old) => (old ? { ...old, ...patch } : old),
+  );
+
+  const patchListRows = (rows: Ticket[] | undefined) => {
+    if (!rows?.length) return { rows, changed: false };
+    let changed = false;
+    const next = rows.map((row) => {
+      if (String(row.id) !== id) return row;
+      changed = true;
+      return { ...row, ...patch };
+    });
+    return { rows: changed ? next : rows, changed };
+  };
+
+  queryClient.setQueriesData<TicketListCache>(
+    { queryKey: ["tickets", "getList"] },
+    (old) => {
+      if (!old?.data) return old;
+      const { rows, changed } = patchListRows(old.data);
+      return changed ? { ...old, data: rows } : old;
+    },
+  );
+
+  queryClient.setQueriesData<Ticket[]>(
+    { queryKey: ["tickets", "getMany"] },
+    (old) => {
+      const { rows, changed } = patchListRows(old);
+      return changed ? rows : old;
+    },
   );
 };
 

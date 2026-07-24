@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useNotify, useUpdate } from "ra-core";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { Ticket } from "@/modules/types";
+import { patchTicketInQueryCache } from "@/modules/tickets/ticketsRealtimeCache";
 
 type TicketSubjectFieldProps = {
   ticket: Ticket;
   editable?: boolean;
   className?: string;
   inputClassName?: string;
+  onUpdated?: () => void;
 };
 
 export const TicketSubjectField = ({
@@ -16,16 +19,29 @@ export const TicketSubjectField = ({
   editable = true,
   className,
   inputClassName,
+  onUpdated,
 }: TicketSubjectFieldProps) => {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(ticket.subject ?? "");
+  const [displaySubject, setDisplaySubject] = useState<string | null>(null);
   const [update, { isPending }] = useUpdate();
   const notify = useNotify();
+  const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
+  const resolvedSubject = displaySubject ?? ticket.subject ?? "";
 
   useEffect(() => {
-    setValue(ticket.subject ?? "");
-  }, [ticket.subject]);
+    setValue(resolvedSubject);
+  }, [resolvedSubject]);
+
+  useEffect(() => {
+    if (
+      displaySubject != null &&
+      displaySubject === (ticket.subject ?? "").trim()
+    ) {
+      setDisplaySubject(null);
+    }
+  }, [displaySubject, ticket.subject]);
 
   useEffect(() => {
     if (editing) {
@@ -35,7 +51,7 @@ export const TicketSubjectField = ({
   }, [editing]);
 
   const cancel = () => {
-    setValue(ticket.subject ?? "");
+    setValue(resolvedSubject);
     setEditing(false);
   };
 
@@ -43,21 +59,31 @@ export const TicketSubjectField = ({
     const next = String(value ?? "").trim();
     if (!next) {
       notify("Subject cannot be empty", { type: "warning" });
-      setValue(ticket.subject ?? "");
+      setValue(resolvedSubject);
       setEditing(false);
       return;
     }
-    if (next === (ticket.subject ?? "")) {
+    if (next === resolvedSubject.trim()) {
       setEditing(false);
       return;
     }
+
+    setDisplaySubject(next);
+    patchTicketInQueryCache(queryClient, ticket.id, { subject: next });
 
     update(
       "tickets",
       { id: ticket.id, data: { subject: next }, previousData: ticket },
       {
-        onSuccess: () => setEditing(false),
+        onSuccess: () => {
+          setEditing(false);
+          onUpdated?.();
+        },
         onError: () => {
+          setDisplaySubject(null);
+          patchTicketInQueryCache(queryClient, ticket.id, {
+            subject: ticket.subject ?? "",
+          });
           notify("Could not update subject", { type: "error" });
           setValue(ticket.subject ?? "");
           setEditing(false);
@@ -74,7 +100,7 @@ export const TicketSubjectField = ({
           className,
         )}
       >
-        {ticket.subject || "Untitled ticket"}
+        {resolvedSubject || "Untitled ticket"}
       </span>
     );
   }
@@ -120,7 +146,7 @@ export const TicketSubjectField = ({
         className,
       )}
     >
-      {ticket.subject || "Untitled ticket"}
+      {resolvedSubject || "Untitled ticket"}
     </button>
   );
 };
