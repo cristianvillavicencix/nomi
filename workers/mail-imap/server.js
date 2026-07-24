@@ -91,7 +91,10 @@ async function createWorkingTransporter({ host, preferredPort, user, pass }) {
   throw new Error(
     `SMTP connection failed (tried ${smtpPortCandidates(preferredPort)
       .map((p) => `${host}:${p}`)
-      .join(", ")}). ${errors.join(" | ")}`,
+      .join(", ")}). ${errors.join(" | ")}` +
+      (errors.some((e) => /timeout|ETIMEDOUT|ECONNREFUSED|ENETUNREACH/i.test(e))
+        ? " If this worker runs on Render free tier, outbound SMTP (465/587) is blocked — deploy to Cloud Run (see workers/mail-imap/CLOUD_RUN.md) or upgrade Render to a paid plan."
+        : ""),
   );
 }
 

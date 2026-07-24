@@ -30,7 +30,13 @@ npm install
 SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npm start
 ```
 
-Tunnel or deploy (Cloud Run), then set on Supabase Edge:
+## Production deploy
+
+**Do not use Render free tier** — it blocks outbound SMTP (ports 465/587). IMAP sync may work; send will fail with connection timeout.
+
+Preferred: [Cloud Run](./CLOUD_RUN.md) (same pattern as `workers/web-audit`).
+
+Tunnel or deploy, then set on Supabase Edge:
 
 ```bash
 supabase secrets set MAIL_IMAP_WORKER_URL=https://your-worker.example \
