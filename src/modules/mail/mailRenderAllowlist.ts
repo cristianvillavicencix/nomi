@@ -25,6 +25,11 @@ const EXACT_STYLESHEET_HOSTS = new Set([
   "stackpath.bootstrapcdn.com",
   "usebootstrap.com",
   "app-rsrc.getbee.io",
+  "cdn.hostinger.com",
+  "assets.hostinger.com",
+  "static.hostinger.com",
+  "cdn.sendgrid.net",
+  "email.sendgrid.net",
 ]);
 
 /** Hostname must end with one of these suffixes. */
@@ -37,6 +42,8 @@ const STYLESHEET_HOST_SUFFIXES = [
   ".marketingcloudapis.com",
   ".r20.rs6.net",
   ".emltrk.com",
+  ".hostinger.com",
+  ".sendgrid.net",
 ];
 
 function normalizeStylesheetHref(href: string): string {

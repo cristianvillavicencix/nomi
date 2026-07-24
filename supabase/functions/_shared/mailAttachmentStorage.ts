@@ -31,11 +31,13 @@ async function attachmentAlreadyStored(
 ): Promise<boolean> {
   const { data } = await supabaseAdmin
     .from("mail_attachments")
-    .select("id")
+    .select("id, storage_path")
     .eq("message_id", messageId)
     .eq("provider_attachment_id", providerAttachmentId)
     .maybeSingle();
-  return Boolean(data?.id);
+  if (!data?.id) return false;
+  if (!data.storage_path?.trim()) return false;
+  return storageObjectExists(data.storage_path);
 }
 
 async function inlineAlreadyStored(
@@ -46,11 +48,20 @@ async function inlineAlreadyStored(
   if (!normalized) return false;
   const { data } = await supabaseAdmin
     .from("mail_attachments")
-    .select("id")
+    .select("id, storage_path")
     .eq("message_id", messageId)
     .eq("content_id", normalized)
     .maybeSingle();
-  return Boolean(data?.id);
+  if (!data?.id) return false;
+  if (!data.storage_path?.trim()) return false;
+  return storageObjectExists(data.storage_path);
+}
+
+async function storageObjectExists(storagePath: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin.storage
+    .from(MAIL_ATTACHMENTS_BUCKET)
+    .download(storagePath);
+  return !error && Boolean(data);
 }
 
 export async function storeMailAttachment(params: {

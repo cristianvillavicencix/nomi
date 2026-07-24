@@ -9,6 +9,7 @@ import {
   loadMailAccount,
   type MailAccountRow,
 } from "../_shared/mailAccount.ts";
+import { readWorkerErrorResponse } from "../_shared/formatWorkerError.ts";
 
 const json = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -101,15 +102,7 @@ async function applyImapViaWorker(
     }),
   });
   if (!res.ok) {
-    const text = await res.text();
-    let detail = text || "IMAP worker action failed";
-    try {
-      const parsed = JSON.parse(text) as { error?: string };
-      if (parsed.error) detail = parsed.error;
-    } catch {
-      /* keep text */
-    }
-    throw new Error(detail);
+    throw new Error(await readWorkerErrorResponse(res));
   }
 }
 

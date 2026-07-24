@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { formatWorkerError, readWorkerErrorResponse } from "../_shared/formatWorkerError.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
@@ -471,8 +472,7 @@ async function syncImap(
     }),
   });
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || "IMAP worker sync failed");
+    throw new Error(await readWorkerErrorResponse(res));
   }
   const payload = await res.json().catch(() => ({}));
   return {
@@ -570,7 +570,7 @@ async function runSync(accountId: number, opts: SyncOptions) {
       since: opts.since,
     };
   } catch (e) {
-    const message =
+    const rawMessage =
       e instanceof Error
         ? e.message
         : e &&
@@ -579,6 +579,7 @@ async function runSync(accountId: number, opts: SyncOptions) {
             typeof (e as { message: unknown }).message === "string"
           ? (e as { message: string }).message
           : "Sync failed";
+    const message = formatWorkerError(rawMessage);
     await supabaseAdmin
       .from("mail_accounts")
       .update({
@@ -678,7 +679,7 @@ Deno.serve(async (req) => {
     const result = await runSync(accountId, opts);
     return json(result);
   } catch (e) {
-    const message =
+    const rawMessage =
       e instanceof Error
         ? e.message
         : e &&
@@ -687,6 +688,6 @@ Deno.serve(async (req) => {
             typeof (e as { message: unknown }).message === "string"
           ? (e as { message: string }).message
           : "Sync failed";
-    return json({ error: message }, 500);
+    return json({ error: formatWorkerError(rawMessage) }, 500);
   }
 });

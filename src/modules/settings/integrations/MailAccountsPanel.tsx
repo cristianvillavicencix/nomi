@@ -29,6 +29,7 @@ import {
   resolveMailBrand,
 } from "@/modules/mail/mailProviderBrand";
 import { MailAccountShareDialog } from "@/modules/mail/MailAccountShareDialog";
+import { formatMailAccountError } from "@/modules/mail/formatMailAccountError";
 
 function SyncHealthPanel({ orgAccounts }: { orgAccounts: MailAccount[] }) {
   const { data: jobs = [] } = useQuery({
@@ -63,7 +64,7 @@ function SyncHealthPanel({ orgAccounts }: { orgAccounts: MailAccount[] }) {
         <ul className="space-y-1 text-sm">
           {errorAccounts.map((a) => (
             <li key={a.id} className="text-destructive">
-              {a.email}: {a.error_message || a.status}
+              {a.email}: {formatMailAccountError(a.error_message) || a.status}
             </li>
           ))}
         </ul>
@@ -87,7 +88,9 @@ function SyncHealthPanel({ orgAccounts }: { orgAccounts: MailAccount[] }) {
                 {new Date(job.created_at).toLocaleString()}
               </span>
               {job.error_message ? (
-                <span className="w-full text-destructive">{job.error_message}</span>
+                <span className="w-full text-destructive">
+                  {formatMailAccountError(job.error_message)}
+                </span>
               ) : null}
             </li>
           ))}
@@ -195,7 +198,9 @@ function AccountRows({
                     ? `· Synced ${new Date(account.last_sync_at).toLocaleString()}`
                     : null}
                   {account.error_message ? (
-                    <span className="text-destructive">{account.error_message}</span>
+                    <span className="text-destructive">
+                      {formatMailAccountError(account.error_message)}
+                    </span>
                   ) : null}
                 </div>
               </div>
@@ -222,7 +227,7 @@ function AccountRows({
                       <>
                     <DropdownMenuItem onClick={() => onRequestSync(account)}>
                       <ArrowsClockwise className="size-4" />
-                      Sync now…
+                      {account.status === "error" ? "Retry sync…" : "Sync now…"}
                     </DropdownMenuItem>
                     {(account.status === "needs_reconnect" ||
                       account.status === "error") &&

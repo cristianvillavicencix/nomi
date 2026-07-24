@@ -14,6 +14,10 @@ import {
   decodeBase64ToBytes,
   storeMailAttachment,
 } from "../_shared/mailAttachmentStorage.ts";
+import {
+  formatWorkerError,
+  readWorkerErrorResponse,
+} from "../_shared/formatWorkerError.ts";
 
 const json = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -390,15 +394,15 @@ Deno.serve(async (req) => {
         }),
       });
       if (!res.ok) {
-        const raw = await res.text();
-        let detail = raw || "IMAP/SMTP send failed";
-        try {
-          const parsed = JSON.parse(raw) as { error?: string };
-          if (parsed.error) detail = parsed.error;
-        } catch {
-          /* keep raw */
-        }
-        throw new Error(detail);
+        throw new Error(await readWorkerErrorResponse(res));
+      }
+      const imapPayload = (await res.json().catch(() => ({}))) as {
+        message_id?: string;
+      };
+      if (imapPayload.message_id) {
+        providerMessageId = String(imapPayload.message_id)
+          .replace(/^<|>$/g, "")
+          .trim();
       }
     } else {
       throw new Error("Unsupported provider");
@@ -448,10 +452,25 @@ Deno.serve(async (req) => {
         .eq("owner_member_id", auth.member.id);
     }
 
+    if (account.provider === "imap") {
+      await supabaseAdmin
+        .from("mail_accounts")
+        .update({
+          status: "connected",
+          error_message: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", account.id);
+    }
+
     return json({ ok: true, provider_message_id: providerMessageId });
   } catch (e) {
     return json(
-      { error: e instanceof Error ? e.message : "Send failed" },
+      {
+        error: formatWorkerError(
+          e instanceof Error ? e.message : "Send failed",
+        ),
+      },
       500,
     );
   }

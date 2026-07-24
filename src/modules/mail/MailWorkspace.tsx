@@ -309,7 +309,11 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const openCompose = (mode: MailComposeMode, contextThread?: MailThread) => {
     const thread = contextThread ?? selected;
     if (mode === "new") {
-      openGlobalCompose({ mode: "new" });
+      openGlobalCompose({
+        mode: "new",
+        initialAccountId:
+          accountFilter !== "all" ? accountFilter : undefined,
+      });
       return;
     }
     if (!thread || isMailDraftListId(thread.id)) {

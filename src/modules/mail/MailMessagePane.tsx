@@ -67,7 +67,13 @@ function AttachmentRow({ file }: { file: MailAttachment }) {
       .from("mail-attachments")
       .createSignedUrl(file.storage_path, 3600);
     if (error || !data?.signedUrl) {
-      notify(error?.message ?? "Could not open attachment", { type: "error" });
+      const message = error?.message ?? "Could not open attachment";
+      notify(
+        /not found/i.test(message)
+          ? "Attachment file missing. Try syncing this mailbox again."
+          : message,
+        { type: "error" },
+      );
       return;
     }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
@@ -251,15 +257,24 @@ function MessageHtmlBody({
   scrollPaneRef: RefObject<HTMLDivElement | null>;
 }) {
   const resolvedHtml = useResolvedMailHtml(message.body_html, attachments);
-  if (!resolvedHtml) return null;
-  return (
-    <MailHtmlBody
-      html={resolvedHtml}
-      variant="reader"
-      layout="auto"
-      scrollPaneRef={scrollPaneRef}
-    />
-  );
+  if (resolvedHtml) {
+    return (
+      <MailHtmlBody
+        html={resolvedHtml}
+        variant="reader"
+        layout="auto"
+        scrollPaneRef={scrollPaneRef}
+      />
+    );
+  }
+  if (message.body_text?.trim()) {
+    return (
+      <pre className="whitespace-pre-wrap px-3 py-3 font-sans text-sm leading-relaxed text-neutral-900 md:px-4">
+        {message.body_text}
+      </pre>
+    );
+  }
+  return null;
 }
 
 export function MailMessagePane({

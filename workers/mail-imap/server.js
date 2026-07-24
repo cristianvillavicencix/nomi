@@ -107,6 +107,18 @@ function sanitizeAttachmentFilename(name) {
   );
 }
 
+function normalizeRfcMessageId(value) {
+  return String(value || "").replace(/^<|>$/g, "").trim();
+}
+
+async function storageObjectExists(sb, storagePath) {
+  if (!storagePath?.trim()) return false;
+  const { data, error } = await sb.storage
+    .from(MAIL_ATTACHMENTS_BUCKET)
+    .download(storagePath);
+  return !error && Boolean(data);
+}
+
 async function syncImapMessageAttachments(sb, account, messageId, attachments) {
   if (!messageId || !attachments?.length) return;
 
@@ -133,11 +145,19 @@ async function syncImapMessageAttachments(sb, account, messageId, attachments) {
 
     const { data: existing } = await sb
       .from("mail_attachments")
-      .select("id")
+      .select("id, storage_path")
       .eq("message_id", messageId)
       .eq("provider_attachment_id", providerId)
       .maybeSingle();
-    if (existing?.id) continue;
+    if (existing?.id) {
+      if (
+        existing.storage_path &&
+        (await storageObjectExists(sb, existing.storage_path))
+      ) {
+        continue;
+      }
+      await sb.from("mail_attachments").delete().eq("id", existing.id);
+    }
 
     const storagePath = `${account.org_id}/${account.id}/${messageId}/${providerId}-${filename}`;
 
@@ -186,12 +206,67 @@ function isFileAttachment(att) {
   return !isInlineImageAttachment(att);
 }
 
+async function findExistingMessage(sb, accountId, providerMessageId) {
+  const normalized = normalizeRfcMessageId(providerMessageId);
+  const candidates = [
+    providerMessageId,
+    normalized,
+    normalized ? `<${normalized}>` : null,
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    const { data } = await sb
+      .from("mail_messages")
+      .select("id, provider_message_id")
+      .eq("account_id", accountId)
+      .eq("provider_message_id", candidate)
+      .maybeSingle();
+    if (data?.id) return data;
+  }
+  return null;
+}
+
+async function findDuplicateOutboundMessage(
+  sb,
+  account,
+  { subject, sentAt, fromEmail, providerMessageId },
+) {
+  const existing = await findExistingMessage(sb, account.id, providerMessageId);
+  if (existing?.id) return existing;
+  if (!subject || !fromEmail) return null;
+
+  const sent = new Date(sentAt);
+  if (Number.isNaN(sent.getTime())) return null;
+  const windowStart = new Date(sent.getTime() - 2 * 60 * 1000).toISOString();
+  const windowEnd = new Date(sent.getTime() + 2 * 60 * 1000).toISOString();
+
+  const { data: candidates } = await sb
+    .from("mail_messages")
+    .select("id, provider_message_id")
+    .eq("account_id", account.id)
+    .eq("direction", "outbound")
+    .eq("from_email", fromEmail)
+    .eq("subject", subject)
+    .gte("sent_at", windowStart)
+    .lte("sent_at", windowEnd)
+    .order("id", { ascending: false })
+    .limit(5);
+
+  const normalized = normalizeRfcMessageId(providerMessageId);
+  for (const row of candidates ?? []) {
+    const pid = String(row.provider_message_id || "");
+    if (pid.startsWith("local-")) return row;
+    if (normalized && normalizeRfcMessageId(pid) === normalized) return row;
+  }
+  return null;
+}
+
 async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
   const fromEmail = (parsed.from?.value?.[0]?.address || "").toLowerCase() || null;
   const fromName = parsed.from?.value?.[0]?.name || null;
   const toEmails = (parsed.to?.value || []).map((a) => a.address?.toLowerCase()).filter(Boolean);
   const ccEmails = (parsed.cc?.value || []).map((a) => a.address?.toLowerCase()).filter(Boolean);
   const providerMessageId = String(parsed.messageId || `imap-${account.id}-${mailbox}-${rawUid}`);
+  const normalizedProviderMessageId = normalizeRfcMessageId(providerMessageId);
   const providerThreadId = String(
     parsed.inReplyTo || parsed.references?.[0] || providerMessageId,
   );
@@ -245,12 +320,15 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
     threadId = inserted.id;
   }
 
-  const { data: existingMsg } = await sb
-    .from("mail_messages")
-    .select("id")
-    .eq("account_id", account.id)
-    .eq("provider_message_id", providerMessageId)
-    .maybeSingle();
+  let existingMsg = await findExistingMessage(sb, account.id, providerMessageId);
+  if (!existingMsg && direction === "outbound") {
+    existingMsg = await findDuplicateOutboundMessage(sb, account, {
+      subject,
+      sentAt,
+      fromEmail,
+      providerMessageId,
+    });
+  }
 
   const allAttachments = parsed.attachments || [];
   const inlineAttachments = allAttachments.filter(isInlineImageAttachment);
@@ -268,7 +346,7 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
         thread_id: threadId,
         account_id: account.id,
         org_id: account.org_id,
-        provider_message_id: providerMessageId,
+        provider_message_id: normalizedProviderMessageId || providerMessageId,
         direction,
         from_email: fromEmail,
         from_name: fromName,
@@ -298,6 +376,22 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
       .eq("id", threadId);
   } else {
     messageId = existingMsg.id;
+    const bodyHtml = parsed.html || null;
+    await sb
+      .from("mail_messages")
+      .update({
+        provider_message_id: normalizedProviderMessageId || providerMessageId,
+        body_html: bodyHtml ?? undefined,
+        body_text: parsed.text || null,
+        has_attachments: hasAttachments,
+        sent_at: sentAt,
+        raw_headers: {
+          "Message-ID": parsed.messageId || providerMessageId,
+          imap_uid: rawUid,
+          imap_mailbox: mailbox,
+        },
+      })
+      .eq("id", messageId);
   }
 
   if (syncAttachments.length > 0 && messageId) {
@@ -436,8 +530,9 @@ async function sendAccount(body) {
     pass: password,
   });
 
+  let sendResult = { ok: true, smtp_port: smtpPort, message_id: undefined };
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: account.email,
       to: (body.to || []).join(", "),
       cc: (body.cc || []).join(", ") || undefined,
@@ -454,6 +549,13 @@ async function sendAccount(body) {
             }))
         : undefined,
     });
+    sendResult = {
+      ok: true,
+      smtp_port: smtpPort,
+      message_id: info.messageId
+        ? normalizeRfcMessageId(info.messageId)
+        : undefined,
+    };
   } finally {
     try {
       transporter.close();
@@ -473,7 +575,7 @@ async function sendAccount(body) {
       .eq("id", account.id);
   }
 
-  return { ok: true, smtp_port: smtpPort };
+  return sendResult;
 }
 
 const TRASH_FOLDER_CANDIDATES = [

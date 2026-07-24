@@ -266,7 +266,9 @@ export function MailComposeDialog({
   const editorRef = useRef<HTMLDivElement | null>(null);
   const editorShellRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const sendable = accounts.filter((a) => a.status === "connected");
+  const sendable = accounts.filter(
+    (a) => a.status === "connected" || a.status === "error",
+  );
   const [accountId, setAccountId] = useState("");
   const [to, setTo] = useState<string[]>([]);
   const [cc, setCc] = useState<string[]>([]);
@@ -485,7 +487,9 @@ export function MailComposeDialog({
       notify(asDraft ? "Draft saved" : "Message sent", { type: "success" });
       void queryClient.invalidateQueries({ queryKey: ["mail_threads"] });
       void queryClient.invalidateQueries({ queryKey: ["mail_messages"] });
+      void queryClient.invalidateQueries({ queryKey: ["mail_attachments"] });
       void queryClient.invalidateQueries({ queryKey: ["mail_unread_count"] });
+      void queryClient.invalidateQueries({ queryKey: ["mail_accounts_safe"] });
       if (!asDraft) {
         onOpenChange(false);
       }
@@ -510,11 +514,18 @@ export function MailComposeDialog({
                 <SelectValue placeholder="Select mailbox" />
               </SelectTrigger>
               <SelectContent>
-                {sendable.map((account) => (
-                  <SelectItem key={account.id} value={String(account.id)}>
-                    {account.email}
-                  </SelectItem>
-                ))}
+                {sendable.length === 0 ? (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                    No sendable mailboxes. Fix sync errors in Settings → Mailboxes.
+                  </div>
+                ) : (
+                  sendable.map((account) => (
+                    <SelectItem key={account.id} value={String(account.id)}>
+                      {account.email}
+                      {account.status !== "connected" ? " (Sync issue)" : ""}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
