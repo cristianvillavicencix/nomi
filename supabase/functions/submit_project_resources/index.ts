@@ -1,10 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { decode } from "npm:base64-arraybuffer";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
-import {
-  buildStorageObjectReference,
-  createStorageSignedUrl,
-} from "../_shared/storageObjectUrl.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 
@@ -95,24 +91,11 @@ const uploadResourceFile = async (
     return null;
   }
 
-  const signed = await createStorageSignedUrl(
-    supabaseAdmin,
-    LEGACY_BUCKET,
-    legacyPath,
-    3600,
-  );
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const reference = buildStorageObjectReference(
-    supabaseUrl,
-    LEGACY_BUCKET,
-    legacyPath,
-  );
-
   return {
     title: name,
     type: mime,
     path: legacyPath,
-    src: signed ?? reference,
+    src: "",
     bucket: LEGACY_BUCKET,
   };
 };

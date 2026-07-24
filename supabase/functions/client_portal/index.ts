@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
-import { createStorageSignedUrl } from "../_shared/storageObjectUrl.ts";
+import { createFileAccessToken } from "../_shared/fileAccessToken.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { loadPortalSession } from "../_shared/portalSession.ts";
@@ -64,7 +64,7 @@ const parseDomainFromUrl = (siteUrl?: string | null) => {
   }
 };
 
-const signResourceUrls = async (file: ResourceFile) => {
+const signResourceUrls = async (file: ResourceFile, orgId?: number | null) => {
   const path = file.path?.trim();
   const mimeType = file.type?.trim() || "application/octet-stream";
   const fileName = file.title?.trim() || "file";
@@ -83,30 +83,28 @@ const signResourceUrls = async (file: ResourceFile) => {
   }
 
   const bucket = file.bucket?.trim() || "project-files";
-  if (bucket === "attachments") {
-    const signed = await createStorageSignedUrl(
-      supabaseAdmin,
-      "attachments",
-      path,
-      3600,
-    );
-    const fallback = file.src?.trim() || null;
-    const downloadUrl = signed ?? fallback;
+  try {
+    const { url: downloadUrl } = await createFileAccessToken({
+      bucket,
+      storagePath: path,
+      filename: fileName,
+      mimeType,
+      expiresInSec: 3600,
+      purpose: "client_portal",
+      orgId: orgId ?? null,
+    });
+    const previewUrl = isImage
+      ? `${downloadUrl}?disposition=inline`
+      : null;
     return {
       file_name: fileName,
       mime_type: mimeType,
       is_image: isImage,
       download_url: downloadUrl,
-      preview_url: downloadUrl,
+      preview_url: previewUrl,
       size_bytes: file.size ?? null,
     };
-  }
-
-  const { data, error } = await supabaseAdmin.storage
-    .from(bucket)
-    .createSignedUrl(path, 3600);
-
-  if (error || !data?.signedUrl) {
+  } catch {
     const fallback = file.src?.trim() || null;
     return {
       file_name: fileName,
@@ -117,21 +115,16 @@ const signResourceUrls = async (file: ResourceFile) => {
       size_bytes: file.size ?? null,
     };
   }
-
-  return {
-    file_name: fileName,
-    mime_type: mimeType,
-    is_image: isImage,
-    download_url: data.signedUrl,
-    preview_url: isImage ? data.signedUrl : null,
-    size_bytes: file.size ?? null,
-  };
 };
 
 const sanitizePortalResource = async (row: Record<string, unknown>) => {
   const file =
     row.file && typeof row.file === "object" ? (row.file as ResourceFile) : {};
-  const signed = await signResourceUrls(file);
+  const orgId =
+    typeof row.org_id === "number"
+      ? row.org_id
+      : Number(row.org_id) || null;
+  const signed = await signResourceUrls(file, orgId);
   return {
     id: row.id,
     category: row.category,
@@ -348,7 +341,10 @@ Deno.serve(
 
         const resources = await Promise.all(
           clientResources.map((row) =>
-            sanitizePortalResource(row as Record<string, unknown>),
+            sanitizePortalResource({
+              ...(row as Record<string, unknown>),
+              org_id: account.org_id,
+            }),
           ),
         );
 

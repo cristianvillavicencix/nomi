@@ -152,6 +152,11 @@ Located in `supabase/functions/`:
 - User management (creating/updating users, account disabling)
 - Inbound email webhook processing
 
+#### Private file downloads
+
+- **CRM UI (authenticated):** use `src/lib/supabase/privateStorageFile.ts` — fetch via signed URL in the background, then open/download with `blob:` URLs. Never `window.open(signedUrl)`.
+- **Emails / portal / public links:** create rows in `storage_file_access_tokens` via `supabase/functions/_shared/fileAccessToken.ts` and share `https://www.nomicrm.com/files/{token}` (Vercel rewrite → `file_download` edge function). Do **not** put Supabase Storage signed URLs in outbound email bodies.
+
 #### Data Providers
 
 Two data providers are available:

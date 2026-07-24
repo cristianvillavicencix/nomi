@@ -68,34 +68,6 @@ export const resolveStorageDisplayUrl = async (
   reference: string | null | undefined,
   options?: { path?: string; bucket?: string; defaultBucket?: string; expiresIn?: number },
 ): Promise<string | null> => {
-  if (!reference?.trim() && !options?.path) return null;
-
-  const parsed =
-  (options?.path && options?.bucket
-    ? { bucket: options.bucket, path: options.path }
-    : null) ??
-    (reference ? parseStorageObjectReference(reference, options?.defaultBucket) : null) ??
-    (options?.path
-      ? parseStorageObjectReference(options.path, options?.defaultBucket ?? options?.bucket)
-      : null);
-
-  if (parsed) {
-    return createStorageSignedUrl(
-      parsed.bucket,
-      parsed.path,
-      options?.expiresIn ?? 3600,
-    );
-  }
-
-  const trimmed = reference?.trim() ?? "";
-  if (
-    trimmed.startsWith("http://") ||
-    trimmed.startsWith("https://") ||
-    trimmed.startsWith("blob:") ||
-    trimmed.startsWith("data:")
-  ) {
-    return trimmed;
-  }
-
-  return null;
+  const { resolveDisplayUrlFromReference } = await import("./privateStorageFile");
+  return resolveDisplayUrlFromReference(reference, options);
 };

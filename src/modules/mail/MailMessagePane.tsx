@@ -16,7 +16,9 @@ import {
 import { IconButtonWithTooltip } from "@/components/admin/icon-button-with-tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNotify } from "ra-core";
-import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+import {
+  openPrivateStorageFile,
+} from "@/lib/supabase/privateStorageFile";
 import { isMailTicketBridgeEnabled } from "@/lib/featureFlags";
 import { cn } from "@/lib/utils";
 import { useMailAttachments, useMailMessages } from "./useMailThreads";
@@ -62,20 +64,17 @@ function AttachmentRow({ file }: { file: MailAttachment }) {
       );
       return;
     }
-    const { data, error } = await supabase.storage
-      .from("mail-attachments")
-      .createSignedUrl(file.storage_path, 3600);
-    if (error || !data?.signedUrl) {
-      const message = error?.message ?? "Could not open attachment";
-      notify(
-        /not found|access denied|permission/i.test(message)
-          ? "Could not open this attachment. Try syncing the mailbox again."
-          : message,
-        { type: "error" },
-      );
-      return;
+    try {
+      await openPrivateStorageFile({
+        bucket: "mail-attachments",
+        path: file.storage_path,
+        filename: file.filename,
+      });
+    } catch {
+      notify("Could not open this attachment. Try syncing the mailbox again.", {
+        type: "error",
+      });
     }
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   };
 
   return (

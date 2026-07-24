@@ -47,7 +47,11 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!assets/|icons/|manifest\\.json|favicon|sw\\.js|workbox-|api/).*)",
+      "source": "/files/:token",
+      "destination": "https://qjglkywmqwqdoaboakao.supabase.co/functions/v1/file_download?token=:token"
+    },
+    {
+      "source": "/((?!assets/|icons/|manifest\\.json|favicon|sw\\.js|workbox-|api/|files/).*)",
       "destination": "/index.html"
     }
   ]

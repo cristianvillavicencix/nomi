@@ -1,4 +1,5 @@
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+import { downloadPrivateStorageFile } from "@/lib/supabase/privateStorageFile";
 import {
   buildMessagingAttachmentPathOutbound,
   isLegacyPublicMediaUrl,
@@ -58,24 +59,18 @@ export const getMediaFileName = (urlOrPath: string) => {
 
 export const downloadMediaUrl = async (urlOrPath: string) => {
   const fileName = getMediaFileName(urlOrPath);
-  const resolvedUrl = isLegacyPublicMediaUrl(urlOrPath)
-    ? urlOrPath
-    : await createSignedMediaUrl(urlOrPath);
-  try {
-    const response = await fetch(resolvedUrl);
-    if (!response.ok) throw new Error("Download failed");
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(objectUrl);
-  } catch {
-    window.open(resolvedUrl, "_blank", "noopener,noreferrer");
+  if (isLegacyPublicMediaUrl(urlOrPath)) {
+    await downloadPrivateStorageFile({
+      reference: urlOrPath,
+      filename: fileName,
+    });
+    return;
   }
+  await downloadPrivateStorageFile({
+    bucket: MESSAGING_ATTACHMENTS_BUCKET,
+    path: urlOrPath,
+    filename: fileName,
+  });
 };
 
 export const isImageMediaUrl = (urlOrPath: string) =>

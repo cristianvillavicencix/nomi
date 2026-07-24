@@ -6,7 +6,7 @@ import {
 } from "./ticketInvoiceFlow.ts";
 import { buildTicketDeliveryEmailHtml } from "./ticketEmailTemplates.ts";
 import { loadCombinedInvoiceTicketIds } from "./combinedTicketInvoiceFlow.ts";
-import { createStorageSignedUrl } from "./storageObjectUrl.ts";
+import { createPublicFileLinksForStoragePaths } from "./fileAccessToken.ts";
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 
 const buildMessageId = (ticketId: number) =>
@@ -59,23 +59,38 @@ type DeliveryFile = {
   sort_order?: number | null;
 };
 
-async function buildDownloadLinks(files: DeliveryFile[]) {
-  const links: Array<{ name: string; url: string }> = [];
-  for (const file of files) {
-    const path = file.path?.trim();
-    const name = file.title?.trim() || path?.split("/").pop() || "file";
-    if (path) {
-      const signed = await createStorageSignedUrl(
-        supabaseAdmin,
-        "attachments",
+async function buildDownloadLinks(files: DeliveryFile[], orgId?: number) {
+  const storageFiles = files
+    .map((file) => {
+      const path = file.path?.trim();
+      const name = file.title?.trim() || path?.split("/").pop() || "file";
+      if (!path) return null;
+      return {
+        bucket: "attachments",
         path,
-        DOWNLOAD_LINK_EXPIRES_SEC,
-      );
-      if (signed) {
-        links.push({ name, url: signed });
-        continue;
-      }
-    }
+        filename: name,
+        mimeType: file.type ?? null,
+      };
+    })
+    .filter(Boolean) as Array<{
+    bucket: string;
+    path: string;
+    filename: string;
+    mimeType: string | null;
+  }>;
+
+  const links =
+    storageFiles.length > 0
+      ? await createPublicFileLinksForStoragePaths(storageFiles, {
+          expiresInSec: DOWNLOAD_LINK_EXPIRES_SEC,
+          purpose: "ticket_delivery",
+          orgId,
+        })
+      : [];
+
+  for (const file of files) {
+    if (file.path?.trim()) continue;
+    const name = file.title?.trim() || "file";
     if (file.src?.trim()) {
       links.push({ name, url: file.src.trim() });
       continue;
@@ -84,6 +99,7 @@ async function buildDownloadLinks(files: DeliveryFile[]) {
       `Could not create a download link for "${name}". Retry delivery or share the file manually.`,
     );
   }
+
   if (links.length === 0) {
     throw new Error("Could not create download links for delivery files.");
   }
@@ -212,6 +228,7 @@ async function deliverOneTicketForInvoicePayment(
   const fileNames = deliverables.map((file) => file.title);
   const downloadLinks = await buildDownloadLinks(
     deliverables as DeliveryFile[],
+    params.orgId,
   );
   const textBody =
     `Thank you for your payment (${params.invoiceNumber}). ` +

@@ -9,6 +9,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { downloadPrivateStorageFile } from "@/lib/supabase/privateStorageFile";
 import type { PortalCopy } from "@/modules/portal/portalI18n";
 import { ResourceLightbox } from "@/modules/deals/ResourceLightbox";
 import type { DealResource } from "@/modules/types";
@@ -208,17 +209,18 @@ export const ClientFilesSection = ({
                             size="sm"
                             variant="secondary"
                             className="w-full"
-                            asChild
+                            onClick={() =>
+                              void downloadPrivateStorageFile({
+                                reference: entry.download_url!,
+                                filename:
+                                  entry.file_name ??
+                                  entry.label ??
+                                  copy.fileFallback,
+                              })
+                            }
                           >
-                            <a
-                              href={entry.download_url}
-                              download
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              <Download className="size-4" />
-                              {copy.downloadFile}
-                            </a>
+                            <Download className="size-4" />
+                            {copy.downloadFile}
                           </Button>
                         ) : null}
                       </div>

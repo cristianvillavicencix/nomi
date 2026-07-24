@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { createFileAccessToken } from "../_shared/fileAccessToken.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 
@@ -121,14 +122,20 @@ Deno.serve(
         return jsonResponse({ error: "Failed to upload file" }, 500);
       }
 
-      const { data: signed } = await supabaseAdmin.storage
-        .from(FORM_UPLOADS_BUCKET)
-        .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+      const { url } = await createFileAccessToken({
+        bucket: FORM_UPLOADS_BUCKET,
+        storagePath,
+        filename: file.name,
+        mimeType: mime,
+        expiresInSec: 60 * 60 * 24 * 7,
+        purpose: "form_upload",
+        orgId,
+      });
 
       return jsonResponse({
         name: file.name,
         original_name: file.name,
-        url: signed?.signedUrl ?? "",
+        url,
         path: storagePath,
         bucket: FORM_UPLOADS_BUCKET,
         size: file.size,

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   isResolvableStorageReference,
-  resolveStorageDisplayUrl,
 } from "@/lib/supabase/storageObjectUrl";
+import { resolveDisplayUrlFromReference } from "@/lib/supabase/privateStorageFile";
 
 type UseStorageSignedUrlsOptions = {
   path?: string;
@@ -43,7 +43,7 @@ export const useStorageSignedUrls = (
         if (!isResolvableStorageReference(reference, options?.defaultBucket)) {
           return reference;
         }
-        const signed = await resolveStorageDisplayUrl(reference, options);
+        const signed = await resolveDisplayUrlFromReference(reference, options);
         return signed ?? reference;
       }),
     ).then((resolved) => {

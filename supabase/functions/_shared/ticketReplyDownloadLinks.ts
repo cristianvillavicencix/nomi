@@ -1,5 +1,4 @@
-import { createStorageSignedUrl } from "./storageObjectUrl.ts";
-import { supabaseAdmin } from "./supabaseAdmin.ts";
+import { createPublicFileLinksForStoragePaths } from "./fileAccessToken.ts";
 import type { StoredAttachment } from "./storageAttachmentsForEmail.ts";
 
 /** Same retention as invoice deliverable download links. */
@@ -13,33 +12,30 @@ export type ReplyDownloadLink = {
 export const buildReplyAttachmentDownloadLinks = async (
   files: StoredAttachment[],
   bucket = "attachments",
+  orgId?: number | null,
 ): Promise<ReplyDownloadLink[]> => {
-  const links: ReplyDownloadLink[] = [];
+  const withPaths = files
+    .map((file) => {
+      const path = file.path?.trim();
+      const name = file.title?.trim() || path?.split("/").pop() || "file";
+      if (!path) {
+        throw new Error(
+          `Could not create a download link for "${name}" (missing storage path).`,
+        );
+      }
+      return {
+        bucket,
+        path,
+        filename: name,
+        mimeType: file.type ?? null,
+      };
+    });
 
-  for (const file of files) {
-    const path = file.path?.trim();
-    const name = file.title?.trim() || path?.split("/").pop() || "file";
-    if (!path) {
-      throw new Error(
-        `Could not create a download link for "${name}" (missing storage path).`,
-      );
-    }
-
-    const signed = await createStorageSignedUrl(
-      supabaseAdmin,
-      bucket,
-      path,
-      REPLY_DOWNLOAD_LINK_EXPIRES_SEC,
-    );
-    if (!signed) {
-      throw new Error(
-        `Could not create a download link for "${name}". Try again or share the file manually.`,
-      );
-    }
-    links.push({ name, url: signed });
-  }
-
-  return links;
+  return createPublicFileLinksForStoragePaths(withPaths, {
+    expiresInSec: REPLY_DOWNLOAD_LINK_EXPIRES_SEC,
+    purpose: "ticket_reply",
+    orgId,
+  });
 };
 
 const fileExtension = (name: string) => {

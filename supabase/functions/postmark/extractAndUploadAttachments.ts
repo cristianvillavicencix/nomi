@@ -1,6 +1,5 @@
 import { decode } from "npm:base64-arraybuffer";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
-import { buildStorageObjectReference } from "../_shared/storageObjectUrl.ts";
 import {
   assertInboundAttachmentCount,
   assertInboundAttachmentSize,
@@ -83,37 +82,14 @@ export const extractAndUploadAttachments = async (
           throw new Error("Failed to upload attachment");
         }
 
-        const { data: signed } = await supabaseAdmin.storage
-          .from("attachments")
-          .createSignedUrl(fileName, 60 * 60 * 24 * 7);
-
-        const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-        const reference = buildStorageObjectReference(
-          supabaseUrl,
-          "attachments",
-          fileName,
-        );
-
         return {
           title: Name,
           type: ContentType,
           path: fileName,
-          src: fixPublicUrl(signed?.signedUrl ?? reference),
+          src: fileName,
           contentId: ContentID?.trim() || null,
         };
       }),
     )
   ).filter(Boolean) as Attachment[];
-};
-
-/*
- * Workaround fix for public URL not working on local environment
- * See https://github.com/orgs/supabase/discussions/37271
- *
- * Replaces http://kong:8000/storage/v1/object/public/attachments/0.08968261048718773.txt with http://127.0.0.1:54321/storage/v1/object/public/attachments/0.08968261048718773.txt, using the SB_JWT_ISSUER env var (value http://127.0.0.1:54321/auth/v1) to get the external/public URL of the Supabase instance.
- */
-const fixPublicUrl = (url: string) => {
-  const jwtIssuer = Deno.env.get("SB_JWT_ISSUER") ?? "";
-  const localUrl = jwtIssuer.replace("/auth/v1", "");
-  return url.replace("http://kong:8000", localUrl);
 };

@@ -22,7 +22,10 @@ import {
   type ProjectResourceFile,
 } from "@/modules/deals/projectResourceConstants";
 import { formatResourceDate } from "@/modules/deals/projectResourceGrouping";
-import { resolveStorageDisplayUrl } from "@/lib/supabase/storageObjectUrl";
+import {
+  downloadPrivateStorageFile,
+  resolveDisplayUrlFromReference,
+} from "@/lib/supabase/privateStorageFile";
 import type { DealResource } from "@/modules/types";
 
 type ResourceLightboxProps = {
@@ -34,7 +37,7 @@ type ResourceLightboxProps = {
 
 const resolveResourceUrl = async (file: ProjectResourceFile) => {
   const bucket = file.bucket ?? "project-files";
-  const signed = await resolveStorageDisplayUrl(file.src, {
+  const signed = await resolveDisplayUrlFromReference(file.src, {
     path: file.path,
     bucket,
     defaultBucket: bucket,
@@ -82,10 +85,19 @@ export const ResourceLightbox = ({
     }
 
     let cancelled = false;
+    let activeBlobUrl: string | null = null;
     setLoadingUrl(true);
     resolveResourceUrl(resource.file)
       .then((url) => {
-        if (!cancelled) setFileUrl(url);
+        if (cancelled) {
+          if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+          return;
+        }
+        if (activeBlobUrl?.startsWith("blob:")) {
+          URL.revokeObjectURL(activeBlobUrl);
+        }
+        if (url.startsWith("blob:")) activeBlobUrl = url;
+        setFileUrl(url);
       })
       .catch(() => {
         if (!cancelled) setFileUrl(resource.file.src ?? "");
@@ -96,6 +108,9 @@ export const ResourceLightbox = ({
 
     return () => {
       cancelled = true;
+      if (activeBlobUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(activeBlobUrl);
+      }
     };
   }, [resource]);
 
@@ -203,11 +218,18 @@ export const ResourceLightbox = ({
               <div className="flex max-w-sm flex-col items-center justify-center gap-3 rounded-md border bg-background/90 p-8 text-center shadow-sm">
                 <p className="text-sm text-muted-foreground">{file.title}</p>
                 {previewUrl ? (
-                  <Button type="button" variant="secondary" asChild>
-                    <a href={previewUrl} target="_blank" rel="noreferrer">
-                      <ExternalLink className="size-4" />
-                      Open file
-                    </a>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() =>
+                      void downloadPrivateStorageFile({
+                        reference: previewUrl,
+                        filename: file.title,
+                      })
+                    }
+                  >
+                    <ExternalLink className="size-4" />
+                    Open file
                   </Button>
                 ) : null}
               </div>
@@ -232,16 +254,19 @@ export const ResourceLightbox = ({
             </Button>
           ) : null}
           {previewUrl ? (
-            <Button type="button" variant="secondary" asChild>
-              <a
-                href={previewUrl}
-                download={file.title}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Download className="size-4" />
-                Download
-              </a>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busyAction != null}
+              onClick={() =>
+                void downloadPrivateStorageFile({
+                  reference: previewUrl,
+                  filename: file.title,
+                })
+              }
+            >
+              <Download className="size-4" />
+              Download
             </Button>
           ) : null}
         </div>

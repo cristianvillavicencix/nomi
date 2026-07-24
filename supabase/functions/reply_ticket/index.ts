@@ -349,7 +349,11 @@ Deno.serve(
         if (linkAttachments.length > 0) {
           try {
             downloadLinks =
-              await buildReplyAttachmentDownloadLinks(linkAttachments);
+              await buildReplyAttachmentDownloadLinks(
+                linkAttachments,
+                "attachments",
+                ticket.org_id,
+              );
           } catch (linkError) {
             const message =
               linkError instanceof Error
