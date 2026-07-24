@@ -247,6 +247,48 @@ function MessageHeaderActions({
   );
 }
 
+function formatFromLine(message: MailMessage): string {
+  const name = message.from_name?.trim();
+  const email = message.from_email?.trim();
+  if (name && email && name.toLowerCase() !== email.toLowerCase()) {
+    return `${name} <${email}>`;
+  }
+  return email || name || "Unknown";
+}
+
+function formatEmailList(emails: string[] | null | undefined): string | null {
+  const list = (emails ?? []).map((e) => e.trim()).filter(Boolean);
+  return list.length > 0 ? list.join(", ") : null;
+}
+
+function MessageMetaHeader({ message }: { message: MailMessage }) {
+  const to = formatEmailList(message.to_emails);
+  const cc = formatEmailList(message.cc_emails);
+  return (
+    <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+      <div>
+        <span className="font-medium text-foreground/80">From: </span>
+        <span>{formatFromLine(message)}</span>
+      </div>
+      {to ? (
+        <div>
+          <span className="font-medium text-foreground/80">To: </span>
+          <span>{to}</span>
+        </div>
+      ) : null}
+      {cc ? (
+        <div>
+          <span className="font-medium text-foreground/80">Cc: </span>
+          <span>{cc}</span>
+        </div>
+      ) : null}
+      {message.sent_at ? (
+        <div>{new Date(message.sent_at).toLocaleString()}</div>
+      ) : null}
+    </div>
+  );
+}
+
 function MessageHtmlBody({
   message,
   attachments,
@@ -363,19 +405,10 @@ export function MailMessagePane({
           <p className={cn("text-xs text-muted-foreground", mailboxAccount ? "mt-1" : "mt-0.5")}>
             {soleMessage && !isPending ? (
               <>
-                <span className="text-foreground/90">
-                  {soleMessage.from_name || soleMessage.from_email || "Unknown"}
-                </span>
-                {soleMessage.from_name && soleMessage.from_email ? (
-                  <span> · {soleMessage.from_email}</span>
+                <MessageMetaHeader message={soleMessage} />
+                {thread.is_starred ? (
+                  <span className="mt-0.5 block">Starred</span>
                 ) : null}
-                {soleMessage.sent_at ? (
-                  <span>
-                    {" · "}
-                    {new Date(soleMessage.sent_at).toLocaleString()}
-                  </span>
-                ) : null}
-                {thread.is_starred ? " · Starred" : ""}
               </>
             ) : (
               <>

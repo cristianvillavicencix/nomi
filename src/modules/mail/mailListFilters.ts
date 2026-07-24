@@ -1,6 +1,14 @@
 import type { MailFolderId } from "./MailFolderRail";
 import type { MailThread } from "./types";
 
+export function excludeSentOnlyThreads(
+  threads: MailThread[],
+  sentOnlyIds: Set<number>,
+): MailThread[] {
+  if (sentOnlyIds.size === 0) return threads;
+  return threads.filter((thread) => !sentOnlyIds.has(thread.id));
+}
+
 export type MailListFilter =
   | "all"
   | "unread"

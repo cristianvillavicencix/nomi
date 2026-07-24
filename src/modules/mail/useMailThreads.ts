@@ -3,6 +3,8 @@ import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import type { MailFolderId } from "./MailFolderRail";
 import type { MailListFilter } from "./mailListFilters";
 import type { MailAttachment, MailDraft, MailMessage, MailThread } from "./types";
+import { excludeSentOnlyThreads } from "./mailListFilters";
+import { loadSentOnlyThreadIds } from "./mailThreadFolders";
 
 /** Synthetic list ids for mail_drafts rows (avoid collision with mail_threads.id). */
 export const MAIL_DRAFT_LIST_ID_OFFSET = 1_000_000_000;
@@ -220,7 +222,12 @@ export function useMailThreads(params: {
 
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as MailThread[];
+      let rows = (data ?? []) as MailThread[];
+      if (folder === "inbox") {
+        const sentOnlyIds = await loadSentOnlyThreadIds(accountId);
+        rows = excludeSentOnlyThreads(rows, sentOnlyIds);
+      }
+      return rows;
     },
   });
 }
@@ -277,26 +284,44 @@ async function applyFolderFilter(
     }
     case "inbox":
     default:
-      switch (listFilter) {
-        case "archived":
-          return rows.filter((t) => !t.is_trashed && t.is_archived);
-        case "starred":
-          return rows.filter((t) => !t.is_trashed && t.is_starred);
-        case "unread":
-          return rows.filter(
-            (t) =>
-              !t.is_trashed &&
-              !t.is_archived &&
-              !t.is_draft &&
-              !t.is_spam &&
-              t.is_unread,
-          );
-        case "all":
-        default:
-          return rows.filter(
-            (t) =>
-              !t.is_trashed && !t.is_archived && !t.is_draft && !t.is_spam,
-          );
+      {
+        const sentOnlyIds =
+          folder === "inbox"
+            ? await loadSentOnlyThreadIds(accountId)
+            : new Set<number>();
+        switch (listFilter) {
+          case "archived":
+            return excludeSentOnlyThreads(
+              rows.filter((t) => !t.is_trashed && t.is_archived),
+              sentOnlyIds,
+            );
+          case "starred":
+            return excludeSentOnlyThreads(
+              rows.filter((t) => !t.is_trashed && t.is_starred),
+              sentOnlyIds,
+            );
+          case "unread":
+            return excludeSentOnlyThreads(
+              rows.filter(
+                (t) =>
+                  !t.is_trashed &&
+                  !t.is_archived &&
+                  !t.is_draft &&
+                  !t.is_spam &&
+                  t.is_unread,
+              ),
+              sentOnlyIds,
+            );
+          case "all":
+          default:
+            return excludeSentOnlyThreads(
+              rows.filter(
+                (t) =>
+                  !t.is_trashed && !t.is_archived && !t.is_draft && !t.is_spam,
+              ),
+              sentOnlyIds,
+            );
+        }
       }
   }
 }
