@@ -216,7 +216,7 @@ async function findExistingMessage(sb, accountId, providerMessageId) {
   for (const candidate of candidates) {
     const { data } = await sb
       .from("mail_messages")
-      .select("id, provider_message_id")
+      .select("id, provider_message_id, is_read")
       .eq("account_id", accountId)
       .eq("provider_message_id", candidate)
       .maybeSingle();
@@ -241,7 +241,7 @@ async function findDuplicateOutboundMessage(
 
   const { data: candidates } = await sb
     .from("mail_messages")
-    .select("id, provider_message_id")
+    .select("id, provider_message_id, is_read")
     .eq("account_id", account.id)
     .eq("direction", "outbound")
     .eq("from_email", fromEmail)
@@ -260,7 +260,33 @@ async function findDuplicateOutboundMessage(
   return null;
 }
 
-async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
+function imapMessageIsUnread(flags, direction) {
+  if (direction === "outbound") return false;
+  const set = flags instanceof Set ? flags : new Set(flags || []);
+  return !set.has("\\Seen");
+}
+
+function resolveMessageReadState({ existingIsRead, imapIsUnread }) {
+  const locallyRead = existingIsRead === true;
+  if (locallyRead && imapIsUnread) return true;
+  return !imapIsUnread;
+}
+
+async function recomputeThreadUnread(sb, threadId) {
+  const { count, error } = await sb
+    .from("mail_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("thread_id", threadId)
+    .eq("is_read", false);
+  if (error) throw new Error(error.message);
+  const { error: updateError } = await sb
+    .from("mail_threads")
+    .update({ is_unread: (count ?? 0) > 0 })
+    .eq("id", threadId);
+  if (updateError) throw new Error(updateError.message);
+}
+
+async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX", imapFlags = null) {
   const fromEmail = (parsed.from?.value?.[0]?.address || "").toLowerCase() || null;
   const fromName = parsed.from?.value?.[0]?.name || null;
   const toEmails = (parsed.to?.value || []).map((a) => a.address?.toLowerCase()).filter(Boolean);
@@ -277,6 +303,7 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
   const isSentMailbox = /sent/i.test(mailbox);
   const direction =
     isSentMailbox || fromEmail === accountEmail ? "outbound" : "inbound";
+  const imapIsUnread = imapMessageIsUnread(imapFlags, direction);
 
   const { data: existingThread } = await sb
     .from("mail_threads")
@@ -293,7 +320,6 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
         subject,
         snippet,
         last_message_at: sentAt,
-        is_unread: direction === "inbound",
         updated_at: new Date().toISOString(),
       })
       .eq("id", threadId);
@@ -311,7 +337,7 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
           ...toEmails.map((email) => ({ email })),
         ],
         last_message_at: sentAt,
-        is_unread: direction === "inbound",
+        is_unread: imapIsUnread,
         message_count: 0,
       })
       .select("id")
@@ -356,7 +382,10 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
         body_html: bodyHtml,
         body_text: parsed.text || null,
         sent_at: sentAt,
-        is_read: direction === "outbound",
+        is_read: resolveMessageReadState({
+          existingIsRead: undefined,
+          imapIsUnread,
+        }),
         has_attachments: hasAttachments,
         send_status: direction === "outbound" ? "sent" : null,
         in_reply_to: parsed.inReplyTo || null,
@@ -377,26 +406,30 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
   } else {
     messageId = existingMsg.id;
     const bodyHtml = parsed.html || null;
-    await sb
-      .from("mail_messages")
-      .update({
-        provider_message_id: normalizedProviderMessageId || providerMessageId,
-        body_html: bodyHtml ?? undefined,
-        body_text: parsed.text || null,
-        has_attachments: hasAttachments,
-        sent_at: sentAt,
-        raw_headers: {
-          "Message-ID": parsed.messageId || providerMessageId,
-          imap_uid: rawUid,
-          imap_mailbox: mailbox,
-        },
-      })
-      .eq("id", messageId);
+    const msgPatch = {
+      provider_message_id: normalizedProviderMessageId || providerMessageId,
+      body_html: bodyHtml ?? undefined,
+      body_text: parsed.text || null,
+      has_attachments: hasAttachments,
+      sent_at: sentAt,
+      raw_headers: {
+        "Message-ID": parsed.messageId || providerMessageId,
+        imap_uid: rawUid,
+        imap_mailbox: mailbox,
+      },
+    };
+    msgPatch.is_read = resolveMessageReadState({
+      existingIsRead: existingMsg.is_read,
+      imapIsUnread,
+    });
+    await sb.from("mail_messages").update(msgPatch).eq("id", messageId);
   }
 
   if (syncAttachments.length > 0 && messageId) {
     await syncImapMessageAttachments(sb, account, messageId, syncAttachments);
   }
+
+  await recomputeThreadUnread(sb, threadId);
 }
 
 async function resolveSentMailbox(client) {
@@ -440,10 +473,14 @@ async function syncMailbox(client, sb, account, mailbox, since, maxResults) {
     const list = Array.isArray(uids) ? uids : [];
     const slice = list.slice(-maxResults).reverse();
     for (const uid of slice) {
-      const msg = await client.fetchOne(uid, { source: true, uid: true }, { uid: true });
+      const msg = await client.fetchOne(
+        uid,
+        { source: true, uid: true, flags: true },
+        { uid: true },
+      );
       if (!msg?.source) continue;
       const parsed = await simpleParser(msg.source);
-      await upsertMessage(sb, account, parsed, uid, mailbox);
+      await upsertMessage(sb, account, parsed, uid, mailbox, msg.flags);
       synced += 1;
     }
   } finally {
