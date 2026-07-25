@@ -51,6 +51,10 @@ import {
   type MailThreadsPageResult,
 } from "./mailListPagination";
 import { applyOptimisticMailThreadAction } from "./mailQueryCache";
+import {
+  isMailTrashShortcutKey,
+  shouldIgnoreMailKeyboardShortcut,
+} from "./mailKeyboardShortcuts";
 import type { MailAccount, MailMessage, MailThread } from "./types";
 
 const MOBILE_FOLDERS: Array<{ id: MailFolderId; label: string }> = [
@@ -78,7 +82,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const [perPage, setPerPage] = useState(MAIL_THREADS_DEFAULT_PER_PAGE);
   const [selected, setSelected] = useState<MailThread | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const { openCompose: openGlobalCompose } = useMailCompose();
+  const { openCompose: openGlobalCompose, composeOpen } = useMailCompose();
   const [syncing, setSyncing] = useState(false);
   const [mobileShowThread, setMobileShowThread] = useState(false);
 
@@ -483,6 +487,31 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     }
     void runThreadAction(thread, "spam");
   };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        shouldIgnoreMailKeyboardShortcut(event, { composeOpen }) ||
+        !isMailTrashShortcutKey(event.key)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const bulkIds = [...selectedIds].filter((id) => !isMailDraftListId(id));
+      if (bulkIds.length > 0) {
+        void runBulkAction(folder === "trash" ? "delete_forever" : "trash");
+        return;
+      }
+
+      if (!selected || isMailDraftListId(selected.id)) return;
+      handleListTrash(selected);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [composeOpen, folder, selected, selectedIds]);
 
   const buildMessagePaneActions = (
     t: MailThread,
