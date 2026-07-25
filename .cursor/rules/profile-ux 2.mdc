@@ -1,0 +1,38 @@
+---
+description: Profile Full / Preview / Context modes — no duplicate identity UI
+globs:
+  - src/modules/clients/**/*
+  - src/modules/contacts/**/*
+  - src/modules/accounts/**/*
+  - src/modules/leads/**/*
+  - src/modules/messages/**/*
+  - src/modules/tickets/**/*
+  - src/modules/deals/**/*
+  - src/modules/shared/profile/**/*
+alwaysApply: false
+---
+
+# Profile UX
+
+Use the shared profile system in `src/modules/shared/profile/`. See `docs/ux/PROFILE-SYSTEM.md`.
+
+## Three modes only
+
+| Mode | When | Density |
+|------|------|---------|
+| **Full** | Show pages (`ClientShow`, `ContactShow`, …) | Header + tabs + Related |
+| **Preview** | Hub sheets (Accounts `?company` / `?contact`) | Header + compact tabs |
+| **Context** | Workspace side panels (Messages, Tickets, Project) | Compact identity card + “View profile” |
+
+Do **not** invent a fourth ad-hoc mini-profile.
+
+## Rules
+
+1. Compose `EntityIdentityHeader` / `EntityMetaRow` / context cards — do not fork markup per module.
+2. One fact per role: identity in header; work in tabs; entity jumps in Related.
+3. Never show the same channel as both text and icon (e.g. website URL under name **and** Globe icon).
+4. No audit timestamps (`Created`) in scan headers — Edit / overflow menu only.
+5. Location strings must be complete when address fields exist (`formatCompanyLocation`).
+6. Related must not mirror a center tab’s primary list (e.g. no Projects in Related if Projects is a tab).
+7. Preview ⊂ Full; Context embeds the same identity block. Open Full/Preview via `routing.ts` helpers.
+8. Product UI copy stays English (see `english-ui` rule).

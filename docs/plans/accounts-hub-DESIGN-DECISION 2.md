@@ -1,0 +1,87 @@
+# Accounts module — Design decision
+
+**Date:** 2026-07-16 (refined; List flipped to company-first same day)  
+**Based on:** [accounts-hub-UX-ANALYSIS.md](./accounts-hub-UX-ANALYSIS.md)  
+**Status:** Decided — implemented (Company-first List + company preview; Board = active leads; Client badge + New Deal)
+
+---
+
+## Decision
+
+**Company-first List + company preview drawer. Board scoped to active pipeline leads. Commercial follow-on work for existing clients goes through Deals.**
+
+### List
+
+- **Single flat table** of companies (bill-to accounts). People are not the row primary.
+- Columns: **Business name** (favicon/`CompanyAvatar` + **Client** badge when `is_client`) | **Primary contact** | **Phone** | **Email** | **Website** | **Status**.
+- Sort default: company name ascending. Search companies by `q`.
+- Click **row / business name** → company Sheet preview (`?company=`): fields, **Client** badge, **Contacts** tab (open person preview), **New Deal**, **View full**.
+- Click **Primary contact** → person Sheet preview when `primary_contact_id` is set.
+- Avatars use website/domain favicon via `CompanyAvatar` / `getCompanyFaviconSources`.
+
+### Board
+
+- Unchanged Kanban: columns = active `lead_stage` pipeline (`LBS_LEAD_KANBAN_BOARD_STAGES`). **No Client / Won / Lost columns.**
+- List filter = lead lifecycle statuses only (`lead` / `prospect` + legacy). Convert → `status=client` + terminal stage drops the card off the Board.
+- Client follow-up remains Anti-Olvido / company surfaces, not the Kanban.
+
+### Commercial model (locked)
+
+| Concern | Where it lives | Notes |
+|---------|----------------|-------|
+| **Pipeline** (know → qualify → close) | `contacts.status` + `contacts.lead_stage` | Board, Anti-Olvido, routing. Company is **not** a pipeline entity. |
+| **Bill-to / “is this a client account?”** | `companies.is_client` | **Derived** signal only (triggers/backfill from linked contacts with `status=client` and/or deals in won stages). Not editable as pipeline. Does **not** move pipeline onto the company. |
+| **New commercial work** (incl. existing clients) | **Deals** | Opportunity records: `company_id`, contact(s), owner, deal stage. New work for an existing client is a **new Deal**, not a company Kanban card or re-opening company-as-pipeline. |
+
+Migration: `supabase/migrations/20260916120000_companies_is_client.sql`.
+
+## Why
+
+- Bill-to and directory browsing are company-shaped; List should lead with business name.
+- Primary contact + channels on the row keep people discoverable without people-first rows.
+- Company preview **Contacts** tab is the nested people surface.
+- Board already answers “what needs follow-up today” for open pipeline only.
+- `is_client` answers “can we bill this company?” without conflating bill-to with open pipeline.
+- Deals already model opportunities against a bill-to company.
+
+## Rejected / superseded
+
+| Idea | Why not |
+|------|---------|
+| People-only flat List (mid iteration) | Wrong default for bill-to Accounts door — superseded by company-first |
+| People \| By company toggle | Two list modes; company preview Contacts tab is enough |
+| Rename List → “Companies” only | Hub remains **Accounts** (List + Board) |
+| People \| Companies tabs | Extra chrome |
+| Client column on Board | Clients are not pipeline work |
+| Treating `companies` as the pipeline entity | Pipeline stays on contacts; company is bill-to |
+| Manual / primary `is_client` as stage | Field is derived bill-to only |
+
+## What does not change
+
+- Schema shape: `companies` + `contacts` only — no `accounts` table. (`companies.is_client` is an additive derived column, not a schema merge.)
+- Bill-to FK: invoices / tickets / deals use `company_id`.
+- `primary_contact_id` / `is_primary_contact` on contacts.
+- Board / Anti-Olvido / routing continue to use `contacts.status` + `lead_stage`.
+
+## UI shipped (commercial surfaces)
+
+- **Client** badge on Accounts List business name and company preview when `is_client`.
+- **New Deal** from company preview → existing deal create flow with `company_id` prefilled.
+
+## Code anchors
+
+| Area | Path |
+|------|------|
+| List host | `src/modules/accounts/AccountsGroupedList.tsx` → `AccountsCompaniesList.tsx` |
+| Person preview | `AccountsLeadPreviewSheet.tsx` |
+| Company preview | `AccountsCompanyPreviewSheet.tsx`, `AccountsCompanyOverviewPreview.tsx` |
+| Board | `src/modules/leads/LeadsBoardPanel.tsx`, `LeadsKanban.tsx`, `leadStages.ts` |
+| `is_client` migration | `supabase/migrations/20260916120000_companies_is_client.sql` |
+
+Legacy people-first list remains at `AccountsPeopleList.tsx` (unused by hub; kept for reference / possible future directory mode).
+
+## Related
+
+- Overview: [00-accounts-hub-OVERVIEW.md](./00-accounts-hub-OVERVIEW.md)
+- Analysis: [accounts-hub-UX-ANALYSIS.md](./accounts-hub-UX-ANALYSIS.md)
+- QA: [05-accounts-hub-NO-REGRESSION-CHECKLIST.md](./05-accounts-hub-NO-REGRESSION-CHECKLIST.md)

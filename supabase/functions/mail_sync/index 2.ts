@@ -1,0 +1,693 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { formatWorkerError, readWorkerErrorResponse } from "../_shared/formatWorkerError.ts";
+import { corsHeaders } from "../_shared/cors.ts";
+import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import {
+  authenticateMailMember,
+  assertAccountAccessAsync,
+  getFreshGoogleAccessToken,
+  getFreshMicrosoftAccessToken,
+  loadMailAccount,
+  upsertThreadAndMessage,
+  type MailAccountRow,
+} from "../_shared/mailAccount.ts";
+import {
+  gmailMessageHasFileAttachments,
+  gmailMessageHasInlineImages,
+  syncGmailMessageAttachments,
+  syncGraphMessageAttachments,
+} from "../_shared/mailAttachmentSync.ts";
+
+const json = (payload: unknown, status = 200) =>
+  new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
+
+type SyncOptions = {
+  since: string | null;
+  maxResults: number;
+};
+
+type SyncStats = {
+  synced: number;
+  new_messages: number;
+};
+
+function emptySyncStats(): SyncStats {
+  return { synced: 0, new_messages: 0 };
+}
+
+function mergeSyncStats(...parts: SyncStats[]): SyncStats {
+  return parts.reduce(
+    (acc, part) => ({
+      synced: acc.synced + part.synced,
+      new_messages: acc.new_messages + part.new_messages,
+    }),
+    emptySyncStats(),
+  );
+}
+
+type GmailPart = {
+  mimeType?: string;
+  filename?: string;
+  headers?: Array<{ name: string; value: string }>;
+  body?: { data?: string; attachmentId?: string; size?: number };
+  parts?: GmailPart[];
+};
+
+function htmlHasCidReferences(html: string | null | undefined): boolean {
+  return Boolean(html && /cid:/i.test(html));
+}
+
+function parseSyncOptions(body: Record<string, unknown>): SyncOptions {
+  const sinceRaw = body.since;
+  let since: string | null = null;
+  if (typeof sinceRaw === "string" && sinceRaw.trim()) {
+    const d = new Date(sinceRaw);
+    if (!Number.isNaN(d.getTime())) since = d.toISOString();
+  }
+  const maxResults = Math.min(
+    500,
+    Math.max(10, Number(body.max_results) || 200),
+  );
+  return { since, maxResults };
+}
+
+function gmailFolderQuery(
+  folder: "inbox" | "sent" | "spam" | "trash",
+  since: string | null,
+): string {
+  const base =
+    folder === "sent"
+      ? "in:sent"
+      : folder === "spam"
+        ? "in:spam"
+        : folder === "trash"
+          ? "in:trash"
+          : "in:inbox";
+  if (!since) return base;
+  const d = new Date(since);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${base} after:${y}/${m}/${day}`;
+}
+
+function decodeGmailBodyData(data: string): string {
+  const normalized = data.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder("utf-8").decode(bytes);
+}
+
+async function fetchGmailAttachmentData(
+  accessToken: string,
+  messageId: string,
+  attachmentId: string,
+): Promise<string | null> {
+  const res = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/attachments/${attachmentId}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) return null;
+  const json = await res.json();
+  if (!json?.data || typeof json.data !== "string") return null;
+  return decodeGmailBodyData(json.data);
+}
+
+async function extractGmailBodies(
+  accessToken: string,
+  messageId: string,
+  payload: GmailPart | undefined,
+): Promise<{ bodyHtml: string | null; bodyText: string | null }> {
+  let bodyHtml: string | null = null;
+  let bodyText: string | null = null;
+  const pendingHtml: string[] = [];
+  const pendingText: string[] = [];
+
+  const walk = (part: GmailPart | undefined) => {
+    if (!part) return;
+    const mime = String(part.mimeType || "").toLowerCase();
+    const data = part.body?.data;
+    const attachmentId = part.body?.attachmentId;
+    if (mime === "text/html") {
+      if (data && !bodyHtml) bodyHtml = decodeGmailBodyData(data);
+      else if (attachmentId) pendingHtml.push(attachmentId);
+    } else if (mime === "text/plain") {
+      if (data && !bodyText) bodyText = decodeGmailBodyData(data);
+      else if (attachmentId) pendingText.push(attachmentId);
+    }
+    for (const child of part.parts ?? []) walk(child);
+  };
+  walk(payload);
+
+  if (!bodyHtml && pendingHtml[0]) {
+    bodyHtml = await fetchGmailAttachmentData(
+      accessToken,
+      messageId,
+      pendingHtml[0],
+    );
+  }
+  if (!bodyText && pendingText[0]) {
+    bodyText = await fetchGmailAttachmentData(
+      accessToken,
+      messageId,
+      pendingText[0],
+    );
+  }
+
+  return { bodyHtml, bodyText };
+}
+
+function prepareStoredHtml(html: string | null): string | null {
+  if (!html?.trim()) return null;
+  return html;
+}
+
+async function syncGoogleFolder(
+  account: MailAccountRow,
+  accessToken: string,
+  folder: "inbox" | "sent" | "spam" | "trash",
+  opts: SyncOptions,
+  seen: Set<string>,
+): Promise<SyncStats> {
+  const q = encodeURIComponent(gmailFolderQuery(folder, opts.since));
+  let pageToken: string | undefined;
+  let synced = 0;
+  let newMessages = 0;
+
+  while (synced < opts.maxResults) {
+    const pageSize = Math.min(100, opts.maxResults - synced);
+    let url =
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${pageSize}&q=${q}`;
+    if (pageToken) url += `&pageToken=${encodeURIComponent(pageToken)}`;
+
+    const listRes = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const listJson = await listRes.json();
+    if (!listRes.ok) {
+      throw new Error(listJson.error?.message || "Gmail list failed");
+    }
+    const messages = (listJson.messages ?? []) as Array<{
+      id: string;
+      threadId: string;
+    }>;
+    if (messages.length === 0) break;
+
+    for (const msg of messages) {
+      if (seen.has(msg.id)) continue;
+      seen.add(msg.id);
+      if (synced >= opts.maxResults) break;
+
+      const detailRes = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      const detail = await detailRes.json();
+      if (!detailRes.ok) continue;
+      const headers = (detail.payload?.headers ?? []) as Array<{
+        name: string;
+        value: string;
+      }>;
+      const getH = (n: string) =>
+        headers.find((h) => h.name.toLowerCase() === n.toLowerCase())?.value ??
+          null;
+      const subject = getH("Subject");
+      const rfcMessageId = getH("Message-ID");
+      const inReplyTo = getH("In-Reply-To");
+      const fromRaw = getH("From") || "";
+      const toRaw = getH("To") || "";
+      const ccRaw = getH("Cc") || "";
+      const fromMatch = fromRaw.match(/^(?:"?([^"]*)"?\s)?<?([^>]+@[^>]+)>?$/);
+      const fromName = fromMatch?.[1]?.trim() || null;
+      const fromEmail =
+        (fromMatch?.[2] || fromRaw).trim().toLowerCase() || null;
+      const parseAddrs = (raw: string) =>
+        raw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .map((s) => {
+            const m = s.match(/<([^>]+)>/);
+            return (m?.[1] || s).toLowerCase();
+          });
+
+      const messageId = String(detail.id || msg.id);
+      const { bodyHtml, bodyText } = await extractGmailBodies(
+        accessToken,
+        messageId,
+        detail.payload as GmailPart | undefined,
+      );
+
+      const labelIds = (detail.labelIds ?? []) as string[];
+      const isUnread = labelIds.includes("UNREAD");
+      const internalDate = detail.internalDate
+        ? new Date(Number(detail.internalDate)).toISOString()
+        : null;
+      const isOutbound =
+        folder === "sent" ||
+        fromEmail === account.email.toLowerCase() ||
+        labelIds.includes("SENT");
+
+      const payload = detail.payload as GmailPart | undefined;
+      const hasAttachments = gmailMessageHasFileAttachments(payload);
+      const hasInlineImages = gmailMessageHasInlineImages(payload);
+
+      const upserted = await upsertThreadAndMessage({
+        account,
+        providerThreadId: String(detail.threadId || msg.threadId),
+        providerMessageId: messageId,
+        subject,
+        snippet: detail.snippet ?? null,
+        fromEmail,
+        fromName,
+        toEmails: parseAddrs(toRaw),
+        ccEmails: parseAddrs(ccRaw),
+        bodyHtml,
+        bodyText,
+        sentAt: internalDate,
+        isUnread: isOutbound ? false : isUnread,
+        direction: isOutbound ? "outbound" : "inbound",
+        isTrashed:
+          labelIds.includes("TRASH") || folder === "trash" ? true : undefined,
+        isSpam:
+          labelIds.includes("SPAM") || folder === "spam" ? true : undefined,
+        isStarred: labelIds.includes("STARRED"),
+        rfcMessageId,
+        inReplyTo,
+        hasAttachments: hasAttachments || hasInlineImages,
+      });
+
+      if (
+        upserted.messageId &&
+        (hasAttachments || hasInlineImages || htmlHasCidReferences(bodyHtml))
+      ) {
+        await syncGmailMessageAttachments(
+          accessToken,
+          account,
+          messageId,
+          upserted.messageId,
+          payload,
+        );
+      }
+      synced += 1;
+      if (upserted.messageCreated) newMessages += 1;
+    }
+
+    pageToken = listJson.nextPageToken;
+    if (!pageToken) break;
+  }
+
+  return { synced, new_messages: newMessages };
+}
+
+async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
+  const accessToken = await getFreshGoogleAccessToken(account);
+  const seen = new Set<string>();
+  const perFolder = Math.max(10, Math.ceil(opts.maxResults / 4));
+  const folderOpts = { ...opts, maxResults: perFolder };
+  const stats = mergeSyncStats(
+    await syncGoogleFolder(account, accessToken, "inbox", folderOpts, seen),
+    await syncGoogleFolder(account, accessToken, "sent", folderOpts, seen),
+    await syncGoogleFolder(account, accessToken, "spam", folderOpts, seen),
+    await syncGoogleFolder(account, accessToken, "trash", folderOpts, seen),
+  );
+
+  const labelsRes = await fetch(
+    "https://gmail.googleapis.com/gmail/v1/users/me/labels",
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (labelsRes.ok) {
+    const labelsJson = await labelsRes.json();
+    for (const label of labelsJson.labels ?? []) {
+      if (label.type !== "user") continue;
+      await supabaseAdmin.from("mail_labels").upsert(
+        {
+          account_id: account.id,
+          org_id: account.org_id,
+          provider_label_id: label.id,
+          name: label.name,
+        },
+        { onConflict: "account_id,provider_label_id" },
+      );
+    }
+  }
+
+  return stats;
+}
+
+async function syncMicrosoftFolder(
+  account: MailAccountRow,
+  accessToken: string,
+  folder: "inbox" | "sentitems",
+  opts: SyncOptions,
+): Promise<SyncStats> {
+  let synced = 0;
+  let newMessages = 0;
+  let nextUrl: string | null =
+    `https://graph.microsoft.com/v1.0/me/mailFolders/${folder}/messages?$top=${
+      Math.min(50, opts.maxResults)
+    }&$orderby=receivedDateTime desc&$select=id,conversationId,subject,bodyPreview,from,toRecipients,ccRecipients,receivedDateTime,isRead,hasAttachments,body`;
+
+  if (opts.since) {
+    const filter = encodeURIComponent(
+      `receivedDateTime ge ${new Date(opts.since).toISOString()}`,
+    );
+    nextUrl += `&$filter=${filter}`;
+  }
+
+  while (nextUrl && synced < opts.maxResults) {
+    const listRes = await fetch(nextUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Prefer: 'outlook.body-content-type="html"',
+      },
+    });
+    const listJson = await listRes.json();
+    if (!listRes.ok) {
+      throw new Error(listJson.error?.message || "Graph mail list failed");
+    }
+    const batch = listJson.value ?? [];
+    if (batch.length === 0) break;
+
+    for (const msg of batch) {
+      if (synced >= opts.maxResults) break;
+      const fromEmail = msg.from?.emailAddress?.address?.toLowerCase() ?? null;
+      const fromName = msg.from?.emailAddress?.name ?? null;
+      const toEmails = (msg.toRecipients ?? [])
+        .map((r: { emailAddress?: { address?: string } }) =>
+          String(r.emailAddress?.address || "").toLowerCase()
+        )
+        .filter(Boolean);
+      const ccEmails = (msg.ccRecipients ?? [])
+        .map((r: { emailAddress?: { address?: string } }) =>
+          String(r.emailAddress?.address || "").toLowerCase()
+        )
+        .filter(Boolean);
+      const isOutbound =
+        folder === "sentitems" ||
+        fromEmail === account.email.toLowerCase();
+      const content = typeof msg.body?.content === "string"
+        ? msg.body.content
+        : null;
+      const contentType = String(msg.body?.contentType || "").toLowerCase();
+      const looksHtml =
+        contentType === "html" ||
+        Boolean(content && /<[a-z][\s\S]*>/i.test(content));
+      const hasAttachments = Boolean(msg.hasAttachments);
+      const bodyHtml = looksHtml ? prepareStoredHtml(content) : null;
+      const upserted = await upsertThreadAndMessage({
+        account,
+        providerThreadId: String(msg.conversationId || msg.id),
+        providerMessageId: String(msg.id),
+        subject: msg.subject ?? null,
+        snippet: msg.bodyPreview ?? null,
+        fromEmail,
+        fromName,
+        toEmails,
+        ccEmails,
+        bodyHtml,
+        bodyText: !looksHtml ? content : null,
+        sentAt: msg.receivedDateTime ?? null,
+        isUnread: isOutbound ? false : msg.isRead === false,
+        direction: isOutbound ? "outbound" : "inbound",
+        hasAttachments,
+      });
+      if (
+        upserted.messageId &&
+        (hasAttachments || htmlHasCidReferences(bodyHtml))
+      ) {
+        await syncGraphMessageAttachments(
+          accessToken,
+          account,
+          String(msg.id),
+          upserted.messageId,
+        );
+      }
+      synced += 1;
+      if (upserted.messageCreated) newMessages += 1;
+    }
+    nextUrl = listJson["@odata.nextLink"] ?? null;
+  }
+  return { synced, new_messages: newMessages };
+}
+
+async function syncMicrosoft(account: MailAccountRow, opts: SyncOptions) {
+  const accessToken = await getFreshMicrosoftAccessToken(account);
+  const perFolder = Math.max(10, Math.ceil(opts.maxResults / 2));
+  const folderOpts = { ...opts, maxResults: perFolder };
+  return mergeSyncStats(
+    await syncMicrosoftFolder(account, accessToken, "inbox", folderOpts),
+    await syncMicrosoftFolder(account, accessToken, "sentitems", folderOpts),
+  );
+}
+
+async function syncImap(
+  account: MailAccountRow,
+  opts: SyncOptions,
+): Promise<SyncStats> {
+  const workerUrl = Deno.env.get("MAIL_IMAP_WORKER_URL")?.trim();
+  const workerSecret = Deno.env.get("MAIL_IMAP_WORKER_SECRET")?.trim();
+  if (!workerUrl) {
+    throw new Error(
+      "IMAP sync requires the mail-imap worker. Set MAIL_IMAP_WORKER_URL (see workers/mail-imap).",
+    );
+  }
+  const res = await fetch(workerUrl.replace(/\/$/, "") + "/sync", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(workerSecret ? { Authorization: `Bearer ${workerSecret}` } : {}),
+    },
+    body: JSON.stringify({
+      account_id: account.id,
+      since: opts.since,
+      max_results: opts.maxResults,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(await readWorkerErrorResponse(res));
+  }
+  const payload = await res.json().catch(() => ({}));
+  return {
+    synced: Number(payload.synced ?? 0),
+    new_messages: Number(payload.new_messages ?? 0),
+  };
+}
+
+async function runSync(accountId: number, opts: SyncOptions) {
+  const account = await loadMailAccount(accountId);
+  if (!account) throw new Error("Account not found");
+
+  const { data: running } = await supabaseAdmin
+    .from("mail_sync_jobs")
+    .select("id")
+    .eq("account_id", account.id)
+    .eq("status", "running")
+    .limit(1)
+    .maybeSingle();
+  if (running?.id) {
+    return {
+      ok: true,
+      synced: 0,
+      new_messages: 0,
+      skipped: true,
+      reason: "sync_already_running",
+    };
+  }
+
+  const { data: job } = await supabaseAdmin
+    .from("mail_sync_jobs")
+    .insert({
+      account_id: account.id,
+      org_id: account.org_id,
+      status: "running",
+      job_type: "incremental",
+      started_at: new Date().toISOString(),
+      meta: { since: opts.since, max_results: opts.maxResults },
+    })
+    .select("id")
+    .single();
+
+  try {
+    let stats = emptySyncStats();
+    if (account.provider === "google") {
+      stats = await syncGoogle(account, opts);
+    } else if (account.provider === "microsoft") {
+      stats = await syncMicrosoft(account, opts);
+    } else if (account.provider === "imap") {
+      stats = await syncImap(account, opts);
+    } else {
+      throw new Error(`Unsupported provider: ${account.provider}`);
+    }
+
+    const prevCursor =
+      account.sync_cursor && typeof account.sync_cursor === "object"
+        ? account.sync_cursor
+        : {};
+    await supabaseAdmin
+      .from("mail_accounts")
+      .update({
+        last_sync_at: new Date().toISOString(),
+        status: "connected",
+        error_message: null,
+        sync_cursor: {
+          ...prevCursor,
+          last_since: opts.since,
+          last_max_results: opts.maxResults,
+          last_synced_count: stats.synced,
+          last_new_messages: stats.new_messages,
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", account.id);
+
+    if (job?.id) {
+      await supabaseAdmin
+        .from("mail_sync_jobs")
+        .update({
+          status: "succeeded",
+          finished_at: new Date().toISOString(),
+          meta: {
+            synced: stats.synced,
+            new_messages: stats.new_messages,
+            since: opts.since,
+            max_results: opts.maxResults,
+          },
+        })
+        .eq("id", job.id);
+    }
+    return {
+      ok: true,
+      synced: stats.synced,
+      new_messages: stats.new_messages,
+      since: opts.since,
+    };
+  } catch (e) {
+    const rawMessage =
+      e instanceof Error
+        ? e.message
+        : e &&
+            typeof e === "object" &&
+            "message" in e &&
+            typeof (e as { message: unknown }).message === "string"
+          ? (e as { message: string }).message
+          : "Sync failed";
+    const message = formatWorkerError(rawMessage);
+    await supabaseAdmin
+      .from("mail_accounts")
+      .update({
+        status: "error",
+        error_message: message,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", account.id);
+    if (job?.id) {
+      await supabaseAdmin
+        .from("mail_sync_jobs")
+        .update({
+          status: "failed",
+          finished_at: new Date().toISOString(),
+          error_message: message,
+        })
+        .eq("id", job.id);
+    }
+    throw e;
+  }
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
+  const body = await req.json().catch(() => ({}));
+  const isCronAction = body.action === "cron" || body.sync_due === true;
+  const cronSecret = Deno.env.get("CRON_SECRET")?.trim();
+  const cronHeader = req.headers.get("x-cron-secret")?.trim();
+  const cronAuthorized = Boolean(
+    cronSecret &&
+      (cronHeader === cronSecret ||
+        req.headers.get("authorization")?.trim() === `Bearer ${cronSecret}`),
+  );
+
+  if (isCronAction) {
+    const auth = await authenticateMailMember(req);
+    const serviceOk = !("error" in auth) &&
+      auth.member.user_id === "service_role";
+    if (!serviceOk && !cronAuthorized) {
+      return json({ error: "Forbidden" }, 403);
+    }
+
+    const opts = parseSyncOptions(body as Record<string, unknown>);
+    const { data: due } = await supabaseAdmin.rpc("mail_accounts_due_for_sync", {
+      p_limit: Number(body.limit) || 10,
+    });
+    const results = [];
+    for (const row of due ?? []) {
+      try {
+        // Incremental lookback: prefer last_sync_at (with 1h overlap), not the
+        // original bulk-sync "since" stored in sync_cursor (that re-fetches weeks).
+        const lastSync = row.last_sync_at
+          ? new Date(String(row.last_sync_at)).getTime()
+          : NaN;
+        const sinceIso = Number.isFinite(lastSync)
+          ? new Date(lastSync - 60 * 60 * 1000).toISOString()
+          : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const cronOpts: SyncOptions = {
+          since: sinceIso,
+          maxResults: Math.min(50, opts.maxResults || 50),
+        };
+        results.push(await runSync(row.id, cronOpts));
+      } catch (e) {
+        results.push({
+          account_id: row.id,
+          error: e instanceof Error ? e.message : "failed",
+        });
+      }
+    }
+    return json({ ok: true, results });
+  }
+
+  const auth = await authenticateMailMember(req);
+  if ("error" in auth) return json({ error: auth.error }, auth.status);
+
+  const opts = parseSyncOptions(body as Record<string, unknown>);
+
+  const accountId = Number(body.account_id);
+  if (!accountId) return json({ error: "account_id required" }, 400);
+
+  const account = await loadMailAccount(accountId);
+  if (!account) return json({ error: "Not found" }, 404);
+
+  if (auth.member.user_id !== "service_role") {
+    const denied = await assertAccountAccessAsync(auth.member, account, "view");
+    if (denied) return json({ error: denied }, 403);
+    if (account.org_id !== auth.member.org_id) {
+      return json({ error: "Forbidden" }, 403);
+    }
+  }
+
+  try {
+    const result = await runSync(accountId, opts);
+    return json(result);
+  } catch (e) {
+    const rawMessage =
+      e instanceof Error
+        ? e.message
+        : e &&
+            typeof e === "object" &&
+            "message" in e &&
+            typeof (e as { message: unknown }).message === "string"
+          ? (e as { message: string }).message
+          : "Sync failed";
+    return json({ error: formatWorkerError(rawMessage) }, 500);
+  }
+});

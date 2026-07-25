@@ -1,0 +1,494 @@
+import { useCallback, useEffect, useState } from "react";
+import { useGetIdentity, useNotify } from "ra-core";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router";
+import { EnvelopeSimple, ArrowsClockwise, Plugs, ShareNetwork } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
+import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+import { useMailAccounts } from "@/modules/mail/useMailAccounts";
+import {
+  disconnectMailAccount,
+  MAIL_OAUTH_BROADCAST_CHANNEL,
+  type MailOAuthBroadcastMessage,
+  startMailOAuth,
+  syncMailAccount,
+} from "@/modules/mail/mailApi";
+import { MailImapDialog } from "@/modules/mail/MailImapDialog";
+import { MailSyncRangeDialog } from "@/modules/mail/MailSyncRangeDialog";
+import type { MailSyncRange } from "@/modules/mail/mailSyncRange";
+import type { MailAccount } from "@/modules/mail/types";
+import { MailAccountAvatar } from "@/modules/mail/mailAccountAvatar";
+import {
+  MAIL_BRAND_LABELS,
+  resolveMailBrand,
+} from "@/modules/mail/mailProviderBrand";
+import { MailAccountShareDialog } from "@/modules/mail/MailAccountShareDialog";
+import { formatMailAccountError } from "@/modules/mail/formatMailAccountError";
+
+function SyncHealthPanel({ orgAccounts }: { orgAccounts: MailAccount[] }) {
+  const { data: jobs = [] } = useQuery({
+    queryKey: ["mail_sync_jobs_recent"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("mail_sync_jobs")
+        .select(
+          "id, account_id, status, job_type, error_message, created_at, finished_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(15);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  if (orgAccounts.length === 0 && jobs.length === 0) return null;
+
+  const errorAccounts = orgAccounts.filter(
+    (a) => a.status === "error" || a.status === "needs_reconnect",
+  );
+
+  return (
+    <section className="space-y-3 rounded-md border p-4">
+      <h3 className="text-sm font-medium">Sync health</h3>
+      <p className="text-xs text-muted-foreground">
+        Organization mailbox status and recent sync jobs (no personal message
+        bodies).
+      </p>
+      {errorAccounts.length > 0 ? (
+        <ul className="space-y-1 text-sm">
+          {errorAccounts.map((a) => (
+            <li key={a.id} className="text-destructive">
+              {a.email}: {formatMailAccountError(a.error_message) || a.status}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          No organization mailbox errors.
+        </p>
+      )}
+      {jobs.length > 0 ? (
+        <ul className="divide-y rounded border text-xs">
+          {jobs.map((job) => (
+            <li
+              key={job.id}
+              className="flex flex-wrap justify-between gap-2 px-2 py-1.5"
+            >
+              <span>
+                Account #{job.account_id} · {job.job_type} ·{" "}
+                <span className="capitalize">{job.status}</span>
+              </span>
+              <span className="text-muted-foreground">
+                {new Date(job.created_at).toLocaleString()}
+              </span>
+              {job.error_message ? (
+                <span className="w-full text-destructive">
+                  {formatMailAccountError(job.error_message)}
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
+function AccountRows({
+  accounts,
+  canManage,
+  canShare = false,
+  onShare,
+  scope,
+  onRefresh,
+  onRequestSync,
+}: {
+  accounts: MailAccount[];
+  canManage: boolean;
+  canShare?: boolean;
+  onShare?: (account: MailAccount) => void;
+  scope: "org" | "personal";
+  onRefresh: () => void;
+  onRequestSync: (account: MailAccount) => void;
+}) {
+  const notify = useNotify();
+  const [imapOpen, setImapOpen] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  const connect = async (provider: "google" | "microsoft") => {
+    try {
+      await startMailOAuth({ provider, scope });
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Could not start connection", {
+        type: "error",
+      });
+    }
+  };
+
+  const disconnect = async (id: number) => {
+    setBusyId(id);
+    try {
+      await disconnectMailAccount(id);
+      notify("Mailbox disconnected", { type: "success" });
+      onRefresh();
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Disconnect failed", {
+        type: "error",
+      });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {canManage ? (
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" onClick={() => connect("google")}>
+            <EnvelopeSimple className="size-4" />
+            Connect Google
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => connect("microsoft")}
+          >
+            Connect Microsoft
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setImapOpen(true)}
+          >
+            Add other account
+          </Button>
+        </div>
+      ) : null}
+
+      {accounts.length === 0 ? (
+        <p className="rounded-md border border-dashed px-4 py-6 text-sm text-muted-foreground">
+          No mailboxes yet. Connect Google or Microsoft to get started.
+        </p>
+      ) : (
+        <ul className="divide-y rounded-md border">
+          {accounts.map((account) => (
+            <li
+              key={account.id}
+              className="flex flex-wrap items-center gap-3 px-3 py-2.5"
+            >
+              <MailAccountAvatar account={account} size="md" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{account.email}</div>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <Badge variant="secondary">
+                    {MAIL_BRAND_LABELS[resolveMailBrand(account)]}
+                  </Badge>
+                  <span className="capitalize">
+                    {account.status.replace("_", " ")}
+                  </span>
+                  {account.last_sync_at
+                    ? `· Synced ${new Date(account.last_sync_at).toLocaleString()}`
+                    : null}
+                  {account.error_message ? (
+                    <span className="text-destructive">
+                      {formatMailAccountError(account.error_message)}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              {(canManage || canShare) ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={busyId === account.id}
+                    >
+                      Actions
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {canShare && scope === "org" && onShare ? (
+                      <DropdownMenuItem onClick={() => onShare(account)}>
+                        <ShareNetwork className="size-4" />
+                        Share with team…
+                      </DropdownMenuItem>
+                    ) : null}
+                    {canManage ? (
+                      <>
+                    <DropdownMenuItem onClick={() => onRequestSync(account)}>
+                      <ArrowsClockwise className="size-4" />
+                      {account.status === "error" ? "Retry sync…" : "Sync now…"}
+                    </DropdownMenuItem>
+                    {(account.status === "needs_reconnect" ||
+                      account.status === "error") &&
+                      account.provider !== "imap" && (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            void connect(
+                              account.provider as "google" | "microsoft",
+                            )
+                          }
+                        >
+                          <Plugs className="size-4" />
+                          Reconnect
+                        </DropdownMenuItem>
+                      )}
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => void disconnect(account.id)}
+                    >
+                      Disconnect
+                    </DropdownMenuItem>
+                      </>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <MailImapDialog
+        open={imapOpen}
+        onOpenChange={setImapOpen}
+        scope={scope}
+        onConnected={(accountId, email) => {
+          onRefresh();
+          onRequestSync({
+            id: accountId,
+            email,
+            provider: "imap",
+          } as MailAccount);
+        }}
+      />
+    </div>
+  );
+}
+
+export function MailAccountsPanel() {
+  const notify = useNotify();
+  const queryClient = useQueryClient();
+  const { identity } = useGetIdentity();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { data: accounts = [], refetch, isPending } = useMailAccounts();
+  const [syncTarget, setSyncTarget] = useState<MailAccount | null>(null);
+  const [shareTarget, setShareTarget] = useState<MailAccount | null>(null);
+
+  const refresh = useCallback(() => {
+    void refetch();
+    void queryClient.invalidateQueries({ queryKey: ["mail_accounts_safe"] });
+    void queryClient.invalidateQueries({ queryKey: ["mail_threads"] });
+  }, [queryClient, refetch]);
+
+  const canOrgManage = hasMemberCapability(identity as any, "mail.org.manage");
+  const canOrgShare = hasMemberCapability(identity as any, "mail.org.share");
+  const canOrgView = hasMemberCapability(identity as any, "mail.org.view");
+  const canPersonalManage = hasMemberCapability(
+    identity as any,
+    "mail.personal.manage",
+  );
+  const canPersonalView = hasMemberCapability(
+    identity as any,
+    "mail.personal.view",
+  );
+  const isAdmin =
+    (identity as { administrator?: boolean } | undefined)?.administrator ===
+    true;
+
+  const handleOAuthSuccess = useCallback(
+    (accountId: number) => {
+      notify("Mailbox connected — choose how far back to sync", {
+        type: "success",
+      });
+      void refetch().then((result) => {
+        const list = result.data ?? [];
+        const found =
+          list.find((a) => a.id === accountId) ??
+          list.find((a) => !a.last_sync_at) ??
+          null;
+        if (found) setSyncTarget(found);
+      });
+      refresh();
+    },
+    [notify, refetch, refresh],
+  );
+
+  const handleOAuthError = useCallback(
+    (message: string) => {
+      notify(message || "Connection failed", { type: "error" });
+      refresh();
+    },
+    [notify, refresh],
+  );
+
+  useEffect(() => {
+    const channel = new BroadcastChannel(MAIL_OAUTH_BROADCAST_CHANNEL);
+    channel.onmessage = (event: MessageEvent<MailOAuthBroadcastMessage>) => {
+      const message = event.data;
+      if (message.type === "connected") {
+        handleOAuthSuccess(message.accountId);
+        return;
+      }
+      if (message.type === "error") {
+        handleOAuthError(message.message);
+      }
+    };
+    return () => channel.close();
+  }, [handleOAuthSuccess, handleOAuthError]);
+
+  useEffect(() => {
+    const clearOAuthParams = () => {
+      const next = new URLSearchParams(searchParams);
+      next.delete("mail_connected");
+      next.delete("mail_account_id");
+      next.delete("mail_error");
+      setSearchParams(next, { replace: true });
+    };
+
+    const connected = searchParams.get("mail_connected") === "1";
+    const error = searchParams.get("mail_error");
+
+    if (connected) {
+      const accountId = Number(searchParams.get("mail_account_id"));
+      const channel = new BroadcastChannel(MAIL_OAUTH_BROADCAST_CHANNEL);
+      channel.postMessage({
+        type: "connected",
+        accountId,
+      } satisfies MailOAuthBroadcastMessage);
+      channel.close();
+      window.close();
+      const timer = window.setTimeout(clearOAuthParams, 500);
+      return () => window.clearTimeout(timer);
+    }
+
+    if (error) {
+      const channel = new BroadcastChannel(MAIL_OAUTH_BROADCAST_CHANNEL);
+      channel.postMessage({
+        type: "error",
+        message: error,
+      } satisfies MailOAuthBroadcastMessage);
+      channel.close();
+      window.close();
+      const timer = window.setTimeout(clearOAuthParams, 500);
+      return () => window.clearTimeout(timer);
+    }
+  }, [searchParams, setSearchParams]);
+
+  const runSync = async (range: MailSyncRange) => {
+    if (!syncTarget) return;
+    try {
+      const result = await syncMailAccount(syncTarget.id, {
+        since: range.since,
+        max_results: range.max_results,
+      });
+      notify(
+        `Synced ${result.synced ?? 0} message${
+          (result.synced ?? 0) === 1 ? "" : "s"
+        }`,
+        { type: "success" },
+      );
+      refresh();
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Sync failed", { type: "error" });
+    }
+  };
+
+  const orgAccounts = accounts.filter((a) => a.owner_member_id == null);
+  const personalAccounts = accounts.filter(
+    (a) => a.owner_member_id != null && a.owner_member_id === identity?.id,
+  );
+
+  if (!canOrgView && !canPersonalView && orgAccounts.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        You do not have permission to view mailboxes.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-base font-semibold">Mailboxes</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Connect Gmail, Outlook, or another account. When you sync, you choose
+          how far back to pull messages into Mail.
+        </p>
+      </div>
+
+      {canOrgView || canOrgManage || canOrgShare || orgAccounts.length > 0 ? (
+        <section className="space-y-3">
+          <h3 className="text-sm font-medium">Organization</h3>
+          <p className="text-xs text-muted-foreground">
+            Shared organization mailboxes. Admins connect accounts; access is
+            granted per mailbox via Share.
+          </p>
+          {isPending ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : (
+            <AccountRows
+              accounts={orgAccounts}
+              canManage={canOrgManage}
+              canShare={canOrgShare || canOrgManage}
+              onShare={setShareTarget}
+              scope="org"
+              onRefresh={refresh}
+              onRequestSync={setSyncTarget}
+            />
+          )}
+        </section>
+      ) : null}
+
+      {canPersonalView ? (
+        <section className="space-y-3">
+          <h3 className="text-sm font-medium">My mailboxes</h3>
+          {isPending ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : (
+            <AccountRows
+              accounts={personalAccounts}
+              canManage={canPersonalManage}
+              scope="personal"
+              onRefresh={refresh}
+              onRequestSync={setSyncTarget}
+            />
+          )}
+        </section>
+      ) : null}
+
+      {isAdmin || canOrgManage || canOrgShare ? (
+        <SyncHealthPanel orgAccounts={orgAccounts} />
+      ) : null}
+
+      <MailAccountShareDialog
+        account={shareTarget}
+        open={shareTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setShareTarget(null);
+        }}
+      />
+
+      <MailSyncRangeDialog
+        open={syncTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setSyncTarget(null);
+        }}
+        accountEmail={syncTarget?.email}
+        onConfirm={runSync}
+      />
+    </div>
+  );
+}
