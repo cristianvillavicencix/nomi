@@ -1,5 +1,6 @@
 import { ImageIcon, Loader2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
+import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
 import { cn } from "@/lib/utils";
 import {
   isProposalImageUrl,
@@ -32,8 +33,12 @@ export const ProposalImageDropZone = ({
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const signedImageUrl = useStorageSignedUrl(imageUrl, {
+    defaultBucket: "attachments",
+  });
 
   const hasImage = isProposalImageUrl(imageUrl);
+  const displayUrl = signedImageUrl ?? undefined;
 
   const onFile = async (file: File | undefined) => {
     if (!file || !file.type.startsWith("image/") || !onChange) return;
@@ -67,7 +72,7 @@ export const ProposalImageDropZone = ({
     return (
       <div className={cn("pf-drop", aspectClass, className)}>
         <img
-          src={imageUrl!.trim()}
+          src={displayUrl}
           alt=""
           className={cn(
             "size-full",
@@ -99,7 +104,7 @@ export const ProposalImageDropZone = ({
       />
       {hasImage ? (
         <img
-          src={imageUrl!.trim()}
+          src={displayUrl}
           alt=""
           className={cn(
             "absolute inset-0 size-full",

@@ -42,18 +42,12 @@ export const isResolvableStorageReference = (
 ) =>
   Boolean(reference && parseStorageObjectReference(reference, defaultBucket));
 
+/** Persisted storage identifier (path only). Use defaultBucket when resolving. */
 export const buildStorageObjectReference = (
-  supabaseUrl: string,
-  bucket: string,
+  _supabaseUrl: string,
+  _bucket: string,
   path: string,
-) => {
-  const base = supabaseUrl.replace(/\/$/, "");
-  const encodedPath = path
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-  return `${base}/storage/v1/object/public/${bucket}/${encodedPath}`;
-};
+) => path;
 
 export const createStorageSignedUrl = async (
   supabase: SupabaseClient,

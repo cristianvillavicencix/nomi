@@ -1,5 +1,8 @@
 import { useFieldValue, useRecordContext, useTranslate } from "ra-core";
+import type { MouseEvent } from "react";
 import type { FileFieldProps } from "@/components/admin";
+import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
+import { downloadPrivateStorageFile } from "@/lib/supabase/privateStorageFile";
 import { cn } from "@/lib/utils";
 
 /**
@@ -17,8 +20,8 @@ export const AttachmentField = (props: FileFieldProps) => {
     className,
     empty,
     title,
-    target,
-    download,
+    target: _target,
+    download: _download,
     defaultValue,
     source,
     record: _recordProp,
@@ -34,6 +37,11 @@ export const AttachmentField = (props: FileFieldProps) => {
     })?.toString() ?? title;
   const translate = useTranslate();
 
+  const srcValue = sourceValue?.toString() ?? "";
+  const signedSrc = useStorageSignedUrl(srcValue, {
+    defaultBucket: "attachments",
+  });
+
   if (sourceValue == null) {
     if (!empty) {
       return null;
@@ -47,39 +55,43 @@ export const AttachmentField = (props: FileFieldProps) => {
   }
 
   const type = record?.type ?? record?.rawFile?.type;
-  const srcValue = sourceValue.toString();
+  const href = signedSrc ?? srcValue;
+
+  const openAttachment = (event: MouseEvent) => {
+    event.stopPropagation();
+    event.preventDefault();
+    void downloadPrivateStorageFile({
+      reference: srcValue,
+      defaultBucket: "attachments",
+      filename: titleValue?.toString() || "attachment",
+    });
+  };
 
   return (
     <div className={cn("inline-block", className)} {...rest}>
       {isImageMimeType(type) ? (
-        <a
-          href={srcValue}
+        <button
+          type="button"
           title={titleValue}
-          target={target}
-          rel="noopener noreferrer"
-          download={download}
-          // useful to prevent click bubbling in a DataTable with rowClick
-          onClick={(e) => e.stopPropagation()}
+          className="cursor-pointer border-0 bg-transparent p-0"
+          onClick={openAttachment}
         >
           <img
             alt={titleValue}
             title={titleValue}
-            src={srcValue}
-            className="w-[200px] h-[100px] object-cover cursor-pointer object-left border border-border"
+            src={href}
+            className="h-[100px] w-[200px] border border-border object-cover object-left"
           />
-        </a>
+        </button>
       ) : (
-        <a
-          href={srcValue}
+        <button
+          type="button"
           title={titleValue}
-          target={target}
-          rel="noopener noreferrer"
-          download={download}
-          // useful to prevent click bubbling in a DataTable with rowClick
-          onClick={(e) => e.stopPropagation()}
+          className="cursor-pointer border-0 bg-transparent p-0 text-primary underline"
+          onClick={openAttachment}
         >
           {titleValue}
-        </a>
+        </button>
       )}
     </div>
   );

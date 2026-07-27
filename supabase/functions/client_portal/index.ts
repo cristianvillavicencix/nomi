@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { createFileAccessToken } from "../_shared/fileAccessToken.ts";
+import { parseStorageObjectReference } from "../_shared/storageObjectUrl.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { loadPortalSession } from "../_shared/portalSession.ts";
@@ -65,24 +66,31 @@ const parseDomainFromUrl = (siteUrl?: string | null) => {
 };
 
 const signResourceUrls = async (file: ResourceFile, orgId?: number | null) => {
-  const path = file.path?.trim();
   const mimeType = file.type?.trim() || "application/octet-stream";
   const fileName = file.title?.trim() || "file";
   const isImage = mimeType.startsWith("image/");
 
+  let path = file.path?.trim() || "";
+  let bucket = file.bucket?.trim() || "project-files";
+  if (!path && file.src?.trim()) {
+    const parsed = parseStorageObjectReference(file.src.trim(), bucket);
+    if (parsed) {
+      path = parsed.path;
+      bucket = parsed.bucket;
+    }
+  }
+
   if (!path) {
-    const fallback = file.src?.trim() || null;
     return {
       file_name: fileName,
       mime_type: mimeType,
       is_image: isImage,
-      download_url: fallback,
-      preview_url: fallback,
+      download_url: null,
+      preview_url: null,
       size_bytes: file.size ?? null,
     };
   }
 
-  const bucket = file.bucket?.trim() || "project-files";
   try {
     const { url: downloadUrl } = await createFileAccessToken({
       bucket,
@@ -105,13 +113,12 @@ const signResourceUrls = async (file: ResourceFile, orgId?: number | null) => {
       size_bytes: file.size ?? null,
     };
   } catch {
-    const fallback = file.src?.trim() || null;
     return {
       file_name: fileName,
       mime_type: mimeType,
       is_image: isImage,
-      download_url: fallback,
-      preview_url: fallback,
+      download_url: null,
+      preview_url: null,
       size_bytes: file.size ?? null,
     };
   }

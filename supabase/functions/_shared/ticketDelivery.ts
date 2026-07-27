@@ -7,6 +7,7 @@ import {
 import { buildTicketDeliveryEmailHtml } from "./ticketEmailTemplates.ts";
 import { loadCombinedInvoiceTicketIds } from "./combinedTicketInvoiceFlow.ts";
 import { createPublicFileLinksForStoragePaths } from "./fileAccessToken.ts";
+import { parseStorageObjectReference } from "./storageObjectUrl.ts";
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 
 const buildMessageId = (ticketId: number) =>
@@ -60,18 +61,32 @@ type DeliveryFile = {
 };
 
 async function buildDownloadLinks(files: DeliveryFile[], orgId?: number) {
-  const storageFiles = files
-    .map((file) => {
-      const path = file.path?.trim();
-      const name = file.title?.trim() || path?.split("/").pop() || "file";
-      if (!path) return null;
+  const resolveStorageFile = (file: DeliveryFile) => {
+    const name = file.title?.trim() || "file";
+    const path = file.path?.trim();
+    if (path) {
       return {
         bucket: "attachments",
         path,
         filename: name,
         mimeType: file.type ?? null,
       };
-    })
+    }
+    const parsed = parseStorageObjectReference(
+      file.src?.trim() ?? "",
+      "attachments",
+    );
+    if (!parsed) return null;
+    return {
+      bucket: parsed.bucket,
+      path: parsed.path,
+      filename: name,
+      mimeType: file.type ?? null,
+    };
+  };
+
+  const storageFiles = files
+    .map((file) => resolveStorageFile(file))
     .filter(Boolean) as Array<{
     bucket: string;
     path: string;
@@ -89,12 +104,8 @@ async function buildDownloadLinks(files: DeliveryFile[], orgId?: number) {
       : [];
 
   for (const file of files) {
-    if (file.path?.trim()) continue;
+    if (resolveStorageFile(file)) continue;
     const name = file.title?.trim() || "file";
-    if (file.src?.trim()) {
-      links.push({ name, url: file.src.trim() });
-      continue;
-    }
     throw new Error(
       `Could not create a download link for "${name}". Retry delivery or share the file manually.`,
     );

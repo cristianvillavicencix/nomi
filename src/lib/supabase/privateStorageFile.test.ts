@@ -61,4 +61,32 @@ describe("privateStorageFile", () => {
       }),
     ).toBeNull();
   });
+
+  it("parses legacy Supabase public storage URLs", () => {
+    expect(
+      resolvePrivateStorageLocation({
+        reference:
+          "https://qjglkywmqwqdoaboakao.supabase.co/storage/v1/object/public/attachments/0de761ae-364c-4577-b4f5-58a013f755ec.pdf",
+      }),
+    ).toEqual({
+      bucket: "attachments",
+      path: "0de761ae-364c-4577-b4f5-58a013f755ec.pdf",
+      filename: undefined,
+      expiresIn: undefined,
+    });
+  });
+
+  it("parses bare attachment paths with default bucket", () => {
+    expect(
+      resolvePrivateStorageLocation({
+        reference: "0de761ae-364c-4577-b4f5-58a013f755ec.pdf",
+        defaultBucket: "attachments",
+      }),
+    ).toEqual({
+      bucket: "attachments",
+      path: "0de761ae-364c-4577-b4f5-58a013f755ec.pdf",
+      filename: undefined,
+      expiresIn: undefined,
+    });
+  });
 });

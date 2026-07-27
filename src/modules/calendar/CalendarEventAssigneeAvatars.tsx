@@ -1,6 +1,6 @@
 import type { OrganizationMember } from "@/components/atomic-crm/types";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { resolveAvatarUrl } from "@/components/avatar/resolveAvatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { SignedMemberAvatarImage } from "@/components/avatar/SignedMemberAvatarImage";
 import {
   getMemberInitials,
   getMemberName,
@@ -46,7 +46,7 @@ export const CalendarEventAssigneeAvatars = ({
             className={cn(avatarClass, "ring-1 ring-background")}
             title={name}
           >
-            <AvatarImage src={resolveAvatarUrl(member, 64)} alt={name} />
+            <SignedMemberAvatarImage member={member} size={64} alt={name} />
             <AvatarFallback className="bg-primary/10 font-medium text-primary">
               {getMemberInitials(member)}
             </AvatarFallback>

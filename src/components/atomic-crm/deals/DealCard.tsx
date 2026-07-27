@@ -1,9 +1,9 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { GripVertical } from "lucide-react";
 import { useNavigate } from "react-router";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
-import { resolveAvatarUrl } from "@/components/avatar/resolveAvatar";
+import { SignedMemberAvatarImage } from "@/components/avatar/SignedMemberAvatarImage";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import { cn } from "@/lib/utils";
@@ -150,8 +150,9 @@ export const DealCardContent = ({
               {assignee ? (
                 <>
                   <Avatar className="size-5">
-                    <AvatarImage
-                      src={resolveAvatarUrl(assignee, 40)}
+                    <SignedMemberAvatarImage
+                      member={assignee}
+                      size={40}
                       alt={getMemberDisplayName(assignee)}
                     />
                     <AvatarFallback

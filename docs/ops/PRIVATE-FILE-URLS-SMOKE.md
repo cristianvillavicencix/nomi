@@ -46,3 +46,33 @@ All manual smoke items passed in production.
 - [x] `file_download` — IP rate limit (30 req/min) via `file_download_request_log`
 - [x] pg_cron daily purge of expired tokens + old request logs
 - [x] `uploadFormFile.ts` — removed legacy signed-URL upload path (token-only)
+
+## Ticket attachment hardening (2026-07-27)
+
+### Code changes
+
+- [x] `privateStorageFile.ts` — parse legacy `/object/public/{bucket}/…` URLs before treating as external
+- [x] `buildStorageObjectReference` — path-only identifiers for new uploads
+- [x] `TicketBillingSidePanel` — deliverable download via `downloadPrivateStorageFile`
+- [x] `ProposalImageDropZone`, `AttachmentField`, avatar lists — signed URLs
+- [x] `ticketDelivery.ts` / `client_portal` — no raw Supabase `src` fallbacks in email/API links
+- [x] Migration `20260727180000_normalize_legacy_storage_references.sql`
+
+### Manual checks
+
+- [ ] Ticket reply → upload PDF → open attachment pill (no `/object/public/` in address bar)
+- [ ] Ticket billing → deliverable download button works
+- [ ] Legacy row with old public URL still opens after migration backfill
+- [ ] Proposal image preview loads for uploaded images
+- [ ] Deal card / ticket assignee avatars render for uploaded avatars
+
+### Automated
+
+```bash
+npm run typecheck
+npm run test -- --run src/lib/supabase/privateStorageFile.test.ts
+rg 'href=\{.*\.src\}' src/modules/tickets/
+rg 'object/public/attachments' src/ supabase/functions/ --glob '!* 2.*'
+```
+
+Deploy after merge: apply migration, redeploy `deliver_ticket` + `client_portal` edge functions.

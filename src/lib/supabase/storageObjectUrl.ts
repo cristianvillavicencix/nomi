@@ -41,14 +41,9 @@ export const isResolvableStorageReference = (
   defaultBucket?: string,
 ) => Boolean(reference && parseStorageObjectReference(reference, defaultBucket));
 
-export const buildStorageObjectReference = (bucket: string, path: string) => {
-  const base = import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, "");
-  const encodedPath = path
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-  return `${base}/storage/v1/object/public/${bucket}/${encodedPath}`;
-};
+/** Persisted storage identifier (path only). Use defaultBucket when resolving. */
+export const buildStorageObjectReference = (_bucket: string, path: string) =>
+  path;
 
 export const createStorageSignedUrl = async (
   bucket: string,

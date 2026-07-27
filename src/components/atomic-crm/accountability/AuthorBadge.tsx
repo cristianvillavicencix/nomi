@@ -1,7 +1,8 @@
 import { useGetOne, type Identifier } from "ra-core";
 import { Link } from "react-router";
 import { useIsAdminLevel } from "@/lib/permissions/useIsAdminLevel";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SignedMemberAvatarImage } from "@/components/avatar/SignedMemberAvatarImage";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { OrganizationMember } from "@/components/atomic-crm/types";
 
 interface AuthorBadgeProps {
@@ -43,7 +44,7 @@ export function AuthorBadge({
       className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground ${variant === "block" ? "mt-1" : ""}`}
     >
       <Avatar className={avatarSize}>
-        <AvatarImage src={member.avatar?.src} alt={fullName} />
+        <SignedMemberAvatarImage member={member} size={64} alt={fullName} />
         <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
       </Avatar>
       <span className="hover:underline">{fullName}</span>

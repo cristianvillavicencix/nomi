@@ -1,8 +1,8 @@
 import { Link } from "react-router";
 import { useGetList } from "ra-core";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { resolveAvatarUrl } from "@/components/avatar/resolveAvatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { SignedMemberAvatarImage } from "@/components/avatar/SignedMemberAvatarImage";
 import type {
   OrganizationMember,
   Task,
@@ -94,7 +94,7 @@ export const TaskAssignedAvatars = ({
         className={cn(linkClassName, done && completedAvatarClass)}
       >
         <Avatar className={avatarClass}>
-          <AvatarImage src={resolveAvatarUrl(member, 64)} alt={name} />
+          <SignedMemberAvatarImage member={member} size={64} alt={name} />
           <AvatarFallback
             className={cn(
               textClass,

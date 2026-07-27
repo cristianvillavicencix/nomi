@@ -39,12 +39,14 @@ export function resolvePrivateStorageLocation(
   const refInput = input as PrivateStorageReferenceInput;
   const reference = refInput.reference?.trim();
   if (!reference) return null;
-  if (isExternalHttpUrl(reference)) return null;
   const parsed = parseStorageObjectReference(
     reference,
     refInput.defaultBucket,
   );
-  if (!parsed) return null;
+  if (!parsed) {
+    if (isExternalHttpUrl(reference)) return null;
+    return null;
+  }
   return {
     bucket: parsed.bucket,
     path: parsed.path,
@@ -208,11 +210,14 @@ export async function resolveDisplayUrlFromReference(
   }
 
   const trimmed = reference?.trim() ?? "";
-  if (trimmed && isExternalHttpUrl(trimmed)) {
-    return resolvePrivateStorageBlobUrl({ reference: trimmed });
-  }
-
   if (trimmed) {
+    const parsed = parseStorageObjectReference(
+      trimmed,
+      options?.defaultBucket ?? options?.bucket,
+    );
+    if (!parsed && isExternalHttpUrl(trimmed)) {
+      return resolvePrivateStorageBlobUrl({ reference: trimmed });
+    }
     return resolvePrivateStorageBlobUrl({
       reference: trimmed,
       defaultBucket: options?.defaultBucket ?? options?.bucket,

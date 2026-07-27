@@ -1,10 +1,10 @@
 import type { MouseEvent } from "react";
 import { Link } from "react-router";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   initialsOf,
-  resolveAvatarUrl,
 } from "@/components/avatar/resolveAvatar";
+import { SignedMemberAvatarImage } from "@/components/avatar/SignedMemberAvatarImage";
 import type { Deal, OrganizationMember } from "@/components/atomic-crm/types";
 
 const getMemberName = (
@@ -47,8 +47,9 @@ export const ProjectAssignedAvatars = ({
                 onClick={onClick}
               >
                 <Avatar className="size-7">
-                  <AvatarImage
-                    src={resolveAvatarUrl(member, 64)}
+                  <SignedMemberAvatarImage
+                    member={member}
+                    size={64}
                     alt={getMemberName(member)}
                   />
                   <AvatarFallback className="bg-muted text-[10px] font-medium">
@@ -83,7 +84,7 @@ export const ProjectAssignedAvatars = ({
       onClick={onClick}
     >
       <Avatar className="size-7">
-        <AvatarImage src={resolveAvatarUrl(member, 64)} alt={name} />
+        <SignedMemberAvatarImage member={member} size={64} alt={name} />
         <AvatarFallback className="bg-muted text-[10px] font-medium">
           {initialsOf(member)}
         </AvatarFallback>

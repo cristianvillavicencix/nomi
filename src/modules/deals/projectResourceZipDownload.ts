@@ -6,7 +6,6 @@ const sanitizeFilename = (value: string) =>
   value.replace(/[/\\?%*:| "<>]/g, "-").trim() || "file";
 
 const resolveResourceDownloadUrl = async (entry: DealResource) => {
-  if (entry.file.src) return entry.file.src;
   if (entry.file.path) {
     return getProjectResourceSignedUrl(entry.file.path, entry.file.bucket);
   }

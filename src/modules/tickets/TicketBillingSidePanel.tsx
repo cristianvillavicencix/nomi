@@ -55,6 +55,7 @@ import type { Company, Contact } from "@/components/atomic-crm/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
+import { downloadPrivateStorageFile } from "@/lib/supabase/privateStorageFile";
 import {
   Tooltip,
   TooltipContent,
@@ -880,16 +881,19 @@ export const TicketBillingSidePanel = ({
       className="flex items-center justify-between gap-2 rounded-none border px-3 py-2.5"
     >
       <span className="min-w-0 truncate text-sm">{file.title}</span>
-      {file.src ? (
-        <IconButton aria-label="Download" className="size-7 shrink-0" asChild>
-          <a
-            href={file.src}
-            target="_blank"
-            rel="noopener noreferrer"
-            download={file.title}
-          >
-            <Download className="size-3.5" />
-          </a>
+      {file.src || file.path ? (
+        <IconButton
+          aria-label="Download"
+          className="size-7 shrink-0"
+          onClick={() => {
+            void downloadPrivateStorageFile({
+              reference: file.src ?? file.path,
+              defaultBucket: "attachments",
+              filename: file.title,
+            }).catch(() => notify("Could not download file", { type: "error" }));
+          }}
+        >
+          <Download className="size-3.5" />
         </IconButton>
       ) : null}
     </div>

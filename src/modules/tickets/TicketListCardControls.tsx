@@ -5,7 +5,8 @@ import type { OrganizationMember, Ticket } from "@/modules/types";
 import { ticketStatusLabel } from "@/modules/tickets/ticketInboxConfig";
 import { memberDisplayName } from "@/modules/tickets/ticketInboxUi";
 import { useTicketStatusChange } from "@/modules/tickets/useTicketStatusChange";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SignedMemberAvatarImage } from "@/components/avatar/SignedMemberAvatarImage";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Popover,
   PopoverContent,
@@ -149,8 +150,8 @@ export const TicketListAssigneeControl = ({
       onClick={(event) => event.stopPropagation()}
     >
       <Avatar className="size-6">
-        {assignee?.avatar?.src ? (
-          <AvatarImage src={assignee.avatar.src} alt={name} />
+        {assignee ? (
+          <SignedMemberAvatarImage member={assignee} size={48} alt={name} />
         ) : null}
         <AvatarFallback className="text-[10px] font-medium">
           {assignee ? (
@@ -194,12 +195,11 @@ export const TicketListAssigneeControl = ({
             onClick={() => handleChange(member.id)}
           >
             <Avatar className="size-6">
-              {member.avatar?.src ? (
-                <AvatarImage
-                  src={member.avatar.src}
-                  alt={memberDisplayName(member) ?? "Member"}
-                />
-              ) : null}
+              <SignedMemberAvatarImage
+                member={member}
+                size={48}
+                alt={memberDisplayName(member) ?? "Member"}
+              />
               <AvatarFallback className="text-[10px]">
                 {getMemberInitials(member)}
               </AvatarFallback>
