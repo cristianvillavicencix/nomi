@@ -16,16 +16,20 @@ import { useNotify, useGetIdentity } from "ra-core";
 import { MailEmptyState } from "./MailEmptyState";
 import { MailThreadList } from "./MailThreadList";
 import { MailThreadListPagination } from "./MailThreadListPagination";
-import { MailMessagePane, type MailMessagePaneActions } from "./MailMessagePane";
+import {
+  MailMessagePane,
+  type MailMessagePaneActions,
+} from "./MailMessagePane";
 import type { MailComposeMode } from "./MailComposeDialog";
 import { useMailCompose } from "./MailComposeProvider";
-import {
-  MailFolderRail,
-  type MailFolderId,
-} from "./MailFolderRail";
+import { MailFolderRail, type MailFolderId } from "./MailFolderRail";
 import { MailThreadFilters } from "./MailThreadFilters";
 import type { MailListFilter } from "./mailListFilters";
-import { syncMailAccount, applyMailThreadAction, type MailThreadAction } from "./mailApi";
+import {
+  syncMailAccount,
+  applyMailThreadAction,
+  type MailThreadAction,
+} from "./mailApi";
 import {
   readMailAccountFilter,
   readMailFolder,
@@ -33,10 +37,7 @@ import {
   writeMailFolder,
 } from "./mailPreferences";
 import { mailRfcMessageId } from "./mailHeaders";
-import {
-  buildForwardQuoteBlock,
-  buildReplyQuoteBlock,
-} from "./mailQuoteHtml";
+import { buildForwardQuoteBlock, buildReplyQuoteBlock } from "./mailQuoteHtml";
 import {
   useMailThreads,
   useMailMessages,
@@ -96,15 +97,14 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     perPage,
   });
   const threads = threadsPage?.threads ?? [];
-  const listPagination: MailThreadsPageResult =
-    threadsPage ?? {
-      threads: [],
-      total: 0,
-      page,
-      perPage,
-      hasNextPage: false,
-      hasPreviousPage: false,
-    };
+  const listPagination: MailThreadsPageResult = threadsPage ?? {
+    threads: [],
+    total: 0,
+    page,
+    perPage,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  };
   const { data: labels = [] } = useMailLabels(accountFilter);
   const { data: inboxUnreadCount = 0 } = useMailInboxUnreadCount(accountFilter);
 
@@ -143,7 +143,8 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
       return true;
     }
     if (action === "unarchive" && folder === "archive") return true;
-    if (action === "spam" && (folder === "inbox" || folder === "starred")) return true;
+    if (action === "spam" && (folder === "inbox" || folder === "starred"))
+      return true;
     if (action === "not_spam" && folder === "spam") return true;
     if (action === "unstar" && folder === "starred") return true;
     if (
@@ -172,6 +173,23 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     );
   };
 
+  const applyOptimisticListRemoval = (
+    thread: MailThread,
+    action: MailThreadAction,
+  ) => {
+    const patch = applyOptimisticMailThreadAction(queryClient, action, thread, {
+      identityId: identity?.id,
+      accountFilter,
+    });
+    if (patch !== null && leavesFolderForAction(action, thread)) {
+      removeThreadFromListCache(thread.id);
+    }
+    return patch;
+  };
+
+  const shouldRefreshMailQueriesAfterAction = (action: MailThreadAction) =>
+    action === "mark_read" || action === "mark_unread";
+
   const runThreadAction = async (
     thread: MailThread,
     action: MailThreadAction,
@@ -188,16 +206,10 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
       return;
     }
 
-    const optimisticPatch = applyOptimisticMailThreadAction(
-      queryClient,
-      action,
-      thread,
-      { identityId: identity?.id, accountFilter },
-    );
-    if (optimisticPatch) {
-      if (leavesFolderForAction(action, thread)) {
-        removeThreadFromListCache(thread.id);
-      }
+    const optimisticPatch = applyOptimisticListRemoval(thread, action);
+    if (selected?.id === thread.id && leavesFolderForAction(action, thread)) {
+      selectNeighborAfterRemoval(thread.id);
+    } else if (optimisticPatch && Object.keys(optimisticPatch).length > 0) {
       setSelected((prev) => {
         if (prev?.id === thread.id) return { ...prev, ...optimisticPatch };
         if (action === "mark_read") return { ...thread, ...optimisticPatch };
@@ -207,28 +219,19 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
 
     try {
       await applyMailThreadAction(thread.id, action);
-      if (selected?.id === thread.id && leavesFolderForAction(action, thread)) {
-        selectNeighborAfterRemoval(thread.id);
-      } else if (
-        selected?.id === thread.id &&
-        action !== "delete_forever" &&
-        !optimisticPatch
-      ) {
-        const patch: Partial<MailThread> = {};
-        if (action === "unarchive") patch.is_archived = false;
-        if (action === "untrash") patch.is_trashed = false;
-        if (action === "not_spam") patch.is_spam = false;
-        if (Object.keys(patch).length > 0) {
-          setSelected({ ...thread, ...patch });
-        }
+      if (shouldRefreshMailQueriesAfterAction(action)) {
+        void queryClient.invalidateQueries({
+          queryKey: ["mail_unread_count"],
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ["mail_inbox_unread_count"],
+        });
       }
-      if (action === "mark_read" || action === "mark_unread") {
-        return;
-      }
-      invalidate();
     } catch (e) {
       invalidate();
-      notify(e instanceof Error ? e.message : "Action failed", { type: "error" });
+      notify(e instanceof Error ? e.message : "Action failed", {
+        type: "error",
+      });
     }
   };
 
@@ -246,17 +249,26 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     ) {
       return;
     }
+    const targets = threads.filter((t) => ids.includes(t.id));
+    for (const thread of targets) {
+      applyOptimisticListRemoval(thread, action);
+    }
+    if (
+      selected &&
+      ids.includes(selected.id) &&
+      leavesFolderForAction(action, selected)
+    ) {
+      selectNeighborAfterRemoval(ids);
+    }
+
     try {
       await applyMailThreadAction(ids, action);
       setSelectedIds(new Set());
-      if (selected && ids.includes(selected.id)) {
-        if (leavesFolderForAction(action, selected)) {
-          selectNeighborAfterRemoval(ids);
-        }
-      }
-      invalidate();
     } catch (e) {
-      notify(e instanceof Error ? e.message : "Action failed", { type: "error" });
+      invalidate();
+      notify(e instanceof Error ? e.message : "Action failed", {
+        type: "error",
+      });
     }
   };
 
@@ -301,7 +313,9 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["mail_threads"] });
     void queryClient.invalidateQueries({ queryKey: ["mail_unread_count"] });
-    void queryClient.invalidateQueries({ queryKey: ["mail_inbox_unread_count"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["mail_inbox_unread_count"],
+    });
     void queryClient.invalidateQueries({ queryKey: ["mail_messages"] });
     void queryClient.invalidateQueries({ queryKey: ["mail_attachments"] });
   };
@@ -348,8 +362,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     if (mode === "new") {
       openGlobalCompose({
         mode: "new",
-        initialAccountId:
-          accountFilter !== "all" ? accountFilter : undefined,
+        initialAccountId: accountFilter !== "all" ? accountFilter : undefined,
       });
       return;
     }
@@ -429,10 +442,9 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         totalNew += result.new_messages ?? 0;
       }
       if (totalNew > 0) {
-        notify(
-          `${totalNew} new message${totalNew === 1 ? "" : "s"}`,
-          { type: "success" },
-        );
+        notify(`${totalNew} new message${totalNew === 1 ? "" : "s"}`, {
+          type: "success",
+        });
       } else {
         notify("Inbox is up to date", { type: "info" });
       }
@@ -443,29 +455,6 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     } finally {
       setSyncing(false);
     }
-  };
-
-  if (accounts.length === 0) {
-    return <MailEmptyState />;
-  }
-
-  const handleListStar = (thread: MailThread) => {
-    void runThreadAction(
-      thread,
-      thread.is_starred ? "unstar" : "star",
-    );
-  };
-
-  const handleListArchive = (thread: MailThread) => {
-    if (folder === "spam" || folder === "trash") return;
-    void runThreadAction(
-      thread,
-      folder === "archive" || thread.is_archived ? "unarchive" : "archive",
-    );
-  };
-
-  const handleListRestore = (thread: MailThread) => {
-    void runThreadAction(thread, "untrash");
   };
 
   const handleListTrash = (thread: MailThread) => {
@@ -480,15 +469,9 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     void runThreadAction(thread, "trash");
   };
 
-  const handleListSpam = (thread: MailThread) => {
-    if (folder === "spam") {
-      void runThreadAction(thread, "not_spam");
-      return;
-    }
-    void runThreadAction(thread, "spam");
-  };
-
   useEffect(() => {
+    if (accounts.length === 0) return;
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (
         shouldIgnoreMailKeyboardShortcut(event, { composeOpen }) ||
@@ -511,7 +494,35 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [composeOpen, folder, selected, selectedIds]);
+  }, [accounts.length, composeOpen, folder, selected, selectedIds]);
+
+  if (accounts.length === 0) {
+    return <MailEmptyState />;
+  }
+
+  const handleListStar = (thread: MailThread) => {
+    void runThreadAction(thread, thread.is_starred ? "unstar" : "star");
+  };
+
+  const handleListArchive = (thread: MailThread) => {
+    if (folder === "spam" || folder === "trash") return;
+    void runThreadAction(
+      thread,
+      folder === "archive" || thread.is_archived ? "unarchive" : "archive",
+    );
+  };
+
+  const handleListRestore = (thread: MailThread) => {
+    void runThreadAction(thread, "untrash");
+  };
+
+  const handleListSpam = (thread: MailThread) => {
+    if (folder === "spam") {
+      void runThreadAction(thread, "not_spam");
+      return;
+    }
+    void runThreadAction(thread, "spam");
+  };
 
   const buildMessagePaneActions = (
     t: MailThread,
@@ -594,58 +605,57 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
       >
         <div className="shrink-0 border-b border-border/40 bg-muted/15 md:bg-muted/20">
           <div className="flex items-center gap-2 px-2 py-2 md:hidden">
-          <Select
-            value={folder}
-            onValueChange={(v) => {
-              const next = v as MailFolderId;
-              setFolder(next);
-              writeMailFolder(next);
-              setListFilter("all");
-              setLabelId(null);
-              setPage(1);
-              setSelected(null);
-              setMobileShowThread(false);
-            }}
-          >
-            <SelectTrigger className="h-8 w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MOBILE_FOLDERS.map((f) => (
-                <SelectItem key={f.id} value={f.id}>
-                  {f.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={accountFilter === "all" ? "all" : String(accountFilter)}
-            onValueChange={(v) => {
-              const next =
-                v === "all" ? ("all" as const) : Number(v);
-              setAccountFilter(next);
-              writeMailAccountFilter(next);
-              setPage(1);
-              setSelected(null);
-              setLabelId(null);
-              setMobileShowThread(false);
-            }}
-          >
-            <SelectTrigger className="h-8 min-w-0 flex-1">
-              <SelectValue placeholder="Mailbox" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All mailboxes</SelectItem>
-              {accounts
-                .filter((a) => a.status === "connected")
-                .map((account) => (
-                  <SelectItem key={account.id} value={String(account.id)}>
-                    {account.display_name?.trim() || account.email}
+            <Select
+              value={folder}
+              onValueChange={(v) => {
+                const next = v as MailFolderId;
+                setFolder(next);
+                writeMailFolder(next);
+                setListFilter("all");
+                setLabelId(null);
+                setPage(1);
+                setSelected(null);
+                setMobileShowThread(false);
+              }}
+            >
+              <SelectTrigger className="h-8 w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MOBILE_FOLDERS.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.label}
                   </SelectItem>
                 ))}
-            </SelectContent>
-          </Select>
-        </div>
+              </SelectContent>
+            </Select>
+            <Select
+              value={accountFilter === "all" ? "all" : String(accountFilter)}
+              onValueChange={(v) => {
+                const next = v === "all" ? ("all" as const) : Number(v);
+                setAccountFilter(next);
+                writeMailAccountFilter(next);
+                setPage(1);
+                setSelected(null);
+                setLabelId(null);
+                setMobileShowThread(false);
+              }}
+            >
+              <SelectTrigger className="h-8 min-w-0 flex-1">
+                <SelectValue placeholder="Mailbox" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All mailboxes</SelectItem>
+                {accounts
+                  .filter((a) => a.status === "connected")
+                  .map((account) => (
+                    <SelectItem key={account.id} value={String(account.id)}>
+                      {account.display_name?.trim() || account.email}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <MailThreadFilters
             folder={folder}
@@ -671,106 +681,106 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
 
           {threads.length > 0 ? (
             <div className="flex items-center gap-2 border-t border-border/30 px-3 py-1.5 text-xs text-muted-foreground">
-            <Checkbox
-              checked={
-                selectedIds.size > 0 && selectedIds.size === threads.length
-              }
-              onCheckedChange={(checked) => {
-                if (checked) {
-                  setSelectedIds(new Set(threads.map((t) => t.id)));
-                } else {
-                  setSelectedIds(new Set());
+              <Checkbox
+                checked={
+                  selectedIds.size > 0 && selectedIds.size === threads.length
                 }
-              }}
-            />
-            <span className="flex-1">
-              {selectedIds.size > 0
-                ? `${selectedIds.size} selected`
-                : listPagination.total > 0
-                  ? `${listPagination.total} conversation${listPagination.total === 1 ? "" : "s"}`
-                  : "No conversations"}
-            </span>
-            {selectedIds.size > 0 ? (
-              <div className="flex flex-wrap justify-end gap-1">
-                {folder !== "trash" && folder !== "spam" ? (
-                  <>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => void runBulkAction("star")}
-                    >
-                      Star
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => void runBulkAction("archive")}
-                    >
-                      Archive
-                    </Button>
-                    {folder === "inbox" ? (
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setSelectedIds(new Set(threads.map((t) => t.id)));
+                  } else {
+                    setSelectedIds(new Set());
+                  }
+                }}
+              />
+              <span className="flex-1">
+                {selectedIds.size > 0
+                  ? `${selectedIds.size} selected`
+                  : listPagination.total > 0
+                    ? `${listPagination.total} conversation${listPagination.total === 1 ? "" : "s"}`
+                    : "No conversations"}
+              </span>
+              {selectedIds.size > 0 ? (
+                <div className="flex flex-wrap justify-end gap-1">
+                  {folder !== "trash" && folder !== "spam" ? (
+                    <>
                       <Button
                         type="button"
                         size="sm"
                         variant="ghost"
                         className="h-7 px-2 text-xs"
-                        onClick={() => void runBulkAction("spam")}
+                        onClick={() => void runBulkAction("star")}
                       >
-                        Spam
+                        Star
                       </Button>
-                    ) : null}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => void runBulkAction("archive")}
+                      >
+                        Archive
+                      </Button>
+                      {folder === "inbox" ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => void runBulkAction("spam")}
+                        >
+                          Spam
+                        </Button>
+                      ) : null}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => void runBulkAction("trash")}
+                      >
+                        Trash
+                      </Button>
+                    </>
+                  ) : null}
+                  {folder === "trash" ? (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => void runBulkAction("untrash")}
+                      >
+                        Restore
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => void runBulkAction("delete_forever")}
+                      >
+                        Delete forever
+                      </Button>
+                    </>
+                  ) : null}
+                  {folder === "spam" ? (
                     <Button
                       type="button"
                       size="sm"
                       variant="ghost"
                       className="h-7 px-2 text-xs"
-                      onClick={() => void runBulkAction("trash")}
+                      onClick={() => void runBulkAction("not_spam")}
                     >
-                      Trash
+                      Not spam
                     </Button>
-                  </>
-                ) : null}
-                {folder === "trash" ? (
-                  <>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => void runBulkAction("untrash")}
-                    >
-                      Restore
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => void runBulkAction("delete_forever")}
-                    >
-                      Delete forever
-                    </Button>
-                  </>
-                ) : null}
-                {folder === "spam" ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => void runBulkAction("not_spam")}
-                  >
-                    Not spam
-                  </Button>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {isPending ? (
@@ -797,7 +807,9 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
                     void openDraftFromList(thread);
                     return;
                   }
-                  const next = thread.is_unread ? { ...thread, is_unread: false } : thread;
+                  const next = thread.is_unread
+                    ? { ...thread, is_unread: false }
+                    : thread;
                   setSelected(next);
                   setMobileShowThread(true);
                   if (thread.is_unread) {
@@ -850,7 +862,6 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
       >
         <PencilSimple className="size-5" />
       </Button>
-
     </div>
   );
 }

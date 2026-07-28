@@ -45,9 +45,8 @@ export function adjustMailUnreadCountsInCache(
   const { identityId, accountFilter, thread, delta } = params;
   if (!threadCountsTowardUnreadTotals(thread)) return;
 
-  queryClient.setQueryData<number>(
-    ["mail_unread_count", identityId],
-    (old) => Math.max(0, (old ?? 0) + delta),
+  queryClient.setQueryData<number>(["mail_unread_count", identityId], (old) =>
+    Math.max(0, (old ?? 0) + delta),
   );
 
   if (accountFilter === "all" || accountFilter === thread.account_id) {
@@ -135,6 +134,24 @@ export function applyOptimisticMailThreadAction(
         });
       }
       return { is_spam: true, is_unread: false };
+    case "delete_forever":
+      if (threadCountsTowardUnreadTotals(thread)) {
+        adjustMailUnreadCountsInCache(queryClient, {
+          ...params,
+          thread,
+          delta: -1,
+        });
+      }
+      return {};
+    case "untrash":
+      patchMailThreadsInCache(queryClient, thread.id, { is_trashed: false });
+      return { is_trashed: false };
+    case "unarchive":
+      patchMailThreadsInCache(queryClient, thread.id, { is_archived: false });
+      return { is_archived: false };
+    case "not_spam":
+      patchMailThreadsInCache(queryClient, thread.id, { is_spam: false });
+      return { is_spam: false };
     default:
       return null;
   }

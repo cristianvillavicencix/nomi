@@ -4,6 +4,7 @@ import {
   syncAttachmentBatch,
 } from "./mailAttachmentStorage.ts";
 import { normalizeContentId } from "./mailInlineImages.ts";
+import { microsoftGraphHeaders } from "./microsoftGraphMail.ts";
 
 type GmailHeader = { name?: string; value?: string };
 
@@ -201,7 +202,7 @@ export async function syncGraphMessageAttachments(
 ): Promise<number> {
   const res = await fetch(
     `https://graph.microsoft.com/v1.0/me/messages/${encodeURIComponent(providerMessageId)}/attachments?$top=20`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
+    { headers: microsoftGraphHeaders(accessToken) },
   );
   if (!res.ok) return 0;
   const json = await res.json();

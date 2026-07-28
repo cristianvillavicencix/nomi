@@ -229,8 +229,6 @@ export const resolveSettingsRoute = (searchParams: URLSearchParams) => {
     normalizedTab = "products";
   } else if (rawTab === "commercial" && sectionParam === "contracts") {
     normalizedTab = "proposals";
-  } else if (rawTab === "proposals" && sectionParam === "catalog") {
-    normalizedTab = "products";
   } else if (rawTab === "connectors" && sectionParam === "content") {
     normalizedTab = "communications";
   } else if (rawTab === "connectors" && sectionParam === "notifications") {

@@ -17,6 +17,9 @@ import {
   syncGmailMessageAttachments,
   syncGraphMessageAttachments,
 } from "../_shared/mailAttachmentSync.ts";
+import {
+  MICROSOFT_GRAPH_IMMUTABLE_ID_PREFER,
+} from "../_shared/microsoftGraphMail.ts";
 
 const json = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -366,7 +369,7 @@ async function syncMicrosoftFolder(
     const listRes = await fetch(nextUrl, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        Prefer: 'outlook.body-content-type="html"',
+        Prefer: `${MICROSOFT_GRAPH_IMMUTABLE_ID_PREFER}, outlook.body-content-type="html"`,
       },
     });
     const listJson = await listRes.json();

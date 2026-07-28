@@ -10,6 +10,13 @@ import {
   type MailAccountRow,
 } from "../_shared/mailAccount.ts";
 import { readWorkerErrorResponse } from "../_shared/formatWorkerError.ts";
+import {
+  graphMessageFetch,
+  handleMicrosoftGraphResponse,
+  isBenignMicrosoftMailError,
+  resolveMicrosoftThreadMessageIds,
+  resolveMicrosoftWellKnownFolderId,
+} from "../_shared/microsoftGraphMail.ts";
 
 const json = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -225,113 +232,118 @@ async function applyGoogleAction(
 
 async function applyMicrosoftAction(
   account: MailAccountRow,
-  _thread: ThreadRow,
+  thread: ThreadRow,
   action: MailAction,
   messageIds: string[],
 ): Promise<void> {
   const accessToken = await getFreshMicrosoftAccessToken(account);
-  if (messageIds.length === 0) {
-    throw new Error("No synced messages to update on Microsoft mailbox");
+  const ids = await resolveMicrosoftThreadMessageIds(
+    accessToken,
+    thread.provider_thread_id,
+    messageIds,
+  );
+
+  if (ids.length === 0) {
+    // Message already removed remotely — allow DB-only cleanup below.
+    return;
   }
 
   const patchMessage = async (messageId: string, body: Record<string, unknown>) => {
-    const res = await fetch(
-      `https://graph.microsoft.com/v1.0/me/messages/${encodeURIComponent(messageId)}`,
+    const res = await graphMessageFetch(
+      accessToken,
+      `/messages/${encodeURIComponent(messageId)}`,
       {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(
-        (err as { error?: { message?: string } }).error?.message ||
-          "Graph update failed",
-      );
-    }
+    await handleMicrosoftGraphResponse(res, { allowMissing: true });
   };
 
   const moveMessage = async (messageId: string, destinationId: string) => {
-    const res = await fetch(
-      `https://graph.microsoft.com/v1.0/me/messages/${encodeURIComponent(messageId)}/move`,
+    const resolvedDestination =
+      destinationId.includes("/") || destinationId.length > 40
+        ? destinationId
+        : await resolveMicrosoftWellKnownFolderId(accessToken, destinationId);
+
+    const res = await graphMessageFetch(
+      accessToken,
+      `/messages/${encodeURIComponent(messageId)}/move`,
       {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ destinationId }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ destinationId: resolvedDestination }),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(
-        (err as { error?: { message?: string } }).error?.message ||
-          "Graph move failed",
-      );
+    const moved = await handleMicrosoftGraphResponse(res, { allowMissing: true });
+    const nextId = typeof moved?.id === "string" ? moved.id.trim() : "";
+    if (nextId && nextId !== messageId) {
+      await supabaseAdmin
+        .from("mail_messages")
+        .update({ provider_message_id: nextId })
+        .eq("provider_message_id", messageId);
     }
   };
 
   const deleteMessage = async (messageId: string) => {
-    const res = await fetch(
-      `https://graph.microsoft.com/v1.0/me/messages/${encodeURIComponent(messageId)}`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${accessToken}` },
-      },
+    const res = await graphMessageFetch(
+      accessToken,
+      `/messages/${encodeURIComponent(messageId)}`,
+      { method: "DELETE" },
     );
-    if (!res.ok && res.status !== 404) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(
-        (err as { error?: { message?: string } }).error?.message ||
-          "Graph delete failed",
-      );
-    }
+    await handleMicrosoftGraphResponse(res, { allowMissing: true });
   };
 
-  for (const messageId of messageIds) {
-    switch (action) {
-      case "delete_forever":
-        await deleteMessage(messageId);
-        break;
-      case "trash":
-        await moveMessage(messageId, "deleteditems");
-        break;
-      case "untrash":
-        await moveMessage(messageId, "inbox");
-        break;
-      case "archive":
-        await moveMessage(messageId, "archive");
-        break;
-      case "unarchive":
-        await moveMessage(messageId, "inbox");
-        break;
-      case "star":
-        await patchMessage(messageId, { flag: { flagStatus: "flagged" } });
-        break;
-      case "unstar":
-        await patchMessage(messageId, { flag: { flagStatus: "notFlagged" } });
-        break;
-      case "mark_read":
-        await patchMessage(messageId, { isRead: true });
-        break;
-      case "mark_unread":
-        await patchMessage(messageId, { isRead: false });
-        break;
-      case "spam":
-        await moveMessage(messageId, "junkemail");
-        break;
-      case "not_spam":
-        await moveMessage(messageId, "inbox");
-        break;
-      default:
-        throw new Error(`Unsupported Graph action: ${action}`);
+  let hardError: string | null = null;
+  for (const messageId of ids) {
+    try {
+      switch (action) {
+        case "delete_forever":
+          await deleteMessage(messageId);
+          break;
+        case "trash":
+          await moveMessage(messageId, "deleteditems");
+          break;
+        case "untrash":
+          await moveMessage(messageId, "inbox");
+          break;
+        case "archive":
+          await moveMessage(messageId, "archive");
+          break;
+        case "unarchive":
+          await moveMessage(messageId, "inbox");
+          break;
+        case "star":
+          await patchMessage(messageId, { flag: { flagStatus: "flagged" } });
+          break;
+        case "unstar":
+          await patchMessage(messageId, { flag: { flagStatus: "notFlagged" } });
+          break;
+        case "mark_read":
+          await patchMessage(messageId, { isRead: true });
+          break;
+        case "mark_unread":
+          await patchMessage(messageId, { isRead: false });
+          break;
+        case "spam":
+          await moveMessage(messageId, "junkemail");
+          break;
+        case "not_spam":
+          await moveMessage(messageId, "inbox");
+          break;
+        default:
+          throw new Error(`Unsupported Graph action: ${action}`);
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (isBenignMicrosoftMailError(msg)) continue;
+      hardError = msg;
+      break;
     }
   }
+
+  if (hardError) throw new Error(hardError);
 }
 
 function dbPatchForAction(action: MailAction): Partial<ThreadRow> | null {

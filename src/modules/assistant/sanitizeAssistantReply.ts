@@ -9,7 +9,7 @@ export const sanitizeAssistantReply = (raw: string): string => {
     let l = line;
     l = l.replace(/^#{1,6}\s+/g, "");
     if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(l)) return "";
-    l = l.replace(/^[✅⚠️👉❌✔️]\s*/gu, "");
+    l = l.replace(/^(?:✅|⚠️|👉|❌|✔️)\s*/gu, "");
     l = l.replace(/\*\*(.*?)\*\*/g, "$1");
     l = l.replace(/__(.*?)__/g, "$1");
     l = l.replace(/(?<!\w)\*(.*?)\*(?!\w)/g, "$1");

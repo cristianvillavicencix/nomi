@@ -95,8 +95,7 @@ export const FORMS_SECTION_IDS = ["list"] as const;
 export type FormsSectionId = (typeof FORMS_SECTION_IDS)[number];
 
 export const NOTIFICATIONS_SECTION_IDS = ["personal", "workspace"] as const;
-export type NotificationsSectionId =
-  (typeof NOTIFICATIONS_SECTION_IDS)[number];
+export type NotificationsSectionId = (typeof NOTIFICATIONS_SECTION_IDS)[number];
 
 export const DATA_SECTION_IDS = ["zoho", "import", "duplicates"] as const;
 export type DataSectionId = (typeof DATA_SECTION_IDS)[number];
@@ -229,18 +228,13 @@ export const resolveSettingsRoute = (searchParams: URLSearchParams) => {
     normalizedTab = "products";
   } else if (rawTab === "commercial" && sectionParam === "contracts") {
     normalizedTab = "proposals";
-  } else if (rawTab === "proposals" && sectionParam === "catalog") {
-    normalizedTab = "products";
   } else if (rawTab === "connectors" && sectionParam === "content") {
     normalizedTab = "communications";
   } else if (rawTab === "connectors" && sectionParam === "notifications") {
     normalizedTab = "notifications";
   } else if (rawTab === "connectors" && sectionParam === "tickets") {
     normalizedTab = "tickets";
-  } else if (
-    rawTab === "forms" &&
-    sectionParam === "notifications"
-  ) {
+  } else if (rawTab === "forms" && sectionParam === "notifications") {
     normalizedTab = "notifications";
   }
 
@@ -262,10 +256,7 @@ export const resolveSettingsRoute = (searchParams: URLSearchParams) => {
   let connectorsSection: ConnectorsSectionId = "twilio";
   if (isConnectorsSectionId(sectionParam ?? "")) {
     connectorsSection = sectionParam as ConnectorsSectionId;
-  } else if (
-    sectionParam &&
-    LEGACY_CONNECTORS_SECTION[sectionParam]
-  ) {
+  } else if (sectionParam && LEGACY_CONNECTORS_SECTION[sectionParam]) {
     connectorsSection = LEGACY_CONNECTORS_SECTION[sectionParam];
   } else if (rawTab === "web-monitor" || rawTab === "messaging") {
     connectorsSection = rawTab === "web-monitor" ? "google" : "twilio";
