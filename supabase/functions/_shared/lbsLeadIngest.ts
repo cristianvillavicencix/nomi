@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
-import { normalizeUsPhoneToE164 } from "./phone.ts";
+import { contactHasPhone, normalizeUsPhoneToE164 } from "./phone.ts";
 import { AUTOMATED_OPPORTUNITY_DEAL_FIELDS } from "./dealLifecycle.ts";
 import {
   normalizeOrganizationLeadSettings,
@@ -30,6 +30,7 @@ type ContactRow = {
   id: number;
   company_id: number | null;
   background: string | null;
+  phone_jsonb: unknown;
 };
 
 type CompanyRow = {
@@ -249,7 +250,7 @@ async function upsertContact(
   if (existing) {
     const { data: current, error: fetchError } = await supabase
       .from("contacts")
-      .select("id, company_id, background")
+      .select("id, company_id, background, phone_jsonb")
       .eq("id", existing.id)
       .eq("org_id", orgId)
       .maybeSingle();
@@ -262,6 +263,19 @@ async function upsertContact(
       last_seen: now,
       background: mergeBackground(current.background, lead.background),
     };
+
+    if (
+      lead.contactPhone &&
+      !contactHasPhone(current.phone_jsonb, lead.contactPhone)
+    ) {
+      const existingPhones = Array.isArray(current.phone_jsonb)
+        ? current.phone_jsonb
+        : [];
+      updates.phone_jsonb = [
+        ...existingPhones,
+        { number: lead.contactPhone, type: "Work" },
+      ];
+    }
 
     if (!current.company_id && companyId) updates.company_id = companyId;
     if (lead.interestedService) updates.interested_service = lead.interestedService;
