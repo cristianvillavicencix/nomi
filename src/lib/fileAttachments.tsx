@@ -8,11 +8,13 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
+import { isResolvableStorageReference } from "@/lib/supabase/storageObjectUrl";
 
 export type FileAttachment = {
   title?: string;
   type?: string;
   src?: string;
+  path?: string;
 };
 
 export type FileKind =
@@ -108,24 +110,38 @@ export const FileTypeIcon = ({
 export const FileAttachmentPill = ({ file }: { file: FileAttachment }) => {
   const kind = getFileKind(file);
   const { Icon, iconClassName } = FILE_KIND_META[kind];
-  const href = useStorageSignedUrl(file.src, {
-    path: (file as FileAttachment & { path?: string }).path,
+  const reference = file.src?.trim() || file.path?.trim();
+  const href = useStorageSignedUrl(reference, {
+    path: file.path,
     defaultBucket: "attachments",
   });
+  const isResolving =
+    Boolean(reference) &&
+    !href &&
+    isResolvableStorageReference(reference, "attachments");
 
-  if (!href) return null;
+  if (!reference) return null;
 
   return (
     <a
-      href={href}
+      href={href ?? "#"}
       target="_blank"
       rel="noreferrer"
       title={file.title || "Attachment"}
-      className="inline-flex max-w-full items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
-      onClick={(event) => event.stopPropagation()}
+      aria-busy={isResolving}
+      className={cn(
+        "inline-flex max-w-full items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/50",
+        isResolving && "pointer-events-none opacity-70",
+      )}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (!href) event.preventDefault();
+      }}
     >
       <Icon className={cn("size-3.5 shrink-0", iconClassName)} />
-      <span className="truncate">{file.title || "Attachment"}</span>
+      <span className="truncate">
+        {isResolving ? "Loading attachment…" : file.title || "Attachment"}
+      </span>
     </a>
   );
 };
@@ -139,7 +155,7 @@ export const FileAttachmentPillList = ({
 }) => {
   const files = attachments
     .map((item) => item as FileAttachment)
-    .filter((file) => file.src);
+    .filter((file) => file.src?.trim() || file.path?.trim());
 
   if (!files.length) return null;
 
@@ -163,25 +179,35 @@ export const FileAttachmentIconLink = ({
   const { Icon, iconClassName, tileClassName } = FILE_KIND_META[kind];
   const tileSize = size === "sm" ? "size-7" : "size-9";
   const iconSize = size === "sm" ? "size-3.5" : "size-4";
-  const href = useStorageSignedUrl(file.src, {
-    path: (file as FileAttachment & { path?: string }).path,
+  const reference = file.src?.trim() || file.path?.trim();
+  const href = useStorageSignedUrl(reference, {
+    path: file.path,
     defaultBucket: "attachments",
   });
+  const isResolving =
+    Boolean(reference) &&
+    !href &&
+    isResolvableStorageReference(reference, "attachments");
 
-  if (!href) return null;
+  if (!reference) return null;
 
   return (
     <a
-      href={href}
+      href={href ?? "#"}
       target="_blank"
       rel="noreferrer"
       title={file.title || "Attachment"}
+      aria-busy={isResolving}
       className={cn(
         "inline-flex shrink-0 items-center justify-center rounded-md border transition-colors hover:opacity-90",
         tileSize,
         tileClassName,
+        isResolving && "pointer-events-none opacity-70",
       )}
-      onClick={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (!href) event.preventDefault();
+      }}
     >
       <Icon className={cn(iconSize, iconClassName)} />
     </a>
@@ -199,7 +225,7 @@ export const FileAttachmentIconRow = ({
 }) => {
   const files = attachments
     .map((item) => item as FileAttachment)
-    .filter((file) => file.src);
+    .filter((file) => file.src?.trim() || file.path?.trim());
 
   if (!files.length) return null;
 

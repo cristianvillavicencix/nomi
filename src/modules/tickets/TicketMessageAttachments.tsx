@@ -74,7 +74,12 @@ const FileAssetRow = ({ asset }: { asset: MessageAsset }) => {
   return (
     <div className="inline-flex max-w-full items-center gap-1 rounded-full border bg-background pr-1">
       <FileAttachmentPill
-        file={{ title: asset.label, type: "", src: asset.href }}
+        file={{
+          title: asset.label,
+          type: asset.type ?? "",
+          src: asset.href,
+          path: asset.path,
+        }}
       />
       {isDownloadableFileAsset(asset) ? (
         <IconButton

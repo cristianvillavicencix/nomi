@@ -12,6 +12,7 @@ export const downloadTicketAsset = async (asset: MessageAsset) => {
   const filename = safeFilename(asset.label);
   await downloadPrivateStorageFile({
     reference: asset.href,
+    path: asset.path,
     defaultBucket: "attachments",
     filename,
   });

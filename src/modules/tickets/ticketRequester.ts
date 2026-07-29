@@ -1,15 +1,79 @@
 import type { Identifier } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import type { Ticket } from "@/modules/types";
+import type { Ticket, TicketMessage } from "@/modules/types";
 import {
   getContactEmail,
   getContactFullName,
 } from "@/modules/clients/clientShowUtils";
 import { resolveCompanyEmailForDisplay } from "@/modules/clients/companyChannelResolvers";
+import { DEFAULT_TICKET_INBOX_EMAIL } from "@/modules/tickets/ticketInboxConfig";
 import {
   getTicketListMeta,
   resolveTicketPrimaryContactName,
 } from "@/modules/tickets/ticketListMeta";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizeEmail = (value?: string | null) => {
+  const trimmed = value?.trim().toLowerCase();
+  if (!trimmed || !EMAIL_REGEX.test(trimmed)) return null;
+  return trimmed;
+};
+
+export const buildTicketInboxEmailSet = (
+  ticket: Pick<Ticket, "inbox_address">,
+  inboxEmails: Array<string | null | undefined> = [],
+) => {
+  const emails = new Set<string>();
+  for (const value of inboxEmails) {
+    const normalized = normalizeEmail(value);
+    if (normalized) emails.add(normalized);
+  }
+  const ticketInbox = normalizeEmail(ticket.inbox_address);
+  if (ticketInbox) emails.add(ticketInbox);
+  const fallbackInbox = normalizeEmail(DEFAULT_TICKET_INBOX_EMAIL);
+  if (fallbackInbox) emails.add(fallbackInbox);
+  return emails;
+};
+
+/** Gmail-style reply target, but never the ticket inbox (avoids reply loops). */
+export const resolveTicketReplyRecipientEmail = ({
+  ticket,
+  company,
+  contact,
+  recentMessages,
+  inboxEmails = [],
+}: {
+  ticket: Ticket;
+  company?: Company | null;
+  contact?: Contact | null;
+  recentMessages: TicketMessage[];
+  inboxEmails?: Array<string | null | undefined>;
+}) => {
+  const requester =
+    normalizeEmail(resolveTicketRequesterEmail(ticket, company, contact)) ??
+    normalizeEmail(ticket.requester_email);
+  const inboxSet = buildTicketInboxEmailSet(ticket, inboxEmails);
+
+  for (const message of recentMessages) {
+    if (message.direction !== "inbound") continue;
+    const from = normalizeEmail(message.from_email);
+    if (!from || inboxSet.has(from)) continue;
+    return from;
+  }
+
+  return requester ?? "";
+};
+
+export const isTicketInboxRecipient = (
+  email: string,
+  ticket: Pick<Ticket, "inbox_address">,
+  inboxEmails: Array<string | null | undefined> = [],
+) => {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return false;
+  return buildTicketInboxEmailSet(ticket, inboxEmails).has(normalized);
+};
 
 const normalize = (value?: string | null) => {
   const trimmed = value?.trim();

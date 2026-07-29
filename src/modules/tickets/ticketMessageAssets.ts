@@ -9,6 +9,8 @@ export type MessageAsset = {
   /** Uploaded file vs link extracted from email HTML/text. */
   source: "file" | "link";
   previewSrc?: string;
+  path?: string;
+  type?: string;
 };
 
 const normalizeHref = (value: string) => {
@@ -93,17 +95,24 @@ const isVideoFile = (file: FileAttachment) => {
   const type = file.type?.toLowerCase() ?? "";
   const name = file.title?.toLowerCase() ?? "";
   const src = file.src?.toLowerCase() ?? "";
+  const path = file.path?.toLowerCase() ?? "";
   if (type.startsWith("video/")) return true;
-  return VIDEO_EXT.test(name) || VIDEO_EXT.test(src);
+  return (
+    VIDEO_EXT.test(name) ||
+    VIDEO_EXT.test(src) ||
+    VIDEO_EXT.test(path)
+  );
 };
 
-const isPhotoFile = (file: FileAttachment) =>
-  getFileKind(file) === "image" && Boolean(file.src?.trim());
+const isPhotoFile = (file: FileAttachment) => {
+  const reference = file.src?.trim() || file.path?.trim();
+  return getFileKind(file) === "image" && Boolean(reference);
+};
 
 export const fileAttachmentToAsset = (
   file: FileAttachment,
 ): MessageAsset | null => {
-  const href = file.src?.trim();
+  const href = file.src?.trim() || file.path?.trim();
   if (!href) return null;
 
   const label = file.title?.trim() || inferLinkLabel(href);
@@ -117,6 +126,8 @@ export const fileAttachmentToAsset = (
     category,
     source: "file",
     previewSrc: category === "photo" ? href : undefined,
+    path: file.path?.trim() || undefined,
+    type: file.type?.trim() || undefined,
   };
 };
 

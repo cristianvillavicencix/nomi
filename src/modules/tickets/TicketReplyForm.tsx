@@ -90,7 +90,10 @@ import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Textarea } from "@/components/ui/textarea";
 import { TicketRecipientInput } from "@/modules/tickets/TicketRecipientInput";
-import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
+import {
+  isTicketInboxRecipient,
+  resolveTicketReplyRecipientEmail,
+} from "@/modules/tickets/ticketRequester";
 import { allDeliverablesHaveBilling } from "@/modules/tickets/supplementPricing";
 import { isValidRecordId } from "@/lib/isValidRecordId";
 import {
@@ -269,14 +272,23 @@ export const TicketReplyForm = forwardRef<
     [recentMessages],
   );
 
+  const ticketInboxEmails = useMemo(
+    () => ticketInboxes.map((inbox) => inbox.email),
+    [ticketInboxes],
+  );
+
   /** Prefer the sender of the latest inbound email (Gmail-style Reply). */
-  const defaultRecipientEmail = useMemo(() => {
-    const lastFrom = lastInboundMessage?.from_email?.trim().toLowerCase();
-    if (lastFrom && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lastFrom)) {
-      return lastFrom;
-    }
-    return resolveTicketRequesterEmail(ticket, company, contact) ?? "";
-  }, [lastInboundMessage, ticket, company, contact]);
+  const defaultRecipientEmail = useMemo(
+    () =>
+      resolveTicketReplyRecipientEmail({
+        ticket,
+        company,
+        contact,
+        recentMessages,
+        inboxEmails: ticketInboxEmails,
+      }),
+    [ticket, company, contact, recentMessages, ticketInboxEmails],
+  );
 
   const buildReplyHtmlWithQuote = useCallback(
     (quotedMessage?: TicketMessage | null) => {
@@ -765,6 +777,18 @@ export const TicketReplyForm = forwardRef<
     }
     if (ccRecipients.trim() && !isValidEmailList(ccEmails)) {
       notify("Cc contains an invalid email address", { type: "warning" });
+      return;
+    }
+
+    if (
+      toEmails.some((email) =>
+        isTicketInboxRecipient(email, ticket, ticketInboxEmails),
+      )
+    ) {
+      notify(
+        "To cannot be your ticket inbox. Use the client's email address.",
+        { type: "error" },
+      );
       return;
     }
 
