@@ -72,13 +72,28 @@ export async function ensureClientConversation(params: {
     }
 
     if (!contactHasPhone(contact.phone_jsonb, normalized)) {
-      throw new Error("Selected contact does not use this phone number");
+      const matchedContact = await findContactByPhone(params.orgId, normalized);
+      if (matchedContact) {
+        contactId = Number(matchedContact.id);
+        title =
+          title ||
+          `${matchedContact.first_name ?? ""} ${matchedContact.last_name ?? ""}`.trim() ||
+          normalized;
+      } else {
+        // Billing/company phones are valid SMS targets but may not live on the
+        // ticket contact record — keep the conversation on the number only.
+        contactId = null;
+        title =
+          title ||
+          `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
+          normalized;
+      }
+    } else {
+      title =
+        title ||
+        `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
+        normalized;
     }
-
-    title =
-      title ||
-      `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
-      normalized;
   } else {
     const matchedContact = await findContactByPhone(params.orgId, normalized);
     if (matchedContact) {
