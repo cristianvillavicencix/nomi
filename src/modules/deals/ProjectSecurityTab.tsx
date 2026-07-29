@@ -16,6 +16,7 @@ import {
   Eye,
   EyeOff,
   KeyRound,
+  Link2,
   Loader2,
   Pencil,
   Plus,
@@ -44,6 +45,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   emptyDealAccessFormValues,
+  emptyDealAccessLinkFormValues,
   normalizeAccessUrl,
   type DealAccessFormValues,
 } from "@/modules/deals/projectAccessConstants";
@@ -293,6 +295,97 @@ const AccessEntryRow = ({
   );
 };
 
+const LinkAccessEntryRow = ({
+  entry,
+  onEdit,
+  onDelete,
+  isDeleting,
+}: {
+  entry: DealAccessEntry;
+  onEdit: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
+}) => {
+  const notify = useNotify();
+  const href = normalizeAccessUrl(entry.url);
+
+  const copyLinkDetails = async () => {
+    const lines = [`Label: ${entry.label}`];
+    if (entry.url?.trim()) lines.push(`URL: ${entry.url.trim()}`);
+    if (entry.notes?.trim()) lines.push(`Notes: ${entry.notes.trim()}`);
+    await navigator.clipboard.writeText(lines.join("\n"));
+    notify("Link copied", { type: "info" });
+  };
+
+  return (
+    <TableRow>
+      <TableCell className="font-medium whitespace-nowrap">
+        <div>{entry.label}</div>
+        {entry.notes?.trim() ? (
+          <p className="mt-1 max-w-[280px] text-xs font-normal text-muted-foreground whitespace-normal">
+            {entry.notes.trim()}
+          </p>
+        ) : null}
+      </TableCell>
+      <TableCell className="max-w-[320px]">
+        {href ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex max-w-full items-center gap-1 text-sm link-action"
+            title={entry.url ?? undefined}
+          >
+            <span className="truncate">{entry.url}</span>
+            <ExternalLink className="size-3.5 shrink-0" />
+          </a>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-1">
+          {href ? (
+            <IconButton
+              onClick={() => void copyToClipboard(entry.url ?? "", notify)}
+              aria-label="Copy URL"
+              title="Copy URL"
+            >
+              <Copy className="size-4" />
+              <span className="sr-only">Copy URL</span>
+            </IconButton>
+          ) : null}
+          <IconButton
+            onClick={() => void copyLinkDetails()}
+            aria-label="Copy link details"
+            title="Copy link details"
+          >
+            <Link2 className="size-4" />
+            <span className="sr-only">Copy link details</span>
+          </IconButton>
+          <IconButton onClick={onEdit} aria-label="Edit">
+            <Pencil className="size-4" />
+            <span className="sr-only">Edit</span>
+          </IconButton>
+          <IconButton
+            className="text-destructive"
+            onClick={onDelete}
+            disabled={isDeleting}
+            aria-label="Delete"
+          >
+            {isDeleting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Trash2 className="size-4" />
+            )}
+            <span className="sr-only">Delete</span>
+          </IconButton>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+};
+
 const AccessEntryDialog = ({
   open,
   title,
@@ -312,6 +405,10 @@ const AccessEntryDialog = ({
   isSaving: boolean;
   isEditing: boolean;
 }) => {
+  const isLink = values.kind === "link";
+  const canSave =
+    values.label.trim().length > 0 && (!isLink || values.url.trim().length > 0);
+
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="sm:max-w-lg">
@@ -327,48 +424,60 @@ const AccessEntryDialog = ({
               onChange={(event) =>
                 onChange({ ...values, label: event.target.value })
               }
-              placeholder="Custom label, e.g. Shopify admin"
+              placeholder={
+                isLink
+                  ? "Google Business Profile, Review link, Facebook page…"
+                  : "Custom label, e.g. Shopify admin"
+              }
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="access-url">Login URL</Label>
+            <Label htmlFor="access-url">
+              {isLink ? "Link URL" : "Login URL"}
+            </Label>
             <Input
               id="access-url"
               value={values.url}
               onChange={(event) =>
                 onChange({ ...values, url: event.target.value })
               }
-              placeholder="https://example.com/wp-admin"
+              placeholder={
+                isLink
+                  ? "https://g.page/your-business or https://facebook.com/…"
+                  : "https://example.com/wp-admin"
+              }
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="access-username">Username</Label>
-              <Input
-                id="access-username"
-                value={values.username}
-                onChange={(event) =>
-                  onChange({ ...values, username: event.target.value })
-                }
-                placeholder="admin@client.com"
-              />
+          {isLink ? null : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="access-username">Username</Label>
+                <Input
+                  id="access-username"
+                  value={values.username}
+                  onChange={(event) =>
+                    onChange({ ...values, username: event.target.value })
+                  }
+                  placeholder="admin@client.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="access-password">Password</Label>
+                <Input
+                  id="access-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={values.password}
+                  onChange={(event) =>
+                    onChange({ ...values, password: event.target.value })
+                  }
+                  placeholder={
+                    isEditing ? "Leave blank to keep unchanged" : "Optional"
+                  }
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="access-password">Password</Label>
-              <Input
-                id="access-password"
-                type="password"
-                autoComplete="new-password"
-                value={values.password}
-                onChange={(event) =>
-                  onChange({ ...values, password: event.target.value })
-                }
-                placeholder={
-                  isEditing ? "Leave blank to keep unchanged" : "Optional"
-                }
-              />
-            </div>
-          </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="access-notes">Instructions for client</Label>
             <Textarea
@@ -377,12 +486,17 @@ const AccessEntryDialog = ({
               onChange={(event) =>
                 onChange({ ...values, notes: event.target.value })
               }
-              placeholder="e.g. Sign in with Google using this email. LBS does not store your Google password."
+              placeholder={
+                isLink
+                  ? "e.g. Use this link to manage your Google Business Profile or collect reviews."
+                  : "e.g. Sign in with Google using this email. LBS does not store your Google password."
+              }
               rows={3}
             />
             <p className="text-xs text-muted-foreground">
-              Shown in the client portal when this credential is shared at
-              delivery. Leave password empty for Google or client-owned logins.
+              {isLink
+                ? "Optional. Shown in the client portal when this link is shared at delivery."
+                : "Shown in the client portal when this credential is shared at delivery. Leave password empty for Google or client-owned logins."}
             </p>
           </div>
         </div>
@@ -393,7 +507,7 @@ const AccessEntryDialog = ({
           <Button
             type="button"
             onClick={onSave}
-            disabled={isSaving || !values.label.trim()}
+            disabled={isSaving || !canSave}
           >
             {isSaving ? <Loader2 className="size-4 animate-spin" /> : null}
             Save
@@ -671,9 +785,32 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     [entries, editingId],
   );
 
+  const linkEntries = useMemo(
+    () => entries.filter((entry) => entry.kind === "link"),
+    [entries],
+  );
+
+  const loginEntries = useMemo(
+    () => entries.filter((entry) => entry.kind !== "link"),
+    [entries],
+  );
+
+  const accessDialogTitle = useMemo(() => {
+    if (values.kind === "link") {
+      return editingEntry ? "Edit link" : "Add link";
+    }
+    return editingEntry ? "Edit access" : "Add login";
+  }, [editingEntry, values.kind]);
+
   const openCreate = () => {
     setEditingId(null);
     setValues(emptyDealAccessFormValues());
+    setDialogOpen(true);
+  };
+
+  const openCreateLink = () => {
+    setEditingId(null);
+    setValues(emptyDealAccessLinkFormValues());
     setDialogOpen(true);
   };
 
@@ -729,11 +866,17 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
       return;
     }
 
+    if (values.kind === "link" && !values.url.trim()) {
+      notify("Link URL is required", { type: "error" });
+      return;
+    }
+
     const passwordProvided = values.password.trim().length > 0;
     const payload = {
       label: values.label.trim(),
       url: values.url.trim() || null,
-      username: values.username.trim() || null,
+      username:
+        values.kind === "link" ? null : values.username.trim() || null,
       kind: values.kind,
       secret_label: values.secret_label.trim() || null,
       notes: values.notes.trim() || null,
@@ -759,7 +902,7 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
             values.password.trim(),
           );
         }
-        notify("Access updated");
+        notify(values.kind === "link" ? "Link updated" : "Access updated");
       } else {
         const created = await create(
           "deal_access_entries",
@@ -785,7 +928,7 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
             // Non-blocking.
           }
         }
-        notify("Access saved");
+        notify(values.kind === "link" ? "Link saved" : "Access saved");
       }
       closeDialog();
       refresh();
@@ -988,6 +1131,15 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
           <Plus className="size-4" />
           Add login
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={openCreateLink}
+          className="shrink-0"
+        >
+          <Link2 className="size-4" />
+          Add link
+        </Button>
       </div>
 
       {secrets.length === 0 ? null : (
@@ -1020,16 +1172,44 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
         </div>
       )}
 
-      {entries.length === 0 ? (
+      {linkEntries.length === 0 ? null : (
+        <div className="overflow-x-auto rounded-md border">
+          <div className="border-b bg-muted/20 px-4 py-2 text-sm font-semibold">
+            Links
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Label</TableHead>
+                <TableHead>URL</TableHead>
+                <TableHead className="w-[88px] text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {linkEntries.map((entry) => (
+                <LinkAccessEntryRow
+                  key={String(entry.id)}
+                  entry={entry}
+                  onEdit={() => openEdit(entry)}
+                  onDelete={() => handleDelete(entry)}
+                  isDeleting={isDeleting && deletingId === entry.id}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {loginEntries.length === 0 && linkEntries.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
           <KeyRound className="mx-auto text-muted-foreground" />
           <p className="mt-3 text-sm font-medium">No access entries yet</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Add hosting, WordPress, FTP, and other logins used to build this
-            project.
+            Add logins for hosting and WordPress, or links for Google Business
+            Profile, review pages, and social profiles.
           </p>
         </div>
-      ) : (
+      ) : loginEntries.length === 0 ? null : (
         <div className="overflow-x-auto rounded-md border">
           <div className="border-b bg-muted/20 px-4 py-2 text-sm font-semibold">
             Logins
@@ -1045,7 +1225,7 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {entries.map((entry) => (
+              {loginEntries.map((entry) => (
                 <AccessEntryRow
                   key={String(entry.id)}
                   entry={entry}
@@ -1061,7 +1241,7 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
 
       <AccessEntryDialog
         open={dialogOpen}
-        title={editingEntry ? "Edit access" : "Add access"}
+        title={accessDialogTitle}
         values={values}
         onChange={setValues}
         onClose={closeDialog}

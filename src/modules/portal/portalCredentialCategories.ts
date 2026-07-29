@@ -112,6 +112,15 @@ export const resolvePortalCredentialCategory = (
   entry: PortalCredential,
 ): PortalCredentialCategory => {
   if (entry.kind === "api_key") return "api";
+  if (entry.kind === "link") {
+    const haystack = [entry.label, entry.url]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    if (matchesKeywords(haystack, CATEGORY_KEYWORDS.marketing)) {
+      return "marketing";
+    }
+  }
 
   const serviceKind = String(entry.service_kind ?? "")
     .trim()

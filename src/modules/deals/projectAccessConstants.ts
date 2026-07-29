@@ -36,6 +36,23 @@ export const emptyDealAccessFormValues = (): DealAccessFormValues => ({
   notes: "",
 });
 
+export const emptyDealAccessLinkFormValues = (): DealAccessFormValues => ({
+  label: "",
+  kind: "link",
+  secret_label: "",
+  url: "",
+  username: "",
+  password: "",
+  notes: "",
+});
+
+export const PROJECT_LINK_LABEL_SUGGESTIONS = [
+  "Google Business Profile",
+  "Google review link",
+  "Facebook page",
+  "Instagram profile",
+] as const;
+
 export const normalizeAccessUrl = (url?: string | null) => {
   const trimmed = url?.trim();
   if (!trimmed) return "";

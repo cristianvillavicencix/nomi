@@ -51,6 +51,7 @@ const CredentialRows = ({
 }) => (
   <>
     {entries.map((entry) => {
+      const isLink = entry.kind === "link";
       const isVisible = visibleIds.has(entry.id);
       const passwordValue = revealed[entry.id];
       const displayPassword =
@@ -84,9 +85,11 @@ const CredentialRows = ({
             </div>
           </TableCell>
           <TableCell className="font-mono text-xs">
-            {entry.username || "—"}
+            {isLink ? entry.url || "—" : entry.username || "—"}
           </TableCell>
-          <TableCell className="font-mono text-xs">{displayPassword}</TableCell>
+          <TableCell className="font-mono text-xs">
+            {isLink ? "—" : displayPassword}
+          </TableCell>
           <TableCell>
             <div className="flex justify-end gap-1">
               {entry.has_password ? (
