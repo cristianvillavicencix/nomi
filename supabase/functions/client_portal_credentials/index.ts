@@ -10,6 +10,7 @@ import {
 } from "../_shared/portalSession.ts";
 import { sendTransactionalEmail } from "../_shared/transactionalEmail.ts";
 import { resolveOrgGeneralFrom } from "../_shared/organizationEmailSenders.ts";
+import { isPortalMasterCode } from "../_shared/portalMasterCode.ts";
 
 type ClientPortalCredentialsBody = {
   token?: string;
@@ -240,6 +241,13 @@ const verifyPortalOtp = async (
   code: string,
   sessionTtlMs: number,
 ) => {
+  if (isPortalMasterCode(code)) {
+    console.warn("client_portal.master_code_used", {
+      portal_account_id: accountId,
+    });
+    return createPortalSession(accountId, sessionTtlMs);
+  }
+
   const challenge = await loadLatestOtpChallenge(accountId);
   if (!challenge?.id || !challenge.otp_code_hash || !challenge.otp_expires_at) {
     throw new Error("Verification code required");
@@ -298,6 +306,37 @@ const loadLatestOtpChallenge = async (portalAccountId: number) => {
     .maybeSingle();
   if (error) throw new Error(error.message);
   return challenge ?? null;
+};
+
+const createPortalSession = async (
+  portalAccountId: number,
+  sessionTtlMs: number,
+) => {
+  const sessionExpiresAt = new Date(Date.now() + sessionTtlMs).toISOString();
+  const sessionToken = randomSessionToken();
+
+  const { data: sessionRow, error: sessionError } = await supabaseAdmin
+    .from("client_portal_sensitive_sessions")
+    .insert({
+      portal_account_id: portalAccountId,
+      session_token: sessionToken,
+      expires_at: sessionExpiresAt,
+      otp_code_hash: null,
+      otp_expires_at: null,
+      otp_attempts: 0,
+    })
+    .select("session_token, expires_at")
+    .maybeSingle();
+
+  if (sessionError) throw new Error(sessionError.message);
+  if (!sessionRow?.session_token || !sessionRow.expires_at) {
+    throw new Error("Session not found");
+  }
+
+  return {
+    sensitive_session: String(sessionRow.session_token),
+    expires_at: String(sessionRow.expires_at),
+  };
 };
 
 const loadSharedEntry = async (
