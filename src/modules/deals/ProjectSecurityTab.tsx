@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   emptyDealAccessFormValues,
   normalizeAccessUrl,
@@ -180,7 +181,12 @@ const AccessEntryRow = ({
   return (
     <TableRow>
       <TableCell className="font-medium whitespace-nowrap">
-        {entry.label}
+        <div>{entry.label}</div>
+        {entry.notes?.trim() ? (
+          <p className="mt-1 max-w-[240px] text-xs font-normal text-muted-foreground whitespace-normal">
+            {entry.notes.trim()}
+          </p>
+        ) : null}
       </TableCell>
       <TableCell className="max-w-[220px]">
         {href ? (
@@ -358,10 +364,26 @@ const AccessEntryDialog = ({
                   onChange({ ...values, password: event.target.value })
                 }
                 placeholder={
-                  isEditing ? "Leave blank to keep unchanged" : "••••••••"
+                  isEditing ? "Leave blank to keep unchanged" : "Optional"
                 }
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="access-notes">Instructions for client</Label>
+            <Textarea
+              id="access-notes"
+              value={values.notes}
+              onChange={(event) =>
+                onChange({ ...values, notes: event.target.value })
+              }
+              placeholder="e.g. Sign in with Google using this email. LBS does not store your Google password."
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Shown in the client portal when this credential is shared at
+              delivery. Leave password empty for Google or client-owned logins.
+            </p>
           </div>
         </div>
         <DialogFooter>
@@ -665,9 +687,17 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     setEditingId(entry.id);
     setValues({
       label: entry.label ?? "",
+      kind:
+        entry.kind === "api_key" ||
+        entry.kind === "link" ||
+        entry.kind === "note"
+          ? entry.kind
+          : "login",
+      secret_label: entry.secret_label ?? "Password",
       url: entry.url ?? "",
       username: entry.username ?? "",
       password: "",
+      notes: entry.notes ?? "",
     });
     setDialogOpen(true);
   };
@@ -704,9 +734,9 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
       label: values.label.trim(),
       url: values.url.trim() || null,
       username: values.username.trim() || null,
-      kind: "login",
-      secret_label: null,
-      notes: null,
+      kind: values.kind,
+      secret_label: values.secret_label.trim() || null,
+      notes: values.notes.trim() || null,
       shared_with_client: true,
       managed_by: "lbs",
       updated_at: new Date().toISOString(),

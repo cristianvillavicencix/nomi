@@ -281,7 +281,7 @@ Deno.serve(
           ? await supabaseAdmin
               .from("deal_access_entries")
               .select(
-                "id, label, url, username, managed_by, service_kind, portal_sort_order, has_password, password_updated_at",
+                "id, label, url, username, notes, managed_by, service_kind, portal_sort_order, has_password, password_updated_at",
               )
               .eq("deal_id", dealId)
               .eq("org_id", account.org_id)

@@ -64,6 +64,11 @@ const CredentialRows = ({
         <TableRow key={entry.id}>
           <TableCell>
             <div className="font-medium">{entry.label}</div>
+            {entry.notes?.trim() ? (
+              <p className="mt-1 max-w-md text-xs text-muted-foreground whitespace-normal">
+                {entry.notes.trim()}
+              </p>
+            ) : null}
             <div className="mt-1 flex flex-wrap gap-1">
               <Badge variant="outline" className="text-[10px]">
                 {entry.managed_by === "client"

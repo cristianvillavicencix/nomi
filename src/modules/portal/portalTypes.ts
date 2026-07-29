@@ -78,6 +78,7 @@ export type PortalCredential = {
   portal_sort_order?: number | null;
   has_password?: boolean | null;
   password_updated_at?: string | null;
+  notes?: string | null;
 };
 
 export type PortalResource = {

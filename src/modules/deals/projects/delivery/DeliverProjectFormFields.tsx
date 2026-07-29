@@ -264,12 +264,23 @@ export const DeliverProjectFormFields = ({
         </p>
         <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
           {credentials.map((entry) => (
-            <label key={entry.id} className="flex items-center gap-2 text-sm">
+            <label
+              key={entry.id}
+              className="flex items-start gap-2 text-sm"
+            >
               <Checkbox
+                className="mt-0.5"
                 checked={shareCredentialIds.includes(Number(entry.id))}
                 onCheckedChange={() => onToggleCredential(Number(entry.id))}
               />
-              {entry.label}
+              <span>
+                <span className="font-medium">{entry.label}</span>
+                {entry.notes?.trim() ? (
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {entry.notes.trim()}
+                  </span>
+                ) : null}
+              </span>
             </label>
           ))}
         </div>

@@ -27,6 +27,7 @@ const pdfCopy = {
     url: "URL",
     password: "Contraseña",
     passwordProtected: "Protegida — consulta en el portal",
+    instructions: "Instrucciones",
     noCredentials: "No hay accesos compartidos en este momento.",
     securityNote:
       "Las contraseñas no se incluyen en este PDF por seguridad. Ábrelas en el portal con tu email.",
@@ -44,6 +45,7 @@ const pdfCopy = {
     url: "URL",
     password: "Password",
     passwordProtected: "Protected — view in portal",
+    instructions: "Instructions",
     noCredentials: "No shared logins at this time.",
     securityNote:
       "Passwords are not included in this PDF for security. View them in the portal with your email.",
@@ -157,6 +159,9 @@ export const downloadPortalDeliveryPdf = async ({
           entry.has_password ? labels.passwordProtected : "—"
         }`,
       );
+      if (entry.notes?.trim()) {
+        writeln(`${labels.instructions}: ${entry.notes.trim()}`);
+      }
       y += 4;
     }
   }
