@@ -17,6 +17,7 @@ export const useMessagingEnabled = () => {
   return {
     smsEnabled: data?.sms_enabled === true,
     voiceEnabled: data?.voice_enabled === true,
-    isPending: identityPending || isPending,
+    // Avoid unregistering the softphone when refetching settings on tab focus.
+    isPending: identityPending || (isPending && !data),
   };
 };

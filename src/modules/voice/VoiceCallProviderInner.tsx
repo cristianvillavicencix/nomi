@@ -28,6 +28,17 @@ import {
   resolveSmsThreadDisplayName,
 } from "@/modules/voice/voiceCallerUtils";
 
+import {
+  formatVoiceDeviceError,
+  isTransientVoiceDeviceError,
+} from "@/modules/voice/voiceDeviceErrors";
+
+/** US East primary edge (Stamford CT / Ashburn); roaming fallback if unreachable. */
+const VOICE_DEVICE_EDGE: string[] = ["ashburn", "roaming"];
+
+/** Avoid token refresh storms when the SDK reconnects repeatedly. */
+const TOKEN_REFRESH_MIN_INTERVAL_MS = 30_000;
+
 const emptyIncomingCallerInfo = (
   params: Record<string, string | undefined>,
 ): IncomingCallerInfo => {
@@ -66,6 +77,8 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
   const deviceRef = useRef<Device | null>(null);
   const activeCallRef = useRef<Call | null>(null);
   const incomingCallRef = useRef<Call | null>(null);
+  const tokenRefreshInFlightRef = useRef<Promise<void> | null>(null);
+  const lastTokenRefreshAtRef = useRef(0);
   const [callState, setCallState] = useState<VoiceCallState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [incomingCall, setIncomingCall] = useState<Call | null>(null);
@@ -209,7 +222,7 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
         invalidateCallHistory();
       });
       call.on("error", (error) => {
-        setErrorMessage(error.message);
+        setErrorMessage(formatVoiceDeviceError(error));
         setCallState("error");
         invalidateCallHistory();
       });
@@ -223,8 +236,31 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
   const refreshToken = useCallback(async () => {
     const device = deviceRef.current;
     if (!device) return;
-    const { token } = await dataProvider.getVoiceToken();
-    await device.updateToken(token);
+
+    const now = Date.now();
+    if (now - lastTokenRefreshAtRef.current < TOKEN_REFRESH_MIN_INTERVAL_MS) {
+      return;
+    }
+
+    if (tokenRefreshInFlightRef.current) {
+      await tokenRefreshInFlightRef.current.catch(() => undefined);
+      return;
+    }
+
+    const refreshPromise = (async () => {
+      const { token } = await dataProvider.getVoiceToken();
+      await device.updateToken(token);
+      lastTokenRefreshAtRef.current = Date.now();
+    })();
+
+    tokenRefreshInFlightRef.current = refreshPromise;
+    try {
+      await refreshPromise;
+    } finally {
+      if (tokenRefreshInFlightRef.current === refreshPromise) {
+        tokenRefreshInFlightRef.current = null;
+      }
+    }
   }, [dataProvider]);
 
   const resolveIncomingCaller = useCallback(
@@ -337,7 +373,9 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     const { token } = await dataProvider.getVoiceToken();
     const device = new Device(token, {
       codecPreferences: ["opus", "pcmu"],
-      logLevel: 1,
+      edge: VOICE_DEVICE_EDGE,
+      maxCallSignalingTimeoutMs: 30_000,
+      logLevel: import.meta.env.DEV ? 1 : 0,
       // Custom Web Audio ringtones in useVoiceCallRingtone (avoids Twilio output-device errors).
       sounds: {
         incoming: false,
@@ -347,7 +385,13 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     });
 
     device.on("error", (error) => {
-      setErrorMessage(error.message);
+      const friendly = formatVoiceDeviceError(error);
+      const liveCall = hasLiveCall();
+      if (!liveCall && isTransientVoiceDeviceError(error)) {
+        console.warn("[VoiceCallProvider] transient device error", error);
+        return;
+      }
+      setErrorMessage(friendly);
       setCallState("error");
     });
 
@@ -372,7 +416,8 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
 
     device.on("registered", () => {
       setIsRegistered(true);
-      if (!activeCallRef.current && !incomingCall) {
+      setErrorMessage(null);
+      if (!activeCallRef.current && !incomingCallRef.current) {
         setCallState("idle");
       }
     });
@@ -395,7 +440,7 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
       setCallState("idle");
     }
     return device;
-  }, [dataProvider, refreshToken, resolveIncomingCaller]);
+  }, [dataProvider, hasLiveCall, refreshToken, resolveIncomingCaller]);
 
   useEffect(() => {
     if (!shouldRegister) {
