@@ -160,19 +160,9 @@ export const MessagesInbox = (props: {
     ],
   );
 
-  const teamTabProjectConversations = useMemo(
-    () =>
-      filteredConversations.filter(
-        (conversation) => conversation.type === "project",
-      ),
-    [filteredConversations],
-  );
-
   const tabCounts = useMemo(
     () => ({
-      team: props.conversations.filter(
-        (c) => c.type === "team_dm" || c.type === "project",
-      ).length,
+      team: props.conversations.filter((c) => c.type === "team_dm").length,
       unread: unread.totalUnread,
     }),
     [props.conversations, unread.totalUnread],
@@ -298,25 +288,6 @@ export const MessagesInbox = (props: {
             selectedConversationId={props.selectedConversationId}
             onSelectConversation={props.onSelectConversation}
           />
-          {teamTabProjectConversations.length > 0 ? (
-            <>
-              <div className="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Project chats
-              </div>
-              <InboxList
-                conversations={teamTabProjectConversations}
-                deals={props.deals}
-                dmParticipants={props.dmParticipants}
-                members={props.members}
-                contacts={props.contacts}
-                currentMemberId={props.currentMemberId}
-                selectedConversationId={props.selectedConversationId}
-                onSelectConversation={props.onSelectConversation}
-                isConversationUnread={unread.isConversationUnread}
-                getUnreadCount={unread.getUnreadCount}
-              />
-            </>
-          ) : null}
         </div>
       ) : props.isPending ? null : filteredConversations.length === 0 &&
         !debouncedQuery ? (

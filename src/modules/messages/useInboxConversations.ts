@@ -53,17 +53,6 @@ export const useInboxConversations = (
       { enabled: enabled && !!identity?.id, staleTime: 15_000 },
     );
 
-  const { data: projectConversations = [], isPending: isProjectsPending } =
-    useGetList<Conversation>(
-      "conversations",
-      {
-        filter: { "type@eq": "project" },
-        pagination: { page: 1, perPage: pageSize },
-        sort: { field: "updated_at", order: "DESC" },
-      },
-      { enabled, staleTime: 15_000 },
-    );
-
   const { data: clientConversations = [], isPending: isClientsPending } =
     useGetList<Conversation>(
       "conversations",
@@ -78,10 +67,9 @@ export const useInboxConversations = (
   const conversationIds = useMemo(() => {
     const ids = new Set<string>();
     participations.forEach((entry) => ids.add(String(entry.conversation_id)));
-    projectConversations.forEach((entry) => ids.add(String(entry.id)));
     clientConversations.forEach((entry) => ids.add(String(entry.id)));
     return [...ids];
-  }, [participations, projectConversations, clientConversations]);
+  }, [participations, clientConversations]);
 
   const { data: conversations = [], isPending: isConversationsPending } =
     useGetMany<Conversation>(
@@ -98,11 +86,13 @@ export const useInboxConversations = (
   const visibleConversations = useMemo(() => {
     const base = sortConversationsByActivity(
       conversations.filter((conversation) => {
+        if (conversation.type === "project") {
+          return false;
+        }
         if (!conversation.last_message_at) {
           return false;
         }
         return (
-          conversation.type === "project" ||
           conversation.type === "client" ||
           participantConversationIds.has(String(conversation.id))
         );
@@ -207,9 +197,6 @@ export const useInboxConversations = (
     members,
     contacts,
     isPending:
-      isParticipantsPending ||
-      isProjectsPending ||
-      isClientsPending ||
-      isConversationsPending,
+      isParticipantsPending || isClientsPending || isConversationsPending,
   };
 };

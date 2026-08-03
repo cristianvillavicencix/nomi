@@ -20,11 +20,7 @@ export const filterInboxConversations = (
 
   return conversations.filter((conversation) => {
     if (tab === "sms" && conversation.type !== "client") return false;
-    if (
-      tab === "team" &&
-      conversation.type !== "team_dm" &&
-      conversation.type !== "project"
-    ) {
+    if (tab === "team" && conversation.type !== "team_dm") {
       return false;
     }
     if (tab === "mine") {

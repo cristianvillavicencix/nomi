@@ -21,6 +21,7 @@ import {
   MESSAGES_CONVERSATION_PARAM,
   parseMessagesConversationId,
 } from "@/modules/messages/messagesRouting";
+import { resolveInboxConversation } from "@/modules/messages/resolveInboxConversation";
 
 export const MessagesPage = () => {
   const isMobile = useIsMobile();
@@ -63,12 +64,16 @@ export const MessagesPage = () => {
   const openConversation = useCallback(
     (conversation: Conversation) => {
       clearDraftSms();
-      viewConversation(conversation);
-      focusConversation(conversation);
-      setSelectedConversation(conversation);
-      if (isMobile) setMobileShowChat(true);
+      void resolveInboxConversation(conversation, dataProvider).then(
+        (resolved) => {
+          viewConversation(resolved);
+          focusConversation(resolved);
+          setSelectedConversation(resolved);
+          if (isMobile) setMobileShowChat(true);
+        },
+      );
     },
-    [clearDraftSms, focusConversation, isMobile, viewConversation],
+    [clearDraftSms, dataProvider, focusConversation, isMobile, viewConversation],
   );
 
   useEffect(() => {
