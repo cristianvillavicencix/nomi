@@ -24,14 +24,11 @@ import {
   getContactDisplayName,
   getContactPhoneLabel,
 } from "@/modules/messages/messageContactUtils";
-import { useConversationMessages } from "@/modules/messages/useConversationMessages";
+import { useClientConversationTimeline } from "@/modules/messages/useClientConversationTimeline";
+import { ClientConversationTimelineList } from "@/modules/messages/ClientConversationTimelineList";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
 import { useResendFailedSmsMessage } from "@/modules/messages/useResendFailedSmsMessage";
 import { ClientSmsComposer } from "@/modules/messages/ClientSmsComposer";
-import {
-  ConversationMessageBubble,
-  ConversationSystemMessageNote,
-} from "@/modules/messages/ConversationMessageBubble";
 import {
   buildTicketDeliverySmsText,
   buildTicketPaymentReminderSmsText,
@@ -97,13 +94,16 @@ export const TicketToolsClientSms = ({
     setConversation(loadedConversation ?? null);
   }, [loadedConversation]);
 
-  const { messages, isPending: messagesPending } = useConversationMessages(
-    conversation?.id,
-  );
+  const {
+    timeline,
+    isPending: messagesPending,
+    refetch,
+  } = useClientConversationTimeline(conversation?.id);
 
   const { retryMessage, retryingMessageId } = useResendFailedSmsMessage({
     enabled: canSendMessages && smsEnabled,
     onSent: () => {
+      void refetch();
       const node = scrollRef.current;
       if (node) {
         node.scrollTop = node.scrollHeight;
@@ -250,7 +250,7 @@ export const TicketToolsClientSms = ({
     const node = scrollRef.current;
     if (!node) return;
     node.scrollTop = node.scrollHeight;
-  }, [messages.length, conversation?.id]);
+  }, [timeline.length, conversation?.id]);
 
   const isLoadingMessages =
     conversationPending || (conversation?.id != null && messagesPending);
@@ -329,29 +329,18 @@ export const TicketToolsClientSms = ({
             <Loader2 className="size-3.5 animate-spin" />
             Loading messages…
           </div>
-        ) : messages.length === 0 ? (
+        ) : timeline.length === 0 ? (
           <p className="py-6 text-center text-xs text-muted-foreground">
             No texts with this client yet.
           </p>
         ) : (
-          messages.map((message) =>
-            message.kind === "system" ? (
-              <ConversationSystemMessageNote
-                key={String(message.id)}
-                message={message}
-                compact
-              />
-            ) : (
-              <ConversationMessageBubble
-                key={String(message.id)}
-                message={message}
-                isOwn={message.direction === "outbound"}
-                compact
-                onRetryDelivery={retryMessage}
-                retryingDelivery={String(retryingMessageId) === String(message.id)}
-              />
-            ),
-          )
+          <ClientConversationTimelineList
+            timeline={timeline}
+            compact
+            isOwnMessage={(message) => message.direction === "outbound"}
+            onRetryDelivery={retryMessage}
+            retryingMessageId={retryingMessageId}
+          />
         )}
       </div>
 
@@ -382,6 +371,7 @@ export const TicketToolsClientSms = ({
         compact
         onSent={({ conversation: nextConversation }) => {
           setConversation(nextConversation);
+          void refetch();
         }}
       />
     </div>

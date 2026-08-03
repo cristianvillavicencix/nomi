@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useCreate, useGetIdentity, useNotify, type Identifier } from "ra-core";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,20 +9,13 @@ import type {
   Contact,
   Conversation,
 } from "@/modules/types";
-import { useConversationMessages } from "@/modules/messages/useConversationMessages";
+import { useClientConversationTimeline } from "@/modules/messages/useClientConversationTimeline";
+import { ClientConversationTimelineList } from "@/modules/messages/ClientConversationTimelineList";
 import { useMarkConversationRead } from "@/modules/messages/useMarkConversationRead";
 import { useResendFailedSmsMessage } from "@/modules/messages/useResendFailedSmsMessage";
 import { useMessagesQuickAccessOptional } from "@/modules/messages/messagesQuickAccessContext";
 import { ClientSmsComposer } from "@/modules/messages/ClientSmsComposer";
-import {
-  ConversationMessageBubble,
-  ConversationSystemMessageNote,
-} from "@/modules/messages/ConversationMessageBubble";
 import { getClientSmsDraftLabel } from "@/modules/messages/messageContactUtils";
-import {
-  formatMessageDateDivider,
-  getMessageDayKey,
-} from "@/modules/messages/conversationUtils";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import {
   SMS_COMPOSER_FORM_PROPS,
@@ -71,14 +64,19 @@ export const ConversationThread = ({
   const composerInputRef = useRef<HTMLInputElement | null>(null);
   const [create, { isPending }] = useCreate();
   const canSendMessages = useMemberCapability(SEND_MESSAGES_CAPABILITY);
+  const includeCallTimeline =
+    conversation?.type === "client" || !!clientSmsDraft;
   const {
     messages,
+    timeline,
     isPending: isLoadingMessages,
     refetch,
     loadOlder,
     hasMoreOlder,
     loadingOlder,
-  } = useConversationMessages(conversation?.id);
+  } = useClientConversationTimeline(conversation?.id, {
+    includeCalls: includeCallTimeline,
+  });
 
   const markConversationRead = messagesQuickAccess?.markConversationRead;
   const latestMessage = messages[messages.length - 1];
@@ -110,14 +108,14 @@ export const ConversationThread = ({
 
   useLayoutEffect(() => {
     if (!conversation && !clientSmsDraft) return;
-    if (isLoadingMessages && messages.length === 0) return;
+    if (isLoadingMessages && timeline.length === 0) return;
 
     const container = scrollContainerRef.current;
     if (!container) return;
 
     container.scrollTop = container.scrollHeight;
   }, [
-    messages.length,
+    timeline.length,
     conversation?.id,
     clientSmsDraft?.contact?.id,
     clientSmsDraft?.externalPhone,
@@ -238,7 +236,7 @@ export const ConversationThread = ({
               you send.
             </p>
           </div>
-        ) : isLoadingMessages ? null : messages.length === 0 ? (
+        ) : isLoadingMessages ? null : timeline.length === 0 ? (
           <div
             className={cn(
               "flex items-center justify-center",
@@ -255,50 +253,18 @@ export const ConversationThread = ({
             </p>
           </div>
         ) : (
-          messages.map((message, index) => {
-            const dayKey = getMessageDayKey(message.created_at);
-            const prevDayKey =
-              index > 0
-                ? getMessageDayKey(messages[index - 1]?.created_at)
-                : null;
-            const showDateDivider = dayKey != null && dayKey !== prevDayKey;
-
-            return (
-              <Fragment key={String(message.id)}>
-                {showDateDivider ? (
-                  <div
-                    className="flex items-center gap-3 py-1"
-                    role="separator"
-                    aria-label={formatMessageDateDivider(message.created_at)}
-                  >
-                    <div className="h-px flex-1 bg-border/60" />
-                    <span className="shrink-0 text-[11px] font-medium text-muted-foreground">
-                      {formatMessageDateDivider(message.created_at)}
-                    </span>
-                    <div className="h-px flex-1 bg-border/60" />
-                  </div>
-                ) : null}
-                {message.kind === "system" ? (
-                  <ConversationSystemMessageNote message={message} />
-                ) : (
-                  <ConversationMessageBubble
-                    message={message}
-                    isOwn={
-                      isClientSms
-                        ? message.direction === "outbound"
-                        : String(message.author_member_id) ===
-                          String(identity?.id)
-                    }
-                    compact={isSidebar}
-                    onRetryDelivery={retryMessage}
-                    retryingDelivery={
-                      String(retryingMessageId) === String(message.id)
-                    }
-                  />
-                )}
-              </Fragment>
-            );
-          })
+          <ClientConversationTimelineList
+            timeline={timeline}
+            compact={isSidebar}
+            showDateDividers={!isSidebar}
+            isOwnMessage={(message) =>
+              isClientSms
+                ? message.direction === "outbound"
+                : String(message.author_member_id) === String(identity?.id)
+            }
+            onRetryDelivery={isClientSms ? retryMessage : undefined}
+            retryingMessageId={isClientSms ? retryingMessageId : undefined}
+          />
         )}
         <div ref={bottomRef} />
       </div>

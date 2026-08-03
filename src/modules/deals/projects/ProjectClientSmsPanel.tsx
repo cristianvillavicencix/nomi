@@ -14,14 +14,11 @@ import {
   resolveClientSmsPhone,
 } from "@/modules/messages/messageContactUtils";
 import { VoiceCallButton } from "@/modules/voice/VoiceCallButton";
-import { useConversationMessages } from "@/modules/messages/useConversationMessages";
+import { useClientConversationTimeline } from "@/modules/messages/useClientConversationTimeline";
+import { ClientConversationTimelineList } from "@/modules/messages/ClientConversationTimelineList";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
 import { useResendFailedSmsMessage } from "@/modules/messages/useResendFailedSmsMessage";
 import { ClientSmsComposer } from "@/modules/messages/ClientSmsComposer";
-import {
-  ConversationMessageBubble,
-  ConversationSystemMessageNote,
-} from "@/modules/messages/ConversationMessageBubble";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
@@ -71,13 +68,16 @@ export const ProjectClientSmsPanel = ({
     setConversation(loadedConversation ?? null);
   }, [loadedConversation]);
 
-  const { messages, isPending: messagesPending } = useConversationMessages(
-    conversation?.id,
-  );
+  const {
+    timeline,
+    isPending: messagesPending,
+    refetch,
+  } = useClientConversationTimeline(conversation?.id);
 
   const { retryMessage, retryingMessageId } = useResendFailedSmsMessage({
     enabled: canSendMessages && smsEnabled,
     onSent: () => {
+      void refetch();
       const node = scrollRef.current;
       if (node) {
         node.scrollTop = node.scrollHeight;
@@ -89,7 +89,7 @@ export const ProjectClientSmsPanel = ({
     const node = scrollRef.current;
     if (!node) return;
     node.scrollTop = node.scrollHeight;
-  }, [messages.length]);
+  }, [timeline.length]);
 
   const renderEmptyState = (message: string) => (
     <div
@@ -142,7 +142,7 @@ export const ProjectClientSmsPanel = ({
   const phoneLabel = getContactPhoneLabel(contact);
   const clientPhone = resolveClientSmsPhone(contact);
   const isLoadingMessages =
-    conversation?.id != null && messagesPending && messages.length === 0;
+    conversation?.id != null && messagesPending && timeline.length === 0;
 
   return (
     <div className={cn("flex h-full min-h-0 flex-1 flex-col overflow-hidden", className)}>
@@ -180,29 +180,18 @@ export const ProjectClientSmsPanel = ({
             <Loader2 className="size-3.5 animate-spin" />
             Loading messages…
           </div>
-        ) : messages.length === 0 ? (
+        ) : timeline.length === 0 ? (
           <p className="py-6 text-center text-xs text-muted-foreground">
             No texts with this client yet.
           </p>
         ) : (
-          messages.map((message) =>
-            message.kind === "system" ? (
-              <ConversationSystemMessageNote
-                key={String(message.id)}
-                message={message}
-                compact
-              />
-            ) : (
-              <ConversationMessageBubble
-                key={String(message.id)}
-                message={message}
-                isOwn={message.direction === "outbound"}
-                compact
-                onRetryDelivery={retryMessage}
-                retryingDelivery={String(retryingMessageId) === String(message.id)}
-              />
-            ),
-          )
+          <ClientConversationTimelineList
+            timeline={timeline}
+            compact
+            isOwnMessage={(message) => message.direction === "outbound"}
+            onRetryDelivery={retryMessage}
+            retryingMessageId={retryingMessageId}
+          />
         )}
       </div>
 
@@ -215,6 +204,7 @@ export const ProjectClientSmsPanel = ({
           compact
           onSent={({ conversation: nextConversation }) => {
             setConversation(nextConversation);
+            void refetch();
           }}
         />
       </div>
