@@ -29,6 +29,9 @@ import {
   formatSmsLengthSummary,
   isSmsLengthOverLimit,
 } from "@/modules/messages/smsMessageLimits";
+import {
+  SMS_COMPOSER_TEXTAREA_PROPS,
+} from "@/modules/messages/smsComposerInputProps";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { cn } from "@/lib/utils";
 
@@ -126,12 +129,17 @@ export const GlobalMessagesButton = () => {
             <Label htmlFor="global-sms-phone">To</Label>
             <Input
               id="global-sms-phone"
+              name="sms-to-phone"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
               placeholder="(555) 123-4567"
               inputMode="tel"
+              autoComplete="tel"
               autoFocus
               disabled={isSending}
+              data-1p-ignore
+              data-lpignore="true"
+              data-bwignore
             />
           </div>
           <div className="space-y-1.5">
@@ -143,6 +151,7 @@ export const GlobalMessagesButton = () => {
               placeholder="Type a quick SMS…"
               rows={3}
               disabled={isSending}
+              {...SMS_COMPOSER_TEXTAREA_PROPS}
               className="resize-none text-sm"
             />
             <p

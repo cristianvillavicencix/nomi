@@ -24,6 +24,10 @@ import {
   getMessageDayKey,
 } from "@/modules/messages/conversationUtils";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import {
+  SMS_COMPOSER_FORM_PROPS,
+  TEAM_MESSAGE_INPUT_PROPS,
+} from "@/modules/messages/smsComposerInputProps";
 import { cn } from "@/lib/utils";
 
 const SEND_MESSAGES_CAPABILITY = "messaging.send";
@@ -328,6 +332,7 @@ export const ConversationThread = ({
       ) : canSendMessages ? (
         <form
           onSubmit={handleSubmit}
+          {...SMS_COMPOSER_FORM_PROPS}
           className={cn(
             "mt-auto shrink-0 border-t border-border/70 bg-background",
             isSidebar
@@ -341,6 +346,7 @@ export const ConversationThread = ({
               value={body}
               onChange={(event) => setBody(event.target.value)}
               placeholder="Write a message…"
+              {...TEAM_MESSAGE_INPUT_PROPS}
               className="h-10 flex-1 border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
             />
             <IconButton

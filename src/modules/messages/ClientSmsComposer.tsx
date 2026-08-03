@@ -27,6 +27,10 @@ import {
 import { SmsTemplateShortcutTiles } from "@/modules/messages/SmsTemplateShortcutTiles";
 import { SmsBodyLengthHint } from "@/modules/messages/SmsBodyLengthHint";
 import { isSmsLengthOverLimit } from "@/modules/messages/smsMessageLimits";
+import {
+  SMS_COMPOSER_FORM_PROPS,
+  SMS_COMPOSER_TEXTAREA_PROPS,
+} from "@/modules/messages/smsComposerInputProps";
 
 type PendingAttachment = {
   id: string;
@@ -289,6 +293,7 @@ export const ClientSmsComposer = ({
   return (
     <form
       onSubmit={handleSubmit}
+      {...SMS_COMPOSER_FORM_PROPS}
       className={cn(
         "bg-background",
         compact
@@ -439,6 +444,7 @@ export const ClientSmsComposer = ({
           placeholder={
             isInternalNote ? "Write an internal note…" : "Write an SMS…"
           }
+          {...SMS_COMPOSER_TEXTAREA_PROPS}
           className={cn(
             "flex-1 resize-none overflow-y-auto border-0 bg-transparent px-1.5 py-1.5 shadow-none field-sizing-content focus-visible:ring-0",
             compact

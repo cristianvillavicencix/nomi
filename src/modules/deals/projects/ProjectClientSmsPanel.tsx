@@ -11,7 +11,9 @@ import {
   contactHasSmsPhone,
   getContactDisplayName,
   getContactPhoneLabel,
+  resolveClientSmsPhone,
 } from "@/modules/messages/messageContactUtils";
+import { VoiceCallButton } from "@/modules/voice/VoiceCallButton";
 import { useConversationMessages } from "@/modules/messages/useConversationMessages";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
 import { useResendFailedSmsMessage } from "@/modules/messages/useResendFailedSmsMessage";
@@ -138,6 +140,7 @@ export const ProjectClientSmsPanel = ({
 
   const clientName = getContactDisplayName(contact);
   const phoneLabel = getContactPhoneLabel(contact);
+  const clientPhone = resolveClientSmsPhone(contact);
   const isLoadingMessages =
     conversation?.id != null && messagesPending && messages.length === 0;
 
@@ -149,12 +152,19 @@ export const ProjectClientSmsPanel = ({
             {getInitials(clientName)}
           </AvatarFallback>
         </Avatar>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-medium">{clientName}</p>
           <p className="truncate text-[11px] text-muted-foreground">
             {phoneLabel}
           </p>
         </div>
+        <VoiceCallButton
+          variant="icon"
+          phoneNumber={clientPhone}
+          contactId={contact.id}
+          conversationId={conversation?.id}
+          dealId={record.id}
+        />
       </div>
 
       <div

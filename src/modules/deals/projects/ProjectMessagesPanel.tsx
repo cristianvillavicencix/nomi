@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { useGetIdentity } from "ra-core";
 import { cn } from "@/lib/utils";
+import type { AccessIdentity } from "@/components/atomic-crm/providers/commons/canAccess";
+import { isScopedWorkspaceUser } from "@/lib/permissions/permissionCatalog";
 import type { LbsDeal } from "@/modules/types";
 import { ProjectClientSmsPanel } from "@/modules/deals/projects/ProjectClientSmsPanel";
 import { ProjectTeamChat } from "@/modules/messages/ProjectTeamChat";
@@ -30,7 +33,24 @@ export const ProjectMessagesPanel = ({
   record: LbsDeal;
   className?: string;
 }) => {
+  const { data: identity } = useGetIdentity();
+  const isScopedUser = isScopedWorkspaceUser(
+    identity as AccessIdentity | undefined,
+  );
   const [channel, setChannel] = useState<MessageChannel>("team");
+
+  if (isScopedUser) {
+    return (
+      <div
+        className={cn(
+          "flex h-full min-h-0 flex-1 flex-col overflow-hidden",
+          className,
+        )}
+      >
+        <ProjectClientSmsPanel record={record} className="min-h-0 flex-1" />
+      </div>
+    );
+  }
 
   return (
     <div
