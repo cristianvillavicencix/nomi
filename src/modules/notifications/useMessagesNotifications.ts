@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useGetIdentity } from "ra-core";
 
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+import { canViewMonetaryAmounts } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
 import type { ConversationMessage } from "@/modules/types";
 import { getConversationDisplay } from "@/modules/messages/conversationDisplay";
 import { buildMessagePreview } from "@/modules/messages/conversationUtils";
+import { sanitizeMessageBodyForFinancialAccess } from "@/lib/permissions/messageFinancialSanitizer";
 import { useInboxConversations } from "@/modules/messages/useInboxConversations";
 import { useMessagesInboxRealtime } from "@/modules/messages/useMessagesInboxRealtime";
 import { useMessagesQuickAccess } from "@/modules/messages/messagesQuickAccessContext";
@@ -114,6 +116,9 @@ export const useMessagesNotifications = () => {
 
   const notifyMessage = useCallback(
     (message: ConversationMessage, decision: NotifyDecision) => {
+      const canViewAmounts = canViewMonetaryAmounts(
+        identity as Parameters<typeof canViewMonetaryAmounts>[0],
+      );
       const conversation = conversationsById[String(message.conversation_id)];
       const display = conversation
         ? getConversationDisplay({
@@ -123,13 +128,17 @@ export const useMessagesNotifications = () => {
             members,
             contacts,
             currentMemberId: identity?.id,
+            canViewAmounts,
           })
         : null;
 
       pushNotification({
         category: decision.category,
         title: display?.title ?? "New message",
-        body: buildMessagePreview(message),
+        body: sanitizeMessageBodyForFinancialAccess(
+          buildMessagePreview(message),
+          canViewAmounts,
+        ),
         tag: `msg-${message.id}`,
         href: conversation
           ? getMessagesConversationPath(conversation.id)

@@ -8,6 +8,12 @@ import {
 } from "@/modules/messages/conversationUtils";
 import { SmsMessageMedia } from "@/modules/messages/SmsMessageMedia";
 import { parseMessageBodyWithSignature } from "@/lib/signatures/signatureExpansion";
+import {
+  FINANCIAL_DETAILS_HIDDEN_HINT,
+  messageBodyHasHiddenFinancialDetails,
+  sanitizeMessageBodyForFinancialAccess,
+} from "@/lib/permissions/messageFinancialSanitizer";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import { useOrganizationSmsSignature } from "@/modules/settings/useOrganizationSmsSignature";
 import { SmsDeliveryBadge } from "@/modules/messages/SmsDeliveryBadge";
 import { cn } from "@/lib/utils";
@@ -18,7 +24,16 @@ export const ConversationSystemMessageNote = ({
 }: {
   message: ConversationMessage;
   compact?: boolean;
-}) => (
+}) => {
+  const canViewAmounts = useCanViewAmounts();
+  const body = message.body ?? "";
+  const displayBody = sanitizeMessageBodyForFinancialAccess(body, canViewAmounts);
+  const hasHiddenFinancialDetails = messageBodyHasHiddenFinancialDetails(
+    body,
+    canViewAmounts,
+  );
+
+  return (
   <div className="flex justify-center py-1">
     <div
       className={cn(
@@ -28,7 +43,12 @@ export const ConversationSystemMessageNote = ({
           : "rounded-full px-3 py-1 text-xs",
       )}
     >
-      <span>{message.body}</span>
+      <span>{displayBody}</span>
+      {hasHiddenFinancialDetails ? (
+        <span className="mt-0.5 block text-[10px] opacity-70">
+          {FINANCIAL_DETAILS_HIDDEN_HINT}
+        </span>
+      ) : null}
       {message.created_at ? (
         <span className="ml-2 opacity-70">
           · {formatMessageTime(message.created_at)}
@@ -36,7 +56,8 @@ export const ConversationSystemMessageNote = ({
       ) : null}
     </div>
   </div>
-);
+  );
+};
 
 export const ConversationMessageBubble = ({
   message,
@@ -52,6 +73,7 @@ export const ConversationMessageBubble = ({
   retryingDelivery?: boolean;
 }) => {
   useOrganizationSmsSignature();
+  const canViewAmounts = useCanViewAmounts();
   const { content, signature } = useMemo(
     () =>
       message.direction === "outbound" && !message.is_internal_note
@@ -59,10 +81,18 @@ export const ConversationMessageBubble = ({
         : { content: message.body ?? "", signature: null },
     [message.body, message.direction, message.is_internal_note],
   );
+  const displayContent = useMemo(
+    () => sanitizeMessageBodyForFinancialAccess(content, canViewAmounts),
+    [canViewAmounts, content],
+  );
+  const hasHiddenFinancialDetails = useMemo(
+    () => messageBodyHasHiddenFinancialDetails(content, canViewAmounts),
+    [canViewAmounts, content],
+  );
 
   const mediaUrls = useMemo(() => getMessageMediaUrls(message), [message]);
   const showBody =
-    content && !isMediaPlaceholderBody(content, mediaUrls.length);
+    displayContent && !isMediaPlaceholderBody(displayContent, mediaUrls.length);
   const hasMultiplePhotos = mediaUrls.length > 1;
 
   return (
@@ -101,7 +131,17 @@ export const ConversationMessageBubble = ({
           />
         ) : null}
         {showBody ? (
-          <div className="whitespace-pre-wrap break-words">{content}</div>
+          <div className="whitespace-pre-wrap break-words">{displayContent}</div>
+        ) : null}
+        {hasHiddenFinancialDetails ? (
+          <p
+            className={cn(
+              "text-muted-foreground/80",
+              compact ? "mt-1 text-[9px]" : "mt-1.5 text-[10px]",
+            )}
+          >
+            {FINANCIAL_DETAILS_HIDDEN_HINT}
+          </p>
         ) : null}
         {signature ? (
           <p

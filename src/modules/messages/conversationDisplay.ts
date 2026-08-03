@@ -7,6 +7,7 @@ import type {
   OrganizationMember,
 } from "@/modules/types";
 import { getConversationTypeLabel } from "@/modules/messages/conversationUtils";
+import { sanitizeMessageBodyForFinancialAccess } from "@/lib/permissions/messageFinancialSanitizer";
 import { getOtherDmMemberId } from "@/modules/messages/useDirectMessage";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 
@@ -82,6 +83,7 @@ export const getConversationDisplay = ({
   members,
   contacts = [],
   currentMemberId,
+  canViewAmounts = true,
 }: {
   conversation: Conversation;
   deals: LbsDeal[];
@@ -89,12 +91,16 @@ export const getConversationDisplay = ({
   members: OrganizationMember[];
   contacts?: Contact[];
   currentMemberId?: Identifier;
+  canViewAmounts?: boolean;
 }): ConversationDisplay => {
   const typeLabel = getConversationTypeLabel(conversation.type);
   const activityAt = conversation.last_message_at ?? conversation.updated_at;
-  const messagePreview =
+  const rawMessagePreview =
     conversation.last_message_preview?.trim() ||
     (conversation.last_message_at ? "New message" : null);
+  const messagePreview = rawMessagePreview
+    ? sanitizeMessageBodyForFinancialAccess(rawMessagePreview, canViewAmounts)
+    : null;
 
   const isOutbound = conversation.last_message_direction === "outbound";
   const isOutboundOwn =

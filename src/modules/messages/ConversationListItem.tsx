@@ -13,6 +13,7 @@ import {
   formatConversationListTime,
 } from "@/modules/messages/conversationDisplay";
 import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import { cn } from "@/lib/utils";
 
 export const ConversationListItem = ({
@@ -36,6 +37,7 @@ export const ConversationListItem = ({
   currentMemberId?: Identifier;
   unreadCount?: number;
 }) => {
+  const canViewAmounts = useCanViewAmounts();
   const display = getConversationDisplay({
     conversation,
     deals,
@@ -43,6 +45,7 @@ export const ConversationListItem = ({
     members,
     contacts,
     currentMemberId,
+    canViewAmounts,
   });
   const timeLabel = formatConversationListTime(display.activityAt);
   const hasUnread = unreadCount > 0;

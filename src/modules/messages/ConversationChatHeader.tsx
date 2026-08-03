@@ -19,6 +19,7 @@ import { ChangeStatusDropdown } from "@/modules/messages/status/ChangeStatusDrop
 import { SendFormButton } from "@/modules/forms/share/SendFormButton";
 import { VoiceCallButton } from "@/modules/voice/VoiceCallButton";
 import { useOrgPresence } from "@/modules/messages/useOrgPresence";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import { getOtherDmMemberId } from "@/modules/messages/useDirectMessage";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { cn } from "@/lib/utils";
@@ -91,6 +92,7 @@ export const ConversationChatHeader = ({
   onToggleContext?: () => void;
   onSaveContact?: () => void;
 }) => {
+  const canViewAmounts = useCanViewAmounts();
   const display = getConversationDisplay({
     conversation,
     deals,
@@ -98,6 +100,7 @@ export const ConversationChatHeader = ({
     members,
     contacts,
     currentMemberId,
+    canViewAmounts,
   });
 
   const assignee = members.find(
