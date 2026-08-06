@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { buildBriefPrefillFromCrm } from "../_shared/briefPrefill.ts";
+import { buildProjectResourcesPrefill } from "../_shared/projectResourcesPrefill.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { resolveStorageDisplayUrl } from "../_shared/storageObjectUrl.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
@@ -130,6 +131,15 @@ Deno.serve(
         }
 
         prefill = buildBriefPrefillFromCrm({ deal, contact, company });
+
+        if (formInstance.slug === "project-resources" && tokenData.deal_id) {
+          const resourcesPrefill = await buildProjectResourcesPrefill(
+            supabaseAdmin,
+            Number(tokenData.deal_id),
+            deal?.website_brief as Record<string, unknown> | null,
+          );
+          prefill = { ...prefill, ...resourcesPrefill };
+        }
       }
 
       const templateJoin = formInstance.form_templates as

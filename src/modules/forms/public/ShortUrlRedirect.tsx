@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
+
+/** Preserves `?sections=…&services=…` when resolving `/f/:code` → `/forms/:token`. */
+export const buildPublicFormRedirectPath = (
+  token: string,
+  search = "",
+) => `/forms/${token}${search}`;
 
 export const ShortUrlRedirect = () => {
   const { shortCode = "" } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [error, setError] = useState(false);
 
@@ -32,7 +39,10 @@ export const ShortUrlRedirect = () => {
         }
         const payload = (await response.json()) as { token?: string };
         if (payload.token) {
-          navigate(`/forms/${payload.token}`, { replace: true });
+          navigate(
+            buildPublicFormRedirectPath(payload.token, location.search),
+            { replace: true },
+          );
           return;
         }
         setError(true);
@@ -42,7 +52,7 @@ export const ShortUrlRedirect = () => {
     };
 
     void resolve();
-  }, [navigate, shortCode]);
+  }, [location.search, navigate, shortCode]);
 
   if (error) {
     return (

@@ -27,6 +27,21 @@ export const FULL_RESOURCE_REQUEST: ResourceRequestScope = {
   sections: ["logo", "team", "services"],
 };
 
+/** Logo + team + service photos; skips the services list when tabs already exist. */
+export const scopeForFullResourceRequest = (
+  serviceTabs: ResourceRequestServiceTab[],
+): ResourceRequestScope => {
+  if (serviceTabs.length === 0) {
+    return FULL_RESOURCE_REQUEST;
+  }
+
+  const photoScope = scopeForPhotoServicesRequest(serviceTabs);
+  return {
+    sections: ["logo", "team", ...photoScope.sections],
+    presetServices: photoScope.presetServices,
+  };
+};
+
 export const parseRequestSectionsParam = (
   value: string | null,
 ): ResourceRequestSection[] | null => {
@@ -142,6 +157,11 @@ export const readRequestScopeFromLocation = (): {
   return { sections, presetServices };
 };
 
+export const buildPresetServicesAnswers = (
+  presetServices: string[],
+): Record<string, unknown> =>
+  presetServices.length > 0 ? { services: [...presetServices] } : {};
+
 export const filterProjectResourcesSchema = (
   schema:
     | { sections?: Array<{ id: string }>; settings?: Record<string, unknown> }
@@ -180,7 +200,7 @@ export const shouldShowProjectResourcesSection = (
     return sections.includes("team");
   }
   if (sectionId === "services") {
-    if (presetServices?.length && !sections.includes("services")) {
+    if (presetServices?.length) {
       return false;
     }
     return sections.includes("services");

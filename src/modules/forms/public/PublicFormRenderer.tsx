@@ -52,9 +52,10 @@ import {
   publicFormContentClassName,
   usePublicFormEmbed,
 } from "@/modules/forms/public/PublicFormEmbedProvider";
-import { expandWizardSteps } from "@/modules/forms/wizardStepUtils";
+import { expandWizardSteps, readStringList } from "@/modules/forms/wizardStepUtils";
 import {
   filterProjectResourcesSchema,
+  buildPresetServicesAnswers,
   readRequestScopeFromLocation,
 } from "@/modules/deals/projectResourceRequestScope";
 import {
@@ -472,7 +473,9 @@ export const PublicFormRenderer = () => {
   const dataProvider = useDataProvider<CrmDataProvider>();
   const getRecaptchaToken = useRecaptchaToken(true);
 
-  const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  const [answers, setAnswers] = useState<Record<string, unknown>>(() =>
+    buildPresetServicesAnswers(readRequestScopeFromLocation().presetServices),
+  );
   const [honeypot, setHoneypot] = useState("");
   const [step, setStep] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -517,7 +520,17 @@ export const PublicFormRenderer = () => {
 
   useEffect(() => {
     if (!formPayload?.prefill) return;
-    setAnswers((current) => ({ ...formPayload.prefill, ...current }));
+    setAnswers((current) => {
+      const merged = { ...formPayload.prefill, ...current };
+      const urlServices = readRequestScopeFromLocation().presetServices;
+      const prefillServices = readStringList(formPayload.prefill?.services);
+      const services =
+        urlServices.length > 0 ? urlServices : prefillServices;
+      if (services.length > 0) {
+        merged.services = services;
+      }
+      return merged;
+    });
   }, [formPayload?.prefill]);
 
   useEffect(() => {
@@ -530,6 +543,20 @@ export const PublicFormRenderer = () => {
 
   useEffect(() => {
     if (!token || formPayload?.is_preview) return;
+    const { presetServices } = readRequestScopeFromLocation();
+    if (presetServices.length > 0) {
+      setProgressDismissed(true);
+      return;
+    }
+    const prefillServices = readStringList(formPayload?.prefill?.services);
+    if (
+      formPayload?.form.slug === "project-resources" &&
+      prefillServices.length > 0
+    ) {
+      setProgressDismissed(true);
+      setSavedProgress(null);
+      return;
+    }
     try {
       const raw = localStorage.getItem(formProgressStorageKey(token));
       if (!raw) return;
@@ -540,7 +567,13 @@ export const PublicFormRenderer = () => {
     } catch {
       // ignore invalid saved progress
     }
-  }, [token, formPayload?.is_preview]);
+  }, [
+    formPayload?.form.slug,
+    formPayload?.is_preview,
+    formPayload?.prefill?.services,
+    searchParams,
+    token,
+  ]);
 
   useEffect(() => {
     if (!token || formPayload?.is_preview || submitted) return;
@@ -565,6 +598,20 @@ export const PublicFormRenderer = () => {
     [searchParams],
   );
 
+  const effectivePresetServices = useMemo(() => {
+    if (requestScope.presetServices.length > 0) {
+      return requestScope.presetServices;
+    }
+    if (formPayload?.form.slug === "project-resources") {
+      return readStringList(formPayload.prefill?.services);
+    }
+    return [];
+  }, [
+    formPayload?.form.slug,
+    formPayload?.prefill?.services,
+    requestScope.presetServices,
+  ]);
+
   const effectiveSchema = useMemo(() => {
     if (formPayload?.form.slug !== "project-resources") {
       return formPayload?.form.schema;
@@ -573,24 +620,24 @@ export const PublicFormRenderer = () => {
       filterProjectResourcesSchema(
         formPayload?.form.schema,
         requestScope.sections,
-        requestScope.presetServices,
+        effectivePresetServices,
       ) ?? formPayload?.form.schema
     );
   }, [
+    effectivePresetServices,
     formPayload?.form.schema,
     formPayload?.form.slug,
-    requestScope.presetServices,
     requestScope.sections,
   ]);
 
   useEffect(() => {
     if (formPayload?.form.slug !== "project-resources") return;
-    if (requestScope.presetServices.length === 0) return;
+    if (effectivePresetServices.length === 0) return;
     setAnswers((current) => ({
       ...current,
-      services: requestScope.presetServices,
+      services: effectivePresetServices,
     }));
-  }, [formPayload?.form.slug, requestScope.presetServices]);
+  }, [effectivePresetServices, formPayload?.form.slug]);
 
   const sections = useMemo(
     () => getVisibleSections(effectiveSchema, answers),
@@ -814,7 +861,13 @@ export const PublicFormRenderer = () => {
               type="button"
               size="sm"
               onClick={() => {
-                setAnswers((current) => ({ ...savedProgress, ...current }));
+                setAnswers((current) => {
+                  const merged = { ...savedProgress, ...current };
+                  if (effectivePresetServices.length > 0) {
+                    merged.services = effectivePresetServices;
+                  }
+                  return merged;
+                });
                 setProgressDismissed(true);
               }}
             >

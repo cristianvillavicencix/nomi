@@ -40,6 +40,7 @@ import {
 } from "@/modules/deals/projectResourceConstants";
 import {
   FULL_RESOURCE_REQUEST,
+  scopeForFullResourceRequest,
   scopeForResourceTab,
   type ResourceRequestScope,
 } from "@/modules/deals/projectResourceRequestScope";
@@ -430,7 +431,9 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
                 <IconButton
                   variant="secondary"
                   aria-label="Request all"
-                  onClick={() => openRequestDialog(FULL_RESOURCE_REQUEST)}
+                  onClick={() =>
+                    openRequestDialog(scopeForFullResourceRequest(serviceSubTabs))
+                  }
                 >
                   <Link2 className="size-4" />
                 </IconButton>

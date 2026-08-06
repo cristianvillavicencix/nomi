@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   appendRequestScopeToUrl,
+  buildPresetServicesAnswers,
+  scopeForFullResourceRequest,
   scopeForPhotoServicesRequest,
   scopeForResourceTab,
   shouldShowProjectResourcesSection,
@@ -30,6 +32,34 @@ describe("scopeForPhotoServicesRequest", () => {
     expect(scope).toEqual({
       sections: ["service:carpentry", "service:framing"],
       presetServices: ["Carpentry", "Framing"],
+    });
+  });
+});
+
+describe("scopeForFullResourceRequest", () => {
+  it("falls back to services list when no tabs exist", () => {
+    expect(scopeForFullResourceRequest([])).toEqual({
+      sections: ["logo", "team", "services"],
+    });
+  });
+
+  it("includes logo, team, and per-service photo steps when tabs exist", () => {
+    expect(
+      scopeForFullResourceRequest([
+        {
+          id: "service:carpentry",
+          label: "Carpentry",
+          category: "service:carpentry",
+        },
+        {
+          id: "service:decks",
+          label: "Decks",
+          category: "service:decks",
+        },
+      ]),
+    ).toEqual({
+      sections: ["logo", "team", "service:carpentry", "service:decks"],
+      presetServices: ["Carpentry", "Decks"],
     });
   });
 });
@@ -78,6 +108,16 @@ describe("shouldShowProjectResourcesSection", () => {
     ).toBe(false);
   });
 
+  it("hides services list when presets exist even if sections includes services", () => {
+    expect(
+      shouldShowProjectResourcesSection(
+        "services",
+        ["logo", "team", "services"],
+        ["Carpentry", "Decks"],
+      ),
+    ).toBe(false);
+  });
+
   it("shows service photos for service slug scope", () => {
     expect(
       shouldShowProjectResourcesSection("service_photos", [
@@ -90,6 +130,18 @@ describe("shouldShowProjectResourcesSection", () => {
     expect(
       shouldShowProjectResourcesSection("company_info", ["service:framing"]),
     ).toBe(false);
+  });
+});
+
+describe("buildPresetServicesAnswers", () => {
+  it("returns services array for wizard prefill", () => {
+    expect(buildPresetServicesAnswers(["Carpentry", "Framing"])).toEqual({
+      services: ["Carpentry", "Framing"],
+    });
+  });
+
+  it("returns empty object when no presets", () => {
+    expect(buildPresetServicesAnswers([])).toEqual({});
   });
 });
 
