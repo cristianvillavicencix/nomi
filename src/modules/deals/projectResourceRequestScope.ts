@@ -110,6 +110,9 @@ export const scopeForResourceTab = (
   if (tabId === "other") {
     return { sections: ["other"] };
   }
+  if (tabId === "before-after") {
+    return { sections: ["other"] };
+  }
   if (tabId === "service-photo") {
     return scopeForPhotoServicesRequest(options?.serviceTabs ?? []);
   }

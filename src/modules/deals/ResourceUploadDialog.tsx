@@ -10,11 +10,26 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   PROJECT_RESOURCE_TAB_CATEGORIES,
+  parseBeforeAfterCategorySlug,
   parseServiceCategorySlug,
 } from "@/modules/deals/projectResourceConstants";
+
+export type BeforeAfterPhotoType = "before" | "after";
+
+export type ResourceUploadServiceOption = {
+  value: string;
+  label: string;
+};
 
 type ResourceUploadDialogProps = {
   open: boolean;
@@ -27,6 +42,12 @@ type ResourceUploadDialogProps = {
   onFilesChange: (files: File[]) => void;
   onUpload: () => void;
   isUploading: boolean;
+  uploadMode?: "default" | "service-name" | "before-after";
+  serviceOptions?: ResourceUploadServiceOption[];
+  selectedService?: string;
+  onServiceChange?: (value: string) => void;
+  photoType?: BeforeAfterPhotoType | "";
+  onPhotoTypeChange?: (value: BeforeAfterPhotoType | "") => void;
 };
 
 const mergeFiles = (current: File[], incoming: File[]) => {
@@ -54,6 +75,12 @@ export const ResourceUploadDialog = ({
   onFilesChange,
   onUpload,
   isUploading,
+  uploadMode = "default",
+  serviceOptions = [],
+  selectedService = "",
+  onServiceChange,
+  photoType = "",
+  onPhotoTypeChange,
 }: ResourceUploadDialogProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -63,8 +90,9 @@ export const ResourceUploadDialog = ({
   const resolvedTitle =
     categoryLabel ??
     categoryDef?.label ??
-    (parseServiceCategorySlug(category)
-      ? category.replace(/^service:/, "").replace(/-/g, " ")
+    (parseServiceCategorySlug(category) ||
+    parseBeforeAfterCategorySlug(category)
+      ? category.replace(/^(service|before-after):/, "").replace(/-/g, " ")
       : "Resources");
 
   const handleFiles = (incoming: File[]) => {
@@ -78,6 +106,16 @@ export const ResourceUploadDialog = ({
     handleFiles(Array.from(event.dataTransfer.files ?? []));
   };
 
+  const isBeforeAfter = uploadMode === "before-after";
+  const isServiceName =
+    uploadMode === "service-name" ||
+    parseServiceCategorySlug(category) ||
+    category === "service-photo";
+  const canUpload =
+    !isUploading &&
+    files.length > 0 &&
+    (!isBeforeAfter || (Boolean(selectedService) && Boolean(photoType)));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -90,8 +128,57 @@ export const ResourceUploadDialog = ({
           ) : null}
         </DialogHeader>
         <div className="space-y-4 py-1">
-          {parseServiceCategorySlug(category) ||
-          category === "service-photo" ? (
+          {isBeforeAfter ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="resource-before-after-service">Service *</Label>
+                <Select
+                  value={selectedService || undefined}
+                  onValueChange={(value) => onServiceChange?.(value)}
+                >
+                  <SelectTrigger id="resource-before-after-service">
+                    <SelectValue placeholder="Choose a service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Link these photos to a service already on this project.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="resource-before-after-type">Photo type *</Label>
+                <Select
+                  value={photoType || undefined}
+                  onValueChange={(value) =>
+                    onPhotoTypeChange?.(value as BeforeAfterPhotoType)
+                  }
+                >
+                  <SelectTrigger id="resource-before-after-type">
+                    <SelectValue placeholder="Before or after" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="before">Before</SelectItem>
+                    <SelectItem value="after">After</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="resource-label">Caption (optional)</Label>
+                <Input
+                  id="resource-label"
+                  value={label}
+                  onChange={(event) => onLabelChange(event.target.value)}
+                  placeholder="Short note about this photo"
+                />
+              </div>
+            </>
+          ) : isServiceName ? (
             <div className="space-y-2">
               <Label htmlFor="resource-service-label">Service name *</Label>
               <Input
@@ -185,11 +272,7 @@ export const ResourceUploadDialog = ({
           >
             Cancel
           </Button>
-          <Button
-            type="button"
-            onClick={onUpload}
-            disabled={isUploading || files.length === 0}
-          >
+          <Button type="button" onClick={onUpload} disabled={!canUpload}>
             {isUploading ? <Loader2 className="size-4 animate-spin" /> : null}
             Upload
           </Button>

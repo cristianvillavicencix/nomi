@@ -65,6 +65,11 @@ export const ResourceMediaCard = ({
       <div className="space-y-1 p-3">
         <div className="truncate text-sm font-medium">{title}</div>
         <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          {resource.label?.trim().toLowerCase().startsWith("before") ? (
+            <Badge variant="secondary">Before</Badge>
+          ) : resource.label?.trim().toLowerCase().startsWith("after") ? (
+            <Badge variant="secondary">After</Badge>
+          ) : null}
           <span className="capitalize">{resource.source ?? "team"}</span>
           {resource.created_at ? (
             <>

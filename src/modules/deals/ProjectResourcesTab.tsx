@@ -51,9 +51,12 @@ import {
 } from "@/modules/deals/projectResourceUpload";
 import { serviceSlugsFromBrief } from "@/modules/deals/projectBriefServiceSlugs";
 import {
+  buildBeforeAfterSubTabs,
   buildMainResourceTabs,
   buildServiceSubTabs,
+  getBeforeAfterSubTabCounts,
   getMainTabCounts,
+  getResourcesForBeforeAfterSubTab,
   getResourcesForMainTab,
   getResourcesForServiceSubTab,
   getServiceSubTabCounts,
@@ -63,7 +66,10 @@ import {
 } from "@/modules/deals/projectResourceTabs";
 import { ResourceCategoryContent } from "@/modules/deals/ResourceCategorySection";
 import { ResourceLightbox } from "@/modules/deals/ResourceLightbox";
-import { ResourceUploadDialog } from "@/modules/deals/ResourceUploadDialog";
+import {
+  ResourceUploadDialog,
+  type BeforeAfterPhotoType,
+} from "@/modules/deals/ResourceUploadDialog";
 import {
   getSupabaseSchemaMissingMessage,
   isSupabaseSchemaMissingError,
@@ -77,6 +83,15 @@ const getContactEmail = (contact?: Contact | null) =>
 
 const getContactName = (contact?: Contact | null) =>
   `${contact?.first_name ?? ""} ${contact?.last_name ?? ""}`.trim();
+
+const buildBeforeAfterResourceLabel = (
+  photoType: BeforeAfterPhotoType,
+  caption?: string,
+) => {
+  const base = photoType === "before" ? "Before" : "After";
+  const trimmed = caption?.trim();
+  return trimmed ? `${base} — ${trimmed}` : base;
+};
 
 export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
   const notify = useNotify();
@@ -97,6 +112,7 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
   const [activeTab, setActiveTab] =
     useState<ProjectResourceTabCategory>("logo");
   const [activeServiceTab, setActiveServiceTab] = useState<string>("");
+  const [activeBeforeAfterTab, setActiveBeforeAfterTab] = useState<string>("");
   const [previewResource, setPreviewResource] = useState<DealResource | null>(
     null,
   );
@@ -104,9 +120,14 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
   const [uploadTarget, setUploadTarget] = useState<{
     category: string;
     label: string;
+    mode?: "default" | "before-after";
   } | null>(null);
   const [uploadLabel, setUploadLabel] = useState("");
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [uploadBeforeAfterService, setUploadBeforeAfterService] = useState("");
+  const [uploadPhotoType, setUploadPhotoType] = useState<
+    BeforeAfterPhotoType | ""
+  >("");
   const [downloadingTab, setDownloadingTab] = useState(false);
 
   const contactId =
@@ -147,10 +168,18 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
       ]),
     [briefServiceSlugs, pendingServiceSlugs, resources],
   );
+  const beforeAfterSubTabs = useMemo(
+    () => buildBeforeAfterSubTabs(serviceSubTabs),
+    [serviceSubTabs],
+  );
   const mainTabCounts = useMemo(() => getMainTabCounts(resources), [resources]);
   const serviceSubTabCounts = useMemo(
     () => getServiceSubTabCounts(serviceSubTabs, resources),
     [resources, serviceSubTabs],
+  );
+  const beforeAfterSubTabCounts = useMemo(
+    () => getBeforeAfterSubTabCounts(beforeAfterSubTabs, resources),
+    [beforeAfterSubTabs, resources],
   );
 
   const activeServiceTabDef = useMemo(
@@ -161,12 +190,31 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
     [activeServiceTab, serviceSubTabs],
   );
 
+  const activeBeforeAfterTabDef = useMemo(
+    () =>
+      beforeAfterSubTabs.find((entry) => entry.id === activeBeforeAfterTab) ??
+      beforeAfterSubTabs[0] ??
+      null,
+    [activeBeforeAfterTab, beforeAfterSubTabs],
+  );
+
   const galleryItems = useMemo(() => {
     if (activeTab === "service-photo" && activeServiceTabDef) {
       return getResourcesForServiceSubTab(activeServiceTabDef, resources);
     }
+    if (activeTab === "before-after" && activeBeforeAfterTabDef) {
+      return getResourcesForBeforeAfterSubTab(
+        activeBeforeAfterTabDef,
+        resources,
+      );
+    }
     return getResourcesForMainTab(activeTab, resources);
-  }, [activeServiceTabDef, activeTab, resources]);
+  }, [
+    activeBeforeAfterTabDef,
+    activeServiceTabDef,
+    activeTab,
+    resources,
+  ]);
 
   useEffect(() => {
     writePendingServiceSlugs(record.id, pendingServiceSlugs);
@@ -182,8 +230,37 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
     }
   }, [activeServiceTab, serviceSubTabs]);
 
+  useEffect(() => {
+    if (beforeAfterSubTabs.length === 0) {
+      setActiveBeforeAfterTab("");
+      return;
+    }
+    if (
+      !beforeAfterSubTabs.some((entry) => entry.id === activeBeforeAfterTab)
+    ) {
+      setActiveBeforeAfterTab(beforeAfterSubTabs[0].id);
+    }
+  }, [activeBeforeAfterTab, beforeAfterSubTabs]);
+
   const openUploadForCategory = (category: string, label: string) => {
-    setUploadTarget({ category, label });
+    setUploadTarget({ category, label, mode: "default" });
+    setUploadBeforeAfterService("");
+    setUploadPhotoType("");
+    setUploadLabel("");
+    setUploadFiles([]);
+    setUploadOpen(true);
+  };
+
+  const openBeforeAfterUpload = (serviceTab?: ProjectResourceTabDef) => {
+    setUploadTarget({
+      category: "before-after",
+      label: "Before & After",
+      mode: "before-after",
+    });
+    setUploadBeforeAfterService(
+      serviceTab?.category ?? activeBeforeAfterTabDef?.category ?? "",
+    );
+    setUploadPhotoType("");
     setUploadLabel("");
     setUploadFiles([]);
     setUploadOpen(true);
@@ -195,6 +272,10 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
         activeServiceTabDef.category,
         activeServiceTabDef.label,
       );
+      return;
+    }
+    if (activeTab === "before-after") {
+      openBeforeAfterUpload(activeBeforeAfterTabDef ?? undefined);
       return;
     }
     const def = PROJECT_RESOURCE_TAB_CATEGORIES.find(
@@ -215,20 +296,38 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
         throw new Error("Choose at least one file");
       }
 
+      const isBeforeAfterUpload = uploadTarget.mode === "before-after";
+      const resolvedCategory = isBeforeAfterUpload
+        ? uploadBeforeAfterService
+        : uploadTarget.category;
+
+      if (isBeforeAfterUpload) {
+        if (!uploadBeforeAfterService) {
+          throw new Error("Choose a service");
+        }
+        if (!uploadPhotoType) {
+          throw new Error("Choose before or after");
+        }
+      }
+
+      const resolvedLabel = isBeforeAfterUpload
+        ? buildBeforeAfterResourceLabel(uploadPhotoType, uploadLabel)
+        : uploadLabel.trim() || undefined;
+
       for (const file of uploadFiles) {
         const uploaded = await uploadProjectResourceFile(
           record.id,
           file,
           undefined,
-          { category: uploadTarget.category as ProjectResourceCategory },
+          { category: resolvedCategory as ProjectResourceCategory },
         );
         await create(
           "deal_resources",
           {
             data: buildProjectResourceRecord({
               dealId: record.id,
-              category: uploadTarget.category,
-              label: uploadLabel.trim() || undefined,
+              category: resolvedCategory,
+              label: resolvedLabel,
               file: uploaded,
               source: "team",
             }),
@@ -243,6 +342,8 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
       setUploadOpen(false);
       setUploadFiles([]);
       setUploadLabel("");
+      setUploadBeforeAfterService("");
+      setUploadPhotoType("");
     },
     onError: (error: Error) => {
       if (isSupabaseSchemaMissingError(error, "deal_resources")) {
@@ -365,11 +466,16 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
                     }),
                   )
                 }
+                disabled={tabId === "before-after"}
               >
                 <Link2 className="size-4" />
               </IconButton>
             </TooltipTrigger>
-            <TooltipContent>Request this tab</TooltipContent>
+            <TooltipContent>
+              {tabId === "before-after"
+                ? "Client request not available for Before & After yet"
+                : "Request this tab"}
+            </TooltipContent>
           </Tooltip>
           {tabId !== "document" ? (
             <Tooltip>
@@ -397,6 +503,8 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
                       activeServiceTabDef.category,
                       activeServiceTabDef.label,
                     );
+                  } else if (tabId === "before-after") {
+                    openBeforeAfterUpload(activeBeforeAfterTabDef ?? undefined);
                   } else {
                     const def = PROJECT_RESOURCE_TAB_CATEGORIES.find(
                       (entry) => entry.id === tabId,
@@ -555,6 +663,84 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
                   )}
                 </Tabs>
               </div>
+            ) : tab.id === "before-after" ? (
+              <div className="space-y-4">
+                {renderTabActions(
+                  "before-after",
+                  activeBeforeAfterTabDef
+                    ? getResourcesForBeforeAfterSubTab(
+                        activeBeforeAfterTabDef,
+                        resources,
+                      )
+                    : getResourcesForMainTab("before-after", resources),
+                  activeBeforeAfterTabDef?.id ?? "before-after",
+                  "Add files",
+                  buildZipBaseName(
+                    activeBeforeAfterTabDef?.label ?? "before-after",
+                  ),
+                )}
+
+                <Tabs
+                  value={activeBeforeAfterTab || "__empty__"}
+                  onValueChange={setActiveBeforeAfterTab}
+                >
+                  <TabsList className="inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg border bg-background p-1">
+                    {beforeAfterSubTabs.map((serviceTab) => (
+                      <TabsTrigger
+                        key={serviceTab.id}
+                        value={serviceTab.id}
+                        className="shrink-0"
+                      >
+                        {serviceTab.label}
+                        {formatTabCount(
+                          beforeAfterSubTabCounts[serviceTab.id],
+                        )}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+
+                  {beforeAfterSubTabs.length === 0 ? (
+                    <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-12 text-center text-sm text-muted-foreground">
+                      <p>No services yet. Add services under Photo services first.</p>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() => {
+                          setActiveTab("service-photo");
+                          setAddTabOpen(true);
+                        }}
+                      >
+                        <Plus className="size-4" />
+                        Add service
+                      </Button>
+                    </div>
+                  ) : (
+                    beforeAfterSubTabs.map((serviceTab) => {
+                      const items = getResourcesForBeforeAfterSubTab(
+                        serviceTab,
+                        resources,
+                      );
+                      return (
+                        <TabsContent
+                          key={serviceTab.id}
+                          value={serviceTab.id}
+                          className="pt-4"
+                        >
+                          <ResourceCategoryContent
+                            categoryId="before-after"
+                            items={items}
+                            onPreview={setPreviewResource}
+                            onDelete={handleDelete}
+                            deletingId={deletingId}
+                          />
+                        </TabsContent>
+                      );
+                    })
+                  )}
+                </Tabs>
+              </div>
             ) : (
               <>
                 {renderTabActions(
@@ -614,6 +800,22 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
         onFilesChange={setUploadFiles}
         onUpload={() => uploadResources()}
         isUploading={isUploading}
+        uploadMode={
+          uploadTarget?.mode === "before-after"
+            ? "before-after"
+            : uploadTarget?.category === "service-photo" ||
+                uploadTarget?.category.startsWith("service:")
+              ? "service-name"
+              : "default"
+        }
+        serviceOptions={beforeAfterSubTabs.map((tab) => ({
+          value: tab.category,
+          label: tab.label,
+        }))}
+        selectedService={uploadBeforeAfterService}
+        onServiceChange={setUploadBeforeAfterService}
+        photoType={uploadPhotoType}
+        onPhotoTypeChange={setUploadPhotoType}
       />
 
       <SendProjectResourcesDialog

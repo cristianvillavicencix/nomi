@@ -9,7 +9,8 @@ export const BASE_PROJECT_RESOURCE_TABS = [
 
 export type ProjectResourceTabCategory =
   | (typeof BASE_PROJECT_RESOURCE_TABS)[number]
-  | "service-photo";
+  | "service-photo"
+  | "before-after";
 
 /** Legacy values still stored on older records. */
 export type LegacyProjectResourceCategory = "location" | "brand";
@@ -17,7 +18,8 @@ export type LegacyProjectResourceCategory = "location" | "brand";
 export type ProjectResourceCategory =
   | ProjectResourceTabCategory
   | LegacyProjectResourceCategory
-  | `service:${string}`;
+  | `service:${string}`
+  | `before-after:${string}`;
 
 export const PROJECT_RESOURCE_TAB_CATEGORIES: Array<{
   id: ProjectResourceTabCategory;
@@ -36,6 +38,12 @@ export const PROJECT_RESOURCE_TAB_CATEGORIES: Array<{
     label: "Photo services",
     description: "Photos for each service you offer.",
     clientLabel: "Photos of your services",
+  },
+  {
+    id: "before-after",
+    label: "Before & After",
+    description: "Before and after photos linked to each service.",
+    clientLabel: "Before and after photos",
   },
   {
     id: "team",
@@ -81,11 +89,23 @@ export const buildServiceCategory = (serviceName: string) =>
   `${SERVICE_CATEGORY_PREFIX}${slugifyServiceName(serviceName)}`;
 
 const SERVICE_CATEGORY_PREFIX = "service:";
+const BEFORE_AFTER_CATEGORY_PREFIX = "before-after:";
 
 export const parseServiceCategorySlug = (category?: string | null) => {
   if (!category?.startsWith(SERVICE_CATEGORY_PREFIX)) return null;
   return category.slice(SERVICE_CATEGORY_PREFIX.length);
 };
+
+export const parseBeforeAfterCategorySlug = (category?: string | null) => {
+  if (!category?.startsWith(BEFORE_AFTER_CATEGORY_PREFIX)) return null;
+  return category.slice(BEFORE_AFTER_CATEGORY_PREFIX.length);
+};
+
+export const buildBeforeAfterCategory = (serviceSlug: string) =>
+  `${BEFORE_AFTER_CATEGORY_PREFIX}${slugifyServiceName(serviceSlug)}`;
+
+export const buildBeforeAfterCategoryFromServiceName = (serviceName: string) =>
+  buildBeforeAfterCategory(slugifyServiceName(serviceName));
 
 export const formatServiceCategoryLabel = (slug: string) =>
   slug
@@ -100,6 +120,9 @@ export const getResourceTabCategory = (
   if (category?.startsWith(SERVICE_CATEGORY_PREFIX)) {
     return "service-photo";
   }
+  if (category?.startsWith(BEFORE_AFTER_CATEGORY_PREFIX)) {
+    return "before-after";
+  }
   if (category && isProjectResourceTabCategory(category)) {
     return category;
   }
@@ -107,6 +130,10 @@ export const getResourceTabCategory = (
 };
 
 export const getProjectResourceCategoryLabel = (category: string) => {
+  const beforeAfterSlug = parseBeforeAfterCategorySlug(category);
+  if (beforeAfterSlug) {
+    return `Before & After · ${formatServiceCategoryLabel(beforeAfterSlug)}`;
+  }
   const serviceSlug = parseServiceCategorySlug(category);
   if (serviceSlug) {
     return formatServiceCategoryLabel(serviceSlug);

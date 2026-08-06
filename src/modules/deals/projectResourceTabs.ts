@@ -1,7 +1,9 @@
 import type { DealResource } from "@/modules/types";
 import {
+  buildBeforeAfterCategory,
   buildServiceCategory,
   formatServiceCategoryLabel,
+  parseBeforeAfterCategorySlug,
   parseServiceCategorySlug,
   PROJECT_RESOURCE_TAB_CATEGORIES,
   type ProjectResourceTabCategory,
@@ -62,6 +64,26 @@ export const buildServiceSubTabs = (
     );
 };
 
+/** Sub-tabs inside Before & After — one per existing service. */
+export const buildBeforeAfterSubTabs = (
+  serviceTabs: ProjectResourceTabDef[],
+): ProjectResourceTabDef[] =>
+  serviceTabs
+    .map((tab) => {
+      const slug =
+        parseServiceCategorySlug(tab.category) ??
+        parseServiceCategorySlug(tab.id);
+      if (!slug) return null;
+      return {
+        id: buildBeforeAfterCategory(slug),
+        label: tab.label,
+        description: `Before and after photos for ${tab.label.toLowerCase()}.`,
+        kind: "service" as const,
+        category: buildBeforeAfterCategory(slug),
+      };
+    })
+    .filter((entry): entry is ProjectResourceTabDef => entry != null);
+
 export const getResourcesForMainTab = (
   tabId: ProjectResourceTabCategory,
   resources: DealResource[],
@@ -71,9 +93,15 @@ export const getResourcesForMainTab = (
       Boolean(parseServiceCategorySlug(entry.category)),
     );
   }
+  if (tabId === "before-after") {
+    return resources.filter((entry) =>
+      Boolean(parseBeforeAfterCategorySlug(entry.category)),
+    );
+  }
   if (tabId === "other") {
     return resources.filter((entry) => {
       if (parseServiceCategorySlug(entry.category)) return false;
+      if (parseBeforeAfterCategorySlug(entry.category)) return false;
       return !PROJECT_RESOURCE_TAB_CATEGORIES.some(
         (def) => def.id !== "other" && def.id === entry.category,
       );
@@ -86,6 +114,8 @@ export const getResourcesForServiceSubTab = (
   tab: ProjectResourceTabDef,
   resources: DealResource[],
 ) => resources.filter((entry) => entry.category === tab.category);
+
+export const getResourcesForBeforeAfterSubTab = getResourcesForServiceSubTab;
 
 export const getMainTabCounts = (resources: DealResource[]) => {
   const counts: Record<string, number> = {};
@@ -105,6 +135,8 @@ export const getServiceSubTabCounts = (
   }
   return counts;
 };
+
+export const getBeforeAfterSubTabCounts = getServiceSubTabCounts;
 
 export const pendingTabsStorageKey = (dealId: string | number) =>
   `nomi:deal-resource-tabs:${dealId}`;
