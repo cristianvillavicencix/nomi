@@ -77,6 +77,10 @@ export const validateSectionFields = (
       continue;
     }
 
+    if (field.type === "before_after_photos") {
+      continue;
+    }
+
     if (
       field.type === "checkbox" &&
       !(field.options && field.options.length > 0)

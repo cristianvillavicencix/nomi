@@ -171,6 +171,68 @@ export async function processProjectResourcesSubmission(
     }
   }
 
+  const beforeAfterRaw = answers.before_after_photos;
+  if (
+    beforeAfterRaw &&
+    typeof beforeAfterRaw === "object" &&
+    !Array.isArray(beforeAfterRaw)
+  ) {
+    const beforeAfterRecord = beforeAfterRaw as {
+      selected?: unknown;
+      services?: Record<
+        string,
+        {
+          description?: string;
+          before?: UploadedAnswerFile[];
+          after?: UploadedAnswerFile[];
+        }
+      >;
+    };
+    const selectedServices = Array.isArray(beforeAfterRecord.selected)
+      ? beforeAfterRecord.selected
+          .map((entry) => String(entry ?? "").trim())
+          .filter(Boolean)
+      : [];
+    const serviceEntries = beforeAfterRecord.services ?? {};
+
+    for (const service of selectedServices) {
+      const entry = serviceEntries[service];
+      if (!entry || typeof entry !== "object") continue;
+      const description = String(entry.description ?? "").trim();
+      const category = `before-after:${slugify(service)}`;
+      const beforePhotos = Array.isArray(entry.before) ? entry.before : [];
+      const afterPhotos = Array.isArray(entry.after) ? entry.after : [];
+
+      for (const photo of beforePhotos) {
+        resourcesToInsert.push({
+          org_id: submission.org_id,
+          deal_id: dealId,
+          category,
+          label: description ? `Before — ${description}` : "Before",
+          file: toDealResourceFile(photo),
+          visibility: "internal",
+          mime_kind: inferMimeKind(photo.mime_type ?? photo.type ?? ""),
+          source: "project_resources_wizard",
+          submitted_by_form: submission.id,
+        });
+      }
+
+      for (const photo of afterPhotos) {
+        resourcesToInsert.push({
+          org_id: submission.org_id,
+          deal_id: dealId,
+          category,
+          label: description ? `After — ${description}` : "After",
+          file: toDealResourceFile(photo),
+          visibility: "internal",
+          mime_kind: inferMimeKind(photo.mime_type ?? photo.type ?? ""),
+          source: "project_resources_wizard",
+          submitted_by_form: submission.id,
+        });
+      }
+    }
+  }
+
   if (resourcesToInsert.length > 0) {
     const { error } = await supabase
       .from("deal_resources")

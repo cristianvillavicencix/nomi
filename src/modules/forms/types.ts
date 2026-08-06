@@ -23,6 +23,7 @@ export type FormFieldType =
   | "file_multi"
   | "dynamic_list"
   | "dynamic_file_groups"
+  | "before_after_photos"
   | "signature"
   | "hidden"
   | "formula";

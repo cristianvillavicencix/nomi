@@ -140,6 +140,23 @@ export const WizardSummaryStep = ({
     );
   }
 
+  let beforeAfterCount = 0;
+  const beforeAfterRaw = answers.before_after_photos;
+  if (
+    beforeAfterRaw &&
+    typeof beforeAfterRaw === "object" &&
+    !Array.isArray(beforeAfterRaw)
+  ) {
+    const entries =
+      (beforeAfterRaw as { services?: Record<string, { before?: unknown[]; after?: unknown[] }> })
+        .services ?? {};
+    beforeAfterCount = Object.values(entries).reduce((sum, entry) => {
+      const before = Array.isArray(entry?.before) ? entry.before.length : 0;
+      const after = Array.isArray(entry?.after) ? entry.after.length : 0;
+      return sum + before + after;
+    }, 0);
+  }
+
   return (
     <section className="space-y-4 rounded-xl border bg-muted/10 p-5">
       <h2 className="text-base font-semibold">Summary</h2>
@@ -164,6 +181,12 @@ export const WizardSummaryStep = ({
         <li>
           <span className="font-medium text-foreground">Service photos:</span>{" "}
           {photoCount}
+        </li>
+        <li>
+          <span className="font-medium text-foreground">
+            Before &amp; after photos:
+          </span>{" "}
+          {beforeAfterCount}
         </li>
       </ul>
     </section>

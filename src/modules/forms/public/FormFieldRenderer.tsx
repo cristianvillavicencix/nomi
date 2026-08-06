@@ -254,6 +254,10 @@ export const FormFieldRenderer = ({
     return null;
   }
 
+  if (field.type === "before_after_photos") {
+    return null;
+  }
+
   if (field.type === "file_multi") {
     return (
       <FormFileMultiField

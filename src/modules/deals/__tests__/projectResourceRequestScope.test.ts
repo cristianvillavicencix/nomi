@@ -131,6 +131,22 @@ describe("shouldShowProjectResourcesSection", () => {
       shouldShowProjectResourcesSection("company_info", ["service:framing"]),
     ).toBe(false);
   });
+
+  it("hides before-after for a single service photo scope", () => {
+    expect(
+      shouldShowProjectResourcesSection("before_after", ["service:framing"]),
+    ).toBe(false);
+  });
+
+  it("shows before-after for full resource scope with services", () => {
+    expect(
+      shouldShowProjectResourcesSection("before_after", [
+        "logo",
+        "team",
+        "service:framing",
+      ]),
+    ).toBe(true);
+  });
 });
 
 describe("buildPresetServicesAnswers", () => {

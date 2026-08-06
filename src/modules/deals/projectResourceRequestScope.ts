@@ -214,5 +214,13 @@ export const shouldShowProjectResourcesSection = (
       sections.some((entry) => entry.startsWith("service:"))
     );
   }
+  if (sectionId === "before_after") {
+    const hasServicePhotos =
+      sections.includes("services") ||
+      sections.some((entry) => entry.startsWith("service:"));
+    if (!hasServicePhotos) return false;
+    if (serviceOnlyScope && sections.length === 1) return false;
+    return true;
+  }
   return true;
 };

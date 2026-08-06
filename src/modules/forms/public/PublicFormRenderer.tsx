@@ -62,6 +62,7 @@ import {
   DynamicFileGroupsField,
   WizardSummaryStep,
 } from "@/modules/forms/public/fields/DynamicFileGroupsField";
+import { BeforeAfterPhotosField } from "@/modules/forms/public/fields/BeforeAfterPhotosField";
 import {
   ProjectResourcesPreflightStep,
   type ProjectLinkMode,
@@ -80,6 +81,9 @@ const PreviewBanner = ({ isPreview }: { isPreview?: boolean }) =>
       Preview mode — submissions won&apos;t be saved.
     </div>
   ) : null;
+
+const getBeforeAfterField = (section?: FormSectionDef) =>
+  section?.fields?.find((field) => field.type === "before_after_photos");
 
 const renderFormSection = ({
   section,
@@ -797,6 +801,12 @@ export const PublicFormRenderer = () => {
     }
     if (currentWizardStep?.kind === "summary") return true;
     if (currentWizardStep?.kind === "dynamic_file_group") return true;
+    if (
+      currentWizardStep?.kind === "section" &&
+      currentSection?.id === "before_after"
+    ) {
+      return true;
+    }
     if (!currentSection) return true;
     const nextErrors = validateSectionFields(currentSection, answers);
     setFieldErrors(nextErrors);
@@ -819,6 +829,11 @@ export const PublicFormRenderer = () => {
     }
     return true;
   };
+
+  const isOptionalPhotoStep =
+    currentWizardStep?.kind === "dynamic_file_group" ||
+    (currentWizardStep?.kind === "section" &&
+      currentSection?.id === "before_after");
 
   return (
     <FormBrandingShell
@@ -906,9 +921,12 @@ export const PublicFormRenderer = () => {
                 ? currentWizardStep.section.title
                 : currentWizardStep?.kind === "dynamic_file_group"
                   ? currentWizardStep.groupKey
-                  : currentWizardStep?.kind === "summary"
-                    ? "Summary"
-                    : ""}
+                  : currentWizardStep?.kind === "section" &&
+                      currentWizardStep.section.id === "before_after"
+                    ? "Before & After"
+                    : currentWizardStep?.kind === "summary"
+                      ? "Summary"
+                      : ""}
             </span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -972,8 +990,32 @@ export const PublicFormRenderer = () => {
             />
           ) : null}
 
-          {isWizard && currentWizardStep?.kind === "section" && currentSection
-            ? renderFormSection({
+          {isWizard && currentWizardStep?.kind === "section" && currentSection ? (
+            currentSection.id === "before_after" &&
+            getBeforeAfterField(currentSection) ? (
+              <section className="space-y-4 rounded-xl border bg-muted/10 p-4 sm:p-6">
+                {currentSection.title ? (
+                  <div className="space-y-1">
+                    <h2 className="text-base font-semibold">
+                      {currentSection.title}
+                    </h2>
+                    {currentSection.description ? (
+                      <p className="text-sm text-muted-foreground">
+                        {currentSection.description}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+                <BeforeAfterPhotosField
+                  field={getBeforeAfterField(currentSection)!}
+                  services={readStringList(answers.services)}
+                  value={answers.before_after_photos}
+                  token={formPayload.token}
+                  onChange={(next) => setAnswer("before_after_photos", next)}
+                />
+              </section>
+            ) : (
+              renderFormSection({
                 section: currentSection,
                 answers,
                 fieldErrors,
@@ -982,7 +1024,8 @@ export const PublicFormRenderer = () => {
                 formulaAnswers,
                 onChange: setAnswer,
               })
-            : null}
+            )
+          ) : null}
 
           {isWizard && currentWizardStep?.kind === "dynamic_file_group" ? (
             <section className="space-y-1 rounded-xl border bg-muted/10 p-4 sm:p-6">
@@ -1039,8 +1082,7 @@ export const PublicFormRenderer = () => {
               )}
 
               <div className="flex w-full gap-2 sm:ml-auto sm:w-auto">
-                {isWizard &&
-                currentWizardStep?.kind === "dynamic_file_group" ? (
+                {isWizard && isOptionalPhotoStep ? (
                   <Button
                     type="button"
                     variant="outline"
@@ -1051,8 +1093,10 @@ export const PublicFormRenderer = () => {
                       setFieldErrors({});
                     }}
                   >
-                    {currentWizardStep.field.skip_button_label ??
-                      "Skip this service"}
+                    {currentWizardStep?.kind === "dynamic_file_group"
+                      ? (currentWizardStep.field.skip_button_label ??
+                        "Skip this service")
+                      : "Skip — no before/after"}
                   </Button>
                 ) : null}
                 <Button
