@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import type { FormFieldDef } from "@/modules/forms/types";
 import { DynamicListField } from "@/modules/forms/public/fields/DynamicListField";
+import { FormFileMultiField } from "@/modules/forms/public/fields/FormFileMultiField";
 import {
   uploadFormFile,
   type UploadedFormFile,
@@ -253,14 +254,25 @@ export const FormFieldRenderer = ({
     return null;
   }
 
-  if (field.type === "file" || field.type === "file_multi") {
-    const files = Array.isArray(value)
-      ? (value as UploadedFormFile[])
-      : value && typeof value === "object"
-        ? [value as UploadedFormFile]
-        : [];
+  if (field.type === "file_multi") {
+    return (
+      <FormFileMultiField
+        field={field}
+        value={value}
+        onChange={onChange}
+        formId={formId}
+        token={token}
+        disabled={disabled}
+        label={commonLabel}
+        helpText={helpText}
+      />
+    );
+  }
 
-    const handleFiles = async (fileList: FileList | null) => {
+  if (field.type === "file") {
+    const files = value && typeof value === "object" ? [value as UploadedFormFile] : [];
+
+    const handleSingleFile = async (fileList: FileList | null) => {
       if (!fileList?.length) return;
       const uploadOptions = token
         ? { token, fieldKey: field.key }
@@ -269,37 +281,11 @@ export const FormFieldRenderer = ({
           : null;
       if (uploadOptions == null) return;
 
-      const selected = Array.from(fileList);
-      if (field.max_files && field.type === "file_multi") {
-        const remaining = field.max_files - files.length;
-        if (remaining <= 0) return;
-        selected.splice(remaining);
-      }
-
-      if (
-        field.type === "file_multi" &&
-        field.soft_warn_after &&
-        files.length + selected.length > field.soft_warn_after
-      ) {
-        const proceed = window.confirm(
-          field.soft_warn_message ??
-            `You already added ${files.length} file(s). Continue adding more?`,
-        );
-        if (!proceed) return;
-      }
-
-      const uploaded = await Promise.all(
-        selected.map((file) =>
-          typeof uploadOptions === "number"
-            ? uploadFormFile(file, uploadOptions)
-            : uploadFormFile(file, uploadOptions),
-        ),
+      const uploaded = await uploadFormFile(
+        fileList[0],
+        typeof uploadOptions === "number" ? uploadOptions : uploadOptions,
       );
-      if (field.type === "file_multi") {
-        onChange([...files, ...uploaded]);
-      } else {
-        onChange(uploaded[0] ?? null);
-      }
+      onChange(uploaded);
     };
 
     return (
@@ -309,9 +295,8 @@ export const FormFieldRenderer = ({
           id={field.key}
           type="file"
           disabled={disabled || (!formId && !token)}
-          multiple={field.type === "file_multi"}
           accept={field.accept}
-          onChange={(event) => void handleFiles(event.target.files)}
+          onChange={(event) => void handleSingleFile(event.target.files)}
         />
         {files.length > 0 ? (
           <ul className="space-y-1 text-sm text-muted-foreground">

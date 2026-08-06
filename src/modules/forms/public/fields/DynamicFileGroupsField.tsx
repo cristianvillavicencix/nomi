@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Camera } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { FormFieldDef } from "@/modules/forms/types";
+import { FormFileUploadZone } from "@/modules/forms/public/fields/FormFileUploadZone";
 import {
   uploadFormFile,
   type UploadedFormFile,
@@ -11,12 +11,12 @@ import {
 type DynamicFileGroupsFieldProps = {
   field: FormFieldDef;
   groupKey: string;
+  groupIndex?: number;
+  groupTotal?: number;
   value: unknown;
   token: string;
   disabled?: boolean;
-  skipButtonLabel?: string;
   onChange: (next: Record<string, UploadedFormFile[]>) => void;
-  onSkip?: () => void;
 };
 
 const readGroups = (value: unknown): Record<string, UploadedFormFile[]> => {
@@ -27,14 +27,15 @@ const readGroups = (value: unknown): Record<string, UploadedFormFile[]> => {
 export const DynamicFileGroupsField = ({
   field,
   groupKey,
+  groupIndex,
+  groupTotal,
   value,
   token,
   disabled,
-  skipButtonLabel,
   onChange,
-  onSkip,
 }: DynamicFileGroupsFieldProps) => {
   const [uploading, setUploading] = useState(false);
+  const [uploadingCount, setUploadingCount] = useState(0);
   const groups = readGroups(value);
   const files = groups[groupKey] ?? [];
   const maxFiles = field.max_files_per_group ?? 20;
@@ -43,15 +44,17 @@ export const DynamicFileGroupsField = ({
     onChange({ ...groups, [groupKey]: nextFiles });
   };
 
-  const handleFiles = async (fileList: FileList | null) => {
-    if (!fileList?.length || !token) return;
+  const handleFiles = async (selected: File[]) => {
+    if (!selected.length || !token) return;
     const remaining = maxFiles - files.length;
     if (remaining <= 0) return;
+
     setUploading(true);
+    setUploadingCount(Math.min(selected.length, remaining));
     try {
-      const selected = Array.from(fileList).slice(0, remaining);
+      const batch = selected.slice(0, remaining);
       const uploaded = await Promise.all(
-        selected.map((file) =>
+        batch.map((file) =>
           uploadFormFile(file, {
             token,
             fieldKey: field.key,
@@ -62,45 +65,53 @@ export const DynamicFileGroupsField = ({
       setGroupFiles([...files, ...uploaded]);
     } finally {
       setUploading(false);
+      setUploadingCount(0);
     }
   };
 
+  const stepLabel =
+    groupIndex != null && groupTotal != null && groupTotal > 0
+      ? `Service ${groupIndex + 1} of ${groupTotal}`
+      : null;
+
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor={`${field.key}-${groupKey}`}>
-          Fotos de &ldquo;{groupKey}&rdquo;
-        </Label>
-        <Input
-          id={`${field.key}-${groupKey}`}
-          type="file"
-          multiple
-          disabled={disabled || uploading || files.length >= maxFiles}
-          accept={field.accept}
-          onChange={(event) => void handleFiles(event.target.files)}
-        />
-        {files.length > 0 ? (
-          <ul className="space-y-1 text-sm text-muted-foreground">
-            {files.map((file) => (
-              <li key={file.path ?? file.url}>{file.name}</li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Podés subir hasta {maxFiles} archivos para este servicio.
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-2">
+          {stepLabel ? (
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {stepLabel}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="gap-1.5 px-3 py-1 text-sm">
+              <Camera className="size-3.5" />
+              {groupKey}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Add photos that showcase this service. You can upload from your
+            phone or computer.
           </p>
-        )}
+        </div>
       </div>
-      {onSkip ? (
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={disabled}
-          onClick={onSkip}
-        >
-          {skipButtonLabel ?? field.skip_button_label ?? "Skip this service"}
-        </Button>
-      ) : null}
+
+      <FormFileUploadZone
+        id={`${field.key}-${groupKey}`}
+        accept={field.accept}
+        multiple
+        maxFiles={maxFiles}
+        files={files}
+        disabled={disabled}
+        uploading={uploading}
+        uploadingCount={uploadingCount}
+        onFilesSelected={(next) => void handleFiles(next)}
+        onRemove={(index) => {
+          setGroupFiles(files.filter((_, fileIndex) => fileIndex !== index));
+        }}
+        emptyTitle="Upload service photos"
+        emptySubtitle="Drag and drop here, or tap to choose from your gallery"
+      />
     </div>
   );
 };
@@ -130,16 +141,16 @@ export const WizardSummaryStep = ({
   }
 
   return (
-    <section className="space-y-4 rounded-lg border p-4">
-      <h2 className="text-base font-semibold">Resumen</h2>
+    <section className="space-y-4 rounded-xl border bg-muted/10 p-5">
+      <h2 className="text-base font-semibold">Summary</h2>
       <ul className="space-y-2 text-sm text-muted-foreground">
         <li>
-          <span className="font-medium text-foreground">Empresa:</span>{" "}
+          <span className="font-medium text-foreground">Company:</span>{" "}
           {String(answers.company_name ?? "—")}
         </li>
         {answers.industry ? (
           <li>
-            <span className="font-medium text-foreground">Industria:</span>{" "}
+            <span className="font-medium text-foreground">Industry:</span>{" "}
             {String(answers.industry)}
           </li>
         ) : null}
@@ -147,13 +158,11 @@ export const WizardSummaryStep = ({
           <span className="font-medium text-foreground">Logos:</span> {logos}
         </li>
         <li>
-          <span className="font-medium text-foreground">Servicios:</span>{" "}
+          <span className="font-medium text-foreground">Services:</span>{" "}
           {services}
         </li>
         <li>
-          <span className="font-medium text-foreground">
-            Fotos de servicios:
-          </span>{" "}
+          <span className="font-medium text-foreground">Service photos:</span>{" "}
           {photoCount}
         </li>
       </ul>

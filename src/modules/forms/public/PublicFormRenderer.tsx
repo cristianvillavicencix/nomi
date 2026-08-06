@@ -98,7 +98,7 @@ const renderFormSection = ({
   formulaAnswers: Record<string, unknown>;
   onChange: (key: string, next: unknown) => void;
 }) => (
-  <section className="space-y-4 rounded-lg border p-4">
+  <section className="space-y-4 rounded-xl border bg-muted/10 p-4 sm:p-6">
     {section.title ? (
       <h2 className="text-base font-semibold">{section.title}</h2>
     ) : null}
@@ -894,24 +894,26 @@ export const PublicFormRenderer = () => {
       ) : null}
 
       {isWizard && !showPreflight ? (
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-            <span>
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-medium text-foreground">
               Step {Math.min(step + 1, wizardSteps.length || 1)} of{" "}
               {wizardSteps.length || 1}
+            </span>
+            <span className="text-xs text-muted-foreground">
               {currentWizardStep?.kind === "section" &&
               currentWizardStep.section.title
-                ? `: ${currentWizardStep.section.title}`
+                ? currentWizardStep.section.title
                 : currentWizardStep?.kind === "dynamic_file_group"
-                  ? `: ${currentWizardStep.groupKey}`
+                  ? currentWizardStep.groupKey
                   : currentWizardStep?.kind === "summary"
-                    ? ": Resumen"
+                    ? "Summary"
                     : ""}
             </span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full bg-primary transition-all"
+              className="h-full rounded-full bg-primary transition-all duration-300"
               style={{
                 width: `${
                   wizardSteps.length > 0
@@ -983,29 +985,17 @@ export const PublicFormRenderer = () => {
             : null}
 
           {isWizard && currentWizardStep?.kind === "dynamic_file_group" ? (
-            <section className="space-y-4 rounded-lg border p-4">
-              {currentWizardStep.section.title ? (
-                <h2 className="text-base font-semibold">
-                  {currentWizardStep.section.title}
-                </h2>
-              ) : null}
-              {currentWizardStep.section.description ? (
-                <p className="text-sm text-muted-foreground">
-                  {currentWizardStep.section.description}
-                </p>
-              ) : null}
+            <section className="space-y-1 rounded-xl border bg-muted/10 p-4 sm:p-6">
               <DynamicFileGroupsField
                 field={currentWizardStep.field}
                 groupKey={currentWizardStep.groupKey}
+                groupIndex={currentWizardStep.groupIndex}
+                groupTotal={currentWizardStep.groupTotal}
                 value={answers[currentWizardStep.field.key]}
                 token={formPayload.token}
                 onChange={(next) =>
                   setAnswer(currentWizardStep.field.key, next)
                 }
-                onSkip={() => {
-                  setStep((current) => current + 1);
-                  setFieldErrors({});
-                }}
               />
             </section>
           ) : null}
@@ -1030,28 +1020,54 @@ export const PublicFormRenderer = () => {
               ))
             : null}
 
-          <div className="flex justify-between gap-2">
-            {isWizard && step > 0 ? (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setStep((current) => current - 1);
-                  setFieldErrors({});
-                }}
-              >
-                Previous
-              </Button>
-            ) : (
-              <span />
-            )}
-            <Button type="submit" disabled={isPending}>
-              {isPending
-                ? "Submitting…"
-                : isWizard && step < wizardSteps.length - 1
-                  ? "Next"
-                  : "Submit"}
-            </Button>
+          <div className="sticky bottom-0 -mx-1 border-t bg-background/95 px-1 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {isWizard && step > 0 ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                  onClick={() => {
+                    setStep((current) => current - 1);
+                    setFieldErrors({});
+                  }}
+                >
+                  Previous
+                </Button>
+              ) : (
+                <span className="hidden sm:block" />
+              )}
+
+              <div className="flex w-full gap-2 sm:ml-auto sm:w-auto">
+                {isWizard &&
+                currentWizardStep?.kind === "dynamic_file_group" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 sm:min-w-36 sm:flex-none"
+                    disabled={isPending}
+                    onClick={() => {
+                      setStep((current) => current + 1);
+                      setFieldErrors({});
+                    }}
+                  >
+                    {currentWizardStep.field.skip_button_label ??
+                      "Skip this service"}
+                  </Button>
+                ) : null}
+                <Button
+                  type="submit"
+                  className="flex-1 sm:min-w-36 sm:flex-none"
+                  disabled={isPending}
+                >
+                  {isPending
+                    ? "Submitting…"
+                    : isWizard && step < wizardSteps.length - 1
+                      ? "Next"
+                      : "Submit"}
+                </Button>
+              </div>
+            </div>
           </div>
         </form>
       ) : null}
