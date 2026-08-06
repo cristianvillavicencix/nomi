@@ -573,9 +573,15 @@ export const PublicFormRenderer = () => {
       filterProjectResourcesSchema(
         formPayload?.form.schema,
         requestScope.sections,
+        requestScope.presetServices,
       ) ?? formPayload?.form.schema
     );
-  }, [formPayload?.form.schema, formPayload?.form.slug, requestScope.sections]);
+  }, [
+    formPayload?.form.schema,
+    formPayload?.form.slug,
+    requestScope.presetServices,
+    requestScope.sections,
+  ]);
 
   useEffect(() => {
     if (formPayload?.form.slug !== "project-resources") return;

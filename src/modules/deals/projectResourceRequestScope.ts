@@ -1,5 +1,6 @@
 import {
   buildServiceCategory,
+  formatServiceCategoryLabel,
   parseServiceCategorySlug,
 } from "@/modules/deals/projectResourceConstants";
 
@@ -14,6 +15,12 @@ export type ResourceRequestSection =
 export type ResourceRequestScope = {
   sections: ResourceRequestSection[];
   presetServices?: string[];
+};
+
+export type ResourceRequestServiceTab = {
+  id: string;
+  label: string;
+  category: string;
 };
 
 export const FULL_RESOURCE_REQUEST: ResourceRequestScope = {
@@ -45,8 +52,36 @@ export const appendRequestScopeToUrl = (
   return next.toString();
 };
 
+/** Request photos for all known project service tabs (skips the services list step). */
+export const scopeForPhotoServicesRequest = (
+  serviceTabs: ResourceRequestServiceTab[],
+): ResourceRequestScope => {
+  if (serviceTabs.length === 0) {
+    return { sections: ["services"] };
+  }
+
+  const sections: ResourceRequestSection[] = [];
+  const presetServices: string[] = [];
+
+  for (const tab of serviceTabs) {
+    const slug =
+      parseServiceCategorySlug(tab.category) ??
+      parseServiceCategorySlug(tab.id);
+    if (!slug) continue;
+    sections.push(`service:${slug}` as ResourceRequestSection);
+    presetServices.push(tab.label.trim() || formatServiceCategoryLabel(slug));
+  }
+
+  if (sections.length === 0) {
+    return { sections: ["services"] };
+  }
+
+  return { sections, presetServices };
+};
+
 export const scopeForResourceTab = (
   tabId: string,
+  options?: { serviceTabs?: ResourceRequestServiceTab[] },
 ): ResourceRequestScope | typeof FULL_RESOURCE_REQUEST => {
   if (tabId === "logo") {
     return { sections: ["logo"] };
@@ -61,14 +96,18 @@ export const scopeForResourceTab = (
     return { sections: ["other"] };
   }
   if (tabId === "service-photo") {
-    return { sections: ["services"] };
+    return scopeForPhotoServicesRequest(options?.serviceTabs ?? []);
   }
+
   const serviceSlug = parseServiceCategorySlug(tabId);
   if (serviceSlug) {
-    const label = serviceSlug
-      .split("-")
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(" ");
+    const matchingTab = options?.serviceTabs?.find(
+      (tab) =>
+        tab.id === tabId ||
+        parseServiceCategorySlug(tab.category) === serviceSlug,
+    );
+    const label =
+      matchingTab?.label?.trim() || formatServiceCategoryLabel(serviceSlug);
     return {
       sections: [`service:${serviceSlug}` as ResourceRequestSection],
       presetServices: [label],
@@ -108,12 +147,13 @@ export const filterProjectResourcesSchema = (
     | { sections?: Array<{ id: string }>; settings?: Record<string, unknown> }
     | undefined,
   sections: ResourceRequestSection[] | null,
+  presetServices?: string[],
 ) => {
   if (!schema || !sections?.length) return schema;
   return {
     ...schema,
     sections: (schema.sections ?? []).filter((section) =>
-      shouldShowProjectResourcesSection(section.id, sections),
+      shouldShowProjectResourcesSection(section.id, sections, presetServices),
     ),
   };
 };
@@ -121,9 +161,18 @@ export const filterProjectResourcesSchema = (
 export const shouldShowProjectResourcesSection = (
   sectionId: string,
   sections: ResourceRequestSection[] | null,
+  presetServices?: string[],
 ) => {
   if (!sections?.length) return true;
-  if (sectionId === "company_info") return true;
+
+  const serviceOnlyScope =
+    sections.length > 0 && sections.every((entry) => entry.startsWith("service:"));
+
+  if (sectionId === "company_info") {
+    if (serviceOnlyScope) return false;
+    return true;
+  }
+
   if (sectionId === "logos") {
     return sections.includes("logo");
   }
@@ -131,6 +180,9 @@ export const shouldShowProjectResourcesSection = (
     return sections.includes("team");
   }
   if (sectionId === "services") {
+    if (presetServices?.length && !sections.includes("services")) {
+      return false;
+    }
     return sections.includes("services");
   }
   if (sectionId === "service_photos") {

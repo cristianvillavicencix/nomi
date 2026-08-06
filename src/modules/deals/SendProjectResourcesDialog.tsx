@@ -139,9 +139,11 @@ export const SendProjectResourcesDialog = ({
         <DialogHeader>
           <DialogTitle>Request files from client</DialogTitle>
           <DialogDescription>
-            {requestScope
-              ? "This link asks only for the selected categories (logo, team, or a specific service)."
-              : "Send this link so your client can upload logos, team photos, service photos, and other assets through the Project Resources wizard."}
+            {requestScope?.presetServices?.length
+              ? `This link asks for photos of ${requestScope.presetServices.length} service${requestScope.presetServices.length === 1 ? "" : "s"} already on this project — no need to re-enter the service list.`
+              : requestScope
+                ? "This link asks only for the selected categories (logo, team, or a specific service)."
+                : "Send this link so your client can upload logos, team photos, service photos, and other assets through the Project Resources wizard."}
           </DialogDescription>
         </DialogHeader>
 

@@ -156,14 +156,14 @@ export const ResourceUploadDialog = ({
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Images, PDF, SVG, and WebP supported
+                PNG, JPG, SVG, PDF, and WebP supported
               </p>
             </div>
             <Input
               ref={fileInputRef}
               id="resource-files"
               type="file"
-              accept="image/*,.pdf,.svg,.webp"
+              accept="image/*,.png,.jpg,.jpeg,.pdf,.svg,.webp"
               multiple
               className="sr-only"
               onChange={(event) =>

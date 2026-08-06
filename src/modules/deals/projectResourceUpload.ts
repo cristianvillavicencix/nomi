@@ -29,8 +29,10 @@ export const uploadProjectResourceFile = async (
   dealId: Identifier,
   file: File,
   orgId?: Identifier | null,
+  options?: { category?: ProjectResourceCategory },
 ): Promise<ProjectResourceFile> => {
-  const optimized = await optimizeImageForUpload(file);
+  const preservePng = options?.category === "logo";
+  const optimized = await optimizeImageForUpload(file, { preservePng });
   const ext = optimized.name.includes(".")
     ? optimized.name.slice(optimized.name.lastIndexOf("."))
     : "";

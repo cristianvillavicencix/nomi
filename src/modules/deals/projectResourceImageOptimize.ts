@@ -39,9 +39,18 @@ const scaleDimensions = (width: number, height: number) => {
   };
 };
 
+export type OptimizeImageOptions = {
+  /** Keep PNG files as-is (used for logo uploads). */
+  preservePng?: boolean;
+};
+
 /** Convert raster uploads to WebP in the browser (skips SVG and already-WebP). */
-export async function optimizeImageForUpload(file: File): Promise<File> {
+export async function optimizeImageForUpload(
+  file: File,
+  options?: OptimizeImageOptions,
+): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
+  if (file.type === "image/png" && options?.preservePng) return file;
   if (file.type === "image/webp" || file.type === "image/svg+xml") return file;
 
   try {

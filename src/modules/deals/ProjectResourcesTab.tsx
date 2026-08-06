@@ -35,6 +35,7 @@ import {
   buildServiceCategory,
   PROJECT_RESOURCE_TAB_CATEGORIES,
   slugifyServiceName,
+  type ProjectResourceCategory,
   type ProjectResourceTabCategory,
 } from "@/modules/deals/projectResourceConstants";
 import {
@@ -214,7 +215,12 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
       }
 
       for (const file of uploadFiles) {
-        const uploaded = await uploadProjectResourceFile(record.id, file);
+        const uploaded = await uploadProjectResourceFile(
+          record.id,
+          file,
+          undefined,
+          { category: uploadTarget.category as ProjectResourceCategory },
+        );
         await create(
           "deal_resources",
           {
@@ -352,7 +358,11 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
                 variant="secondary"
                 aria-label="Request this tab"
                 onClick={() =>
-                  openRequestDialog(scopeForResourceTab(requestTarget))
+                  openRequestDialog(
+                    scopeForResourceTab(requestTarget, {
+                      serviceTabs: serviceSubTabs,
+                    }),
+                  )
                 }
               >
                 <Link2 className="size-4" />
