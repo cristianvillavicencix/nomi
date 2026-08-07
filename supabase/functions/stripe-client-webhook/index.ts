@@ -10,8 +10,153 @@ import {
   processPaymentIntentFailed,
   processPaymentIntentSucceeded,
 } from "../_shared/clientProposalBilling.ts";
+import {
+  applyStripeSubscriptionSnapshot,
+  CLIENT_SUBSCRIPTION_METADATA_TYPE,
+  mirrorSubscriptionInvoiceToSigma,
+  type ClientSubscriptionRow,
+} from "../_shared/clientSubscriptionStripe.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
+const loadSubscriptionByStripeId = async (stripeSubscriptionId: string) => {
+  const { data } = await supabaseAdmin
+    .from("client_subscriptions")
+    .select("*")
+    .eq("stripe_subscription_id", stripeSubscriptionId)
+    .maybeSingle();
+  return data as ClientSubscriptionRow | null;
+};
+
+const loadSubscriptionById = async (subscriptionId: number) => {
+  const { data } = await supabaseAdmin
+    .from("client_subscriptions")
+    .select("*")
+    .eq("id", subscriptionId)
+    .maybeSingle();
+  return data as ClientSubscriptionRow | null;
+};
+
+const resolveSubscriptionIdFromMetadata = (
+  metadata?: Record<string, string> | null,
+) => {
+  if (metadata?.type !== CLIENT_SUBSCRIPTION_METADATA_TYPE) return null;
+  const id = Number(metadata.subscription_id);
+  return Number.isFinite(id) ? id : null;
+};
+
+const handleClientSubscriptionWebhook = async (
+  stripe: Awaited<ReturnType<typeof getStripeForWebhookVerification>>,
+  event: { type: string; data: { object: Record<string, unknown> } },
+) => {
+  const object = event.data.object;
+
+  switch (event.type) {
+    case "checkout.session.completed": {
+      const session = object as {
+        mode?: string;
+        subscription?: string | null;
+        metadata?: Record<string, string> | null;
+      };
+      if (session.mode !== "subscription") {
+        return { handled: false };
+      }
+
+      const subscriptionId = resolveSubscriptionIdFromMetadata(session.metadata);
+      if (!subscriptionId || !session.subscription) {
+        return { handled: false };
+      }
+
+      const stripeSub = await stripe.subscriptions.retrieve(
+        session.subscription as string,
+        { expand: ["default_payment_method"] },
+      );
+      await applyStripeSubscriptionSnapshot(
+        supabaseAdmin,
+        subscriptionId,
+        stripeSub,
+      );
+      return { handled: true, subscription_id: subscriptionId };
+    }
+
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted": {
+      const subPartial = object as {
+        id: string;
+        metadata?: Record<string, string> | null;
+      };
+      let subscription =
+        (await loadSubscriptionByStripeId(subPartial.id)) ??
+        (resolveSubscriptionIdFromMetadata(subPartial.metadata)
+          ? await loadSubscriptionById(
+              resolveSubscriptionIdFromMetadata(subPartial.metadata)!,
+            )
+          : null);
+
+      if (!subscription) {
+        return { handled: false };
+      }
+
+      const stripeSub = await stripe.subscriptions.retrieve(subPartial.id, {
+        expand: ["default_payment_method"],
+      });
+      await applyStripeSubscriptionSnapshot(
+        supabaseAdmin,
+        subscription.id,
+        stripeSub,
+      );
+      return { handled: true, subscription_id: subscription.id };
+    }
+
+    case "invoice.paid":
+    case "invoice.payment_failed": {
+      const invoice = object as {
+        id?: string;
+        subscription?: string | null;
+        metadata?: Record<string, string> | null;
+      };
+      const stripeSubId =
+        typeof invoice.subscription === "string"
+          ? invoice.subscription
+          : null;
+      if (!stripeSubId) {
+        return { handled: false };
+      }
+
+      const subscription = await loadSubscriptionByStripeId(stripeSubId);
+      if (!subscription) {
+        return { handled: false };
+      }
+
+      if (event.type === "invoice.payment_failed") {
+        await supabaseAdmin
+          .from("client_subscriptions")
+          .update({
+            status: "past_due",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", subscription.id);
+        return { handled: true, subscription_id: subscription.id, past_due: true };
+      }
+
+      const fullInvoice = await stripe.invoices.retrieve(invoice.id as string);
+      const mirror = await mirrorSubscriptionInvoiceToSigma(supabaseAdmin, {
+        orgId: subscription.org_id,
+        subscription,
+        stripeInvoice: fullInvoice,
+      });
+      return {
+        handled: true,
+        subscription_id: subscription.id,
+        ...mirror,
+      };
+    }
+
+    default:
+      return { handled: false };
+  }
+};
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -51,6 +196,19 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const subscriptionResult = await handleClientSubscriptionWebhook(
+      stripe,
+      event,
+    );
+    if (subscriptionResult.handled) {
+      return new Response(
+        JSON.stringify({ received: true, ...subscriptionResult }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const object = event.data.object as {
       id: string;
       metadata?: Record<string, string> | null;

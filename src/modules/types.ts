@@ -200,6 +200,43 @@ export type ClientInvoice = {
   scheduled_send_storage_path?: string | null;
   scheduled_send_sms_to?: string | null;
   scheduled_send_sms_body?: string | null;
+  subscription_id?: Identifier | null;
+  stripe_subscription_invoice_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type ClientSubscription = {
+  org_id?: number;
+  company_id?: Identifier | null;
+  contact_id?: Identifier | null;
+  deal_id?: Identifier | null;
+  name: string;
+  description?: string | null;
+  amount: number;
+  currency?: string;
+  billing_interval: "weekly" | "monthly" | "yearly";
+  line_items?: Array<Record<string, unknown>>;
+  status?:
+    | "pending_setup"
+    | "active"
+    | "past_due"
+    | "paused"
+    | "canceled"
+    | "trialing";
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  stripe_checkout_session_id?: string | null;
+  payment_method_brand?: string | null;
+  payment_method_last4?: string | null;
+  current_period_start?: string | null;
+  current_period_end?: string | null;
+  next_billing_at?: string | null;
+  cancel_at_period_end?: boolean;
+  canceled_at?: string | null;
+  paused_at?: string | null;
+  setup_checkout_url?: string | null;
+  created_by_member_id?: Identifier | null;
   created_at?: string;
   updated_at?: string;
 } & Pick<RaRecord, "id">;

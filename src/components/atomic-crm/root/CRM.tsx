@@ -375,6 +375,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
       <Resource name="proposal_payment_schedules" />
       <Resource name="proposal_payment_installments" />
       <Resource name="client_invoices" />
+      <Resource name="client_subscriptions" />
       <Resource name="client_invoice_line_items" />
       <Resource name="proposal_templates" />
       <Resource name="service_packages" />
@@ -511,6 +512,7 @@ const MobileAdmin = (props: CoreAdminProps) => {
         <Resource name="hostinger_domains" />
         <Resource name="proposal_payment_installments" />
         <Resource name="client_invoices" />
+      <Resource name="client_subscriptions" />
         <Resource name="forms" />
         <Resource name="form_submissions_v2" />
         <Resource name="report_web_agency_metrics" />

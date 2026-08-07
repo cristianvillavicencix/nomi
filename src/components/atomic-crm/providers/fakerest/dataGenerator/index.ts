@@ -36,6 +36,7 @@ export default (): Db => {
   db.proposal_payment_schedules = [];
   db.proposal_payment_installments = [];
   db.client_invoices = [];
+  db.client_subscriptions = [];
   db.client_invoice_line_items = [];
   db.proposal_templates = DEFAULT_PROPOSAL_TEMPLATES.map((template, index) => ({
     id: index + 1,

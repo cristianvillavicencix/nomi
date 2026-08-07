@@ -1364,6 +1364,54 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   stripeAddOneSeat: async () => {
     throw new Error("Stripe billing is not available in demo mode");
   },
+  createClientSubscription: async (body) => {
+    const { data: subscription } = await baseDataProvider.create(
+      "client_subscriptions",
+      {
+        data: {
+          org_id: 1,
+          company_id: body.company_id ?? null,
+          contact_id: body.contact_id ?? null,
+          name: body.name,
+          amount: body.amount,
+          currency: body.currency ?? "USD",
+          billing_interval: body.billing_interval,
+          line_items: body.line_items ?? [],
+          status: "pending_setup",
+        },
+      },
+    );
+    return {
+      subscription,
+      checkout_url: "https://checkout.stripe.com/demo",
+      used_saved_card: false,
+      email_sent: body.send_email !== false,
+      sms_sent: body.send_sms !== false,
+    };
+  },
+  manageClientSubscription: async ({ subscriptionId, action }) => {
+    const status =
+      action === "cancel_now" || action === "cancel_at_period_end"
+        ? "canceled"
+        : action === "pause"
+          ? "paused"
+          : action === "resume"
+            ? "active"
+            : "pending_setup";
+    const { data: subscription } = await baseDataProvider.update(
+      "client_subscriptions",
+      {
+        id: subscriptionId,
+        data: { status },
+        previousData: { id: subscriptionId },
+      },
+    );
+    return {
+      subscription,
+      checkout_url:
+        action === "send_setup" ? "https://checkout.stripe.com/demo" : null,
+    };
+  },
   getPlatformAuthUsers: async () => ({
     users: [],
     total: 0,

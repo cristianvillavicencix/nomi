@@ -13,6 +13,7 @@ const RESOURCE_INVALIDATION_MAP: Record<string, string[]> = {
   tickets: ["tickets"],
   ticket_messages: ["ticket_messages", "tickets"],
   client_invoices: ["client_invoices", "tickets"],
+  client_subscriptions: ["client_subscriptions", "client_invoices"],
   ticket_deliverables: ["ticket_deliverables", "tickets"],
 };
 

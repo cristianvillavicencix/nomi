@@ -2,16 +2,17 @@
 
 ## 1. Purpose
 
-Client invoicing and revenue at `/billing`: workspace tabs for invoices, proposal installments, and charts. Standalone invoice create at `/billing/invoices/new`. Public pay flow at `/invoice/:token`. Heavy use of **edge functions** for invoice lifecycle (create, issue, send, charge, share). Org subscription billing (seats) is separate via `stripe-billing` (Settings/Users).
+Client invoicing and revenue at `/billing`: **Invoices** and **Subscriptions** tabs. Standalone invoice create at `/billing/invoices/new`. Public pay flow at `/invoice/:token`. Client **Subscriptions** tab manages recurring Stripe plans (hosting, SEO, etc.) with auto-charge. Org seat billing remains separate via `stripe-billing` (Settings/Users).
 
 ## 2. Files & components
 
 | Area | Paths |
 |------|-------|
-| Main | `src/lbs/billing/ClientBillingPage.tsx`, `InvoiceBillingWorkspace.tsx` |
+| Main | `src/modules/billing/ClientBillingPage.tsx`, `InvoiceBillingWorkspace.tsx` |
+| Subscriptions | `src/modules/billing/subscriptions/` — `ClientSubscriptionsTab.tsx`, create/manage dialogs |
 | Create/Edit | `StandaloneInvoiceCreatePage.tsx`, `StandaloneInvoiceEditPage.tsx`, `CreateClientInvoiceDialog.tsx` |
-| Public | `src/lbs/billing/public/PublicInvoicePage.tsx`, `publicInvoiceApi.ts`, short URL redirects |
-| Tabs | `ClientInvoicesTab.tsx`, `BillingRevenueChart.tsx` |
+| Public | `src/modules/billing/public/PublicInvoicePage.tsx`, `publicInvoiceApi.ts`, short URL redirects |
+| Tabs | `ClientInvoicesTab.tsx`, `ClientSubscriptionsTab.tsx` |
 | Line items | `InvoiceLineItemsSection.tsx`, `CatalogLineItemField.tsx` |
 | Staff actions | `InvoiceStaffChargeDialog.tsx`, `ScheduleInvoiceSendDialog.tsx` |
 | Dead | `StandaloneInvoiceShowPage.tsx` — no route (`19-orphaned-routes.md`) |
@@ -21,7 +22,8 @@ Client invoicing and revenue at `/billing`: workspace tabs for invoices, proposa
 
 | Table | Role |
 |-------|------|
-| `client_invoices` | Standalone + synced proposal invoices |
+| `client_invoices` | Standalone + synced proposal invoices; optional `subscription_id` for cycle charges |
+| `client_subscriptions` | Client recurring plans (Stripe auto-charge) |
 | `client_invoice_line_items` | Lines |
 | `public_client_invoice_tokens` | Public pay links |
 | `proposal_payment_installments` | Scheduled proposal payments |
@@ -34,7 +36,7 @@ Client invoicing and revenue at `/billing`: workspace tabs for invoices, proposa
 
 | Service | Usage |
 |---------|--------|
-| Stripe | Client PaymentIntents (`stripe-client-webhook`), Connect/charge on file |
+| Stripe | Client PaymentIntents + **Subscriptions** (`stripe-client-webhook`) |
 | Stripe | Org seats (`stripe-billing`, `stripe-webhook`) — Settings module |
 | Email | Send invoice / payment link / receipt edge functions |
 | Vercel cron | `process-scheduled-payments`, `process-scheduled-client-invoices` |
@@ -53,6 +55,8 @@ Client invoicing and revenue at `/billing`: workspace tabs for invoices, proposa
 
 | Function | Caller | Purpose |
 |----------|--------|---------|
+| `create_client_subscription` | `dataProvider.createClientSubscription` | New recurring plan + checkout or saved card |
+| `manage_client_subscription` | `dataProvider.manageClientSubscription` | Pause, cancel, resend setup link |
 | `create_client_invoice` | `dataProvider.createStandaloneClientInvoice` | New invoice |
 | `update_client_invoice` | dataProvider | Draft edits |
 | `issue_client_invoice` | dataProvider | Finalize / sync proposal installments |
@@ -71,7 +75,7 @@ Client invoicing and revenue at `/billing`: workspace tabs for invoices, proposa
 | `process_invoice_payment_reminders` | pg_cron | Reminder emails |
 | `process_invoice_auto_charges` | pg_cron | Auto-debit |
 | `process_missed_invoice_payment_receipts` | **No pg_cron yet** | Backfill receipts — **plan daily pg_cron in fix phase** (approved 2026-06-02) |
-| `stripe-client-webhook` | Stripe (external) | Payment events |
+| `stripe-client-webhook` | Stripe (external) | PaymentIntent events + subscription/checkout/invoice events (`metadata.type=client_subscription`) |
 
 ## 7. Status: PARTIAL
 

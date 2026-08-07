@@ -585,4 +585,96 @@ export const billingProvider = {
     }
     return data;
   },
+  async createClientSubscription(body: {
+    company_id?: number | null;
+    contact_id?: number | null;
+    deal_id?: number | null;
+    name: string;
+    amount: number;
+    currency?: string;
+    billing_interval: "weekly" | "monthly" | "yearly";
+    line_items?: Array<Record<string, unknown>>;
+    send_email?: boolean;
+    send_sms?: boolean;
+    email_to?: string | null;
+    sms_to?: string | null;
+    message?: string | null;
+    subject?: string | null;
+    base_url?: string | null;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      subscription: Record<string, unknown>;
+      checkout_url?: string | null;
+      used_saved_card?: boolean;
+      email_sent?: boolean;
+      sms_sent?: boolean;
+    }>("create_client_subscription", {
+      method: "POST",
+      body,
+    });
+
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(
+          error,
+          "Failed to create subscription",
+        ),
+      );
+    }
+
+    if (!data?.subscription) {
+      throw new Error("Failed to create subscription");
+    }
+
+    return data;
+  },
+  async manageClientSubscription(params: {
+    subscriptionId: Identifier;
+    action:
+      | "pause"
+      | "resume"
+      | "cancel_now"
+      | "cancel_at_period_end"
+      | "send_setup";
+    send_email?: boolean;
+    send_sms?: boolean;
+    email_to?: string | null;
+    sms_to?: string | null;
+    message?: string | null;
+    subject?: string | null;
+    base_url?: string | null;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      subscription: Record<string, unknown>;
+      checkout_url?: string | null;
+    }>("manage_client_subscription", {
+      method: "POST",
+      body: {
+        subscription_id: Number(params.subscriptionId),
+        action: params.action,
+        send_email: params.send_email,
+        send_sms: params.send_sms,
+        email_to: params.email_to,
+        sms_to: params.sms_to,
+        message: params.message,
+        subject: params.subject,
+        base_url: params.base_url ?? window.location.origin,
+      },
+    });
+
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(
+          error,
+          "Failed to update subscription",
+        ),
+      );
+    }
+
+    if (!data?.subscription) {
+      throw new Error("Failed to update subscription");
+    }
+
+    return data;
+  },
 };
