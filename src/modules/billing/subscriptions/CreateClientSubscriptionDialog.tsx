@@ -2,13 +2,13 @@ import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
-  useConfigurationContext,
   useDataProvider,
   useGetIdentity,
   useNotify,
   useRefresh,
 } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import {
   BillToClientSearch,
   type BillToSelection,
