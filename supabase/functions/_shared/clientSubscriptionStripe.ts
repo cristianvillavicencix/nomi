@@ -5,6 +5,7 @@ import {
   amountToCents,
   resolveOrCreateInvoiceStripeCustomer,
 } from "./clientProposalBilling.ts";
+import { subscriptionStatementDescriptorSettings } from "./subscriptionStatementDescriptor.ts";
 
 export type BillingInterval = "weekly" | "monthly" | "yearly";
 
@@ -33,6 +34,8 @@ export type ClientSubscriptionRow = {
   canceled_at: string | null;
   paused_at: string | null;
   setup_checkout_url: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
 };
 
 export type SavedClientPaymentMethod = {
@@ -64,6 +67,42 @@ export const buildSubscriptionMetadata = (params: {
   contact_id: params.contactId ? String(params.contactId) : "",
   company_id: params.companyId ? String(params.companyId) : "",
 });
+
+const parseIsoDateStart = (value?: string | null) => {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return new Date(`${trimmed}T00:00:00`);
+  }
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const parseIsoDateEnd = (value?: string | null) => {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return new Date(`${trimmed}T23:59:59`);
+  }
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+export const buildStripeSubscriptionScheduleParams = (params: {
+  startsAt?: string | null;
+  endsAt?: string | null;
+}) => {
+  const now = new Date();
+  const startsAt = parseIsoDateStart(params.startsAt) ?? now;
+  const endsAt = parseIsoDateEnd(params.endsAt);
+  const startMs = startsAt.getTime();
+  const trialEnd =
+    startMs > now.getTime() + 60_000
+      ? Math.floor(startMs / 1000)
+      : undefined;
+  const cancelAt = endsAt ? Math.floor(endsAt.getTime() / 1000) : undefined;
+  return { trial_end: trialEnd, cancel_at: cancelAt };
+};
 
 export const buildSubscriptionPriceData = (params: {
   name: string;
@@ -174,12 +213,19 @@ export async function createStripeSubscriptionWithCard(
     currency: string;
     billingInterval: BillingInterval;
     metadata: Record<string, string>;
+    startsAt?: string | null;
+    endsAt?: string | null;
   },
 ) {
+  const schedule = buildStripeSubscriptionScheduleParams({
+    startsAt: params.startsAt,
+    endsAt: params.endsAt,
+  });
   return stripe.subscriptions.create({
     customer: params.customerId,
     default_payment_method: params.paymentMethodId,
     collection_method: "charge_automatically",
+    ...subscriptionStatementDescriptorSettings(params.name),
     items: [
       {
         price_data: {
@@ -193,6 +239,8 @@ export async function createStripeSubscriptionWithCard(
       },
     ],
     metadata: params.metadata,
+    ...(schedule.trial_end ? { trial_end: schedule.trial_end } : {}),
+    ...(schedule.cancel_at ? { cancel_at: schedule.cancel_at } : {}),
     expand: ["default_payment_method", "latest_invoice.payment_intent"],
   });
 }
@@ -208,8 +256,14 @@ export async function createStripeSubscriptionCheckout(
     successUrl: string;
     cancelUrl: string;
     metadata: Record<string, string>;
+    startsAt?: string | null;
+    endsAt?: string | null;
   },
 ) {
+  const schedule = buildStripeSubscriptionScheduleParams({
+    startsAt: params.startsAt,
+    endsAt: params.endsAt,
+  });
   return stripe.checkout.sessions.create({
     mode: "subscription",
     customer: params.customerId,
@@ -229,6 +283,9 @@ export async function createStripeSubscriptionCheckout(
     metadata: params.metadata,
     subscription_data: {
       metadata: params.metadata,
+      ...subscriptionStatementDescriptorSettings(params.name),
+      ...(schedule.trial_end ? { trial_end: schedule.trial_end } : {}),
+      ...(schedule.cancel_at ? { cancel_at: schedule.cancel_at } : {}),
     },
   });
 }
@@ -296,6 +353,10 @@ export async function applyStripeSubscriptionSnapshot(
   if (status === "active" || status === "trialing") {
     update.setup_checkout_url = null;
     update.stripe_checkout_session_id = null;
+  }
+
+  if (stripeSub.cancel_at) {
+    update.ends_at = new Date(stripeSub.cancel_at * 1000).toISOString();
   }
 
   await supabase

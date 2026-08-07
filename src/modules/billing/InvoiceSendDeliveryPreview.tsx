@@ -103,6 +103,7 @@ export const InvoiceSendDeliveryPreview = ({
   smsTo,
   sendSms,
   sendEmail = true,
+  defaultCollapsed = false,
 }: {
   subject: string;
   emailHtml: string;
@@ -111,19 +112,25 @@ export const InvoiceSendDeliveryPreview = ({
   smsTo: string;
   sendSms: boolean;
   sendEmail?: boolean;
+  /** When true, email/SMS previews start collapsed in an accordion. */
+  defaultCollapsed?: boolean;
 }) => {
   const isMobile = useIsMobile();
+  const useAccordion = isMobile || defaultCollapsed;
+  const accordionDefaultValue = defaultCollapsed
+    ? []
+    : [
+        ...(sendEmail ? ["email"] : []),
+        ...(sendSms ? ["text"] : []),
+      ];
 
-  if (isMobile) {
+  if (useAccordion) {
     return (
       <div className="space-y-3">
         <p className="text-xs font-medium text-muted-foreground">Previews</p>
         <Accordion
           type="multiple"
-          defaultValue={[
-            ...(sendEmail ? ["email"] : []),
-            ...(sendSms ? ["text"] : []),
-          ]}
+          defaultValue={accordionDefaultValue}
           className="rounded-lg border px-3"
         >
           {sendEmail ? (

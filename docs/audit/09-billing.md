@@ -9,7 +9,7 @@ Client invoicing and revenue at `/billing`: **Invoices** and **Subscriptions** t
 | Area | Paths |
 |------|-------|
 | Main | `src/modules/billing/ClientBillingPage.tsx`, `InvoiceBillingWorkspace.tsx` |
-| Subscriptions | `src/modules/billing/subscriptions/` — `ClientSubscriptionsTab.tsx`, create/manage dialogs |
+| Subscriptions | `src/modules/billing/subscriptions/` — `ClientSubscriptionsTab.tsx`, `CreateClientSubscriptionDialog.tsx` (Setup \| Review), `SubscriptionStaffCardForm.tsx` |
 | Create/Edit | `StandaloneInvoiceCreatePage.tsx`, `StandaloneInvoiceEditPage.tsx`, `CreateClientInvoiceDialog.tsx` |
 | Public | `src/modules/billing/public/PublicInvoicePage.tsx`, `publicInvoiceApi.ts`, short URL redirects |
 | Tabs | `ClientInvoicesTab.tsx`, `ClientSubscriptionsTab.tsx` |
@@ -23,7 +23,7 @@ Client invoicing and revenue at `/billing`: **Invoices** and **Subscriptions** t
 | Table | Role |
 |-------|------|
 | `client_invoices` | Standalone + synced proposal invoices; optional `subscription_id` for cycle charges |
-| `client_subscriptions` | Client recurring plans (Stripe auto-charge) |
+| `client_subscriptions` | Client recurring plans (Stripe auto-charge); optional `starts_at` / `ends_at` schedule |
 | `client_invoice_line_items` | Lines |
 | `public_client_invoice_tokens` | Public pay links |
 | `proposal_payment_installments` | Scheduled proposal payments |
@@ -55,7 +55,8 @@ Client invoicing and revenue at `/billing`: **Invoices** and **Subscriptions** t
 
 | Function | Caller | Purpose |
 |----------|--------|---------|
-| `create_client_subscription` | `dataProvider.createClientSubscription` | New recurring plan + checkout or saved card |
+| `create_client_subscription` | `dataProvider.createClientSubscription` | New recurring plan — saved card, staff SetupIntent card, or checkout link (email/SMS) |
+| `prepare_client_subscription_payment` | `SubscriptionStaffCardForm` | Staff SetupIntent for in-dialog card entry |
 | `manage_client_subscription` | `dataProvider.manageClientSubscription` | Pause, cancel, resend setup link |
 | `create_client_invoice` | `dataProvider.createStandaloneClientInvoice` | New invoice |
 | `update_client_invoice` | dataProvider | Draft edits |

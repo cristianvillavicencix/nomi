@@ -129,3 +129,36 @@ export const buildDefaultSubscriptionSetupMessage = (params: {
   checkoutUrl: string;
 }) =>
   `${params.orgLabel}: Set up your ${params.subscriptionName} subscription and save your card for automatic billing:\n\n${params.checkoutUrl}`;
+
+const STRIPE_SUFFIX_MAX = 22;
+const STRIPE_PREFIX_MAX = 10;
+
+export const sanitizeStripeStatementSuffix = (value: string) => {
+  const cleaned = value
+    .replace(/[^a-zA-Z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, STRIPE_SUFFIX_MAX);
+  return /[a-zA-Z]/.test(cleaned) ? cleaned : "Subscription";
+};
+
+export const shortenStripeStatementPrefix = (value: string) => {
+  const cleaned = value
+    .replace(/[^a-zA-Z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase()
+    .slice(0, STRIPE_PREFIX_MAX)
+    .trim();
+  return cleaned || "PAYMENT";
+};
+
+/** Approximate label shown on the client's card/bank statement for each debit. */
+export const buildSubscriptionBankStatementPreview = (params: {
+  orgName: string;
+  subscriptionName: string;
+}) => {
+  const prefix = shortenStripeStatementPrefix(params.orgName);
+  const suffix = sanitizeStripeStatementSuffix(params.subscriptionName).toUpperCase();
+  return `${prefix}* ${suffix}`;
+};

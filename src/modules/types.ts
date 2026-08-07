@@ -236,6 +236,8 @@ export type ClientSubscription = {
   canceled_at?: string | null;
   paused_at?: string | null;
   setup_checkout_url?: string | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
   created_by_member_id?: Identifier | null;
   created_at?: string;
   updated_at?: string;

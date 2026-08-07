@@ -33,6 +33,10 @@ type CreateBody = {
   currency?: string;
   billing_interval?: BillingInterval;
   line_items?: Array<Record<string, unknown>>;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  payment_mode?: "saved_card" | "staff_card" | "request_setup";
+  payment_method_id?: string | null;
   send_email?: boolean;
   send_sms?: boolean;
   email_to?: string | null;
@@ -153,6 +157,13 @@ Deno.serve(
         }
 
         const lineItems = Array.isArray(body.line_items) ? body.line_items : [];
+        const startsAt = body.starts_at?.trim() || null;
+        const endsAt = body.ends_at?.trim() || null;
+        const paymentMode =
+          body.payment_mode ??
+          (body.payment_method_id?.trim()
+            ? "staff_card"
+            : "request_setup");
 
         const { data: subscription, error: insertError } = await supabaseAdmin
           .from("client_subscriptions")
@@ -167,6 +178,8 @@ Deno.serve(
             currency: (body.currency ?? "USD").toUpperCase(),
             billing_interval: billingInterval,
             line_items: lineItems,
+            starts_at: startsAt,
+            ends_at: endsAt,
             status: "pending_setup",
             created_by_member_id: member.id,
           })
@@ -216,20 +229,62 @@ Deno.serve(
 
         let checkoutUrl: string | null = null;
         let usedSavedCard = false;
+        let usedStaffCard = false;
         let emailSent = false;
         let emailSkipped = false;
         let smsSent = false;
         let smsSkipped = false;
 
-        if (savedPayment?.stripePaymentMethodId) {
+        const scheduleParams = { startsAt, endsAt };
+
+        let paymentMethodId: string | null = null;
+        let paymentMethodBrand: string | null = null;
+        let paymentMethodLast4: string | null = null;
+
+        if (paymentMode === "staff_card") {
+          const staffPaymentMethodId = body.payment_method_id?.trim();
+          if (!staffPaymentMethodId) {
+            return createErrorResponse(
+              400,
+              "Enter and confirm the client card before creating the subscription",
+            );
+          }
+          await stripe.paymentMethods.attach(staffPaymentMethodId, {
+            customer: customer.id,
+          });
+          await stripe.customers.update(customer.id, {
+            invoice_settings: {
+              default_payment_method: staffPaymentMethodId,
+            },
+          });
+          const pm = await stripe.paymentMethods.retrieve(staffPaymentMethodId);
+          paymentMethodId = staffPaymentMethodId;
+          paymentMethodBrand = pm.card?.brand ?? null;
+          paymentMethodLast4 = pm.card?.last4 ?? null;
+          usedStaffCard = true;
+        } else if (paymentMode === "saved_card") {
+          if (!savedPayment?.stripePaymentMethodId) {
+            return createErrorResponse(
+              400,
+              "No saved card found for this client. Choose another payment option.",
+            );
+          }
+          paymentMethodId = savedPayment.stripePaymentMethodId;
+          paymentMethodBrand = savedPayment.paymentMethodBrand;
+          paymentMethodLast4 = savedPayment.paymentMethodLast4;
+          usedSavedCard = true;
+        }
+
+        if (paymentMethodId) {
           const stripeSub = await createStripeSubscriptionWithCard(stripe, {
             customerId: customer.id,
-            paymentMethodId: savedPayment.stripePaymentMethodId,
+            paymentMethodId,
             name,
             amount,
             currency: subscription.currency,
             billingInterval,
             metadata,
+            ...scheduleParams,
           });
           await applyStripeSubscriptionSnapshot(
             supabaseAdmin,
@@ -240,11 +295,10 @@ Deno.serve(
             .from("client_subscriptions")
             .update({
               stripe_customer_id: customer.id,
-              payment_method_brand: savedPayment.paymentMethodBrand,
-              payment_method_last4: savedPayment.paymentMethodLast4,
+              payment_method_brand: paymentMethodBrand,
+              payment_method_last4: paymentMethodLast4,
             })
             .eq("id", subscription.id);
-          usedSavedCard = true;
         } else {
           const session = await createStripeSubscriptionCheckout(stripe, {
             customerId: customer.id,
@@ -255,6 +309,7 @@ Deno.serve(
             successUrl: `${baseUrl}/billing?${returnQuery}&setup=success`,
             cancelUrl: `${baseUrl}/billing?${returnQuery}&setup=cancel`,
             metadata,
+            ...scheduleParams,
           });
 
           checkoutUrl = session.url ?? null;
@@ -267,7 +322,10 @@ Deno.serve(
             })
             .eq("id", subscription.id);
 
-          if (checkoutUrl) {
+          const shouldSendEmail = body.send_email !== false;
+          const shouldSendSms = body.send_sms === true;
+
+          if (checkoutUrl && (shouldSendEmail || shouldSendSms)) {
             const delivery = await sendSubscriptionSetupDelivery(supabaseAdmin, {
               orgId: member.org_id,
               memberId: Number(member.id),
@@ -278,8 +336,8 @@ Deno.serve(
               smsTo: body.sms_to,
               subject: body.subject,
               message: body.message,
-              sendEmail: body.send_email,
-              sendSms: body.send_sms,
+              sendEmail: shouldSendEmail,
+              sendSms: shouldSendSms,
               contactId,
             });
             emailSent = delivery.emailSent;
@@ -300,6 +358,7 @@ Deno.serve(
             subscription: fresh,
             checkout_url: checkoutUrl,
             used_saved_card: usedSavedCard,
+            used_staff_card: usedStaffCard,
             email_sent: emailSent,
             email_skipped: emailSkipped,
             sms_sent: smsSent,

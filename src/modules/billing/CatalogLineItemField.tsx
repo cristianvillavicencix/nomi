@@ -21,6 +21,7 @@ type CatalogSuggestion = {
   unit_price: number;
   package_id?: number | null;
   addon_id?: number | null;
+  billing_interval?: "weekly" | "monthly" | "yearly" | null;
 };
 
 type CatalogLineItemFieldProps = {
@@ -30,6 +31,12 @@ type CatalogLineItemFieldProps = {
   >;
   onChange: (patch: Partial<InvoiceLineDraft>) => void;
   className?: string;
+  billingTypeFilter?: "one_time" | "recurring" | "all";
+  defaultBillingInterval?: "weekly" | "monthly" | "yearly";
+  suggestionMinWidth?: number;
+  onCatalogPick?: (item: {
+    billing_interval?: "weekly" | "monthly" | "yearly" | null;
+  }) => void;
 };
 
 type DropdownPosition = {
@@ -61,6 +68,10 @@ export const CatalogLineItemField = ({
   line,
   onChange,
   className,
+  billingTypeFilter = "all",
+  defaultBillingInterval = "monthly",
+  suggestionMinWidth = DROPDOWN_MIN_WIDTH,
+  onCatalogPick,
 }: CatalogLineItemFieldProps) => {
   const notify = useNotify();
   const queryClient = useQueryClient();
@@ -74,12 +85,16 @@ export const CatalogLineItemField = ({
   const [position, setPosition] = useState<DropdownPosition | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pickingRef = useRef(false);
+  const lastPickIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!open) {
-      setQuery(line.title);
+    if (pickingRef.current) {
+      pickingRef.current = false;
+      return;
     }
-  }, [line.title, open]);
+    setQuery(line.title);
+  }, [line.title]);
 
   const updatePosition = () => {
     const anchor = rootRef.current;
@@ -89,7 +104,7 @@ export const CatalogLineItemField = ({
     const cellRect = tableCell?.getBoundingClientRect();
     const baseWidth = cellRect?.width ?? rect.width;
     const width = Math.min(
-      Math.max(baseWidth, DROPDOWN_MIN_WIDTH),
+      Math.max(baseWidth, suggestionMinWidth),
       window.innerWidth - 24,
     );
     setPosition({
@@ -156,9 +171,28 @@ export const CatalogLineItemField = ({
     sort: { field: "sort_order", order: "ASC" },
   });
 
+  const eligiblePackages = useMemo(
+    () =>
+      packages.filter(
+        (pkg) =>
+          billingTypeFilter === "all" || pkg.billing_type === billingTypeFilter,
+      ),
+    [packages, billingTypeFilter],
+  );
+
+  const eligibleAddons = useMemo(
+    () =>
+      addons.filter(
+        (addon) =>
+          billingTypeFilter === "all" ||
+          addon.billing_type === billingTypeFilter,
+      ),
+    [addons, billingTypeFilter],
+  );
+
   const packageSuggestions = useMemo<CatalogSuggestion[]>(
     () =>
-      packages.map((pkg) => ({
+      eligiblePackages.map((pkg) => ({
         id: `pkg-${pkg.id}`,
         kind: "package" as const,
         title: pkg.name,
@@ -166,13 +200,14 @@ export const CatalogLineItemField = ({
         unit_price: pkg.suggested_price,
         package_id: Number(pkg.id),
         addon_id: null,
+        billing_interval: pkg.billing_interval ?? null,
       })),
-    [packages],
+    [eligiblePackages],
   );
 
   const addonSuggestions = useMemo<CatalogSuggestion[]>(
     () =>
-      addons.map((addon) => ({
+      eligibleAddons.map((addon) => ({
         id: `addon-${addon.id}`,
         kind: "addon" as const,
         title: addon.name,
@@ -180,8 +215,9 @@ export const CatalogLineItemField = ({
         unit_price: addon.suggested_price,
         package_id: addon.package_id ? Number(addon.package_id) : null,
         addon_id: Number(addon.id),
+        billing_interval: addon.billing_interval ?? null,
       })),
-    [addons],
+    [eligibleAddons],
   );
 
   const allSuggestions = useMemo(
@@ -265,27 +301,53 @@ export const CatalogLineItemField = ({
   });
 
   const pick = (item: CatalogSuggestion) => {
+    if (lastPickIdRef.current === item.id) return;
+    lastPickIdRef.current = item.id;
+    pickingRef.current = true;
     onChange({
       title: item.title,
       item_detail: item.item_detail ?? "",
-      unit_price: item.unit_price,
-      package_id: item.package_id,
-      addon_id: item.addon_id,
+      unit_price: Number(item.unit_price) || 0,
+      package_id: item.package_id ?? null,
+      addon_id: item.addon_id ?? null,
     });
+    onCatalogPick?.({ billing_interval: item.billing_interval ?? null });
     setQuery(item.title);
     setOpen(false);
+    window.setTimeout(() => {
+      lastPickIdRef.current = null;
+    }, 0);
   };
 
-  const renderSuggestion = (item: CatalogSuggestion) => (
-    <li key={item.id}>
-      <button
-        type="button"
-        className="flex w-full items-start gap-4 px-4 py-2.5 text-left hover:bg-accent"
-        onMouseDown={(event) => {
-          event.preventDefault();
-          pick(item);
-        }}
-      >
+  const handleSuggestionPointerDown = (
+    event: React.PointerEvent<HTMLButtonElement>,
+    item: CatalogSuggestion,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    pick(item);
+  };
+
+  const selectedSuggestionId =
+    line.addon_id != null
+      ? `addon-${line.addon_id}`
+      : line.package_id != null
+        ? `pkg-${line.package_id}`
+        : null;
+
+  const renderSuggestion = (item: CatalogSuggestion) => {
+    const isSelected = selectedSuggestionId === item.id;
+    return (
+      <li key={item.id}>
+        <button
+          type="button"
+          data-catalog-suggestion={item.id}
+          className={cn(
+            "flex w-full items-start gap-4 px-4 py-2.5 text-left hover:bg-accent",
+            isSelected && "bg-accent",
+          )}
+          onPointerDown={(event) => handleSuggestionPointerDown(event, item)}
+        >
         <div className="min-w-0 flex-1">
           <span className="block text-sm font-medium text-foreground">
             {item.title}
@@ -306,14 +368,16 @@ export const CatalogLineItemField = ({
         </div>
       </button>
     </li>
-  );
+    );
+  };
 
   const suggestionsMenu =
     open && position
       ? createPortal(
           <ul
             data-invoice-item-suggestions
-            className="fixed z-[100] max-h-80 overflow-y-auto rounded-md border bg-popover py-1 text-popover-foreground shadow-xl"
+            className="fixed z-[200] max-h-80 overflow-y-auto rounded-md border bg-popover py-1 text-popover-foreground shadow-xl"
+            onPointerDown={(event) => event.stopPropagation()}
             style={{
               top: position.top,
               left: position.left,
@@ -384,7 +448,7 @@ export const CatalogLineItemField = ({
 
   return (
     <>
-      <div ref={rootRef} className={cn("space-y-1", className)}>
+      <div ref={rootRef} className={cn("space-y-2", className)}>
         <Input
           ref={inputRef}
           value={query}
@@ -392,19 +456,31 @@ export const CatalogLineItemField = ({
             const next = event.target.value;
             setQuery(next);
             setOpen(true);
-            onChange({ title: next });
+            onChange({
+              title: next,
+              package_id: null,
+              addon_id: null,
+            });
           }}
           onFocus={() => setOpen(true)}
           placeholder="Search or type item…"
-          className="h-8 border-0 bg-white/80 px-2 shadow-none focus-visible:ring-1 focus-visible:ring-slate-300 rounded-sm font-medium"
+          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm focus-visible:ring-1 focus-visible:ring-ring"
         />
+        {selectedSuggestionId ? (
+          <p className="text-xs text-muted-foreground">
+            Selected:{" "}
+            <span className="font-medium text-foreground">{line.title}</span>
+            {" · "}
+            {formatSuggestionPrice(Number(line.unit_price) || 0)}
+          </p>
+        ) : null}
         {suggestionsMenu}
         <Textarea
           value={line.item_detail ?? ""}
           onChange={(event) => onChange({ item_detail: event.target.value })}
           placeholder="Description (optional)"
           rows={Math.max(2, line.item_detail?.split("\n").length ?? 1)}
-          className="min-h-[2.75rem] resize-y border-0 bg-transparent px-2 py-1.5 text-xs leading-relaxed whitespace-pre-wrap text-slate-600 shadow-none focus-visible:ring-1 focus-visible:ring-slate-200 rounded-sm"
+          className="min-h-[2.75rem] w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground shadow-sm focus-visible:ring-1 focus-visible:ring-ring"
         />
       </div>
 
@@ -416,9 +492,14 @@ export const CatalogLineItemField = ({
         sortOrder={nextSortOrder}
         initial={{
           name: trimmedQuery || line.title,
-          // Keep catalog note short; invoice line already has its own detail.
           description: "",
           suggested_price: line.unit_price || 0,
+          billing_type:
+            billingTypeFilter === "one_time" ? "one_time" : "recurring",
+          billing_interval:
+            billingTypeFilter === "recurring"
+              ? defaultBillingInterval
+              : null,
         }}
         onSave={(draft) => createCatalogMutation.mutateAsync(draft)}
       />

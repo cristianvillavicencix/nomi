@@ -1377,18 +1377,30 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
           currency: body.currency ?? "USD",
           billing_interval: body.billing_interval,
           line_items: body.line_items ?? [],
-          status: "pending_setup",
+          starts_at: body.starts_at ?? null,
+          ends_at: body.ends_at ?? null,
+          status:
+            body.payment_mode === "saved_card" ||
+            body.payment_mode === "staff_card"
+              ? "active"
+              : "pending_setup",
         },
       },
     );
     return {
       subscription,
       checkout_url: "https://checkout.stripe.com/demo",
-      used_saved_card: false,
+      used_saved_card: body.payment_mode === "saved_card",
+      used_staff_card: body.payment_mode === "staff_card",
       email_sent: body.send_email !== false,
       sms_sent: body.send_sms !== false,
     };
   },
+  prepareClientSubscriptionPayment: async () => ({
+    client_secret: "seti_demo_secret",
+    publishable_key: "pk_demo",
+    stripe_customer_id: "cus_demo",
+  }),
   manageClientSubscription: async ({ subscriptionId, action }) => {
     const status =
       action === "cancel_now" || action === "cancel_at_period_end"

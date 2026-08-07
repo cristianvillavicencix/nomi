@@ -594,6 +594,10 @@ export const billingProvider = {
     currency?: string;
     billing_interval: "weekly" | "monthly" | "yearly";
     line_items?: Array<Record<string, unknown>>;
+    starts_at?: string | null;
+    ends_at?: string | null;
+    payment_mode?: "saved_card" | "staff_card" | "request_setup";
+    payment_method_id?: string | null;
     send_email?: boolean;
     send_sms?: boolean;
     email_to?: string | null;
@@ -606,6 +610,7 @@ export const billingProvider = {
       subscription: Record<string, unknown>;
       checkout_url?: string | null;
       used_saved_card?: boolean;
+      used_staff_card?: boolean;
       email_sent?: boolean;
       sms_sent?: boolean;
     }>("create_client_subscription", {
@@ -624,6 +629,35 @@ export const billingProvider = {
 
     if (!data?.subscription) {
       throw new Error("Failed to create subscription");
+    }
+
+    return data;
+  },
+  async prepareClientSubscriptionPayment(body: {
+    company_id?: number | null;
+    contact_id?: number | null;
+    email_to?: string | null;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      client_secret: string;
+      publishable_key: string;
+      stripe_customer_id: string;
+    }>("prepare_client_subscription_payment", {
+      method: "POST",
+      body,
+    });
+
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(
+          error,
+          "Failed to prepare subscription payment",
+        ),
+      );
+    }
+
+    if (!data?.client_secret) {
+      throw new Error("Failed to prepare subscription payment");
     }
 
     return data;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSubscriptionListFilter,
+  buildSubscriptionBankStatementPreview,
   formatSubscriptionAmountLabel,
   subscriptionStatusLabel,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
@@ -28,5 +29,14 @@ describe("subscriptionDisplayUtils", () => {
     expect(formatSubscriptionAmountLabel(99, "USD", "yearly")).toBe(
       "$99.00/yr",
     );
+  });
+
+  it("builds an approximate bank statement label", () => {
+    expect(
+      buildSubscriptionBankStatementPreview({
+        orgName: "Latino Business Support",
+        subscriptionName: "Monthly IT Support",
+      }),
+    ).toBe("LATINO BUS* MONTHLY IT SUPPORT");
   });
 });
