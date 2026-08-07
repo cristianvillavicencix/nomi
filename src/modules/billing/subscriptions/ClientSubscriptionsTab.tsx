@@ -59,6 +59,7 @@ export const ClientSubscriptionsTab = () => {
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
           onCreate={() => setCreateOpen(true)}
+          showSummaryCards={!hasSubscriptionOpen}
         />
       </List>
 

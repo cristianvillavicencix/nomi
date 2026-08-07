@@ -3,15 +3,28 @@ import {
   buildSubscriptionListFilter,
   buildSubscriptionBankStatementPreview,
   formatSubscriptionAmountLabel,
+  isSubscriptionExpired,
+  subscriptionMatchesStatusFilter,
   subscriptionStatusLabel,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
 
 describe("subscriptionDisplayUtils", () => {
   it("maps status filters for list queries", () => {
     expect(buildSubscriptionListFilter("all")).toEqual({});
+    expect(buildSubscriptionListFilter("expired")).toEqual({});
     expect(buildSubscriptionListFilter("active")).toEqual({
       "status@eq": "active",
     });
+  });
+
+  it("derives expired status from ends_at", () => {
+    const row = {
+      status: "active" as const,
+      ends_at: "2020-01-01T00:00:00.000Z",
+    };
+    expect(isSubscriptionExpired(row)).toBe(true);
+    expect(subscriptionStatusLabel("active", row)).toBe("Expired");
+    expect(subscriptionMatchesStatusFilter(row as never, "expired")).toBe(true);
   });
 
   it("returns English status labels", () => {

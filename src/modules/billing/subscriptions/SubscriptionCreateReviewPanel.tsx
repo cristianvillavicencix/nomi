@@ -42,6 +42,9 @@ type SubscriptionCreateReviewPanelProps = {
   isPending: boolean;
   onSubmit: () => void;
   onCancel: () => void;
+  submitLabel?: string;
+  pendingLabel?: string;
+  hideActions?: boolean;
 };
 
 const SummaryRow = ({
@@ -77,6 +80,9 @@ export const SubscriptionCreateReviewPanel = ({
   isPending,
   onSubmit,
   onCancel,
+  submitLabel = "Create subscription",
+  pendingLabel = "Creating…",
+  hideActions = false,
 }: SubscriptionCreateReviewPanelProps) => {
   const schedule = formatSubscriptionScheduleLabel({
     startsAt: startsAtDate,
@@ -194,26 +200,28 @@ export const SubscriptionCreateReviewPanel = ({
         </div>
       ) : null}
 
-      <div className="mt-auto flex flex-wrap justify-end gap-2 border-t pt-5">
-        <Button type="button" variant="ghost" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          disabled={!canSubmit || isPending}
-          onClick={onSubmit}
-        >
-          {isPending ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              Creating…
-            </>
-          ) : (
-            "Create subscription"
-          )}
-        </Button>
-      </div>
+      {!hideActions ? (
+        <div className="mt-auto flex flex-wrap justify-end gap-2 border-t pt-5">
+          <Button type="button" variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            disabled={!canSubmit || isPending}
+            onClick={onSubmit}
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                {pendingLabel}
+              </>
+            ) : (
+              submitLabel
+            )}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 };

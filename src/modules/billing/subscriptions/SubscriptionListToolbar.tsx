@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
 import { useMemo } from "react";
 import { useGetList } from "ra-core";
+import { BillingStatusFilterMenu } from "@/modules/billing/BillingStatusFilterMenu";
 import {
   countSubscriptionsByStatusFilter,
   SUBSCRIPTION_FILTER_OPTIONS,
@@ -9,7 +10,6 @@ import {
 import type { ClientSubscription } from "@/modules/types";
 import { Button } from "@/components/ui/button";
 import { ModuleSearchField } from "@/components/atomic-crm/layout/ModuleToolbar";
-import { cn } from "@/lib/utils";
 
 type SubscriptionListToolbarProps = {
   statusFilter: SubscriptionStatusFilter;
@@ -17,6 +17,8 @@ type SubscriptionListToolbarProps = {
   searchQuery: string;
   onSearchQueryChange: (next: string) => void;
   onCreate: () => void;
+  /** Sidebar with detail open: New stacks below search. Full list: New on the same row. */
+  compact?: boolean;
 };
 
 export const SubscriptionListToolbar = ({
@@ -25,6 +27,7 @@ export const SubscriptionListToolbar = ({
   searchQuery,
   onSearchQueryChange,
   onCreate,
+  compact = false,
 }: SubscriptionListToolbarProps) => {
   const { data: subscriptions = [] } = useGetList<ClientSubscription>(
     "client_subscriptions",
@@ -41,46 +44,62 @@ export const SubscriptionListToolbar = ({
     [subscriptions],
   );
 
+  const newButton = (
+    <Button
+      type="button"
+      variant="primary"
+      size="sm"
+      className={compact ? "w-full sm:w-auto" : "shrink-0"}
+      onClick={onCreate}
+    >
+      <Plus className="size-4" />
+      New subscription
+    </Button>
+  );
+
+  if (compact) {
+    return (
+      <div className="flex shrink-0 flex-col gap-2 border-b bg-background px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <BillingStatusFilterMenu
+            value={statusFilter}
+            onChange={onStatusFilterChange}
+            options={SUBSCRIPTION_FILTER_OPTIONS}
+            counts={counts}
+            ariaLabel="Filter subscriptions"
+          />
+          <ModuleSearchField
+            value={searchQuery}
+            onChange={onSearchQueryChange}
+            basePlaceholder="Search by client, plan, status"
+            total={counts.all}
+            itemSingular="subscription"
+            className="min-w-0 flex-1 [&>div]:max-w-none"
+          />
+        </div>
+        {newButton}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex shrink-0 flex-col gap-2 border-b bg-background px-3 py-2">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-        <ModuleSearchField
-          value={searchQuery}
-          onChange={onSearchQueryChange}
-          basePlaceholder="Search by client, plan, status"
-          total={counts.all}
-          itemSingular="subscription"
-        />
-
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          className="shrink-0 sm:ml-auto"
-          onClick={onCreate}
-        >
-          <Plus className="size-4" />
-          New subscription
-        </Button>
-      </div>
-
-      <div className="flex flex-wrap gap-1">
-        {SUBSCRIPTION_FILTER_OPTIONS.map((option) => (
-          <Button
-            key={option.value}
-            type="button"
-            size="sm"
-            variant={statusFilter === option.value ? "secondary" : "ghost"}
-            className={cn("h-7 px-2.5 text-xs")}
-            onClick={() => onStatusFilterChange(option.value)}
-          >
-            {option.label}
-            <span className="ml-1 text-muted-foreground">
-              {counts[option.value]}
-            </span>
-          </Button>
-        ))}
-      </div>
+    <div className="flex shrink-0 items-center gap-2 border-b bg-background px-3 py-2">
+      <BillingStatusFilterMenu
+        value={statusFilter}
+        onChange={onStatusFilterChange}
+        options={SUBSCRIPTION_FILTER_OPTIONS}
+        counts={counts}
+        ariaLabel="Filter subscriptions"
+      />
+      <ModuleSearchField
+        value={searchQuery}
+        onChange={onSearchQueryChange}
+        basePlaceholder="Search by client, plan, status"
+        total={counts.all}
+        itemSingular="subscription"
+        className="min-w-0 flex-1 [&>div]:max-w-none"
+      />
+      {newButton}
     </div>
   );
 };

@@ -9,6 +9,7 @@ import {
   useRefresh,
 } from "ra-core";
 import { Link, Navigate, useNavigate, useParams } from "react-router";
+import { buildSubscriptionDetailSearchParams } from "@/modules/billing/subscriptions/billingNavigation";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import {
@@ -762,7 +763,17 @@ export const StandaloneInvoiceEditPage = ({
   const headerInner = (
     <>
       {embedded ? (
-        <h2 className="text-base font-semibold">{invoice.invoice_number}</h2>
+        <div className="space-y-1">
+          <h2 className="text-base font-semibold">{invoice.invoice_number}</h2>
+          {invoice.subscription_id ? (
+            <Link
+              to={`/billing?${buildSubscriptionDetailSearchParams(String(invoice.subscription_id)).toString()}`}
+              className="text-sm text-primary hover:underline"
+            >
+              View subscription
+            </Link>
+          ) : null}
+        </div>
       ) : (
         <PageTitle label={invoice.invoice_number} />
       )}

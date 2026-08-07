@@ -15,13 +15,17 @@ import { resolvePublicAppBaseUrl } from "../_shared/publicAppUrl.ts";
 import {
   applyStripeSubscriptionSnapshot,
   buildSubscriptionMetadata,
+  normalizeSubscriptionLineItems,
   createStripeSubscriptionCheckout,
   createStripeSubscriptionWithCard,
+  deliverSubscriptionSetupLink,
   resolveClientStripePaymentMethod,
+  resolveSubscriptionClientName,
   resolveSubscriptionStripeCustomer,
+  sumSubscriptionLineItemsAmount,
   type BillingInterval,
+  type ClientSubscriptionRow,
 } from "../_shared/clientSubscriptionStripe.ts";
-import { sendSubscriptionSetupDelivery } from "../_shared/clientSubscriptionDelivery.ts";
 
 type CreateBody = {
   company_id?: number | null;
@@ -43,36 +47,11 @@ type CreateBody = {
   sms_to?: string | null;
   message?: string | null;
   subject?: string | null;
+  reference_number?: string | null;
   base_url?: string | null;
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const resolveClientName = async (params: {
-  contactId?: number | null;
-  companyId?: number | null;
-}) => {
-  if (params.contactId) {
-    const { data } = await supabaseAdmin
-      .from("contacts")
-      .select("first_name, last_name, company_id")
-      .eq("id", params.contactId)
-      .maybeSingle();
-    if (data) {
-      const name = [data.first_name, data.last_name].filter(Boolean).join(" ");
-      return { name: name || undefined, companyId: params.companyId ?? data.company_id };
-    }
-  }
-  if (params.companyId) {
-    const { data } = await supabaseAdmin
-      .from("companies")
-      .select("name")
-      .eq("id", params.companyId)
-      .maybeSingle();
-    if (data?.name) return { name: data.name, companyId: params.companyId };
-  }
-  return { name: undefined, companyId: params.companyId ?? null };
-};
 
 Deno.serve(
   OptionsMiddleware(async (req) => {
@@ -132,6 +111,19 @@ Deno.serve(
         if (!Number.isFinite(amount) || amount <= 0) {
           return createErrorResponse(400, "Amount must be greater than zero");
         }
+        const lineItems = Array.isArray(body.line_items) ? body.line_items : [];
+        const normalizedLines = normalizeSubscriptionLineItems(
+          lineItems,
+          name,
+          amount,
+        );
+        const computedAmount = sumSubscriptionLineItemsAmount(normalizedLines);
+        if (Math.round(computedAmount * 100) !== Math.round(amount * 100)) {
+          return createErrorResponse(
+            400,
+            "Amount must match the sum of line items",
+          );
+        }
         if (!["weekly", "monthly", "yearly"].includes(billingInterval)) {
           return createErrorResponse(400, "Invalid billing interval");
         }
@@ -142,7 +134,10 @@ Deno.serve(
           .eq("id", member.org_id)
           .maybeSingle();
 
-        const clientInfo = await resolveClientName({ contactId, companyId });
+        const clientInfo = await resolveSubscriptionClientName(supabaseAdmin, {
+          contactId,
+          companyId,
+        });
         const resolvedCompanyId = companyId ?? clientInfo.companyId ?? null;
 
         let recipientEmail = body.email_to?.trim() ?? "";
@@ -156,14 +151,25 @@ Deno.serve(
           );
         }
 
-        const lineItems = Array.isArray(body.line_items) ? body.line_items : [];
         const startsAt = body.starts_at?.trim() || null;
         const endsAt = body.ends_at?.trim() || null;
+        const referenceNumber = body.reference_number?.trim() || null;
         const paymentMode =
           body.payment_mode ??
           (body.payment_method_id?.trim()
             ? "staff_card"
             : "request_setup");
+
+        const { data: subscriptionNumber, error: numberError } =
+          await supabaseAdmin.rpc("next_client_subscription_number", {
+            p_org_id: member.org_id,
+          });
+        if (numberError || !subscriptionNumber) {
+          return createErrorResponse(
+            500,
+            numberError?.message ?? "Could not generate subscription number",
+          );
+        }
 
         const { data: subscription, error: insertError } = await supabaseAdmin
           .from("client_subscriptions")
@@ -172,12 +178,14 @@ Deno.serve(
             company_id: resolvedCompanyId,
             contact_id: contactId,
             deal_id: dealId,
+            subscription_number: subscriptionNumber as string,
+            reference_number: referenceNumber,
             name,
             description: body.description?.trim() || null,
             amount,
             currency: (body.currency ?? "USD").toUpperCase(),
             billing_interval: billingInterval,
-            line_items: lineItems,
+            line_items: normalizedLines,
             starts_at: startsAt,
             ends_at: endsAt,
             status: "pending_setup",
@@ -215,6 +223,14 @@ Deno.serve(
             savedPayment,
           },
         );
+
+        await supabaseAdmin
+          .from("client_subscriptions")
+          .update({
+            stripe_customer_id: customer.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", subscription.id);
 
         const metadata = buildSubscriptionMetadata({
           orgId: member.org_id,
@@ -280,10 +296,11 @@ Deno.serve(
             customerId: customer.id,
             paymentMethodId,
             name,
-            amount,
+            amount: computedAmount,
             currency: subscription.currency,
             billingInterval,
             metadata,
+            lineItems: normalizedLines,
             ...scheduleParams,
           });
           await applyStripeSubscriptionSnapshot(
@@ -303,12 +320,13 @@ Deno.serve(
           const session = await createStripeSubscriptionCheckout(stripe, {
             customerId: customer.id,
             name,
-            amount,
+            amount: computedAmount,
             currency: subscription.currency,
             billingInterval,
             successUrl: `${baseUrl}/billing?${returnQuery}&setup=success`,
             cancelUrl: `${baseUrl}/billing?${returnQuery}&setup=cancel`,
             metadata,
+            lineItems: normalizedLines,
             ...scheduleParams,
           });
 
@@ -322,23 +340,23 @@ Deno.serve(
             })
             .eq("id", subscription.id);
 
-          const shouldSendEmail = body.send_email !== false;
+          const shouldSendEmail = body.send_email === true;
           const shouldSendSms = body.send_sms === true;
 
           if (checkoutUrl && (shouldSendEmail || shouldSendSms)) {
-            const delivery = await sendSubscriptionSetupDelivery(supabaseAdmin, {
+            const delivery = await deliverSubscriptionSetupLink(supabaseAdmin, {
               orgId: member.org_id,
               memberId: Number(member.id),
               orgName: org?.name ?? null,
-              subscriptionName: name,
+              subscription: subscription as ClientSubscriptionRow,
               checkoutUrl,
+              baseUrl,
               emailTo: recipientEmail,
               smsTo: body.sms_to,
               subject: body.subject,
               message: body.message,
               sendEmail: shouldSendEmail,
               sendSms: shouldSendSms,
-              contactId,
             });
             emailSent = delivery.emailSent;
             emailSkipped = delivery.emailSkipped;

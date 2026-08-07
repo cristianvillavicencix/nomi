@@ -16,6 +16,8 @@ type Props<T extends string> = {
   /** Single shared panel below the tab bar — stable full-width layout. */
   content?: ReactNode;
   className?: string;
+  /** Let tab content fill remaining viewport height (split billing workspaces). */
+  fillHeight?: boolean;
 };
 
 export const SettingsSubNav = <T extends string>({
@@ -25,6 +27,7 @@ export const SettingsSubNav = <T extends string>({
   children,
   content,
   className,
+  fillHeight = false,
 }: Props<T>) => (
   <Tabs
     value={value}
@@ -38,7 +41,12 @@ export const SettingsSubNav = <T extends string>({
         </TabsTrigger>
       ))}
     </TabsList>
-    <div className="w-full min-w-0 self-stretch">
+    <div
+      className={cn(
+        "w-full min-w-0 self-stretch",
+        fillHeight && "flex min-h-0 flex-1 flex-col overflow-hidden",
+      )}
+    >
       {content ?? children}
     </div>
   </Tabs>

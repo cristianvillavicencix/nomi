@@ -1,31 +1,40 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildBillingTabSearchParams,
-  resolveBillingTab,
+  resolveSubscriptionSubview,
+  buildSubscriptionDetailSearchParams,
+  buildBillingInvoiceDetailPath,
 } from "@/modules/billing/subscriptions/billingNavigation";
 
 describe("billingNavigation", () => {
-  it("defaults to invoices tab", () => {
-    expect(resolveBillingTab(new URLSearchParams())).toBe("invoices");
-    expect(resolveBillingTab(new URLSearchParams("tab=invoices"))).toBe(
-      "invoices",
-    );
-    expect(resolveBillingTab(new URLSearchParams("tab=subscriptions"))).toBe(
-      "subscriptions",
-    );
+  it("defaults subscription subview to overview", () => {
+    expect(
+      resolveSubscriptionSubview(new URLSearchParams("tab=subscriptions&subscription=42")),
+    ).toBe("overview");
   });
 
-  it("preserves invoice workspace when on invoices tab", () => {
-    const current = new URLSearchParams("invoice=42&tab=invoices");
+  it("preserves explicit subview values", () => {
     expect(
-      Object.fromEntries(buildBillingTabSearchParams("invoices", current)),
-    ).toEqual({ invoice: "42" });
+      resolveSubscriptionSubview(
+        new URLSearchParams("tab=subscriptions&subscription=42&subview=edit"),
+      ),
+    ).toBe("edit");
+    expect(
+      resolveSubscriptionSubview(
+        new URLSearchParams("tab=subscriptions&subscription=42&subview=cards"),
+      ),
+    ).toBe("cards");
   });
 
-  it("preserves subscription selection on subscriptions tab", () => {
-    const current = new URLSearchParams("tab=subscriptions&subscription=9");
-    expect(
-      Object.fromEntries(buildBillingTabSearchParams("subscriptions", current)),
-    ).toEqual({ tab: "subscriptions", subscription: "9" });
+  it("builds subscription detail params without subview for overview", () => {
+    const params = buildSubscriptionDetailSearchParams("42", "overview");
+    expect(params.get("tab")).toBe("subscriptions");
+    expect(params.get("subscription")).toBe("42");
+    expect(params.get("subview")).toBeNull();
+  });
+
+  it("builds invoice detail path with invoices tab", () => {
+    expect(buildBillingInvoiceDetailPath("99")).toBe(
+      "/billing?tab=invoices&invoice=99",
+    );
   });
 });

@@ -11,7 +11,9 @@ export type SubscriptionSetupDeliveryParams = {
   memberId: number;
   orgName: string | null;
   subscriptionName: string;
-  checkoutUrl: string;
+  subscriptionNumber?: string | null;
+  amountLabel?: string | null;
+  shareUrl: string;
   emailTo?: string | null;
   smsTo?: string | null;
   subject?: string | null;
@@ -24,26 +26,72 @@ export type SubscriptionSetupDeliveryParams = {
 export const buildDefaultSubscriptionSetupMessage = (params: {
   orgName: string | null;
   subscriptionName: string;
-  checkoutUrl: string;
-}) =>
-  `${
-    params.orgName ?? "Latino Business Support"
-  }: Set up your ${params.subscriptionName} subscription and save your card for automatic billing:\n\n${params.checkoutUrl}`;
+  subscriptionNumber?: string | null;
+  amountLabel?: string | null;
+  shareUrl: string;
+}) => {
+  const orgLabel = params.orgName?.trim() || "Latino Business Support";
+  const planLabel = params.amountLabel
+    ? `${params.subscriptionName} (${params.amountLabel})`
+    : params.subscriptionName;
+  const lines = [
+    `${orgLabel}: Set up your ${planLabel} subscription and save your card for automatic billing:`,
+  ];
+  if (params.subscriptionNumber?.trim()) {
+    lines.push(`Reference: ${params.subscriptionNumber.trim()}`);
+  }
+  lines.push("", params.shareUrl.trim());
+  return lines.join("\n");
+};
+
+const replaceSetupUrlsInMessage = (message: string, shareUrl: string) => {
+  const trimmedShareUrl = shareUrl.trim();
+  if (!trimmedShareUrl) return message.trim();
+
+  return message
+    .trim()
+    .replace(/https:\/\/checkout\.stripe\.com[^\s]*/gi, trimmedShareUrl)
+    .replace(/https?:\/\/[^\s/]+\/sub\/[^\s]*/gi, trimmedShareUrl);
+};
+
+export const resolveSubscriptionSetupDeliveryCopy = (
+  params: Pick<
+    SubscriptionSetupDeliveryParams,
+    | "orgName"
+    | "subscriptionName"
+    | "subscriptionNumber"
+    | "amountLabel"
+    | "shareUrl"
+    | "message"
+  >,
+) => {
+  const defaultMessage = buildDefaultSubscriptionSetupMessage({
+    orgName: params.orgName,
+    subscriptionName: params.subscriptionName,
+    subscriptionNumber: params.subscriptionNumber,
+    amountLabel: params.amountLabel,
+    shareUrl: params.shareUrl,
+  });
+
+  const custom = params.message?.trim();
+  const message = custom
+    ? replaceSetupUrlsInMessage(custom, params.shareUrl)
+    : defaultMessage;
+
+  const subject =
+    params.message && custom
+      ? undefined
+      : `${params.orgName?.trim() || "Latino Business Support"}: Set up ${params.subscriptionName}`;
+
+  return { message, defaultSubject: subject ?? `${params.orgName?.trim() || "Latino Business Support"}: Set up ${params.subscriptionName}` };
+};
 
 export async function sendSubscriptionSetupDelivery(
   supabase: SupabaseClient,
   params: SubscriptionSetupDeliveryParams,
 ) {
-  const message =
-    params.message?.trim() ||
-    buildDefaultSubscriptionSetupMessage({
-      orgName: params.orgName,
-      subscriptionName: params.subscriptionName,
-      checkoutUrl: params.checkoutUrl,
-    });
-  const subject =
-    params.subject?.trim() ||
-    `${params.orgName ?? "Latino Business Support"}: Set up ${params.subscriptionName}`;
+  const { message, defaultSubject } = resolveSubscriptionSetupDeliveryCopy(params);
+  const subject = params.subject?.trim() || defaultSubject;
 
   let emailSent = false;
   let emailSkipped = false;

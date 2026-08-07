@@ -6,6 +6,10 @@
     "test": "vitest run",
     "test:mail": "vitest run src/modules/mail/mailRenderPipeline.test.ts src/modules/mail/mailInlineImages.test.ts supabase/functions/_shared/mailInlineImages.test.ts",
     "dev": "vite",
+    "dev:demo": "vite --config vite.demo.config.ts --port 5174",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
     "build": "tsc && vite build",
     "build:analyze": "tsc && CI=1 vite build",
     "check:bundle-size": "node scripts/check-bundle-size.mjs",
@@ -109,6 +113,7 @@
   "devDependencies": {
     "@eslint/js": "^9.22.0",
     "@inquirer/prompts": "^8.2.0",
+    "@playwright/test": "^1.62.1",
     "@types/dompurify": "^3.0.5",
     "@types/faker": "^5.5.9",
     "@types/jsonexport": "^3.0.5",

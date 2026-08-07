@@ -53,6 +53,7 @@ export const ClientBillingPage = () => {
         value={activeTab}
         onValueChange={handleTabChange}
         items={BILLING_TABS}
+        fillHeight={hasWorkspaceOpen}
         className={hasWorkspaceOpen ? "min-h-0 flex-1" : undefined}
         content={
           activeTab === "subscriptions" ? (

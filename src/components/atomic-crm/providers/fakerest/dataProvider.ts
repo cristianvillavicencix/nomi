@@ -1365,6 +1365,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     throw new Error("Stripe billing is not available in demo mode");
   },
   createClientSubscription: async (body) => {
+    const year = new Date().getFullYear();
     const { data: subscription } = await baseDataProvider.create(
       "client_subscriptions",
       {
@@ -1372,6 +1373,9 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
           org_id: 1,
           company_id: body.company_id ?? null,
           contact_id: body.contact_id ?? null,
+          deal_id: body.deal_id ?? null,
+          reference_number: body.reference_number ?? null,
+          subscription_number: `SUB-${year}-0001`,
           name: body.name,
           amount: body.amount,
           currency: body.currency ?? "USD",
@@ -1384,6 +1388,11 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
             body.payment_mode === "staff_card"
               ? "active"
               : "pending_setup",
+          activated_at:
+            body.payment_mode === "saved_card" ||
+            body.payment_mode === "staff_card"
+              ? new Date().toISOString()
+              : null,
         },
       },
     );
@@ -1401,20 +1410,106 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     publishable_key: "pk_demo",
     stripe_customer_id: "cus_demo",
   }),
-  manageClientSubscription: async ({ subscriptionId, action }) => {
+  manageClientSubscription: async ({
+    subscriptionId,
+    action,
+    name,
+    description,
+    amount,
+    billing_interval,
+    ends_at,
+    reference_number,
+    deal_id,
+    line_items,
+    payment_mode,
+    email_to,
+    send_email,
+    send_sms,
+  }) => {
+    if (action === "update") {
+      const { data: subscription } = await baseDataProvider.update(
+        "client_subscriptions",
+        {
+          id: subscriptionId,
+          data: {
+            ...(name ? { name } : {}),
+            ...(description !== undefined ? { description } : {}),
+            ...(amount != null ? { amount } : {}),
+            ...(billing_interval ? { billing_interval } : {}),
+            ...(ends_at !== undefined ? { ends_at } : {}),
+            ...(reference_number !== undefined ? { reference_number } : {}),
+            ...(deal_id !== undefined ? { deal_id } : {}),
+            ...(line_items !== undefined ? { line_items } : {}),
+          },
+          previousData: { id: subscriptionId },
+        },
+      );
+      return { subscription, setup_link_stale: false };
+    }
+
+    if (action === "apply_payment") {
+      const { data: subscription } = await baseDataProvider.getOne(
+        "client_subscriptions",
+        { id: subscriptionId },
+      );
+      const nextStatus =
+        payment_mode === "saved_card" || payment_mode === "staff_card"
+          ? "active"
+          : "pending_setup";
+      const { data: updated } = await baseDataProvider.update(
+        "client_subscriptions",
+        {
+          id: subscriptionId,
+          data: {
+            status: nextStatus,
+            setup_checkout_url:
+              payment_mode === "request_setup"
+                ? "https://checkout.stripe.com/demo"
+                : subscription.setup_checkout_url,
+          },
+          previousData: subscription,
+        },
+      );
+      return {
+        subscription: updated,
+        checkout_url:
+          payment_mode === "request_setup"
+            ? "https://checkout.stripe.com/demo"
+            : null,
+        used_saved_card: payment_mode === "saved_card",
+        used_staff_card: payment_mode === "staff_card",
+        email_sent: send_email !== false && Boolean(email_to),
+        sms_sent: send_sms === true,
+      };
+    }
+
     const status =
-      action === "cancel_now" || action === "cancel_at_period_end"
-        ? "canceled"
-        : action === "pause"
-          ? "paused"
-          : action === "resume"
-            ? "active"
-            : "pending_setup";
+      action === "reactivate"
+        ? "active"
+        : action === "undo_cancel"
+          ? "active"
+          : action === "cancel_now" || action === "cancel_at_period_end"
+            ? "canceled"
+            : action === "pause"
+              ? "paused"
+              : action === "resume"
+                ? "active"
+                : "pending_setup";
     const { data: subscription } = await baseDataProvider.update(
       "client_subscriptions",
       {
         id: subscriptionId,
-        data: { status },
+        data: {
+          status,
+          ...(action === "reactivate"
+            ? {
+                canceled_at: null,
+                cancel_at_period_end: false,
+                activated_at: new Date().toISOString(),
+              }
+            : {}),
+          ...(action === "undo_cancel" ? { cancel_at_period_end: false } : {}),
+        },
         previousData: { id: subscriptionId },
       },
     );

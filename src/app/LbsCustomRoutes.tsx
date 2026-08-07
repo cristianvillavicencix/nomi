@@ -217,6 +217,13 @@ const InvoiceShortUrlRedirect = lazy(() =>
     default: module.InvoiceShortUrlRedirect,
   })),
 );
+const SubscriptionSetupShortUrlRedirect = lazy(() =>
+  import("@/modules/billing/public/SubscriptionSetupShortUrlRedirect").then(
+    (module) => ({
+      default: module.SubscriptionSetupShortUrlRedirect,
+    }),
+  ),
+);
 const PortalShortUrlRedirect = lazy(() =>
   import("@/modules/portal/PortalShortUrlRedirect").then((module) => ({
     default: module.PortalShortUrlRedirect,
@@ -339,6 +346,14 @@ export const renderLbsPublicFormRoute = () => (
       element={
         <LazyRoute label="Loading…">
           <InvoiceShortUrlRedirect />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="/sub/:shortCode"
+      element={
+        <LazyRoute label="Loading…">
+          <SubscriptionSetupShortUrlRedirect />
         </LazyRoute>
       }
     />

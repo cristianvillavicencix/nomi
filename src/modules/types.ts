@@ -236,6 +236,13 @@ export type ClientSubscription = {
   canceled_at?: string | null;
   paused_at?: string | null;
   setup_checkout_url?: string | null;
+  setup_share_url?: string | null;
+  setup_short_code?: string | null;
+  stripe_payment_method_id?: string | null;
+  subscription_number?: string | null;
+  reference_number?: string | null;
+  activated_at?: string | null;
+  last_billed_at?: string | null;
   starts_at?: string | null;
   ends_at?: string | null;
   created_by_member_id?: Identifier | null;

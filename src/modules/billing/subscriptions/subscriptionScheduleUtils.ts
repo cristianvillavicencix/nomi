@@ -1,3 +1,5 @@
+import type { ClientSubscription } from "@/modules/types";
+
 export type SubscriptionDurationValue =
   | "ongoing"
   | "3"
@@ -115,4 +117,47 @@ export const subscriptionPaymentModeLabel = (mode: SubscriptionPaymentMode) => {
     default:
       return mode;
   }
+};
+
+export const resolveDurationFromSubscription = (
+  subscription: Pick<ClientSubscription, "ends_at" | "starts_at">,
+): { duration: SubscriptionDurationValue; customEndDate: string } => {
+  if (!subscription.ends_at) {
+    return { duration: "ongoing", customEndDate: "" };
+  }
+  const endDate = subscription.ends_at.slice(0, 10);
+  const startDate = subscription.starts_at?.slice(0, 10) ?? todayIsoDate();
+  const start = parseIsoDateAtStartOfDay(startDate);
+  if (!start) {
+    return { duration: "custom", customEndDate: endDate };
+  }
+
+  for (const option of SUBSCRIPTION_DURATION_OPTIONS) {
+    if (option.value === "ongoing" || option.value === "custom") continue;
+    const computed = computeSubscriptionEndsAt({
+      startsAt: start,
+      duration: option.value,
+      customEndDate: "",
+    });
+    if (computed && computed.toISOString().slice(0, 10) === endDate) {
+      return { duration: option.value, customEndDate: endDate };
+    }
+  }
+
+  return { duration: "custom", customEndDate: endDate };
+};
+
+export const inferSubscriptionPaymentMode = (
+  subscription: Pick<
+    ClientSubscription,
+    "status" | "payment_method_last4" | "stripe_subscription_id"
+  >,
+): SubscriptionPaymentMode => {
+  if (subscription.stripe_subscription_id || subscription.payment_method_last4) {
+    return "saved_card";
+  }
+  if (subscription.status === "pending_setup") {
+    return "request_setup";
+  }
+  return "request_setup";
 };

@@ -589,6 +589,7 @@ export const billingProvider = {
     company_id?: number | null;
     contact_id?: number | null;
     deal_id?: number | null;
+    reference_number?: string | null;
     name: string;
     amount: number;
     currency?: string;
@@ -669,7 +670,21 @@ export const billingProvider = {
       | "resume"
       | "cancel_now"
       | "cancel_at_period_end"
-      | "send_setup";
+      | "undo_cancel"
+      | "reactivate"
+      | "send_setup"
+      | "update"
+      | "apply_payment";
+    name?: string | null;
+    description?: string | null;
+    amount?: number | null;
+    billing_interval?: "weekly" | "monthly" | "yearly" | null;
+    ends_at?: string | null;
+    reference_number?: string | null;
+    deal_id?: number | null;
+    line_items?: Array<Record<string, unknown>>;
+    payment_mode?: "saved_card" | "staff_card" | "request_setup" | null;
+    payment_method_id?: string | null;
     send_email?: boolean;
     send_sms?: boolean;
     email_to?: string | null;
@@ -681,11 +696,26 @@ export const billingProvider = {
     const { data, error } = await invokeEdgeFunction<{
       subscription: Record<string, unknown>;
       checkout_url?: string | null;
+      setup_link_stale?: boolean;
+      used_saved_card?: boolean;
+      used_staff_card?: boolean;
+      email_sent?: boolean;
+      sms_sent?: boolean;
     }>("manage_client_subscription", {
       method: "POST",
       body: {
         subscription_id: Number(params.subscriptionId),
         action: params.action,
+        name: params.name,
+        description: params.description,
+        amount: params.amount,
+        billing_interval: params.billing_interval,
+        ends_at: params.ends_at,
+        reference_number: params.reference_number,
+        deal_id: params.deal_id,
+        line_items: params.line_items,
+        payment_mode: params.payment_mode,
+        payment_method_id: params.payment_method_id,
         send_email: params.send_email,
         send_sms: params.send_sms,
         email_to: params.email_to,

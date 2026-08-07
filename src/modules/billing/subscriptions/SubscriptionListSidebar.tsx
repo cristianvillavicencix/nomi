@@ -2,13 +2,15 @@ import { useMemo } from "react";
 import { useGetMany, useListContext } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
+import { formatContactName } from "@/modules/billing/billingUtils";
 import {
   formatSubscriptionAmountLabel,
   subscriptionMatchesSearchQuery,
+  subscriptionMatchesStatusFilter,
   subscriptionStatusLabel,
   subscriptionStatusVariant,
+  type SubscriptionStatusFilter,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
-import { formatContactName } from "@/modules/billing/billingUtils";
 import type { ClientSubscription } from "@/modules/types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -17,12 +19,14 @@ type SubscriptionListSidebarProps = {
   selectedSubscriptionId?: string | null;
   onSelectSubscription: (subscriptionId: string) => void;
   searchQuery?: string;
+  statusFilter?: SubscriptionStatusFilter;
 };
 
 export const SubscriptionListSidebar = ({
   selectedSubscriptionId,
   onSelectSubscription,
   searchQuery = "",
+  statusFilter = "all",
 }: SubscriptionListSidebarProps) => {
   const { data: subscriptions = [], isPending } =
     useListContext<ClientSubscription>();
@@ -82,14 +86,17 @@ export const SubscriptionListSidebar = ({
         const contact = row.contact_id
           ? contactById.get(String(row.contact_id))
           : null;
-        return subscriptionMatchesSearchQuery(
-          row,
-          company?.name ?? null,
-          formatContactName(contact) ?? null,
-          searchQuery,
+        return (
+          subscriptionMatchesStatusFilter(row, statusFilter) &&
+          subscriptionMatchesSearchQuery(
+            row,
+            company?.name ?? null,
+            formatContactName(contact) ?? null,
+            searchQuery,
+          )
         );
       }),
-    [companyById, contactById, searchQuery, subscriptions],
+    [companyById, contactById, searchQuery, statusFilter, subscriptions],
   );
 
   if (isPending) {
@@ -131,7 +138,7 @@ export const SubscriptionListSidebar = ({
           const clientLabel =
             company?.name ??
             formatContactName(contact) ??
-            "Client";
+            "No customer";
 
           return (
             <li key={row.id}>
@@ -139,35 +146,34 @@ export const SubscriptionListSidebar = ({
                 type="button"
                 onClick={() => onSelectSubscription(String(row.id))}
                 className={cn(
-                  "flex w-full flex-col gap-1 px-3 py-3 text-left transition-colors hover:bg-muted/50",
-                  isSelected && "bg-muted/60",
+                  "flex w-full flex-col gap-1.5 px-3 py-3 text-left transition-colors hover:bg-muted/40",
+                  isSelected &&
+                    "bg-primary/5 ring-1 ring-inset ring-primary/20",
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-foreground">
-                      {row.name}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {clientLabel}
-                    </p>
-                  </div>
-                  <Badge variant={subscriptionStatusVariant(row.status)}>
-                    {subscriptionStatusLabel(row.status)}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <span>
+                  <span className="min-w-0 truncate text-sm font-medium">
+                    {clientLabel}
+                  </span>
+                  <span className="shrink-0 text-sm font-medium tabular-nums">
                     {formatSubscriptionAmountLabel(
                       Number(row.amount),
                       row.currency,
                       row.billing_interval,
                     )}
                   </span>
-                  <span>
-                    Next: {formatBillingDate(row.next_billing_at?.slice(0, 10))}
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-xs text-muted-foreground">
+                    {row.subscription_number ?? row.name}
                   </span>
                 </div>
+                <Badge
+                  variant={subscriptionStatusVariant(row.status, row)}
+                  className="w-fit text-[10px] uppercase tracking-wide"
+                >
+                  {subscriptionStatusLabel(row.status, row)}
+                </Badge>
               </button>
             </li>
           );

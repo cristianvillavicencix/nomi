@@ -67,6 +67,7 @@ export const InvoiceBillingWorkspace = ({
             searchQuery={searchQuery}
             onSearchQueryChange={setSearchQuery}
             onFromProposal={onFromProposal}
+            compact={hasSelection && !isMobile}
           />
           {showSummaryCards && !hasSelection ? (
             <div className="shrink-0 border-b bg-background px-3 py-2">
@@ -93,7 +94,7 @@ export const InvoiceBillingWorkspace = ({
       ) : null}
 
       {showDetail && hasSelection ? (
-        <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/50">
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/50">
           {isMobile ? (
             <div className="border-b bg-background px-3 py-2">
               <Button

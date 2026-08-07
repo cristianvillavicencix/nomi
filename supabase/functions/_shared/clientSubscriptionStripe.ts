@@ -5,9 +5,27 @@ import {
   amountToCents,
   resolveOrCreateInvoiceStripeCustomer,
 } from "./clientProposalBilling.ts";
+import { resolveBillingRecipientEmailFromParts } from "./billingRecipientResolution.ts";
+import { sendSubscriptionSetupDelivery } from "./clientSubscriptionDelivery.ts";
+import { ensureSubscriptionSetupShareLink } from "./clientSubscriptionSetupLink.ts";
 import { subscriptionStatementDescriptorSettings } from "./subscriptionStatementDescriptor.ts";
+import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
 
 export type BillingInterval = "weekly" | "monthly" | "yearly";
+
+export const formatSubscriptionAmountLabel = (
+  amount: number,
+  currency: string,
+  interval: BillingInterval,
+) => {
+  const money = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency || "USD",
+  }).format(Number(amount) || 0);
+  if (interval === "weekly") return `${money}/wk`;
+  if (interval === "yearly") return `${money}/yr`;
+  return `${money}/mo`;
+};
 
 export type ClientSubscriptionRow = {
   id: number;
@@ -34,6 +52,8 @@ export type ClientSubscriptionRow = {
   canceled_at: string | null;
   paused_at: string | null;
   setup_checkout_url: string | null;
+  setup_share_url?: string | null;
+  subscription_number?: string | null;
   starts_at: string | null;
   ends_at: string | null;
 };
@@ -120,13 +140,107 @@ export const buildSubscriptionPriceData = (params: {
   },
 });
 
+export type SubscriptionLineItemInput = {
+  description: string;
+  quantity: number;
+  unit: string;
+  unit_price: number;
+  package_id?: number | null;
+  addon_id?: number | null;
+};
+
+export const normalizeSubscriptionLineItems = (
+  lineItems: unknown,
+  fallbackName: string,
+  fallbackAmount: number,
+): SubscriptionLineItemInput[] => {
+  const raw = Array.isArray(lineItems) ? lineItems : [];
+  const normalized = raw
+    .map((row) => {
+      if (!row || typeof row !== "object") return null;
+      const record = row as Record<string, unknown>;
+      const description = String(record.description ?? "").trim();
+      const unitPrice = Number(record.unit_price);
+      const quantity = Number(record.quantity) || 1;
+      if (!description || !Number.isFinite(unitPrice) || unitPrice <= 0) {
+        return null;
+      }
+      return {
+        description,
+        quantity,
+        unit: String(record.unit ?? "ea"),
+        unit_price: unitPrice,
+        package_id: record.package_id ?? null,
+        addon_id: record.addon_id ?? null,
+      } satisfies SubscriptionLineItemInput;
+    })
+    .filter((line): line is SubscriptionLineItemInput => line != null);
+
+  if (normalized.length > 0) return normalized;
+
+  return [
+    {
+      description: fallbackName,
+      quantity: 1,
+      unit: "ea",
+      unit_price: fallbackAmount,
+    },
+  ];
+};
+
+export const sumSubscriptionLineItemsAmount = (
+  lineItems: SubscriptionLineItemInput[],
+) =>
+  lineItems.reduce(
+    (sum, line) => sum + line.quantity * line.unit_price,
+    0,
+  );
+
+const buildStripeLineItemPriceData = (
+  line: SubscriptionLineItemInput,
+  currency: string,
+  billingInterval: BillingInterval,
+): Stripe.SubscriptionCreateParams.Item.PriceData => ({
+  currency: currency.toLowerCase(),
+  unit_amount: amountToCents(line.unit_price),
+  recurring: {
+    interval: mapBillingIntervalToStripe(billingInterval),
+  },
+  product_data: { name: line.description },
+});
+
+export const buildStripeSubscriptionCreateItems = (
+  lineItems: SubscriptionLineItemInput[],
+  currency: string,
+  billingInterval: BillingInterval,
+): Stripe.SubscriptionCreateParams.Item[] =>
+  lineItems.map((line) => ({
+    price_data: buildStripeLineItemPriceData(line, currency, billingInterval),
+    quantity: Math.max(1, Math.round(line.quantity)) || 1,
+  }));
+
+export const buildStripeCheckoutLineItems = (
+  lineItems: SubscriptionLineItemInput[],
+  currency: string,
+  billingInterval: BillingInterval,
+): Stripe.Checkout.SessionCreateParams.LineItem[] =>
+  lineItems.map((line) => ({
+    quantity: Math.max(1, Math.round(line.quantity)) || 1,
+    price_data: buildStripeLineItemPriceData(line, currency, billingInterval),
+  }));
+
 const readPaymentMethodFromStripe = (
   paymentMethod: Stripe.PaymentMethod | string | null | undefined,
 ) => {
   if (!paymentMethod || typeof paymentMethod === "string") {
-    return { brand: null as string | null, last4: null as string | null };
+    return {
+      id: typeof paymentMethod === "string" ? paymentMethod : null,
+      brand: null as string | null,
+      last4: null as string | null,
+    };
   }
   return {
+    id: paymentMethod.id,
     brand: paymentMethod.card?.brand ?? null,
     last4: paymentMethod.card?.last4 ?? null,
   };
@@ -168,6 +282,35 @@ export async function resolveClientStripePaymentMethod(
       stripePaymentMethodId: invoiceRow.stripe_payment_method_id.trim(),
       paymentMethodBrand: invoiceRow.payment_method_brand ?? null,
       paymentMethodLast4: invoiceRow.payment_method_last4 ?? null,
+    };
+  }
+
+  const subscriptionQuery = supabase
+    .from("client_subscriptions")
+    .select(
+      "stripe_customer_id, stripe_payment_method_id, payment_method_brand, payment_method_last4, updated_at",
+    )
+    .eq("org_id", params.orgId)
+    .not("stripe_payment_method_id", "is", null)
+    .order("updated_at", { ascending: false })
+    .limit(1);
+
+  if (params.contactId) {
+    subscriptionQuery.eq("contact_id", params.contactId);
+  } else if (params.companyId) {
+    subscriptionQuery.eq("company_id", params.companyId);
+  }
+
+  const { data: subscriptionRow } = await subscriptionQuery.maybeSingle();
+  if (
+    subscriptionRow?.stripe_customer_id?.trim() &&
+    subscriptionRow?.stripe_payment_method_id?.trim()
+  ) {
+    return {
+      stripeCustomerId: subscriptionRow.stripe_customer_id.trim(),
+      stripePaymentMethodId: subscriptionRow.stripe_payment_method_id.trim(),
+      paymentMethodBrand: subscriptionRow.payment_method_brand ?? null,
+      paymentMethodLast4: subscriptionRow.payment_method_last4 ?? null,
     };
   }
 
@@ -215,29 +358,25 @@ export async function createStripeSubscriptionWithCard(
     metadata: Record<string, string>;
     startsAt?: string | null;
     endsAt?: string | null;
+    lineItems?: SubscriptionLineItemInput[];
   },
 ) {
   const schedule = buildStripeSubscriptionScheduleParams({
     startsAt: params.startsAt,
     endsAt: params.endsAt,
   });
+  const items = buildStripeSubscriptionCreateItems(
+    params.lineItems ??
+      normalizeSubscriptionLineItems([], params.name, params.amount),
+    params.currency,
+    params.billingInterval,
+  );
   return stripe.subscriptions.create({
     customer: params.customerId,
     default_payment_method: params.paymentMethodId,
     collection_method: "charge_automatically",
     ...subscriptionStatementDescriptorSettings(params.name),
-    items: [
-      {
-        price_data: {
-          currency: params.currency.toLowerCase(),
-          unit_amount: amountToCents(params.amount),
-          recurring: {
-            interval: mapBillingIntervalToStripe(params.billingInterval),
-          },
-          product_data: { name: params.name },
-        },
-      },
-    ],
+    items,
     metadata: params.metadata,
     ...(schedule.trial_end ? { trial_end: schedule.trial_end } : {}),
     ...(schedule.cancel_at ? { cancel_at: schedule.cancel_at } : {}),
@@ -258,36 +397,158 @@ export async function createStripeSubscriptionCheckout(
     metadata: Record<string, string>;
     startsAt?: string | null;
     endsAt?: string | null;
+    lineItems?: SubscriptionLineItemInput[];
   },
 ) {
   const schedule = buildStripeSubscriptionScheduleParams({
     startsAt: params.startsAt,
     endsAt: params.endsAt,
   });
+  const lineItems = buildStripeCheckoutLineItems(
+    params.lineItems ??
+      normalizeSubscriptionLineItems([], params.name, params.amount),
+    params.currency,
+    params.billingInterval,
+  );
   return stripe.checkout.sessions.create({
     mode: "subscription",
     customer: params.customerId,
     success_url: params.successUrl,
     cancel_url: params.cancelUrl,
-    line_items: [
-      {
-        quantity: 1,
-        price_data: buildSubscriptionPriceData({
-          name: params.name,
-          amount: params.amount,
-          currency: params.currency,
-          billingInterval: params.billingInterval,
-        }),
-      },
-    ],
+    line_items: lineItems,
     metadata: params.metadata,
     subscription_data: {
       metadata: params.metadata,
-      ...subscriptionStatementDescriptorSettings(params.name),
       ...(schedule.trial_end ? { trial_end: schedule.trial_end } : {}),
       ...(schedule.cancel_at ? { cancel_at: schedule.cancel_at } : {}),
     },
   });
+}
+
+export async function updateStripeSubscriptionBilling(
+  stripe: Stripe,
+  params: {
+    stripeSubscriptionId: string;
+    name: string;
+    amount: number;
+    currency: string;
+    billingInterval: BillingInterval;
+    endsAt?: string | null;
+    lineItems?: SubscriptionLineItemInput[];
+  },
+) {
+  const normalizedLines = normalizeSubscriptionLineItems(
+    params.lineItems,
+    params.name,
+    params.amount,
+  );
+  const stripeSub = await stripe.subscriptions.retrieve(
+    params.stripeSubscriptionId,
+  );
+  const existingItems = stripeSub.items.data;
+  if (!existingItems.length && normalizedLines.length === 0) {
+    throw new Error("Stripe subscription has no billable item");
+  }
+
+  const schedule = buildStripeSubscriptionScheduleParams({
+    endsAt: params.endsAt,
+  });
+
+  const items: Stripe.SubscriptionUpdateParams.Item[] = [];
+  for (let index = normalizedLines.length; index < existingItems.length; index++) {
+    items.push({ id: existingItems[index].id, deleted: true });
+  }
+  normalizedLines.forEach((line, index) => {
+    const existingItem = existingItems[index];
+    const price_data = buildStripeLineItemPriceData(
+      line,
+      params.currency,
+      params.billingInterval,
+    );
+    const quantity = Math.max(1, Math.round(line.quantity)) || 1;
+    if (existingItem) {
+      items.push({ id: existingItem.id, price_data, quantity });
+    } else {
+      items.push({ price_data, quantity });
+    }
+  });
+
+  const updateParams: Stripe.SubscriptionUpdateParams = {
+    items,
+    ...subscriptionStatementDescriptorSettings(params.name),
+    proration_behavior: "create_prorations",
+  };
+
+  if (schedule.cancel_at) {
+    updateParams.cancel_at = schedule.cancel_at;
+  } else if (stripeSub.cancel_at) {
+    updateParams.cancel_at = null;
+  }
+
+  return stripe.subscriptions.update(params.stripeSubscriptionId, updateParams);
+}
+
+export async function reactivateStripeSubscription(
+  stripe: Stripe,
+  supabase: SupabaseClient,
+  params: {
+    subscription: ClientSubscriptionRow;
+    metadata: Record<string, string>;
+  },
+) {
+  const customerId = params.subscription.stripe_customer_id?.trim();
+  if (!customerId) {
+    throw new Error("Stripe customer is not set up for this subscription");
+  }
+
+  const savedPayment = await resolveClientStripePaymentMethod(supabase, {
+    orgId: params.subscription.org_id,
+    contactId: params.subscription.contact_id,
+    companyId: params.subscription.company_id,
+  });
+
+  const paymentMethodId = savedPayment?.stripePaymentMethodId?.trim();
+  if (!paymentMethodId) {
+    throw new Error(
+      "No saved payment method found. Send a setup link to collect a card first.",
+    );
+  }
+
+  const lineItems = normalizeSubscriptionLineItems(
+    params.subscription.line_items,
+    params.subscription.name,
+    Number(params.subscription.amount),
+  );
+
+  const stripeSub = await createStripeSubscriptionWithCard(stripe, {
+    customerId,
+    paymentMethodId,
+    name: params.subscription.name,
+    amount: Number(params.subscription.amount),
+    currency: params.subscription.currency ?? "USD",
+    billingInterval: params.subscription.billing_interval,
+    metadata: params.metadata,
+    startsAt: params.subscription.starts_at,
+    endsAt: params.subscription.ends_at,
+    lineItems,
+  });
+
+  await applyStripeSubscriptionSnapshot(
+    supabase,
+    params.subscription.id,
+    stripeSub,
+  );
+
+  await supabase
+    .from("client_subscriptions")
+    .update({
+      canceled_at: null,
+      cancel_at_period_end: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.subscription.id);
+
+  return stripeSub;
 }
 
 export const mapStripeSubscriptionStatus = (
@@ -324,6 +585,12 @@ export async function applyStripeSubscriptionSnapshot(
   const pm = readPaymentMethodFromStripe(stripeSub.default_payment_method);
   const now = new Date().toISOString();
 
+  const { data: existing } = await supabase
+    .from("client_subscriptions")
+    .select("activated_at")
+    .eq("id", subscriptionId)
+    .maybeSingle();
+
   const update: Record<string, unknown> = {
     stripe_subscription_id: stripeSub.id,
     stripe_customer_id:
@@ -347,12 +614,16 @@ export async function applyStripeSubscriptionSnapshot(
     paused_at: paused ? now : null,
     payment_method_brand: pm.brand,
     payment_method_last4: pm.last4,
+    stripe_payment_method_id: pm.id,
     updated_at: now,
   };
 
   if (status === "active" || status === "trialing") {
     update.setup_checkout_url = null;
     update.stripe_checkout_session_id = null;
+    if (!existing?.activated_at) {
+      update.activated_at = now;
+    }
   }
 
   if (stripeSub.cancel_at) {
@@ -473,7 +744,46 @@ export async function mirrorSubscriptionInvoiceToSigma(
     });
   }
 
+  await supabase
+    .from("client_subscriptions")
+    .update({ last_billed_at: paidAt, updated_at: new Date().toISOString() })
+    .eq("id", params.subscription.id);
+
   return { skipped: false, invoice_id: invoice.id };
+}
+
+export async function resolveSubscriptionClientName(
+  supabase: SupabaseClient,
+  params: {
+    contactId?: number | null;
+    companyId?: number | null;
+  },
+) {
+  if (params.contactId) {
+    const { data } = await supabase
+      .from("contacts")
+      .select("first_name, last_name, company_id")
+      .eq("id", params.contactId)
+      .maybeSingle();
+    if (data) {
+      const name = [data.first_name, data.last_name].filter(Boolean).join(" ");
+      return {
+        name: name || undefined,
+        companyId: params.companyId ?? data.company_id,
+      };
+    }
+  }
+  if (params.companyId) {
+    const { data } = await supabase
+      .from("companies")
+      .select("name")
+      .eq("id", params.companyId)
+      .maybeSingle();
+    if (data?.name) {
+      return { name: data.name, companyId: params.companyId };
+    }
+  }
+  return { name: undefined, companyId: params.companyId ?? null };
 }
 
 export async function resolveSubscriptionStripeCustomer(
@@ -496,5 +806,371 @@ export async function resolveSubscriptionStripeCustomer(
     contactId: params.contactId,
     companyId: params.companyId,
     existingCustomerId: savedCustomerId ?? null,
+  });
+}
+
+export async function resolveSubscriptionBillingEmail(
+  supabase: SupabaseClient,
+  params: {
+    companyId?: number | null;
+    contactId?: number | null;
+    emailTo?: string | null;
+  },
+): Promise<string> {
+  const explicit = params.emailTo?.trim();
+  if (explicit) return explicit;
+
+  let companyContextLinks: string[] | null = null;
+  let primaryContactEmails: Array<{ email?: string | null; isPrimary?: boolean }> | null =
+    null;
+  let businessEmail: string | null = null;
+
+  if (params.companyId) {
+    const { data } = await supabase
+      .from("companies")
+      .select("context_links, primary_contact_email_jsonb, email")
+      .eq("id", params.companyId)
+      .maybeSingle();
+    companyContextLinks = (data?.context_links as string[] | null) ?? null;
+    primaryContactEmails =
+      (data?.primary_contact_email_jsonb as Array<{
+        email?: string | null;
+        isPrimary?: boolean;
+      }> | null) ?? null;
+    businessEmail = data?.email ?? null;
+  }
+
+  let contactEmails: Array<{ email?: string | null; isPrimary?: boolean }> | null =
+    null;
+  if (params.contactId) {
+    const { data } = await supabase
+      .from("contacts")
+      .select("email_jsonb")
+      .eq("id", params.contactId)
+      .maybeSingle();
+    contactEmails =
+      (data?.email_jsonb as Array<{
+        email?: string | null;
+        isPrimary?: boolean;
+      }> | null) ?? null;
+  }
+
+  return resolveBillingRecipientEmailFromParts({
+    companyContextLinks,
+    primaryContactEmails,
+    businessEmail,
+    contactEmails,
+  });
+}
+
+export async function ensureSubscriptionStripeCustomer(
+  stripe: Stripe,
+  supabase: SupabaseClient,
+  params: {
+    orgId: number;
+    subscription: ClientSubscriptionRow;
+    emailTo?: string | null;
+  },
+): Promise<string> {
+  const existing = params.subscription.stripe_customer_id?.trim();
+  if (existing) return existing;
+
+  const contactId = params.subscription.contact_id;
+  const companyId = params.subscription.company_id;
+
+  let email = await resolveSubscriptionBillingEmail(supabase, {
+    companyId,
+    contactId,
+    emailTo: params.emailTo,
+  });
+  if (!email) {
+    throw new Error("A valid client email is required to set up billing");
+  }
+
+  const clientInfo = await resolveSubscriptionClientName(supabase, {
+    contactId,
+    companyId,
+  });
+  const resolvedCompanyId = companyId ?? clientInfo.companyId ?? null;
+
+  const savedPayment = await resolveClientStripePaymentMethod(supabase, {
+    orgId: params.orgId,
+    contactId,
+    companyId: resolvedCompanyId,
+  });
+
+  const customer = await resolveSubscriptionStripeCustomer(stripe, supabase, {
+    orgId: params.orgId,
+    contactId,
+    companyId: resolvedCompanyId,
+    email,
+    name: clientInfo.name,
+    savedPayment,
+  });
+
+  await supabase
+    .from("client_subscriptions")
+    .update({
+      stripe_customer_id: customer.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.subscription.id);
+
+  return customer.id;
+}
+
+export type SubscriptionPaymentMode =
+  | "saved_card"
+  | "staff_card"
+  | "request_setup";
+
+export async function applySubscriptionPayment(
+  stripe: Stripe,
+  supabase: SupabaseClient,
+  params: {
+    orgId: number;
+    memberId: number;
+    subscription: ClientSubscriptionRow;
+    paymentMode: SubscriptionPaymentMode;
+    paymentMethodId?: string | null;
+    emailTo?: string | null;
+    smsTo?: string | null;
+    sendEmail?: boolean;
+    sendSms?: boolean;
+    message?: string | null;
+    subject?: string | null;
+    baseUrl?: string | null;
+    orgName?: string | null;
+  },
+) {
+  if (params.subscription.status !== "pending_setup") {
+    throw new Error("Payment can only be applied while setup is pending");
+  }
+  if (params.subscription.stripe_subscription_id?.trim()) {
+    throw new Error("This subscription is already active in Stripe");
+  }
+
+  const stripeCustomerId = await ensureSubscriptionStripeCustomer(
+    stripe,
+    supabase,
+    {
+      orgId: params.orgId,
+      subscription: params.subscription,
+      emailTo: params.emailTo,
+    },
+  );
+
+  const recipientEmail = await resolveSubscriptionBillingEmail(supabase, {
+    companyId: params.subscription.company_id,
+    contactId: params.subscription.contact_id,
+    emailTo: params.emailTo,
+  });
+
+  const savedPayment = await resolveClientStripePaymentMethod(supabase, {
+    orgId: params.orgId,
+    contactId: params.subscription.contact_id,
+    companyId: params.subscription.company_id,
+  });
+
+  const metadata = buildSubscriptionMetadata({
+    orgId: params.orgId,
+    subscriptionId: params.subscription.id,
+    contactId: params.subscription.contact_id,
+    companyId: params.subscription.company_id,
+  });
+
+  const baseUrl = params.baseUrl?.trim()?.replace(/\/$/, "") ||
+    resolvePublicAppBaseUrl();
+  const returnQuery = `tab=subscriptions&subscription=${params.subscription.id}`;
+  const scheduleParams = {
+    startsAt: params.subscription.starts_at,
+    endsAt: params.subscription.ends_at,
+  };
+
+  let checkoutUrl: string | null = null;
+  let usedSavedCard = false;
+  let usedStaffCard = false;
+  let emailSent = false;
+  let emailSkipped = false;
+  let smsSent = false;
+  let smsSkipped = false;
+
+  let paymentMethodId: string | null = null;
+  let paymentMethodBrand: string | null = null;
+  let paymentMethodLast4: string | null = null;
+
+  if (params.paymentMode === "staff_card") {
+    const staffPaymentMethodId = params.paymentMethodId?.trim();
+    if (!staffPaymentMethodId) {
+      throw new Error(
+        "Enter and confirm the client card before activating the subscription",
+      );
+    }
+    await stripe.paymentMethods.attach(staffPaymentMethodId, {
+      customer: stripeCustomerId,
+    });
+    await stripe.customers.update(stripeCustomerId, {
+      invoice_settings: {
+        default_payment_method: staffPaymentMethodId,
+      },
+    });
+    const pm = await stripe.paymentMethods.retrieve(staffPaymentMethodId);
+    paymentMethodId = staffPaymentMethodId;
+    paymentMethodBrand = pm.card?.brand ?? null;
+    paymentMethodLast4 = pm.card?.last4 ?? null;
+    usedStaffCard = true;
+  } else if (params.paymentMode === "saved_card") {
+    if (!savedPayment?.stripePaymentMethodId) {
+      throw new Error(
+        "No saved card found for this client. Choose another payment option.",
+      );
+    }
+    paymentMethodId = savedPayment.stripePaymentMethodId;
+    paymentMethodBrand = savedPayment.paymentMethodBrand;
+    paymentMethodLast4 = savedPayment.paymentMethodLast4;
+    usedSavedCard = true;
+  }
+
+  if (paymentMethodId) {
+    const subscriptionLines = normalizeSubscriptionLineItems(
+      params.subscription.line_items,
+      params.subscription.name,
+      Number(params.subscription.amount),
+    );
+    const stripeSub = await createStripeSubscriptionWithCard(stripe, {
+      customerId: stripeCustomerId,
+      paymentMethodId,
+      name: params.subscription.name,
+      amount: Number(params.subscription.amount),
+      currency: params.subscription.currency,
+      billingInterval: params.subscription.billing_interval,
+      metadata,
+      lineItems: subscriptionLines,
+      ...scheduleParams,
+    });
+    await applyStripeSubscriptionSnapshot(
+      supabase,
+      params.subscription.id,
+      stripeSub,
+    );
+    await supabase
+      .from("client_subscriptions")
+      .update({
+        stripe_customer_id: stripeCustomerId,
+        payment_method_brand: paymentMethodBrand,
+        payment_method_last4: paymentMethodLast4,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", params.subscription.id);
+  } else {
+    const subscriptionLines = normalizeSubscriptionLineItems(
+      params.subscription.line_items,
+      params.subscription.name,
+      Number(params.subscription.amount),
+    );
+    const session = await createStripeSubscriptionCheckout(stripe, {
+      customerId: stripeCustomerId,
+      name: params.subscription.name,
+      amount: Number(params.subscription.amount),
+      currency: params.subscription.currency,
+      billingInterval: params.subscription.billing_interval,
+      successUrl: `${baseUrl}/billing?${returnQuery}&setup=success`,
+      cancelUrl: `${baseUrl}/billing?${returnQuery}&setup=cancel`,
+      metadata,
+      lineItems: subscriptionLines,
+      ...scheduleParams,
+    });
+
+    checkoutUrl = session.url ?? null;
+    await supabase
+      .from("client_subscriptions")
+      .update({
+        stripe_customer_id: stripeCustomerId,
+        stripe_checkout_session_id: session.id,
+        setup_checkout_url: checkoutUrl,
+        status: "pending_setup",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", params.subscription.id);
+
+    const shouldSendEmail = params.sendEmail === true;
+    const shouldSendSms = params.sendSms === true;
+
+    if (checkoutUrl && (shouldSendEmail || shouldSendSms)) {
+      const delivery = await deliverSubscriptionSetupLink(supabase, {
+        orgId: params.orgId,
+        memberId: params.memberId,
+        orgName: params.orgName ?? null,
+        subscription: params.subscription,
+        checkoutUrl,
+        baseUrl: params.baseUrl,
+        emailTo: recipientEmail,
+        smsTo: params.smsTo,
+        subject: params.subject,
+        message: params.message,
+        sendEmail: shouldSendEmail,
+        sendSms: shouldSendSms,
+      });
+      emailSent = delivery.emailSent;
+      emailSkipped = delivery.emailSkipped;
+      smsSent = delivery.smsSent;
+      smsSkipped = delivery.smsSkipped;
+    }
+  }
+
+  return {
+    checkout_url: checkoutUrl,
+    used_saved_card: usedSavedCard,
+    used_staff_card: usedStaffCard,
+    email_sent: emailSent,
+    email_skipped: emailSkipped,
+    sms_sent: smsSent,
+    sms_skipped: smsSkipped,
+  };
+}
+
+export async function deliverSubscriptionSetupLink(
+  supabase: SupabaseClient,
+  params: {
+    orgId: number;
+    memberId: number;
+    orgName: string | null;
+    subscription: ClientSubscriptionRow;
+    checkoutUrl: string;
+    baseUrl: string;
+    emailTo?: string | null;
+    smsTo?: string | null;
+    subject?: string | null;
+    message?: string | null;
+    sendEmail?: boolean;
+    sendSms?: boolean;
+  },
+) {
+  const { shareUrl } = await ensureSubscriptionSetupShareLink(supabase, {
+    orgId: params.orgId,
+    subscriptionId: params.subscription.id,
+    checkoutUrl: params.checkoutUrl,
+    baseUrl: params.baseUrl,
+  });
+
+  return sendSubscriptionSetupDelivery(supabase, {
+    orgId: params.orgId,
+    memberId: params.memberId,
+    orgName: params.orgName,
+    subscriptionName: params.subscription.name,
+    subscriptionNumber: params.subscription.subscription_number ?? null,
+    amountLabel: formatSubscriptionAmountLabel(
+      Number(params.subscription.amount),
+      params.subscription.currency,
+      params.subscription.billing_interval,
+    ),
+    shareUrl,
+    emailTo: params.emailTo,
+    smsTo: params.smsTo,
+    subject: params.subject,
+    message: params.message,
+    sendEmail: params.sendEmail,
+    sendSms: params.sendSms,
+    contactId: params.subscription.contact_id,
   });
 }

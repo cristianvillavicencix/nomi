@@ -7,19 +7,26 @@ import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
 import {
   isStripeMockMode,
-  resolveContactEmail,
 } from "../_shared/clientProposalBilling.ts";
 import { getStripeForOrg } from "../_shared/stripeClient.ts";
 import { isOrgClientInvoiceCheckoutEnabled } from "../_shared/organizationStripeSettings.ts";
 import { resolvePublicAppBaseUrl } from "../_shared/publicAppUrl.ts";
 import {
   applyStripeSubscriptionSnapshot,
+  applySubscriptionPayment,
   buildSubscriptionMetadata,
   createStripeSubscriptionCheckout,
+  deliverSubscriptionSetupLink,
+  ensureSubscriptionStripeCustomer,
+  normalizeSubscriptionLineItems,
+  reactivateStripeSubscription,
+  resolveSubscriptionBillingEmail,
+  sumSubscriptionLineItemsAmount,
+  updateStripeSubscriptionBilling,
   type BillingInterval,
   type ClientSubscriptionRow,
+  type SubscriptionPaymentMode,
 } from "../_shared/clientSubscriptionStripe.ts";
-import { sendSubscriptionSetupDelivery } from "../_shared/clientSubscriptionDelivery.ts";
 
 type ManageBody = {
   subscription_id?: number;
@@ -28,7 +35,21 @@ type ManageBody = {
     | "resume"
     | "cancel_now"
     | "cancel_at_period_end"
-    | "send_setup";
+    | "undo_cancel"
+    | "reactivate"
+    | "send_setup"
+    | "update"
+    | "apply_payment";
+  name?: string | null;
+  description?: string | null;
+  amount?: number | null;
+  billing_interval?: BillingInterval | null;
+  ends_at?: string | null;
+  reference_number?: string | null;
+  deal_id?: number | null;
+  line_items?: Array<Record<string, unknown>>;
+  payment_mode?: SubscriptionPaymentMode | null;
+  payment_method_id?: string | null;
   send_email?: boolean;
   send_sms?: boolean;
   email_to?: string | null;
@@ -107,15 +128,17 @@ Deno.serve(
 
         const stripe = await getStripeForOrg(member.org_id);
         const stripeSubId = subscription.stripe_subscription_id?.trim();
-        const stripeCustomerId = subscription.stripe_customer_id?.trim();
 
         if (action === "send_setup") {
-          if (!stripeCustomerId) {
-            return createErrorResponse(
-              400,
-              "Stripe customer is not set up for this subscription",
-            );
-          }
+          const stripeCustomerId = await ensureSubscriptionStripeCustomer(
+            stripe,
+            supabaseAdmin,
+            {
+              orgId: member.org_id,
+              subscription,
+              emailTo: body.email_to,
+            },
+          );
 
           const metadata = buildSubscriptionMetadata({
             orgId: member.org_id,
@@ -154,14 +177,14 @@ Deno.serve(
             })
             .eq("id", subscription.id);
 
-          let recipientEmail = body.email_to?.trim() ?? "";
-          if (!recipientEmail && subscription.contact_id) {
-            recipientEmail =
-              (await resolveContactEmail(
-                supabaseAdmin,
-                subscription.contact_id,
-              )) ?? "";
-          }
+          let recipientEmail = await resolveSubscriptionBillingEmail(
+            supabaseAdmin,
+            {
+              companyId: subscription.company_id,
+              contactId: subscription.contact_id,
+              emailTo: body.email_to,
+            },
+          );
 
           const { data: org } = await supabaseAdmin
             .from("organizations")
@@ -169,19 +192,19 @@ Deno.serve(
             .eq("id", member.org_id)
             .maybeSingle();
 
-          const delivery = await sendSubscriptionSetupDelivery(supabaseAdmin, {
+          const delivery = await deliverSubscriptionSetupLink(supabaseAdmin, {
             orgId: member.org_id,
             memberId: Number(member.id),
             orgName: org?.name ?? null,
-            subscriptionName: subscription.name,
+            subscription,
             checkoutUrl,
+            baseUrl,
             emailTo: recipientEmail,
             smsTo: body.sms_to,
             subject: body.subject,
             message: body.message,
             sendEmail: body.send_email,
             sendSms: body.send_sms,
-            contactId: subscription.contact_id,
           });
 
           const { data: fresh } = await supabaseAdmin
@@ -201,6 +224,259 @@ Deno.serve(
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
+        }
+
+        if (action === "apply_payment") {
+          if (subscription.status !== "pending_setup") {
+            return createErrorResponse(
+              400,
+              "Payment can only be applied while setup is pending",
+            );
+          }
+          if (subscription.stripe_subscription_id?.trim()) {
+            return createErrorResponse(
+              400,
+              "This subscription is already active in Stripe",
+            );
+          }
+
+          const paymentMode = body.payment_mode ?? "request_setup";
+          if (
+            paymentMode !== "saved_card" &&
+            paymentMode !== "staff_card" &&
+            paymentMode !== "request_setup"
+          ) {
+            return createErrorResponse(400, "Invalid payment mode");
+          }
+
+          const { data: org } = await supabaseAdmin
+            .from("organizations")
+            .select("name")
+            .eq("id", member.org_id)
+            .maybeSingle();
+
+          const baseUrl = body.base_url?.trim()?.replace(/\/$/, "") ||
+            resolvePublicAppBaseUrl();
+
+          const paymentResult = await applySubscriptionPayment(
+            stripe,
+            supabaseAdmin,
+            {
+              orgId: member.org_id,
+              memberId: Number(member.id),
+              subscription,
+              paymentMode,
+              paymentMethodId: body.payment_method_id,
+              emailTo: body.email_to,
+              smsTo: body.sms_to,
+              sendEmail: body.send_email,
+              sendSms: body.send_sms,
+              message: body.message,
+              subject: body.subject,
+              baseUrl,
+              orgName: org?.name ?? null,
+            },
+          );
+
+          const { data: fresh } = await supabaseAdmin
+            .from("client_subscriptions")
+            .select("*")
+            .eq("id", subscription.id)
+            .single();
+
+          return new Response(
+            JSON.stringify({
+              subscription: fresh,
+              ...paymentResult,
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        if (action === "update") {
+          if (subscription.status === "canceled") {
+            return createErrorResponse(
+              400,
+              "Canceled subscriptions cannot be edited",
+            );
+          }
+
+          const name = body.name?.trim() || subscription.name;
+          const amount =
+            body.amount != null ? Number(body.amount) : Number(subscription.amount);
+          const billingInterval =
+            body.billing_interval ?? subscription.billing_interval;
+          const description =
+            body.description !== undefined
+              ? body.description?.trim() || null
+              : subscription.description;
+
+          if (!name) {
+            return createErrorResponse(400, "Subscription name is required");
+          }
+          if (!Number.isFinite(amount) || amount <= 0) {
+            return createErrorResponse(400, "Enter a valid amount");
+          }
+          if (
+            billingInterval !== "weekly" &&
+            billingInterval !== "monthly" &&
+            billingInterval !== "yearly"
+          ) {
+            return createErrorResponse(400, "Invalid billing interval");
+          }
+
+          const endsAt =
+            body.ends_at !== undefined
+              ? body.ends_at?.trim() || null
+              : subscription.ends_at;
+          const referenceNumber =
+            body.reference_number !== undefined
+              ? body.reference_number?.trim() || null
+              : subscription.reference_number;
+          const dealId =
+            body.deal_id !== undefined
+              ? body.deal_id
+                ? Number(body.deal_id)
+                : null
+              : subscription.deal_id;
+          const lineItemsInput =
+            body.line_items !== undefined
+              ? body.line_items
+              : subscription.line_items;
+          const normalizedLines = normalizeSubscriptionLineItems(
+            lineItemsInput,
+            name,
+            amount,
+          );
+          const computedAmount = sumSubscriptionLineItemsAmount(normalizedLines);
+          if (
+            body.line_items !== undefined &&
+            Math.round(computedAmount * 100) !== Math.round(amount * 100)
+          ) {
+            return createErrorResponse(
+              400,
+              "Subscription amount must match the sum of line items",
+            );
+          }
+          const resolvedAmount = body.line_items !== undefined
+            ? computedAmount
+            : amount;
+
+          const billingChanged =
+            Math.round(resolvedAmount * 100) !==
+              Math.round(Number(subscription.amount) * 100) ||
+            billingInterval !== subscription.billing_interval ||
+            (body.line_items !== undefined &&
+              JSON.stringify(normalizedLines) !==
+                JSON.stringify(
+                  normalizeSubscriptionLineItems(
+                    subscription.line_items,
+                    subscription.name,
+                    Number(subscription.amount),
+                  ),
+                ));
+
+          const dbPatch: Record<string, unknown> = {
+            name,
+            description,
+            amount: resolvedAmount,
+            billing_interval: billingInterval,
+            ends_at: endsAt,
+            reference_number: referenceNumber,
+            deal_id: dealId,
+            line_items: normalizedLines,
+            updated_at: new Date().toISOString(),
+          };
+
+          if (
+            subscription.status === "pending_setup" &&
+            billingChanged
+          ) {
+            dbPatch.setup_checkout_url = null;
+            dbPatch.stripe_checkout_session_id = null;
+          }
+
+          await supabaseAdmin
+            .from("client_subscriptions")
+            .update(dbPatch)
+            .eq("id", subscription.id);
+
+          if (stripeSubId) {
+            const updatedSub = await updateStripeSubscriptionBilling(stripe, {
+              stripeSubscriptionId: stripeSubId,
+              name,
+              amount: resolvedAmount,
+              currency: subscription.currency ?? "USD",
+              billingInterval: billingInterval as BillingInterval,
+              endsAt,
+              lineItems: normalizedLines,
+            });
+            await applyStripeSubscriptionSnapshot(
+              supabaseAdmin,
+              subscription.id,
+              updatedSub,
+            );
+            await supabaseAdmin
+              .from("client_subscriptions")
+              .update({
+                name,
+                description,
+                amount: resolvedAmount,
+                billing_interval: billingInterval,
+                ends_at: endsAt,
+                line_items: normalizedLines,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", subscription.id);
+          }
+
+          const { data: fresh } = await supabaseAdmin
+            .from("client_subscriptions")
+            .select("*")
+            .eq("id", subscription.id)
+            .single();
+
+          return new Response(
+            JSON.stringify({
+              subscription: fresh,
+              setup_link_stale:
+                subscription.status === "pending_setup" && billingChanged,
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        if (action === "reactivate") {
+          if (subscription.status !== "canceled") {
+            return createErrorResponse(
+              400,
+              "Only canceled subscriptions can be reactivated",
+            );
+          }
+          await reactivateStripeSubscription(stripe, supabaseAdmin, {
+            subscription,
+            metadata: buildSubscriptionMetadata({
+              orgId: member.org_id,
+              subscriptionId: subscription.id,
+              contactId: subscription.contact_id,
+              companyId: subscription.company_id,
+            }),
+          });
+          const { data: fresh } = await supabaseAdmin
+            .from("client_subscriptions")
+            .select("*")
+            .eq("id", subscription.id)
+            .single();
+          return new Response(JSON.stringify({ subscription: fresh }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
 
         if (!stripeSubId) {
@@ -237,6 +513,16 @@ Deno.serve(
           case "cancel_at_period_end":
             updatedSub = await stripe.subscriptions.update(stripeSubId, {
               cancel_at_period_end: true,
+            });
+            await applyStripeSubscriptionSnapshot(
+              supabaseAdmin,
+              subscription.id,
+              updatedSub,
+            );
+            break;
+          case "undo_cancel":
+            updatedSub = await stripe.subscriptions.update(stripeSubId, {
+              cancel_at_period_end: false,
             });
             await applyStripeSubscriptionSnapshot(
               supabaseAdmin,

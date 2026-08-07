@@ -6,7 +6,8 @@ export type SubscriptionStatusFilter =
   | "active"
   | "past_due"
   | "paused"
-  | "canceled";
+  | "canceled"
+  | "expired";
 
 export const SUBSCRIPTION_FILTER_OPTIONS: Array<{
   value: SubscriptionStatusFilter;
@@ -17,19 +18,45 @@ export const SUBSCRIPTION_FILTER_OPTIONS: Array<{
   { value: "active", label: "Active" },
   { value: "past_due", label: "Past due" },
   { value: "paused", label: "Paused" },
+  { value: "expired", label: "Expired" },
   { value: "canceled", label: "Canceled" },
 ];
+
+export const isSubscriptionExpired = (
+  subscription: Pick<ClientSubscription, "ends_at" | "status">,
+) => {
+  if (subscription.status === "canceled") return false;
+  const endsAt = subscription.ends_at?.trim();
+  if (!endsAt) return false;
+  const endMs = Date.parse(endsAt);
+  return Number.isFinite(endMs) && endMs < Date.now();
+};
+
+export const subscriptionMatchesStatusFilter = (
+  row: ClientSubscription,
+  statusFilter: SubscriptionStatusFilter,
+) => {
+  if (statusFilter === "all") return true;
+  if (statusFilter === "expired") return isSubscriptionExpired(row);
+  return row.status === statusFilter;
+};
 
 export const buildSubscriptionListFilter = (
   statusFilter: SubscriptionStatusFilter,
 ): Record<string, string> => {
-  if (statusFilter === "all") {
+  if (statusFilter === "all" || statusFilter === "expired") {
     return {};
   }
   return { "status@eq": statusFilter };
 };
 
-export const subscriptionStatusLabel = (status?: string | null) => {
+export const subscriptionStatusLabel = (
+  status?: string | null,
+  subscription?: Pick<ClientSubscription, "ends_at" | "status"> | null,
+) => {
+  if (subscription && isSubscriptionExpired(subscription)) {
+    return "Expired";
+  }
   switch (status) {
     case "pending_setup":
       return "Pending setup";
@@ -48,7 +75,13 @@ export const subscriptionStatusLabel = (status?: string | null) => {
   }
 };
 
-export const subscriptionStatusVariant = (status?: string | null) => {
+export const subscriptionStatusVariant = (
+  status?: string | null,
+  subscription?: Pick<ClientSubscription, "ends_at" | "status"> | null,
+) => {
+  if (subscription && isSubscriptionExpired(subscription)) {
+    return "outline" as const;
+  }
   switch (status) {
     case "active":
     case "trialing":
@@ -66,7 +99,7 @@ export const subscriptionStatusVariant = (status?: string | null) => {
 };
 
 export const countSubscriptionsByStatusFilter = (
-  rows: Array<{ status?: string | null }>,
+  rows: ClientSubscription[],
 ): Record<SubscriptionStatusFilter, number> => {
   const counts: Record<SubscriptionStatusFilter, number> = {
     all: 0,
@@ -75,12 +108,16 @@ export const countSubscriptionsByStatusFilter = (
     past_due: 0,
     paused: 0,
     canceled: 0,
+    expired: 0,
   };
 
   for (const row of rows) {
     counts.all += 1;
+    if (isSubscriptionExpired(row)) {
+      counts.expired += 1;
+    }
     const status = row.status as SubscriptionStatusFilter | undefined;
-    if (status && status in counts && status !== "all") {
+    if (status && status in counts && status !== "all" && status !== "expired") {
       counts[status] += 1;
     }
   }
@@ -98,6 +135,8 @@ export const subscriptionMatchesSearchQuery = (
   if (!q) return true;
   const haystack = [
     row.name,
+    row.subscription_number,
+    row.reference_number,
     companyName,
     contactLabel,
     row.payment_method_last4,
@@ -123,12 +162,33 @@ export const formatSubscriptionAmountLabel = (
   return `${money}/mo`;
 };
 
+export const buildSubscriptionSetupSharePath = (shortCode: string) =>
+  `/sub/${shortCode.trim()}`;
+
+export const buildSubscriptionSetupShareUrl = (
+  origin: string,
+  shortCode: string,
+) => `${origin.replace(/\/$/, "")}${buildSubscriptionSetupSharePath(shortCode)}`;
+
 export const buildDefaultSubscriptionSetupMessage = (params: {
   orgLabel: string;
   subscriptionName: string;
-  checkoutUrl: string;
-}) =>
-  `${params.orgLabel}: Set up your ${params.subscriptionName} subscription and save your card for automatic billing:\n\n${params.checkoutUrl}`;
+  subscriptionNumber?: string | null;
+  amountLabel?: string | null;
+  shareUrl: string;
+}) => {
+  const planLabel = params.amountLabel
+    ? `${params.subscriptionName} (${params.amountLabel})`
+    : params.subscriptionName;
+  const lines = [
+    `${params.orgLabel}: Set up your ${planLabel} subscription and save your card for automatic billing:`,
+  ];
+  if (params.subscriptionNumber?.trim()) {
+    lines.push(`Reference: ${params.subscriptionNumber.trim()}`);
+  }
+  lines.push("", params.shareUrl.trim());
+  return lines.join("\n");
+};
 
 const STRIPE_SUFFIX_MAX = 22;
 const STRIPE_PREFIX_MAX = 10;

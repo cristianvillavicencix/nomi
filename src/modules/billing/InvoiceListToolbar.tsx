@@ -2,6 +2,7 @@ import { ChevronDown, Plus } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "react-router";
 import { useGetList } from "ra-core";
+import { BillingStatusFilterMenu } from "@/modules/billing/BillingStatusFilterMenu";
 import {
   countInvoicesByStatusFilter,
   INVOICE_FILTER_OPTIONS,
@@ -16,7 +17,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 
 type InvoiceListToolbarProps = {
   statusFilter: InvoiceStatusFilter;
@@ -24,6 +24,8 @@ type InvoiceListToolbarProps = {
   searchQuery: string;
   onSearchQueryChange: (next: string) => void;
   onFromProposal: () => void;
+  /** Sidebar with detail open: New stacks below search. Full list: New on the same row. */
+  compact?: boolean;
 };
 
 export const InvoiceListToolbar = ({
@@ -32,6 +34,7 @@ export const InvoiceListToolbar = ({
   searchQuery,
   onSearchQueryChange,
   onFromProposal,
+  compact = false,
 }: InvoiceListToolbarProps) => {
   const { data: invoices = [] } = useGetList<ClientInvoice>(
     "client_invoices",
@@ -48,82 +51,81 @@ export const InvoiceListToolbar = ({
     [invoices],
   );
 
-  return (
-    <div className="flex shrink-0 flex-col gap-2 border-b bg-background px-3 py-2">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-        <ModuleSearchField
-          value={searchQuery}
-          onChange={onSearchQueryChange}
-          basePlaceholder="Search by client, number, amount"
-          total={counts.all}
-          itemSingular="invoice"
-        />
+  const filterAndSearch = (
+    <>
+      <BillingStatusFilterMenu
+        value={statusFilter}
+        onChange={onStatusFilterChange}
+        options={INVOICE_FILTER_OPTIONS}
+        counts={counts}
+        ariaLabel="Filter invoices"
+      />
+      <ModuleSearchField
+        value={searchQuery}
+        onChange={onSearchQueryChange}
+        basePlaceholder="Search by client, number, amount"
+        total={counts.all}
+        itemSingular="invoice"
+        className="min-w-0 flex-1 [&>div]:max-w-none"
+      />
+    </>
+  );
 
-        <div className="flex shrink-0 items-stretch sm:ml-auto">
+  const newButtonGroup = (
+    <div
+      className={
+        compact
+          ? "flex w-full items-stretch sm:w-auto"
+          : "flex shrink-0 items-stretch"
+      }
+    >
+      <Button
+        type="button"
+        variant="primary"
+        size="sm"
+        className={compact ? "flex-1 rounded-r-none sm:flex-none" : "rounded-r-none"}
+        asChild
+      >
+        <Link to="/billing/invoices/new" aria-label="New invoice">
+          <Plus className="size-4" />
+          New invoice
+        </Link>
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <Button
             type="button"
             variant="primary"
             size="sm"
-            className="rounded-r-none"
-            asChild
+            className="rounded-l-none border-l border-primary-foreground/20 px-2"
+            aria-label="More create options"
           >
-            <Link to="/billing/invoices/new" aria-label="New invoice">
-              <Plus className="size-4" />
-              New invoice
-            </Link>
+            <ChevronDown className="size-4" />
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className="rounded-l-none border-l border-primary-foreground/20 px-2"
-                aria-label="More create options"
-              >
-                <ChevronDown className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={onFromProposal}>
-                <Plus className="size-4" />
-                From proposal
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={onFromProposal}>
+            <Plus className="size-4" />
+            From proposal
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 
-      <div className="-mx-1 flex gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {INVOICE_FILTER_OPTIONS.map((option) => {
-          const active = statusFilter === option.value;
-          const count = counts[option.value];
-          return (
-            <Button
-              key={option.value}
-              type="button"
-              size="sm"
-              variant={active ? "secondary" : "ghost"}
-              className={cn(
-                "h-7 shrink-0 gap-1.5 px-2.5 text-xs",
-                active && "bg-muted font-medium",
-              )}
-              onClick={() => onStatusFilterChange(option.value)}
-              aria-pressed={active}
-            >
-              {option.label}
-              <span
-                className={cn(
-                  "tabular-nums text-muted-foreground",
-                  active && "text-foreground",
-                )}
-              >
-                {count}
-              </span>
-            </Button>
-          );
-        })}
+  if (compact) {
+    return (
+      <div className="flex shrink-0 flex-col gap-2 border-b bg-background px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2">{filterAndSearch}</div>
+        {newButtonGroup}
       </div>
+    );
+  }
+
+  return (
+    <div className="flex shrink-0 items-center gap-2 border-b bg-background px-3 py-2">
+      {filterAndSearch}
+      {newButtonGroup}
     </div>
   );
 };

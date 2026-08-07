@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { pickLatestSavedPaymentMethod } from "@/modules/billing/subscriptions/useClientSavedPaymentMethod";
-import type { ClientInvoice, Contract } from "@/modules/types";
+import type { ClientInvoice, ClientSubscription, Contract } from "@/modules/types";
 
 describe("pickLatestSavedPaymentMethod", () => {
   it("returns null when no saved cards exist", () => {
     expect(pickLatestSavedPaymentMethod([], [])).toBeNull();
   });
 
-  it("prefers the most recently updated card across invoices and contracts", () => {
+  it("prefers the most recently updated card across invoices, contracts, and subscriptions", () => {
     const invoices: ClientInvoice[] = [
       {
         id: 1,
@@ -28,11 +28,24 @@ describe("pickLatestSavedPaymentMethod", () => {
       } as Contract,
     ];
 
-    expect(pickLatestSavedPaymentMethod(invoices, contracts)).toEqual({
-      brand: "mastercard",
-      last4: "5555",
-      source: "contract",
-      updatedAt: "2026-06-01T00:00:00.000Z",
+    const subscriptions: ClientSubscription[] = [
+      {
+        id: 3,
+        name: "Hosting",
+        amount: 99,
+        billing_interval: "monthly",
+        stripe_payment_method_id: "pm_sub",
+        payment_method_brand: "amex",
+        payment_method_last4: "1111",
+        updated_at: "2026-08-01T00:00:00.000Z",
+      } as ClientSubscription,
+    ];
+
+    expect(pickLatestSavedPaymentMethod(invoices, contracts, subscriptions)).toEqual({
+      brand: "amex",
+      last4: "1111",
+      source: "subscription",
+      updatedAt: "2026-08-01T00:00:00.000Z",
     });
   });
 
