@@ -75,7 +75,7 @@ export const InvoiceListToolbar = ({
     <div
       className={
         compact
-          ? "flex w-full items-stretch sm:w-auto"
+          ? "flex w-full items-stretch"
           : "flex shrink-0 items-stretch"
       }
     >
@@ -83,7 +83,7 @@ export const InvoiceListToolbar = ({
         type="button"
         variant="primary"
         size="sm"
-        className={compact ? "flex-1 rounded-r-none sm:flex-none" : "rounded-r-none"}
+        className={compact ? "min-w-0 flex-1 rounded-r-none" : "rounded-r-none"}
         asChild
       >
         <Link to="/billing/invoices/new" aria-label="New invoice">
@@ -97,7 +97,7 @@ export const InvoiceListToolbar = ({
             type="button"
             variant="primary"
             size="sm"
-            className="rounded-l-none border-l border-primary-foreground/20 px-2"
+            className="shrink-0 rounded-l-none border-l border-primary-foreground/20 px-2"
             aria-label="More create options"
           >
             <ChevronDown className="size-4" />

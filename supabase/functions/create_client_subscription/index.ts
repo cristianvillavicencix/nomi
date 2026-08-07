@@ -279,16 +279,26 @@ Deno.serve(
           paymentMethodLast4 = pm.card?.last4 ?? null;
           usedStaffCard = true;
         } else if (paymentMode === "saved_card") {
-          if (!savedPayment?.stripePaymentMethodId) {
+          const explicitPaymentMethodId = body.payment_method_id?.trim();
+          if (explicitPaymentMethodId) {
+            const pm = await stripe.paymentMethods.retrieve(
+              explicitPaymentMethodId,
+            );
+            paymentMethodId = explicitPaymentMethodId;
+            paymentMethodBrand = pm.card?.brand ?? null;
+            paymentMethodLast4 = pm.card?.last4 ?? null;
+            usedSavedCard = true;
+          } else if (savedPayment?.stripePaymentMethodId) {
+            paymentMethodId = savedPayment.stripePaymentMethodId;
+            paymentMethodBrand = savedPayment.paymentMethodBrand;
+            paymentMethodLast4 = savedPayment.paymentMethodLast4;
+            usedSavedCard = true;
+          } else {
             return createErrorResponse(
               400,
               "No saved card found for this client. Choose another payment option.",
             );
           }
-          paymentMethodId = savedPayment.stripePaymentMethodId;
-          paymentMethodBrand = savedPayment.paymentMethodBrand;
-          paymentMethodLast4 = savedPayment.paymentMethodLast4;
-          usedSavedCard = true;
         }
 
         if (paymentMethodId) {

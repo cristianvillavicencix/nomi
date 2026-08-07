@@ -38,6 +38,11 @@ import {
   sumSubscriptionLinesAmount,
 } from "@/modules/billing/subscriptions/subscriptionLineUtils";
 import {
+  SavedCardSelect,
+  resolveSavedCardPaymentMethodId,
+  savedCardOptionValue,
+} from "@/modules/billing/subscriptions/SavedCardSelect";
+import {
   formatSavedCardLabel,
   savedCardSourceLabel,
   useClientSavedPaymentMethod,
@@ -153,6 +158,9 @@ export const SubscriptionFormEditor = forwardRef<
   const [sendSms, setSendSms] = useState(false);
   const [message, setMessage] = useState("");
   const [messageEdited, setMessageEdited] = useState(false);
+  const [selectedSavedCardValue, setSelectedSavedCardValue] = useState<
+    string | null
+  >(null);
   const [hydrated, setHydrated] = useState(mode === "create");
 
   const isCanceled = subscription?.status === "canceled";
@@ -302,6 +310,28 @@ export const SubscriptionFormEditor = forwardRef<
     billTo?.companyId,
   ]);
 
+  useEffect(() => {
+    if (allSavedCards.length === 0) {
+      setSelectedSavedCardValue(null);
+      return;
+    }
+    setSelectedSavedCardValue((current) => {
+      if (
+        current &&
+        allSavedCards.some((card) => savedCardOptionValue(card) === current)
+      ) {
+        return current;
+      }
+      return savedCardOptionValue(allSavedCards[0]);
+    });
+  }, [allSavedCards]);
+
+  const selectedSavedPaymentMethodId = useMemo(
+    () =>
+      resolveSavedCardPaymentMethodId(allSavedCards, selectedSavedCardValue),
+    [allSavedCards, selectedSavedCardValue],
+  );
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (mode === "create") {
@@ -310,6 +340,11 @@ export const SubscriptionFormEditor = forwardRef<
           paymentMethodId = (await staffCardRef.current?.confirmCard()) ?? null;
           if (!paymentMethodId) {
             throw new Error("Confirm the card before creating the subscription");
+          }
+        } else if (paymentMode === "saved_card") {
+          paymentMethodId = selectedSavedPaymentMethodId;
+          if (!paymentMethodId) {
+            throw new Error("Select a saved card to charge");
           }
         }
 
@@ -364,7 +399,10 @@ export const SubscriptionFormEditor = forwardRef<
           subscriptionId: subscription.id,
           action: "apply_payment",
           payment_mode: paymentMode,
-          payment_method_id: paymentMethodId,
+          payment_method_id:
+            paymentMode === "saved_card"
+              ? selectedSavedPaymentMethodId
+              : paymentMethodId,
           send_email: paymentMode === "request_setup" ? sendEmail : false,
           send_sms: paymentMode === "request_setup" ? sendSms : false,
           email_to: recipientEmail || null,
@@ -440,7 +478,11 @@ export const SubscriptionFormEditor = forwardRef<
     (mode === "edit" && isActiveLike
       ? true
       : paymentMode === "saved_card"
-        ? Boolean(savedCard || subscription?.payment_method_last4)
+        ? Boolean(
+            selectedSavedPaymentMethodId ||
+              savedCard?.stripePaymentMethodId ||
+              subscription?.payment_method_last4,
+          )
         : paymentMode === "staff_card"
           ? Boolean(recipientEmail)
           : paymentMode === "request_setup"
@@ -658,11 +700,21 @@ export const SubscriptionFormEditor = forwardRef<
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">Use card on file</p>
-                  {allSavedCards.length > 0 ? (
+                  {paymentMode === "saved_card" && allSavedCards.length > 0 ? (
+                    <div className="mt-3">
+                      <SavedCardSelect
+                        cards={allSavedCards}
+                        value={selectedSavedCardValue}
+                        onChange={(value) => setSelectedSavedCardValue(value)}
+                        disabled={formDisabled}
+                        label="Card to charge"
+                      />
+                    </div>
+                  ) : allSavedCards.length > 0 ? (
                     <ul className="mt-1 space-y-1">
                       {allSavedCards.map((card) => (
                         <li
-                          key={`${card.source}-${card.last4}`}
+                          key={savedCardOptionValue(card)}
                           className="text-xs text-muted-foreground"
                         >
                           {formatSavedCardLabel(card)} ·{" "}

@@ -26,12 +26,14 @@ import {
   subscriptionStatusVariant,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
 import { SendSubscriptionSetupDialog } from "@/modules/billing/subscriptions/SendSubscriptionSetupDialog";
+import { CollectSubscriptionPaymentDialog } from "@/modules/billing/subscriptions/CollectSubscriptionPaymentDialog";
+import { SubscriptionBillingActionsDialog } from "@/modules/billing/subscriptions/SubscriptionBillingActionsDialog";
 import { SubscriptionCollectPaymentMenu } from "@/modules/billing/subscriptions/SubscriptionCollectPaymentMenu";
 import {
+  buildSubscriptionDetailSearchParams,
   buildSubscriptionEditSearchParams,
   type SubscriptionSubview,
 } from "@/modules/billing/subscriptions/billingNavigation";
-import type { SubscriptionPaymentMode } from "@/modules/billing/subscriptions/subscriptionScheduleUtils";
 import type { ClientSubscription } from "@/modules/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +41,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -254,6 +255,10 @@ export const SubscriptionDetailToolbar = ({
   const [, setSearchParams] = useSearchParams();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const [sendOpen, setSendOpen] = useState(false);
+  const [collectDialogMode, setCollectDialogMode] = useState<
+    "saved_card" | "staff_card" | null
+  >(null);
+  const [billingActionsOpen, setBillingActionsOpen] = useState(false);
 
   const manageMutation = useMutation({
     mutationFn: (
@@ -289,22 +294,30 @@ export const SubscriptionDetailToolbar = ({
     status === "past_due" ||
     status === "paused" ||
     status === "trialing";
+  const canCancelDraft =
+    (status === "pending_setup" || status === "past_due") &&
+    !subscription.stripe_subscription_id?.trim() &&
+    !expired &&
+    !isCanceled;
+  const canManageBilling =
+    canPause ||
+    canResume ||
+    canCancel ||
+    canCancelDraft ||
+    canUndoCancel;
 
-  const openEditTab = (paymentMode?: SubscriptionPaymentMode) => {
+  const openEditTab = () => {
     setSearchParams(
-      buildSubscriptionEditSearchParams(String(subscription.id), {
-        paymentMode: paymentMode ?? null,
-      }),
+      buildSubscriptionEditSearchParams(String(subscription.id)),
       { replace: true },
     );
   };
 
-  const applySavedCard = () => {
-    manageMutation.mutate({
-      subscriptionId: subscription.id,
-      action: "apply_payment",
-      payment_mode: "saved_card",
-    });
+  const exitEditView = () => {
+    setSearchParams(
+      buildSubscriptionDetailSearchParams(String(subscription.id), "overview"),
+      { replace: true },
+    );
   };
 
   const copyCheckoutUrl = async () => {
@@ -323,13 +336,7 @@ export const SubscriptionDetailToolbar = ({
     subscription.setup_share_url?.trim() || subscription.setup_checkout_url?.trim(),
   );
 
-  const showMoreActions =
-    canPause ||
-    canResume ||
-    canCancel ||
-    canUndoCancel ||
-    hasCheckoutUrl ||
-    canReactivate;
+  const showMoreActions = hasCheckoutUrl;
 
   return (
     <>
@@ -337,6 +344,24 @@ export const SubscriptionDetailToolbar = ({
         subscription={subscription}
         open={sendOpen}
         onOpenChange={setSendOpen}
+      />
+      <CollectSubscriptionPaymentDialog
+        subscription={subscription}
+        mode={collectDialogMode}
+        open={collectDialogMode !== null}
+        onOpenChange={(open) => {
+          if (!open) setCollectDialogMode(null);
+        }}
+      />
+      <SubscriptionBillingActionsDialog
+        subscription={subscription}
+        open={billingActionsOpen}
+        onOpenChange={setBillingActionsOpen}
+        canPause={canPause}
+        canResume={canResume}
+        canCancel={canCancel && Boolean(subscription.stripe_subscription_id)}
+        canCancelDraft={canCancelDraft}
+        canUndoCancel={canUndoCancel}
       />
       <div className={cn("flex flex-col gap-3", className)}>
         <div className="flex flex-wrap items-center gap-0 divide-x rounded-md border bg-background">
@@ -367,6 +392,12 @@ export const SubscriptionDetailToolbar = ({
           </ToolbarButton>
 
           {isEditView && !isCanceled && !expired ? (
+            <ToolbarButton disabled={busy} onClick={exitEditView}>
+              Cancel
+            </ToolbarButton>
+          ) : null}
+
+          {isEditView && !isCanceled && !expired ? (
             <ToolbarButton
               disabled={!canSaveChanges || busy}
               onClick={onSave}
@@ -385,8 +416,8 @@ export const SubscriptionDetailToolbar = ({
             <SubscriptionCollectPaymentMenu
               subscription={subscription}
               disabled={busy}
-              onUseSavedCard={applySavedCard}
-              onEnterStaffCard={() => openEditTab("staff_card")}
+              onUseSavedCard={() => setCollectDialogMode("saved_card")}
+              onEnterStaffCard={() => setCollectDialogMode("staff_card")}
               onRequestClientCard={() => setSendOpen(true)}
             />
           ) : null}
@@ -426,6 +457,26 @@ export const SubscriptionDetailToolbar = ({
             Share
           </ToolbarButton>
 
+          {canResume ? (
+            <ToolbarButton
+              disabled={busy}
+              onClick={() => setBillingActionsOpen(true)}
+              title="Resume billing"
+            >
+              <Play className="size-3.5" />
+              Resume
+            </ToolbarButton>
+          ) : canManageBilling ? (
+            <ToolbarButton
+              disabled={busy}
+              onClick={() => setBillingActionsOpen(true)}
+              title="Pause or stop billing"
+            >
+              <Pause className="size-3.5" />
+              Manage billing
+            </ToolbarButton>
+          ) : null}
+
           {showMoreActions ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -434,80 +485,10 @@ export const SubscriptionDetailToolbar = ({
                 </ToolbarButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                {hasCheckoutUrl ? (
-                  <DropdownMenuItem onSelect={() => void copyCheckoutUrl()}>
-                    <Copy className="size-4" />
-                    Copy setup link
-                  </DropdownMenuItem>
-                ) : null}
-                {canPause ? (
-                  <DropdownMenuItem
-                    onSelect={() =>
-                      manageMutation.mutate({
-                        subscriptionId: subscription.id,
-                        action: "pause",
-                      })
-                    }
-                  >
-                    <Pause className="size-4" />
-                    Pause subscription
-                  </DropdownMenuItem>
-                ) : null}
-                {canResume ? (
-                  <DropdownMenuItem
-                    onSelect={() =>
-                      manageMutation.mutate({
-                        subscriptionId: subscription.id,
-                        action: "resume",
-                      })
-                    }
-                  >
-                    <Play className="size-4" />
-                    Resume subscription
-                  </DropdownMenuItem>
-                ) : null}
-                {canUndoCancel ? (
-                  <DropdownMenuItem
-                    onSelect={() =>
-                      manageMutation.mutate({
-                        subscriptionId: subscription.id,
-                        action: "undo_cancel",
-                      })
-                    }
-                  >
-                    <RotateCcw className="size-4" />
-                    Undo cancel
-                  </DropdownMenuItem>
-                ) : null}
-                {(hasCheckoutUrl || canPause || canResume || canUndoCancel) &&
-                canCancel ? (
-                  <DropdownMenuSeparator />
-                ) : null}
-                {canCancel ? (
-                  <>
-                    <DropdownMenuItem
-                      onSelect={() =>
-                        manageMutation.mutate({
-                          subscriptionId: subscription.id,
-                          action: "cancel_at_period_end",
-                        })
-                      }
-                    >
-                      Cancel at period end
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onSelect={() =>
-                        manageMutation.mutate({
-                          subscriptionId: subscription.id,
-                          action: "cancel_now",
-                        })
-                      }
-                    >
-                      Cancel now
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
+                <DropdownMenuItem onSelect={() => void copyCheckoutUrl()}>
+                  <Copy className="size-4" />
+                  Copy setup link
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : null}

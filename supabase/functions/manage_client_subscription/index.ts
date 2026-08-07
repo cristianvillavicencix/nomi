@@ -480,6 +480,39 @@ Deno.serve(
         }
 
         if (!stripeSubId) {
+          if (action === "cancel_now") {
+            const cancellableDraftStatuses = new Set([
+              "pending_setup",
+              "past_due",
+              "paused",
+            ]);
+            if (!cancellableDraftStatuses.has(subscription.status)) {
+              return createErrorResponse(
+                400,
+                "This subscription is not active in Stripe yet. Send a setup link first.",
+              );
+            }
+            const now = new Date().toISOString();
+            await supabaseAdmin
+              .from("client_subscriptions")
+              .update({
+                status: "canceled",
+                canceled_at: now,
+                cancel_at_period_end: false,
+                updated_at: now,
+              })
+              .eq("id", subscription.id);
+            const { data: fresh } = await supabaseAdmin
+              .from("client_subscriptions")
+              .select("*")
+              .eq("id", subscription.id)
+              .single();
+            return new Response(JSON.stringify({ subscription: fresh }), {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+
           return createErrorResponse(
             400,
             "This subscription is not active in Stripe yet. Send a setup link first.",

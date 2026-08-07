@@ -55,10 +55,9 @@ export const SubscriptionCollectPaymentMenu = ({
     [companies, contacts],
   );
 
-  const { savedCard } = useClientSavedPaymentMethod(billTo);
-  const hasSavedCard = Boolean(
-    savedCard || subscription.payment_method_last4?.trim(),
-  );
+  const { allSavedCards } = useClientSavedPaymentMethod(billTo);
+  const hasSavedCard =
+    allSavedCards.length > 0 || Boolean(subscription.payment_method_last4?.trim());
 
   const options: Array<{
     mode: SubscriptionPaymentMode;
@@ -71,7 +70,7 @@ export const SubscriptionCollectPaymentMenu = ({
     {
       mode: "saved_card",
       label: subscriptionPaymentModeLabel("saved_card"),
-      description: "Charge the client's saved card now",
+      description: "Choose a saved card and charge it now",
       icon: Wallet,
       disabled: !hasSavedCard,
       onSelect: onUseSavedCard,
@@ -79,7 +78,7 @@ export const SubscriptionCollectPaymentMenu = ({
     {
       mode: "staff_card",
       label: subscriptionPaymentModeLabel("staff_card"),
-      description: "Open Edit to enter the card with the client",
+      description: "Open a secure popup to enter the card with the client",
       icon: CreditCard,
       onSelect: onEnterStaffCard,
     },

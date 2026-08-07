@@ -8,6 +8,8 @@ export type ClientSavedPaymentMethod = {
   last4: string;
   source: "invoice" | "contract" | "subscription";
   updatedAt: string | null;
+  stripePaymentMethodId?: string | null;
+  stripeCustomerId?: string | null;
 };
 
 const hasStripeCard = (row: {
@@ -19,6 +21,8 @@ const hasStripeCard = (row: {
 
 const toSavedCard = (
   row: {
+    stripe_payment_method_id?: string | null;
+    stripe_customer_id?: string | null;
     payment_method_brand?: string | null;
     payment_method_last4?: string | null;
     updated_at?: string | null;
@@ -29,6 +33,8 @@ const toSavedCard = (
   last4: row.payment_method_last4!.trim(),
   source,
   updatedAt: row.updated_at ?? null,
+  stripePaymentMethodId: row.stripe_payment_method_id?.trim() ?? null,
+  stripeCustomerId: row.stripe_customer_id?.trim() ?? null,
 });
 
 export const formatSavedCardMask = (last4: string) => `····${last4.trim()}`;
@@ -84,7 +90,9 @@ export const collectUniqueSavedCards = (
   const cards: ClientSavedPaymentMethod[] = [];
 
   const pushUnique = (card: ClientSavedPaymentMethod) => {
-    const key = `${(card.brand ?? "card").toLowerCase()}-${card.last4}`;
+    const key =
+      card.stripePaymentMethodId?.trim() ??
+      `${(card.brand ?? "card").toLowerCase()}-${card.last4}`;
     if (seen.has(key)) return;
     seen.add(key);
     cards.push(card);

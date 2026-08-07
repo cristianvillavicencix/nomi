@@ -46,6 +46,8 @@ describe("pickLatestSavedPaymentMethod", () => {
       last4: "1111",
       source: "subscription",
       updatedAt: "2026-08-01T00:00:00.000Z",
+      stripePaymentMethodId: "pm_sub",
+      stripeCustomerId: null,
     });
   });
 

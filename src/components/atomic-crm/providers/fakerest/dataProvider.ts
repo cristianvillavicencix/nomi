@@ -1508,6 +1508,9 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
                 activated_at: new Date().toISOString(),
               }
             : {}),
+          ...(action === "cancel_now"
+            ? { canceled_at: new Date().toISOString(), cancel_at_period_end: false }
+            : {}),
           ...(action === "undo_cancel" ? { cancel_at_period_end: false } : {}),
         },
         previousData: { id: subscriptionId },

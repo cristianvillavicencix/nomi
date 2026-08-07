@@ -1020,15 +1020,23 @@ export async function applySubscriptionPayment(
     paymentMethodLast4 = pm.card?.last4 ?? null;
     usedStaffCard = true;
   } else if (params.paymentMode === "saved_card") {
-    if (!savedPayment?.stripePaymentMethodId) {
+    const explicitPaymentMethodId = params.paymentMethodId?.trim();
+    if (explicitPaymentMethodId) {
+      const pm = await stripe.paymentMethods.retrieve(explicitPaymentMethodId);
+      paymentMethodId = explicitPaymentMethodId;
+      paymentMethodBrand = pm.card?.brand ?? null;
+      paymentMethodLast4 = pm.card?.last4 ?? null;
+      usedSavedCard = true;
+    } else if (savedPayment?.stripePaymentMethodId) {
+      paymentMethodId = savedPayment.stripePaymentMethodId;
+      paymentMethodBrand = savedPayment.paymentMethodBrand;
+      paymentMethodLast4 = savedPayment.paymentMethodLast4;
+      usedSavedCard = true;
+    } else {
       throw new Error(
         "No saved card found for this client. Choose another payment option.",
       );
     }
-    paymentMethodId = savedPayment.stripePaymentMethodId;
-    paymentMethodBrand = savedPayment.paymentMethodBrand;
-    paymentMethodLast4 = savedPayment.paymentMethodLast4;
-    usedSavedCard = true;
   }
 
   if (paymentMethodId) {
