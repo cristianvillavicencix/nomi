@@ -10,7 +10,7 @@ import {
 } from "../_shared/clientProposalBilling.ts";
 import { getStripeForOrg } from "../_shared/stripeClient.ts";
 import { isOrgClientInvoiceCheckoutEnabled } from "../_shared/organizationStripeSettings.ts";
-import { resolvePublicAppBaseUrl } from "../_shared/publicAppUrl.ts";
+import { resolveClientAppBaseUrl } from "../_shared/publicAppUrl.ts";
 import {
   applyStripeSubscriptionSnapshot,
   applySubscriptionPayment,
@@ -147,8 +147,7 @@ Deno.serve(
             companyId: subscription.company_id,
           });
 
-          const baseUrl = body.base_url?.trim()?.replace(/\/$/, "") ||
-            resolvePublicAppBaseUrl();
+          const baseUrl = resolveClientAppBaseUrl(body.base_url);
           const returnQuery = `tab=subscriptions&subscription=${subscription.id}`;
 
           const session = await createStripeSubscriptionCheckout(stripe, {
@@ -255,8 +254,7 @@ Deno.serve(
             .eq("id", member.org_id)
             .maybeSingle();
 
-          const baseUrl = body.base_url?.trim()?.replace(/\/$/, "") ||
-            resolvePublicAppBaseUrl();
+          const baseUrl = resolveClientAppBaseUrl(body.base_url);
 
           const paymentResult = await applySubscriptionPayment(
             stripe,

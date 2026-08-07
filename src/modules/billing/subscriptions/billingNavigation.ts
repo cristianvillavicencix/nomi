@@ -1,6 +1,6 @@
 import type { SubscriptionPaymentMode } from "@/modules/billing/subscriptions/subscriptionScheduleUtils";
 
-export type BillingTabId = "invoices" | "subscriptions";
+export type BillingTabId = "invoices" | "subscriptions" | "reports";
 
 export type { SubscriptionPaymentMode };
 
@@ -20,13 +20,16 @@ export const SUBSCRIPTION_DETAIL_TABS: Array<{
 export const BILLING_TABS: Array<{ id: BillingTabId; label: string }> = [
   { id: "invoices", label: "Invoices" },
   { id: "subscriptions", label: "Subscriptions" },
+  { id: "reports", label: "Reports" },
 ];
 
 export const resolveBillingTab = (
   params: URLSearchParams,
 ): BillingTabId => {
   const tab = params.get("tab");
-  return tab === "subscriptions" ? "subscriptions" : "invoices";
+  if (tab === "subscriptions") return "subscriptions";
+  if (tab === "reports") return "reports";
+  return "invoices";
 };
 
 export const resolveSubscriptionSubview = (
@@ -81,12 +84,13 @@ export const buildSubscriptionDetailSearchParams = (
 export const buildBillingInvoiceDetailPath = (invoiceId: string) =>
   `/billing?tab=invoices&invoice=${encodeURIComponent(String(invoiceId))}`;
 
-/** Preserve invoice workspace params when switching back to Invoices. */
+/** Preserve workspace params when switching billing tabs. */
 export const buildBillingTabSearchParams = (
   tab: BillingTabId,
   current: URLSearchParams,
 ) => {
   const next = new URLSearchParams();
+
   if (tab === "subscriptions") {
     next.set("tab", "subscriptions");
     const subscriptionId = current.get("subscription");
@@ -95,6 +99,27 @@ export const buildBillingTabSearchParams = (
     if (subview && subview !== "overview") {
       next.set("subview", subview);
     }
+    return next;
+  }
+
+  if (tab === "reports") {
+    next.set("tab", "reports");
+    const report = current.get("report");
+    if (report) next.set("report", report);
+    const period = current.get("period");
+    if (period) next.set("period", period);
+    const customer = current.get("customer");
+    if (customer) next.set("customer", customer);
+    const product = current.get("product");
+    if (product) next.set("product", product);
+    const churn = current.get("churn");
+    if (churn) next.set("churn", churn);
+    const newSubs = current.get("new_subs");
+    if (newSubs) next.set("new_subs", newSubs);
+    const newMrr = current.get("new_mrr");
+    if (newMrr) next.set("new_mrr", newMrr);
+    const compare = current.get("compare");
+    if (compare) next.set("compare", compare);
     return next;
   }
 

@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useGetMany, useListContext } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
 import { formatContactName } from "@/modules/billing/billingUtils";
 import {
   formatSubscriptionAmountLabel,
@@ -9,6 +8,7 @@ import {
   subscriptionMatchesStatusFilter,
   subscriptionStatusLabel,
   subscriptionStatusVariant,
+  formatSubscriptionNextBillingLabel,
   type SubscriptionStatusFilter,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
 import type { ClientSubscription } from "@/modules/types";
@@ -166,6 +166,9 @@ export const SubscriptionListSidebar = ({
                 <div className="flex items-center justify-between gap-2">
                   <span className="truncate text-xs text-muted-foreground">
                     {row.subscription_number ?? row.name}
+                  </span>
+                  <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                    {formatSubscriptionNextBillingLabel(row)}
                   </span>
                 </div>
                 <Badge

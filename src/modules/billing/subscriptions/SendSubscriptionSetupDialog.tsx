@@ -16,8 +16,11 @@ import {
 } from "@/modules/billing/billingRecipientResolution";
 import { InvoiceSendDeliveryPreview } from "@/modules/billing/InvoiceSendDeliveryPreview";
 import {
+  resolvePublicAppBaseUrl,
+  resolveSubscriptionSetupShareUrl,
+} from "@/lib/publicAppUrl";
+import {
   buildDefaultSubscriptionSetupMessage,
-  buildSubscriptionSetupShareUrl,
   formatSubscriptionAmountLabel,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
 import type { ClientSubscription } from "@/modules/types";
@@ -89,18 +92,14 @@ export const SendSubscriptionSetupDialog = ({
   const [message, setMessage] = useState("");
   const [messageEdited, setMessageEdited] = useState(false);
 
-  const previewShareUrl = useMemo(() => {
-    if (subscription.setup_share_url?.trim()) {
-      return subscription.setup_share_url.trim();
-    }
-    if (subscription.setup_short_code?.trim()) {
-      return buildSubscriptionSetupShareUrl(
-        window.location.origin,
-        subscription.setup_short_code,
-      );
-    }
-    return `${window.location.origin.replace(/\/$/, "")}/sub/…`;
-  }, [subscription.setup_share_url, subscription.setup_short_code]);
+  const previewShareUrl = useMemo(
+    () =>
+      resolveSubscriptionSetupShareUrl({
+        setup_share_url: subscription.setup_share_url,
+        setup_short_code: subscription.setup_short_code,
+      }),
+    [subscription.setup_share_url, subscription.setup_short_code],
+  );
 
   const amountLabel = formatSubscriptionAmountLabel(
     Number(subscription.amount),
@@ -150,7 +149,7 @@ export const SendSubscriptionSetupDialog = ({
         send_sms: sendSms,
         message: messageEdited ? message.trim() || null : null,
         subject,
-        base_url: window.location.origin,
+        base_url: resolvePublicAppBaseUrl(),
       }),
     onSuccess: () => {
       refresh();

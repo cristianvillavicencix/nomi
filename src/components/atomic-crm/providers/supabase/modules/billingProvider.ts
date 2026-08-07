@@ -1,4 +1,5 @@
 import type { Identifier } from "ra-core";
+import { resolvePublicAppBaseUrl } from "@/lib/publicAppUrl";
 import {
   invokeEdgeFunction,
   readEdgeFunctionErrorMessage,
@@ -722,7 +723,7 @@ export const billingProvider = {
         sms_to: params.sms_to,
         message: params.message,
         subject: params.subject,
-        base_url: params.base_url ?? window.location.origin,
+        base_url: params.base_url ?? resolvePublicAppBaseUrl(),
       },
     });
 

@@ -263,12 +263,6 @@ export const SubscriptionOverviewTab = ({
                 : "—"
             }
           />
-          {subscription.reference_number ? (
-            <SummaryRow
-              label="Reference #"
-              value={subscription.reference_number}
-            />
-          ) : null}
         </OverviewCard>
 
         <OverviewCard title="Items">

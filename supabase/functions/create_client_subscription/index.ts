@@ -11,7 +11,7 @@ import {
 } from "../_shared/clientProposalBilling.ts";
 import { getStripeForOrg } from "../_shared/stripeClient.ts";
 import { isOrgClientInvoiceCheckoutEnabled } from "../_shared/organizationStripeSettings.ts";
-import { resolvePublicAppBaseUrl } from "../_shared/publicAppUrl.ts";
+import { resolveClientAppBaseUrl } from "../_shared/publicAppUrl.ts";
 import {
   applyStripeSubscriptionSnapshot,
   buildSubscriptionMetadata,
@@ -239,8 +239,7 @@ Deno.serve(
           companyId: resolvedCompanyId,
         });
 
-        const baseUrl = body.base_url?.trim()?.replace(/\/$/, "") ||
-          resolvePublicAppBaseUrl();
+        const baseUrl = resolveClientAppBaseUrl(body.base_url);
         const returnQuery = `tab=subscriptions&subscription=${subscription.id}`;
 
         let checkoutUrl: string | null = null;

@@ -51,6 +51,7 @@ import {
   SubscriptionStaffCardForm,
   type SubscriptionStaffCardFormHandle,
 } from "@/modules/billing/subscriptions/SubscriptionStaffCardForm";
+import { resolvePublicAppBaseUrl, resolveSubscriptionSetupShareUrl } from "@/lib/publicAppUrl";
 import { buildDefaultSubscriptionSetupMessage, formatSubscriptionAmountLabel } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
 import {
   computeSubscriptionEndsAt,
@@ -210,11 +211,10 @@ export const SubscriptionFormEditor = forwardRef<
   const subscriptionName = subscriptionNameFromLines(lines);
   const amount = sumSubscriptionLinesAmount(lines);
   const lineItemsPayload = subscriptionLinesToPayload(lines);
-  const previewShareUrl =
-    subscription?.setup_share_url?.trim() ||
-    (subscription?.setup_short_code?.trim()
-      ? `${window.location.origin.replace(/\/$/, "")}/sub/${subscription.setup_short_code.trim()}`
-      : `${window.location.origin.replace(/\/$/, "")}/sub/…`);
+  const previewShareUrl = resolveSubscriptionSetupShareUrl({
+    setup_share_url: subscription?.setup_share_url,
+    setup_short_code: subscription?.setup_short_code,
+  });
 
   const defaultMessage = useMemo(
     () =>
@@ -366,7 +366,7 @@ export const SubscriptionFormEditor = forwardRef<
           email_to: recipientEmail || null,
           sms_to: recipientPhone || null,
           message: messageEdited ? message.trim() || null : null,
-          base_url: window.location.origin,
+          base_url: resolvePublicAppBaseUrl(),
         });
       }
 
@@ -408,7 +408,7 @@ export const SubscriptionFormEditor = forwardRef<
           email_to: recipientEmail || null,
           sms_to: recipientPhone || null,
           message: messageEdited ? message.trim() || null : null,
-          base_url: window.location.origin,
+          base_url: resolvePublicAppBaseUrl(),
         });
         return {
           ...updateResult,
@@ -593,17 +593,24 @@ export const SubscriptionFormEditor = forwardRef<
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="subscription-reference">Reference #</Label>
-            <Input
-              id="subscription-reference"
-              disabled={formDisabled}
-              value={referenceNumber}
-              onChange={(event) => setReferenceNumber(event.target.value)}
-              placeholder="Optional internal reference"
-            />
-          </div>
+        <div
+          className={cn(
+            "grid gap-3",
+            mode === "edit" ? "sm:grid-cols-2" : undefined,
+          )}
+        >
+          {mode === "edit" ? (
+            <div className="space-y-2">
+              <Label htmlFor="subscription-reference">Internal reference</Label>
+              <Input
+                id="subscription-reference"
+                disabled={formDisabled}
+                value={referenceNumber}
+                onChange={(event) => setReferenceNumber(event.target.value)}
+                placeholder="Optional internal note"
+              />
+            </div>
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor="subscription-deal">Associated deal</Label>
             <Select

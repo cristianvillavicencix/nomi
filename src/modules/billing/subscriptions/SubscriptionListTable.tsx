@@ -138,19 +138,18 @@ export const SubscriptionListTable = ({
 
   return (
     <div className="min-h-0 flex-1 overflow-auto">
-      <Table className="min-w-[1100px]">
+      <Table className="min-w-[640px]">
         <TableHeader className="sticky top-0 z-10 bg-background">
           <TableRow>
-            <TableHead>Created</TableHead>
-            <TableHead>Activated</TableHead>
-            <TableHead>Subscription #</TableHead>
-            <TableHead className="min-w-[180px]">Customer</TableHead>
-            <TableHead>Plan</TableHead>
+            <TableHead className="hidden lg:table-cell">Created</TableHead>
+            <TableHead className="hidden xl:table-cell">Activated</TableHead>
+            <TableHead className="hidden md:table-cell">Subscription #</TableHead>
+            <TableHead className="min-w-[160px]">Customer</TableHead>
+            <TableHead className="hidden md:table-cell">Plan</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Amount</TableHead>
-            <TableHead>Last billed</TableHead>
+            <TableHead className="hidden xl:table-cell">Last billed</TableHead>
             <TableHead>Next billing</TableHead>
-            <TableHead>Reference #</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -176,13 +175,13 @@ export const SubscriptionListTable = ({
                 onClick={() => onSelectSubscription(String(row.id))}
                 className={cn("cursor-pointer", isSelected && "bg-primary/5")}
               >
-                <TableCell className="text-muted-foreground">
+                <TableCell className="hidden lg:table-cell text-muted-foreground">
                   {formatBillingDate(row.created_at?.slice(0, 10))}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="hidden xl:table-cell text-muted-foreground">
                   {formatBillingDate(row.activated_at?.slice(0, 10))}
                 </TableCell>
-                <TableCell className="font-medium text-primary">
+                <TableCell className="hidden md:table-cell font-medium text-primary">
                   {row.subscription_number ?? `#${row.id}`}
                 </TableCell>
                 <TableCell>
@@ -190,8 +189,11 @@ export const SubscriptionListTable = ({
                   {email ? (
                     <div className="text-xs text-muted-foreground">{email}</div>
                   ) : null}
+                  <div className="mt-0.5 text-xs text-muted-foreground md:hidden">
+                    {row.name}
+                  </div>
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="hidden md:table-cell text-muted-foreground">
                   {row.name}
                 </TableCell>
                 <TableCell>
@@ -209,14 +211,13 @@ export const SubscriptionListTable = ({
                     row.billing_interval,
                   )}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="hidden xl:table-cell text-muted-foreground">
                   {formatBillingDate(row.last_billed_at?.slice(0, 10))}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {formatBillingDate(row.next_billing_at?.slice(0, 10))}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {row.reference_number ?? "—"}
+                  {row.status === "pending_setup"
+                    ? "Setup pending"
+                    : formatBillingDate(row.next_billing_at?.slice(0, 10))}
                 </TableCell>
               </TableRow>
             );

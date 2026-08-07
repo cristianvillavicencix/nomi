@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useRefresh } from "ra-core";
-import { useLocation } from "react-router";
+import { useLocation, useSearchParams } from "react-router";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { CreateClientSubscriptionDialog } from "@/modules/billing/subscriptions/CreateClientSubscriptionDialog";
@@ -9,14 +9,28 @@ import {
 } from "@/modules/billing/subscriptions/SubscriptionBillingWorkspace";
 import {
   buildSubscriptionListFilter,
+  SUBSCRIPTION_FILTER_OPTIONS,
   type SubscriptionStatusFilter,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
 import { isBillingSubscriptionWorkspace } from "@/modules/billing/subscriptions/billingNavigation";
 import { cn } from "@/lib/utils";
 
+const resolveSubscriptionStatusFromParams = (
+  params: URLSearchParams,
+): SubscriptionStatusFilter => {
+  const value = params.get("subscription_status");
+  const allowed = SUBSCRIPTION_FILTER_OPTIONS.map((option) => option.value);
+  if (value && allowed.includes(value as SubscriptionStatusFilter)) {
+    return value as SubscriptionStatusFilter;
+  }
+  return "all";
+};
+
 export const ClientSubscriptionsTab = () => {
-  const [statusFilter, setStatusFilter] =
-    useState<SubscriptionStatusFilter>("all");
+  const [searchParams] = useSearchParams();
+  const [statusFilter, setStatusFilter] = useState<SubscriptionStatusFilter>(
+    () => resolveSubscriptionStatusFromParams(searchParams),
+  );
   const [createOpen, setCreateOpen] = useState(false);
   const location = useLocation();
   const refresh = useRefresh();

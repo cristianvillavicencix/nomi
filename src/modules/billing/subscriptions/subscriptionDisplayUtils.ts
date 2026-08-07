@@ -1,4 +1,5 @@
 import type { ClientSubscription } from "@/modules/types";
+import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
 
 export type SubscriptionStatusFilter =
   | "all"
@@ -160,6 +161,31 @@ export const formatSubscriptionAmountLabel = (
   if (interval === "weekly") return `${money}/wk`;
   if (interval === "yearly") return `${money}/yr`;
   return `${money}/mo`;
+};
+
+export const formatSubscriptionNextBillingLabel = (
+  subscription: Pick<
+    ClientSubscription,
+    "status" | "next_billing_at" | "ends_at"
+  >,
+) => {
+  if (subscription.status === "pending_setup") {
+    return "Setup pending";
+  }
+  if (isSubscriptionExpired(subscription)) {
+    return "Expired";
+  }
+  if (subscription.status === "canceled") {
+    return "Canceled";
+  }
+  if (subscription.status === "paused") {
+    return "Paused";
+  }
+  const nextBilling = subscription.next_billing_at?.slice(0, 10);
+  if (!nextBilling) {
+    return "No billing date";
+  }
+  return `Next billing · ${formatBillingDate(nextBilling)}`;
 };
 
 export const buildSubscriptionSetupSharePath = (shortCode: string) =>

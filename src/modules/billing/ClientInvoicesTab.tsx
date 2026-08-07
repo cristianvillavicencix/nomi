@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useRefresh } from "ra-core";
-import { useLocation } from "react-router";
+import { useLocation, useSearchParams } from "react-router";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { CreateClientInvoiceDialog } from "@/modules/billing/CreateClientInvoiceDialog";
@@ -12,8 +12,30 @@ import {
 import { isBillingInvoiceWorkspace } from "@/modules/billing/billingWorkspaceMode";
 import { cn } from "@/lib/utils";
 
+const INVOICE_STATUS_PARAM_VALUES: InvoiceStatusFilter[] = [
+  "all",
+  "draft",
+  "sent",
+  "paid",
+  "overdue",
+  "void",
+];
+
+const resolveInvoiceStatusFromParams = (
+  params: URLSearchParams,
+): InvoiceStatusFilter => {
+  const value = params.get("invoice_status");
+  if (value && INVOICE_STATUS_PARAM_VALUES.includes(value as InvoiceStatusFilter)) {
+    return value as InvoiceStatusFilter;
+  }
+  return "all";
+};
+
 export const ClientInvoicesTab = () => {
-  const [statusFilter, setStatusFilter] = useState<InvoiceStatusFilter>("all");
+  const [searchParams] = useSearchParams();
+  const [statusFilter, setStatusFilter] = useState<InvoiceStatusFilter>(() =>
+    resolveInvoiceStatusFromParams(searchParams),
+  );
   const [fromProposalOpen, setFromProposalOpen] = useState(false);
   const location = useLocation();
   const refresh = useRefresh();

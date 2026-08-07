@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import {
   ChevronDown,
   Copy,
+  CreditCard,
   ExternalLink,
   Loader2,
   Mail,
@@ -19,6 +20,7 @@ import { useState, type ComponentProps } from "react";
 import { useDataProvider, useNotify, useRefresh } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
+import { resolveSubscriptionSetupShareUrl } from "@/lib/publicAppUrl";
 import {
   formatSubscriptionAmountLabel,
   isSubscriptionExpired,
@@ -27,6 +29,7 @@ import {
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
 import { SendSubscriptionSetupDialog } from "@/modules/billing/subscriptions/SendSubscriptionSetupDialog";
 import { CollectSubscriptionPaymentDialog } from "@/modules/billing/subscriptions/CollectSubscriptionPaymentDialog";
+import { FinishSubscriptionSetupDialog } from "@/modules/billing/subscriptions/FinishSubscriptionSetupDialog";
 import { SubscriptionBillingActionsDialog } from "@/modules/billing/subscriptions/SubscriptionBillingActionsDialog";
 import { SubscriptionCollectPaymentMenu } from "@/modules/billing/subscriptions/SubscriptionCollectPaymentMenu";
 import {
@@ -75,20 +78,19 @@ const ToolbarButton = ({
 
 const SubscriptionPendingSetupBanner = ({
   isPending,
-  onSendSetup,
+  onFinishSetup,
 }: {
   isPending?: boolean;
-  onSendSetup: () => void;
+  onFinishSetup: () => void;
 }) => (
   <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
     <p className="text-sm text-muted-foreground">
       <span className="font-medium text-foreground">What&apos;s next?</span>{" "}
-      Send a secure Stripe checkout link so the client can save a card and
-      activate billing.
+      Choose how to collect a payment method and activate recurring billing.
     </p>
-    <Button type="button" size="sm" disabled={isPending} onClick={onSendSetup}>
-      <Send className="size-4" />
-      Send setup link
+    <Button type="button" size="sm" disabled={isPending} onClick={onFinishSetup}>
+      <CreditCard className="size-4" />
+      Finish setup
     </Button>
   </div>
 );
@@ -255,6 +257,7 @@ export const SubscriptionDetailToolbar = ({
   const [, setSearchParams] = useSearchParams();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const [sendOpen, setSendOpen] = useState(false);
+  const [finishSetupOpen, setFinishSetupOpen] = useState(false);
   const [collectDialogMode, setCollectDialogMode] = useState<
     "saved_card" | "staff_card" | null
   >(null);
@@ -321,9 +324,14 @@ export const SubscriptionDetailToolbar = ({
   };
 
   const copyCheckoutUrl = async () => {
+    const shareUrl = resolveSubscriptionSetupShareUrl({
+      setup_share_url: subscription.setup_share_url,
+      setup_short_code: subscription.setup_short_code,
+    });
     const url =
-      subscription.setup_share_url?.trim() ||
-      subscription.setup_checkout_url?.trim();
+      shareUrl.endsWith("/sub/…")
+        ? subscription.setup_checkout_url?.trim()
+        : shareUrl;
     if (!url) {
       notify("No setup link yet. Send a setup link first.", { type: "warning" });
       return;
@@ -338,8 +346,26 @@ export const SubscriptionDetailToolbar = ({
 
   const showMoreActions = hasCheckoutUrl;
 
+  const showFinishSetup = canCollectPayment;
+
+  const handleFinishSetupAction = (
+    action: "saved_card" | "staff_card" | "request_setup",
+  ) => {
+    if (action === "request_setup") {
+      setSendOpen(true);
+      return;
+    }
+    setCollectDialogMode(action);
+  };
+
   return (
     <>
+      <FinishSubscriptionSetupDialog
+        subscription={subscription}
+        open={finishSetupOpen}
+        onOpenChange={setFinishSetupOpen}
+        onSelectAction={handleFinishSetupAction}
+      />
       <SendSubscriptionSetupDialog
         subscription={subscription}
         open={sendOpen}
@@ -412,7 +438,18 @@ export const SubscriptionDetailToolbar = ({
             </ToolbarButton>
           ) : null}
 
-          {canCollectPayment ? (
+          {showFinishSetup ? (
+            <ToolbarButton
+              disabled={busy}
+              onClick={() => setFinishSetupOpen(true)}
+              className="bg-primary/10 text-foreground hover:bg-primary/15"
+            >
+              <CreditCard className="size-3.5" />
+              Finish setup
+            </ToolbarButton>
+          ) : null}
+
+          {canCollectPayment && !showFinishSetup ? (
             <SubscriptionCollectPaymentMenu
               subscription={subscription}
               disabled={busy}
@@ -422,7 +459,7 @@ export const SubscriptionDetailToolbar = ({
             />
           ) : null}
 
-          {canSendSetup ? (
+          {canSendSetup && status !== "pending_setup" ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <ToolbarButton disabled={busy}>
@@ -497,7 +534,7 @@ export const SubscriptionDetailToolbar = ({
         {status === "pending_setup" ? (
           <SubscriptionPendingSetupBanner
             isPending={busy}
-            onSendSetup={() => setSendOpen(true)}
+            onFinishSetup={() => setFinishSetupOpen(true)}
           />
         ) : null}
 

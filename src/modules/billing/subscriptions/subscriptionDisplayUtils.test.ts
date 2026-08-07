@@ -3,6 +3,7 @@ import {
   buildSubscriptionListFilter,
   buildSubscriptionBankStatementPreview,
   formatSubscriptionAmountLabel,
+  formatSubscriptionNextBillingLabel,
   isSubscriptionExpired,
   subscriptionMatchesStatusFilter,
   subscriptionStatusLabel,
@@ -42,6 +43,21 @@ describe("subscriptionDisplayUtils", () => {
     expect(formatSubscriptionAmountLabel(99, "USD", "yearly")).toBe(
       "$99.00/yr",
     );
+  });
+
+  it("formats next billing labels for list cards", () => {
+    expect(
+      formatSubscriptionNextBillingLabel({
+        status: "pending_setup",
+        next_billing_at: null,
+      }),
+    ).toBe("Setup pending");
+    expect(
+      formatSubscriptionNextBillingLabel({
+        status: "active",
+        next_billing_at: "2026-08-15",
+      }),
+    ).toBe("Next billing · Aug 15, 2026");
   });
 
   it("builds an approximate bank statement label", () => {

@@ -5,6 +5,7 @@ import {
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
 import { ClientInvoicesTab } from "@/modules/billing/ClientInvoicesTab";
+import { ClientBillingReportsTab } from "@/modules/billing/reports/ClientBillingReportsTab";
 import { isBillingInvoiceWorkspace } from "@/modules/billing/billingWorkspaceMode";
 import { ClientSubscriptionsTab } from "@/modules/billing/subscriptions/ClientSubscriptionsTab";
 import {
@@ -46,18 +47,20 @@ export const ClientBillingPage = () => {
       )}
     >
       <PageActions>
-        <PageTitle label="Invoices" />
+        <PageTitle label="Billing" />
       </PageActions>
 
       <SettingsSubNav
         value={activeTab}
         onValueChange={handleTabChange}
         items={BILLING_TABS}
-        fillHeight={hasWorkspaceOpen}
-        className={hasWorkspaceOpen ? "min-h-0 flex-1" : undefined}
+        fillHeight={hasWorkspaceOpen && activeTab !== "reports"}
+        className={hasWorkspaceOpen && activeTab !== "reports" ? "min-h-0 flex-1" : undefined}
         content={
           activeTab === "subscriptions" ? (
             <ClientSubscriptionsTab />
+          ) : activeTab === "reports" ? (
+            <ClientBillingReportsTab />
           ) : (
             <ClientInvoicesTab />
           )
