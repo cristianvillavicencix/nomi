@@ -131,10 +131,18 @@ export const TicketDetailPanel = ({
     );
   }, [ticket, update, refreshInbox]);
 
-  if (isPending || !ticket) {
+  if (!ticket && isPending) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
         Loading ticket…
+      </div>
+    );
+  }
+
+  if (!ticket) {
+    return (
+      <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+        Ticket not found.
       </div>
     );
   }

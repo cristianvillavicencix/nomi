@@ -375,7 +375,7 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
       codecPreferences: ["opus", "pcmu"],
       edge: VOICE_DEVICE_EDGE,
       maxCallSignalingTimeoutMs: 30_000,
-      logLevel: import.meta.env.DEV ? 1 : 0,
+      logLevel: import.meta.env.DEV ? 1 : 5,
       // Custom Web Audio ringtones in useVoiceCallRingtone (avoids Twilio output-device errors).
       sounds: {
         incoming: false,
