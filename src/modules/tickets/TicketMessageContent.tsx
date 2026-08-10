@@ -69,7 +69,7 @@ export const TicketMessageContent = ({
   return (
     <div className={cn(className)}>
       <TicketEmailAttachmentBar assets={downloadableAssets} />
-      {isResolving && !body?.trim() ? (
+      {isResolving && htmlBody?.trim() ? (
         <p className="py-2 text-sm text-muted-foreground">Loading message…</p>
       ) : (
         <TicketMessageBody

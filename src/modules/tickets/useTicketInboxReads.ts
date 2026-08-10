@@ -97,8 +97,21 @@ export const useTicketMemberRead = (ticketId: string | null) => {
       }
       return now;
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: readsQueryKey(memberId) });
+    onSuccess: (now) => {
+      if (!now || !memberId || !ticketId) return;
+      queryClient.setQueryData(
+        [...readsQueryKey(memberId), "single", ticketId],
+        now,
+      );
+      queryClient.setQueriesData<Map<string, string>>(
+        { queryKey: readsQueryKey(memberId) },
+        (old) => {
+          if (!(old instanceof Map)) return old;
+          const next = new Map(old);
+          next.set(ticketId, now);
+          return next;
+        },
+      );
     },
   });
 

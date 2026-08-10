@@ -29,9 +29,15 @@ export const useTicketThreadMessages = (
     threadTopRef.current?.scrollIntoView({ behavior, block: "start" });
   }, []);
 
+  const prevTicketIdRef = useRef<typeof ticketId>(null);
+
   useEffect(() => {
     if (!ticketId || isPending) return;
-    scrollToLatest("auto");
+    const ticketChanged = prevTicketIdRef.current !== ticketId;
+    prevTicketIdRef.current = ticketId;
+    if (ticketChanged || messages.length > 0) {
+      scrollToLatest("auto");
+    }
   }, [ticketId, isPending, messages.length, scrollToLatest]);
 
   useEffect(() => {

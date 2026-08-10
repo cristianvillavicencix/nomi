@@ -104,10 +104,16 @@ export const TicketDetailPanel = ({
   useEffect(() => {
     if (isReadLoading) return;
     setReadCutoff(lastReadAt ?? "1970-01-01T00:00:00.000Z");
+  }, [ticketId, lastReadAt, isReadLoading]);
+
+  useEffect(() => {
+    if (isReadLoading) return;
     if (markedTicketRef.current === ticketId) return;
     markedTicketRef.current = ticketId;
-    void markRead();
-  }, [ticketId, lastReadAt, isReadLoading, markRead]);
+    void markRead().then((now) => {
+      if (now) setReadCutoff(now);
+    });
+  }, [ticketId, isReadLoading, markRead]);
 
   useEffect(() => {
     if (!ticket || ticket.status !== "new") return;

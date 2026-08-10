@@ -5,17 +5,17 @@ import { isInlineImageCandidate } from "@/modules/tickets/ticketInlineHtmlUtils"
 
 const resolveCache = new Map<string, string | null>();
 
-const buildCacheKey = (
-  html: string | null | undefined,
-  attachments: FileAttachment[],
-) => {
-  const attachmentKey = attachments
+const buildAttachmentsKey = (attachments: FileAttachment[]) =>
+  attachments
     .map((file) =>
       [file.src, file.path, file.contentId, file.title].filter(Boolean).join("|"),
     )
     .join("\n");
-  return `${html ?? ""}\0${attachmentKey}`;
-};
+
+const buildCacheKey = (
+  html: string | null | undefined,
+  attachmentsKey: string,
+) => `${html ?? ""}\0${attachmentsKey}`;
 
 export const needsAsyncTicketHtmlResolution = (
   html: string | null | undefined,
@@ -44,14 +44,19 @@ export const useTicketInlineHtml = (
   html: string | null | undefined,
   attachments: FileAttachment[],
 ): TicketInlineHtmlResult => {
+  const attachmentsKey = useMemo(
+    () => buildAttachmentsKey(attachments),
+    [attachments],
+  );
+
   const cacheKey = useMemo(
-    () => buildCacheKey(html, attachments),
-    [html, attachments],
+    () => buildCacheKey(html, attachmentsKey),
+    [html, attachmentsKey],
   );
 
   const needsResolution = useMemo(
     () => needsAsyncTicketHtmlResolution(html, attachments),
-    [html, attachments],
+    [html, attachmentsKey],
   );
 
   const cached = resolveCache.get(cacheKey);
@@ -71,26 +76,27 @@ export const useTicketInlineHtml = (
     }
 
     if (resolveCache.has(cacheKey)) {
-      setResolved(resolveCache.get(cacheKey) ?? null);
-      setIsResolving(false);
+      const cachedHtml = resolveCache.get(cacheKey) ?? null;
+      setResolved((current) => (current === cachedHtml ? current : cachedHtml));
+      setIsResolving((current) => (current ? false : current));
       return;
     }
 
     let cancelled = false;
-    setIsResolving(true);
+    setIsResolving((current) => (current ? current : true));
 
     void resolveTicketDisplayHtml(html, attachments).then((next) => {
       resolveCache.set(cacheKey, next);
       if (!cancelled) {
-        setResolved(next);
-        setIsResolving(false);
+        setResolved((current) => (current === next ? current : next));
+        setIsResolving((current) => (current ? false : current));
       }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, html, attachments, needsResolution]);
+  }, [cacheKey, html, attachmentsKey, needsResolution]);
 
   return { html: resolved, isResolving };
 };
