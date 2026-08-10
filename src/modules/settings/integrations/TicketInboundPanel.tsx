@@ -10,6 +10,7 @@ import {
   IntegrationCopyField,
   IntegrationSummaryRow,
 } from "@/modules/settings/integrations/ticketInboxIntegrationUi";
+import { TicketInboundOperationsPanel } from "@/modules/settings/integrations/TicketInboundOperationsPanel";
 import { useTicketWorkspaceSettings } from "@/modules/settings/tickets/useTicketWorkspaceSettings";
 import { DEFAULT_TICKET_INBOX_EMAIL } from "@/modules/tickets/ticketInboxConfig";
 
@@ -173,7 +174,19 @@ export const TicketInboundPanel = ({ data, embedded }: Props) => {
           ok={health?.outbound_configured === true}
           mono={false}
         />
+        <IntegrationSummaryRow
+          label="Inbound attachment limit"
+          value={
+            workspaceBundle?.workspace
+              ? `${Math.round(workspaceBundle.workspace.max_inbound_attachment_bytes / (1024 * 1024))} MB per file`
+              : "25 MB per file (default)"
+          }
+          ok
+          mono={false}
+        />
       </section>
+
+      <TicketInboundOperationsPanel health={health} />
 
       <section className="space-y-4 rounded-xl border bg-muted/10 p-4">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

@@ -1,10 +1,12 @@
 import { decode } from "npm:base64-arraybuffer";
-import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
-  assertInboundAttachmentCount,
-  assertInboundAttachmentSize,
   MAX_INBOUND_ATTACHMENTS,
+  type SkippedInboundAttachment,
 } from "../_shared/inboundAttachmentLimits.ts";
+import {
+  enforceAttachmentCountLimit,
+  uploadInboundAttachmentBytes,
+} from "../_shared/uploadInboundAttachments.ts";
 
 export type Attachment = {
   title: string;
@@ -15,28 +17,6 @@ export type Attachment = {
   contentId?: string | null;
 };
 
-/**
- * Extracts the attachments from the email and upload them to Supabase Storage.
- *
- * Example:
- *   "Attachments": [
- *      {
- *          "Name": "test.txt",
- *          "Content": "VGhpcyBpcyBhdHRhY2htZW50IGNvbnRlbnRzLCBiYXNlLTY0IGVuY29kZWQu",
- *          "ContentType": "text/plain",
- *          "ContentLength": 45
- *      }
- *   ]
- *
- * Return Value:
- * [{
- *    title: "test.txt",
- *    type: "text/plain",
- *    "path": "0.8262106278726917.txt",
- *    "src": "http://127.0.0.1:54321/storage/v1/object/public/attachments/0.8262106278726917.txt",
- * }]
- *
- */
 export const extractAndUploadAttachments = async (
   Attachments: {
     Name: string;
@@ -45,51 +25,54 @@ export const extractAndUploadAttachments = async (
     ContentLength: number;
     ContentID?: string | null;
   }[],
-): Promise<Attachment[]> => {
+  maxBytes: number,
+): Promise<{
+  attachments: Attachment[];
+  skippedAttachments: SkippedInboundAttachment[];
+}> => {
   const list = Attachments || [];
-  assertInboundAttachmentCount(list.length);
+  const skippedAttachments: SkippedInboundAttachment[] = [];
+  const { allowedKeys } = enforceAttachmentCountLimit(
+    list.map((_, index) => `attachment${index + 1}`),
+    skippedAttachments,
+  );
+  const allowed = list.slice(0, allowedKeys.length || MAX_INBOUND_ATTACHMENTS);
 
-  return (
-    await Promise.all(
-      list.slice(0, MAX_INBOUND_ATTACHMENTS).map(async (attachment) => {
-        const { Name, Content, ContentType, ContentID } = attachment;
-        if (!Name || !Content || !ContentType) {
-          console.warn("Attachment is missing required fields, skipping", {
-            attachment,
-          });
-          return null;
-        }
+  const attachments: Attachment[] = [];
 
-        const decodedContent = decode(Content);
-        if (!decodedContent) {
-          console.error("Failed to decode attachment content, skipping", {
-            attachment,
-          });
-          return null;
-        }
+  for (const attachment of allowed) {
+    const { Name, Content, ContentType, ContentID } = attachment;
+    if (!Name || !Content || !ContentType) {
+      console.warn("Attachment is missing required fields, skipping", {
+        attachment,
+      });
+      continue;
+    }
 
-        assertInboundAttachmentSize(decodedContent.byteLength, Name);
+    const decodedContent = decode(Content);
+    if (!decodedContent) {
+      skippedAttachments.push({
+        title: Name,
+        bytes: 0,
+        reason: "decode_failed",
+      });
+      continue;
+    }
 
-        const fileParts = Name.split(".");
-        const fileExt = fileParts.length > 1 ? `.${Name.split(".").pop()}` : "";
-        const fileName = `${Math.random()}${fileExt}`;
-        const { error: uploadError } = await supabaseAdmin.storage
-          .from("attachments")
-          .upload(fileName, decodedContent);
+    const result = await uploadInboundAttachmentBytes({
+      title: Name,
+      type: ContentType,
+      bytes: decodedContent,
+      contentId: ContentID?.trim() || null,
+      maxBytes,
+    });
 
-        if (uploadError) {
-          console.error("uploadError", uploadError);
-          throw new Error("Failed to upload attachment");
-        }
+    if (result.attachment) {
+      attachments.push(result.attachment);
+    } else if (result.skipped) {
+      skippedAttachments.push(result.skipped);
+    }
+  }
 
-        return {
-          title: Name,
-          type: ContentType,
-          path: fileName,
-          src: fileName,
-          contentId: ContentID?.trim() || null,
-        };
-      }),
-    )
-  ).filter(Boolean) as Attachment[];
+  return { attachments, skippedAttachments };
 };

@@ -12,6 +12,19 @@ import {
   saveOrgTicketWorkspaceSettings,
   shouldIgnoreInboundSender,
 } from "../_shared/ticketWorkspaceSettings.ts";
+import { detectCompanyCamInbound } from "../_shared/ticketInboundMetadata.ts";
+import { findContactOrCompanyByAddress } from "../_shared/ticketInboundAddressMatch.ts";
+import {
+  logTicketInboundFailure,
+  resetPipelineStaleNotification,
+  type TicketInboundFailureSource,
+} from "../_shared/ticketInboundFailures.ts";
+import { serializeInboundPayloadForRetry } from "../_shared/inboundPayloadRetry.ts";
+import {
+  formatSkippedAttachmentsNote,
+  resolveMaxInboundAttachmentBytes,
+  type SkippedInboundAttachment,
+} from "../_shared/inboundAttachmentLimits.ts";
 import {
   stripQuotedHtml,
   stripQuotedPlainText,
@@ -384,9 +397,13 @@ export const buildInboundTicketMessageBody = (
 export const processTicketInbound = async ({
   payload,
   attachments,
+  skippedAttachments = [],
+  source = "sendgrid",
 }: {
   payload: PostmarkInboundPayload;
   attachments: Attachment[];
+  skippedAttachments?: SkippedInboundAttachment[];
+  source?: TicketInboundFailureSource;
 }) => {
   const recipients = collectRecipientEmails(payload);
   const inbox = await findInbox(recipients);
@@ -415,7 +432,13 @@ export const processTicketInbound = async ({
   }
 
   const fromName = payload.FromFull?.Name?.trim() || null;
-  const subject = payload.Subject?.trim() || "(No subject)";
+  const rawSubject = payload.Subject?.trim() || "(No subject)";
+  const companyCamMeta = detectCompanyCamInbound({
+    headers: payload.Headers,
+    subject: rawSubject,
+    fromEmail,
+  });
+  const subject = companyCamMeta.normalizedSubject || rawSubject;
   const rawTextBody = payload.TextBody?.trim() || "";
   const rawHtmlBody = payload.HtmlBody?.trim() || "";
   const strippedTextBody =
@@ -458,10 +481,59 @@ export const processTicketInbound = async ({
     attachments,
   );
   if (!messageContent) {
+    await logTicketInboundFailure(supabaseAdmin, {
+      orgId: inbox.org_id,
+      inboxId: inbox.id,
+      fromEmail,
+      fromName,
+      subject,
+      errorMessage: "Missing email body",
+      errorCode: "missing_body",
+      externalMessageId: messageId,
+      skippedAttachments,
+      source,
+      rawPayload: serializeInboundPayloadForRetry(payload),
+    });
     return new Response("Missing email body", { status: 403 });
   }
 
-  const contact = await findContactByEmail(inbox.org_id, fromEmail);
+  const maxInboundBytes = resolveMaxInboundAttachmentBytes(
+    workspaceSettings.max_inbound_attachment_bytes,
+  );
+  const skippedNote = formatSkippedAttachmentsNote(
+    skippedAttachments,
+    maxInboundBytes,
+  );
+  if (skippedNote) {
+    messageContent.body = `${messageContent.body.trim()}${skippedNote}`;
+    if (messageContent.htmlBody) {
+      messageContent.htmlBody = `${messageContent.htmlBody}${skippedNote.replace(/\n/g, "<br/>")}`;
+    }
+  }
+
+  const contactFromEmail =
+    workspaceSettings.auto_link_contact !== false
+      ? await findContactByEmail(inbox.org_id, fromEmail)
+      : null;
+
+  let linkedContactId = contactFromEmail?.id ?? null;
+  let linkedCompanyId = contactFromEmail?.company_id ?? null;
+
+  if (
+    !linkedContactId &&
+    workspaceSettings.auto_link_contact !== false &&
+    companyCamMeta.propertyAddress
+  ) {
+    const addressMatch = await findContactOrCompanyByAddress(
+      inbox.org_id,
+      companyCamMeta.propertyAddress,
+    );
+    if (addressMatch) {
+      linkedContactId = addressMatch.contact_id;
+      linkedCompanyId = addressMatch.company_id;
+    }
+  }
+
   const existingTicketId = await findTicketForThread(
     inbox.org_id,
     inReplyTo,
@@ -485,15 +557,18 @@ export const processTicketInbound = async ({
       routingRule?.priority?.trim() ||
       workspaceSettings.default_priority ||
       "normal";
-    const tags = routingRule?.tag?.trim()
-      ? [routingRule.tag.trim()]
-      : [];
+    const tags = [
+      ...(routingRule?.tag?.trim() ? [routingRule.tag.trim()] : []),
+      ...companyCamMeta.tags.filter(
+        (tag) => !(routingRule?.tag?.trim() === tag),
+      ),
+    ];
     const { data: ticket, error: ticketError } = await supabaseAdmin
       .from("tickets")
       .insert({
         org_id: inbox.org_id,
-        company_id: contact?.company_id ?? null,
-        contact_id: contact?.id ?? null,
+        company_id: linkedCompanyId,
+        contact_id: linkedContactId,
         assignee_id: assigneeId,
         subject,
         status: workspaceSettings.default_status || "new",
@@ -532,9 +607,9 @@ export const processTicketInbound = async ({
       updated_at: now,
     };
 
-    if (contact && !existingTicket?.contact_id) {
-      ticketUpdate.contact_id = contact.id;
-      ticketUpdate.company_id = contact.company_id ?? null;
+    if (contactFromEmail && !existingTicket?.contact_id) {
+      ticketUpdate.contact_id = contactFromEmail.id;
+      ticketUpdate.company_id = contactFromEmail.company_id ?? null;
       if (fromName) {
         ticketUpdate.requester_name = fromName;
       }
@@ -564,7 +639,37 @@ export const processTicketInbound = async ({
     });
 
   if (messageError) {
+    await logTicketInboundFailure(supabaseAdmin, {
+      orgId: inbox.org_id,
+      inboxId: inbox.id,
+      fromEmail,
+      fromName,
+      subject,
+      errorMessage: messageError.message,
+      errorCode: "message_insert_failed",
+      externalMessageId: messageId,
+      skippedAttachments,
+      source,
+      ticketId,
+      rawPayload: serializeInboundPayloadForRetry(payload),
+    });
     throw new Error(messageError.message);
+  }
+
+  if (skippedAttachments.length > 0) {
+    await logTicketInboundFailure(supabaseAdmin, {
+      orgId: inbox.org_id,
+      inboxId: inbox.id,
+      fromEmail,
+      fromName,
+      subject,
+      errorMessage: `${skippedAttachments.length} attachment(s) skipped during ingest`,
+      errorCode: "attachment_skipped",
+      externalMessageId: messageId,
+      skippedAttachments,
+      source,
+      ticketId,
+    });
   }
 
   if (isNewTicket) {
@@ -605,8 +710,18 @@ export const processTicketInbound = async ({
     }
   }
 
-  return new Response(JSON.stringify({ ok: true, ticket_id: ticketId }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
+  await resetPipelineStaleNotification(supabaseAdmin, inbox.id);
+
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      ticket_id: ticketId,
+      skipped_attachments: skippedAttachments.length,
+      companycam: companyCamMeta.isCompanyCam,
+    }),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 };

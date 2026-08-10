@@ -375,6 +375,64 @@ export const messagingProvider = {
     }
     return data ?? { ok: false };
   },
+  async dismissTicketInboundFailure(failureId: number) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok: boolean;
+      health?: import("@/modules/settings/tickets/ticketWorkspaceSettings").TicketSettingsHealth;
+    }>("ticket_settings", {
+      method: "POST",
+      body: { action: "dismiss_inbound_failure", failure_id: failureId },
+    });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to dismiss inbound failure",
+      );
+    }
+    return data ?? { ok: false };
+  },
+  async retryTicketInboundFailure(failureId: number) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok: boolean;
+      ticket_id?: number;
+      health?: import("@/modules/settings/tickets/ticketWorkspaceSettings").TicketSettingsHealth;
+    }>("ticket_settings", {
+      method: "POST",
+      body: { action: "retry_inbound_failure", failure_id: failureId },
+    });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to retry inbound failure",
+      );
+    }
+    if (!data?.ok) {
+      throw new Error("Failed to retry inbound failure");
+    }
+    return data;
+  },
+  async importTicketEmail(file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      ticket_id?: number;
+      skipped_attachments?: number;
+      companycam?: boolean;
+    }>("import_ticket_email", {
+      method: "POST",
+      body: form,
+    });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to import email",
+      );
+    }
+    if (!data?.ok || !data.ticket_id) {
+      throw new Error("Failed to import email");
+    }
+    return data;
+  },
   async getStripeClientSettings() {
     const fallback: import("@/modules/settings/integrations/stripeClientSettings").StripeClientSettings =
       {

@@ -37,18 +37,55 @@ Deno.serve(async (req) => {
   response = checkBody(json);
   if (response) return response;
 
-  const attachments = await extractAndUploadAttachments(json.Attachments);
-
   const ticketInbox = await matchesTicketInbox(json);
   if (ticketInbox) {
     try {
-      return await processTicketInbound({ payload: json, attachments });
+      const { loadOrgTicketWorkspaceSettings } = await import(
+        "../_shared/ticketWorkspaceSettings.ts"
+      );
+      const { resolveMaxInboundAttachmentBytes } = await import(
+        "../_shared/inboundAttachmentLimits.ts"
+      );
+      const workspaceSettings = await loadOrgTicketWorkspaceSettings(
+        ticketInbox.org_id,
+      );
+      const maxBytes = resolveMaxInboundAttachmentBytes(
+        workspaceSettings.max_inbound_attachment_bytes,
+      );
+      const { attachments, skippedAttachments } =
+        await extractAndUploadAttachments(json.Attachments, maxBytes);
+      return await processTicketInbound({
+        payload: json,
+        attachments,
+        skippedAttachments,
+        source: "postmark",
+      });
     } catch (error) {
       console.error("postmark.ticket_inbound.error", error);
-      return new Response(
-        error instanceof Error ? error.message : "Ticket inbound failed",
-        { status: 500 },
+      const message =
+        error instanceof Error ? error.message : "Ticket inbound failed";
+      const { logTicketInboundFailure } = await import(
+        "../_shared/ticketInboundFailures.ts"
       );
+      const { serializeInboundPayloadForRetry } = await import(
+        "../_shared/inboundPayloadRetry.ts"
+      );
+      await logTicketInboundFailure(
+        (await import("../_shared/supabaseAdmin.ts")).supabaseAdmin,
+        {
+          orgId: ticketInbox.org_id,
+          inboxId: ticketInbox.id,
+          fromEmail: json.FromFull?.Email ?? null,
+          fromName: json.FromFull?.Name ?? null,
+          subject: json.Subject ?? null,
+          errorMessage: message,
+          errorCode: "processing_failed",
+          externalMessageId: json.MessageID ?? null,
+          source: "postmark",
+          rawPayload: serializeInboundPayloadForRetry(json),
+        },
+      );
+      return new Response(message, { status: 500 });
     }
   }
 
@@ -67,6 +104,10 @@ Deno.serve(async (req) => {
   }
 
   const contacts = extractMailContactData(ToFull);
+  const { attachments } = await extractAndUploadAttachments(
+    json.Attachments,
+    25 * 1024 * 1024,
+  );
 
   for (const { firstName, lastName, email, domain } of contacts) {
     if (!email) {

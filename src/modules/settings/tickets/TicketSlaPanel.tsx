@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { IntegrationFeatureSwitchRow } from "@/modules/settings/integrations/IntegrationFeatureSwitchRow";
 import { TicketSettingsPanelShell } from "@/modules/settings/tickets/TicketSettingsPanelShell";
 import { useTicketWorkspaceSettingsContext } from "@/modules/settings/tickets/useTicketWorkspaceSettings";
 import {
@@ -97,7 +98,7 @@ export const TicketSlaPanel = ({ embedded }: { embedded?: boolean }) => {
       </div>
 
       <div className="space-y-2 rounded-xl border bg-muted/10 p-4">
-        <Label>Max email-embedded attachment size (MB)</Label>
+        <Label>Max outbound email attachment size (MB)</Label>
         <Input
           type="number"
           min={1}
@@ -112,9 +113,61 @@ export const TicketSlaPanel = ({ embedded }: { embedded?: boolean }) => {
           }}
         />
         <p className="text-xs text-muted-foreground">
-          Files up to this size are attached to the email. Larger files (up to
-          25 MB) are uploaded and sent as download links that expire in 7 days.
+          Files up to this size are attached to outbound replies. Larger files
+          (up to 25 MB) are uploaded and sent as download links that expire in
+          7 days.
         </p>
+      </div>
+
+      <div className="space-y-2 rounded-xl border bg-muted/10 p-4">
+        <Label>Max inbound attachment size (MB)</Label>
+        <Input
+          type="number"
+          min={1}
+          max={30}
+          value={Math.round(
+            workspace.max_inbound_attachment_bytes / (1024 * 1024),
+          )}
+          onChange={(e) => {
+            const mb = Number(e.target.value);
+            if (!Number.isFinite(mb) || mb <= 0) return;
+            void patchWorkspace({
+              max_inbound_attachment_bytes: mb * 1024 * 1024,
+            });
+          }}
+        />
+        <p className="text-xs text-muted-foreground">
+          Attachments above this limit are skipped and noted on the ticket.
+          SendGrid supports roughly 30 MB total per message; default is 25 MB.
+        </p>
+      </div>
+
+      <div className="space-y-2 rounded-xl border bg-muted/10 p-4">
+        <Label>Inbound pipeline alert (hours)</Label>
+        <Input
+          type="number"
+          min={6}
+          max={168}
+          value={workspace.inbound_pipeline_alert_hours}
+          onChange={(e) => {
+            const hours = Number(e.target.value);
+            if (!Number.isFinite(hours) || hours <= 0) return;
+            void patchWorkspace({ inbound_pipeline_alert_hours: hours });
+          }}
+        />
+        <p className="text-xs text-muted-foreground">
+          Show a warning in Settings → Inbound when no mail has been received
+          within this window.
+        </p>
+        <IntegrationFeatureSwitchRow
+          label="Email admin when pipeline is stalled"
+          description="Sends one alert email per stale period to the primary org administrator."
+          checked={workspace.inbound_pipeline_alert_email_enabled}
+          disabled={saving}
+          onCheckedChange={(checked) =>
+            void patchWorkspace({ inbound_pipeline_alert_email_enabled: checked })
+          }
+        />
       </div>
     </>
   );

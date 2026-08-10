@@ -16,6 +16,8 @@ import { NewTicketDialog } from "@/modules/tickets/NewTicketDialog";
 import { formatTicketListTime } from "@/modules/tickets/ticketInboxUi";
 import { isTicketUnread } from "@/modules/tickets/ticketReadState";
 import { useTicketInboxReads } from "@/modules/tickets/useTicketInboxReads";
+import { useTicketWorkspaceSettings } from "@/modules/settings/tickets/useTicketWorkspaceSettings";
+import { buildSettingsSearchParams } from "@/modules/settings/settingsNavigation";
 
 const ACTIVE_TICKET_FILTER = {
   "status@neq": "resolved",
@@ -24,7 +26,11 @@ const ACTIVE_TICKET_FILTER = {
 
 export const DashboardTicketsCard = () => {
   const canViewTickets = useMemberCapability("support.tickets.view");
+  const canManageTickets = useMemberCapability("support.tickets.manage");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { data: workspaceBundle } = useTicketWorkspaceSettings(canManageTickets);
+  const health = workspaceBundle?.health;
+  const inboundSettingsHref = `/settings?${buildSettingsSearchParams("tickets", "inbound").toString()}`;
 
   const { data: tickets = [], isPending } = useGetList<Ticket>(
     "tickets",
@@ -64,6 +70,17 @@ export const DashboardTicketsCard = () => {
     ...(unreadCount > 0
       ? [{ label: `${unreadCount} unread`, tone: "danger" as const }]
       : [{ label: `${tickets.length} open` }]),
+    ...(canManageTickets && health?.pipeline_stale
+      ? [{ label: "Inbound stalled", tone: "danger" as const }]
+      : []),
+    ...(canManageTickets && (health?.inbound_failures_7d_count ?? 0) > 0
+      ? [
+          {
+            label: `${health?.inbound_failures_7d_count} inbound issues (7d)`,
+            tone: "danger" as const,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -99,6 +116,30 @@ export const DashboardTicketsCard = () => {
           <p className="text-sm text-muted-foreground">No open tickets.</p>
         ) : (
           <ul className="space-y-2">
+            {canManageTickets &&
+            (health?.pipeline_stale ||
+              (health?.inbound_failures_7d_count ?? 0) > 0) ? (
+              <li className="rounded-md border border-amber-200/80 bg-amber-50/60 px-3 py-2 text-xs dark:border-amber-900/40 dark:bg-amber-950/20">
+                {health?.pipeline_stale ? (
+                  <p className="text-amber-950 dark:text-amber-100">
+                    Inbound mail pipeline may be stalled.
+                  </p>
+                ) : null}
+                {(health?.inbound_failures_7d_count ?? 0) > 0 ? (
+                  <p className="text-amber-950 dark:text-amber-100">
+                    {health?.inbound_failures_7d_count} inbound failure
+                    {(health?.inbound_failures_7d_count ?? 0) === 1 ? "" : "s"}{" "}
+                    in the last 7 days.
+                  </p>
+                ) : null}
+                <Link
+                  to={inboundSettingsHref}
+                  className="font-medium text-primary hover:underline"
+                >
+                  Review inbound settings
+                </Link>
+              </li>
+            ) : null}
             {preview.map((ticket) => {
               const unread = isTicketUnread(
                 ticket,

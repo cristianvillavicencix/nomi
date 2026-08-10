@@ -19,6 +19,9 @@ export type TicketWorkspaceSettings = {
   blocked_inbound_domains: string[];
   ignore_auto_responders: boolean;
   max_reply_attachment_bytes: number;
+  max_inbound_attachment_bytes: number;
+  inbound_pipeline_alert_hours: number;
+  inbound_pipeline_alert_email_enabled: boolean;
   business_hours_enabled: boolean;
   business_hours_timezone: string;
   business_hours: Record<
@@ -76,11 +79,34 @@ export type TicketInboxSettingsRow = {
   last_inbound_at: string | null;
 };
 
+export type TicketInboundFailureRow = {
+  id: number;
+  from_email: string | null;
+  from_name: string | null;
+  subject: string | null;
+  error_message: string;
+  error_code: string | null;
+  skipped_attachments: Array<{
+    title: string;
+    bytes: number;
+    reason: string;
+  }>;
+  source: string;
+  ticket_id: number | null;
+  can_retry?: boolean;
+  resolved_at: string | null;
+  created_at: string;
+};
+
 export type TicketSettingsHealth = {
   webhook_configured: boolean;
   outbound_configured: boolean;
   last_inbound_at: string | null;
   last_inbound_inbox_email: string | null;
+  pipeline_stale?: boolean;
+  pipeline_alert_hours?: number;
+  inbound_failures_7d_count?: number;
+  recent_inbound_failures?: TicketInboundFailureRow[];
 };
 
 export type TicketWorkspaceSettingsResponse = {
@@ -108,6 +134,9 @@ export const DEFAULT_TICKET_WORKSPACE_SETTINGS: TicketWorkspaceSettings = {
   blocked_inbound_domains: [],
   ignore_auto_responders: true,
   max_reply_attachment_bytes: 5 * 1024 * 1024,
+  max_inbound_attachment_bytes: 25 * 1024 * 1024,
+  inbound_pipeline_alert_hours: 48,
+  inbound_pipeline_alert_email_enabled: true,
   business_hours_enabled: false,
   business_hours_timezone: "America/New_York",
   business_hours: {

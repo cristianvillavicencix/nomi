@@ -20,7 +20,13 @@ import {
 import { sendTicketCsatEmail } from "../_shared/ticketInboundAutoReply.ts";
 
 type TicketSettingsBody = {
-  action?: "get" | "update" | "test_outbound";
+  action?:
+    | "get"
+    | "update"
+    | "test_outbound"
+    | "send_csat"
+    | "dismiss_inbound_failure"
+    | "retry_inbound_failure";
   workspace?: Partial<TicketWorkspaceSettings>;
   inbox?: {
     id: number;
@@ -46,6 +52,7 @@ type TicketSettingsBody = {
   };
   test_email?: string | null;
   ticket_id?: number | null;
+  failure_id?: number | null;
 };
 
 const canViewTicketSettings = (member: Awaited<
@@ -106,17 +113,51 @@ const loadInboxes = async (orgId: number) => {
 const buildHealth = async (orgId: number, inboxes: Awaited<ReturnType<typeof loadInboxes>>) => {
   const inbound = await getTicketInboundSetup(orgId);
   const emailStatus = await getOrgTransactionalEmailStatus(orgId);
+  const workspace = await loadOrgTicketWorkspaceSettings(orgId);
   const latest = [...inboxes]
     .filter((row) => row.last_inbound_at)
     .sort((a, b) =>
       String(b.last_inbound_at).localeCompare(String(a.last_inbound_at))
     )[0];
 
+  const lastInboundAt = latest?.last_inbound_at ?? null;
+  const alertHours = workspace.inbound_pipeline_alert_hours ?? 48;
+  const { isPipelineStale, countInboundFailuresLast7Days } = await import(
+    "../_shared/ticketInboundFailures.ts"
+  );
+  const pipelineStale = isPipelineStale(lastInboundAt, alertHours);
+
+  let recentFailures: Awaited<
+    ReturnType<typeof import("../_shared/ticketInboundFailures.ts").loadRecentTicketInboundFailures>
+  > = [];
+  let inboundFailures7dCount = 0;
+  try {
+    const { loadRecentTicketInboundFailures } = await import(
+      "../_shared/ticketInboundFailures.ts"
+    );
+    recentFailures = await loadRecentTicketInboundFailures(
+      supabaseAdmin,
+      orgId,
+      10,
+    );
+    inboundFailures7dCount = await countInboundFailuresLast7Days(
+      supabaseAdmin,
+      orgId,
+    );
+  } catch {
+    recentFailures = [];
+    inboundFailures7dCount = 0;
+  }
+
   return {
     webhook_configured: inbound?.webhook_configured === true,
     outbound_configured: emailStatus.configured === true,
-    last_inbound_at: latest?.last_inbound_at ?? null,
+    last_inbound_at: lastInboundAt,
     last_inbound_inbox_email: latest?.email ?? null,
+    pipeline_stale: pipelineStale,
+    pipeline_alert_hours: alertHours,
+    recent_inbound_failures: recentFailures,
+    inbound_failures_7d_count: inboundFailures7dCount,
   };
 };
 
@@ -338,6 +379,99 @@ Deno.serve((req: Request) =>
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
+        }
+
+        if (action === "dismiss_inbound_failure") {
+          const failureId = Number(body.failure_id);
+          if (!failureId) {
+            return createErrorResponse(400, "failure_id required");
+          }
+          const { dismissTicketInboundFailure } = await import(
+            "../_shared/ticketInboundFailures.ts"
+          );
+          await dismissTicketInboundFailure(supabaseAdmin, orgId, failureId);
+          const inboxes = await loadInboxes(orgId);
+          const health = await buildHealth(orgId, inboxes);
+          return new Response(JSON.stringify({ ok: true, health }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (action === "retry_inbound_failure") {
+          const failureId = Number(body.failure_id);
+          if (!failureId) {
+            return createErrorResponse(400, "failure_id required");
+          }
+          const {
+            loadInboundFailureForRetry,
+            markInboundFailureRetried,
+          } = await import("../_shared/ticketInboundFailures.ts");
+          const { deserializeInboundPayloadForRetry } = await import(
+            "../_shared/inboundPayloadRetry.ts"
+          );
+          const { processTicketInbound } = await import(
+            "../postmark/processTicketInbound.ts"
+          );
+
+          const failure = await loadInboundFailureForRetry(
+            supabaseAdmin,
+            orgId,
+            failureId,
+          );
+          if (!failure) {
+            return createErrorResponse(404, "Failure not found");
+          }
+          if (failure.resolved_at) {
+            return createErrorResponse(400, "Failure already resolved");
+          }
+          const payload = deserializeInboundPayloadForRetry(failure.raw_payload);
+          if (!payload) {
+            return createErrorResponse(
+              400,
+              "No stored payload for retry. Use .eml import instead.",
+            );
+          }
+
+          const response = await processTicketInbound({
+            payload,
+            attachments: [],
+            skippedAttachments: [],
+            source: (failure.source as "sendgrid" | "postmark" | "manual_import") ??
+              "sendgrid",
+          });
+          const responseText = await response.text();
+          let responseBody: { ticket_id?: number; message?: string; duplicate?: boolean } =
+            {};
+          try {
+            responseBody = JSON.parse(responseText) as typeof responseBody;
+          } catch {
+            responseBody = { message: responseText.trim() || "Retry failed" };
+          }
+          if (!response.ok) {
+            return createErrorResponse(
+              response.status,
+              responseBody.message ?? "Retry failed",
+            );
+          }
+
+          const ticketId = responseBody.ticket_id ?? failure.ticket_id;
+          await markInboundFailureRetried(
+            supabaseAdmin,
+            orgId,
+            failureId,
+            ticketId,
+          );
+
+          const inboxes = await loadInboxes(orgId);
+          const health = await buildHealth(orgId, inboxes);
+          return new Response(
+            JSON.stringify({ ok: true, ticket_id: ticketId, health }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
         }
 
         return createErrorResponse(400, "Unknown action");

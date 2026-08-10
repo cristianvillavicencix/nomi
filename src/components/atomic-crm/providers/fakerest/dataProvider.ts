@@ -1636,6 +1636,16 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   },
   sendTestTicketOutboundEmail: async () => ({ ok: true }),
   sendTicketCsatEmail: async () => ({ ok: true }),
+  dismissTicketInboundFailure: async () => ({ ok: true }),
+  retryTicketInboundFailure: async () => ({
+    ok: true,
+    ticket_id: 1,
+  }),
+  importTicketEmail: async () => ({
+    ok: true,
+    ticket_id: 1,
+    skipped_attachments: 0,
+  }),
   getStripeClientSettings: async () => ({
     org_id: 1,
     stripe_credential_mode: "server" as const,
