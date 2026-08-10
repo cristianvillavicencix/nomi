@@ -6,6 +6,7 @@ import {
   resolveBillToDisplay,
 } from "@/modules/billing/billingUtils";
 import type { ClientInvoice, ClientInvoiceLineItem } from "@/modules/types";
+import { computeInvoiceBalanceDue } from "@/modules/billing/invoicePaymentUtils";
 
 export type ClientInvoicePdfContext = {
   invoice: ClientInvoice;
@@ -186,6 +187,10 @@ const buildDocDefinition = (
   const discountAmount = Number(invoice.discount_amount) || 0;
   const feeAmount = Number(invoice.fee_amount) || 0;
   const total = Number(invoice.amount) || subtotal - discountAmount + feeAmount;
+  const balanceDue = computeInvoiceBalanceDue(
+    total,
+    Number(invoice.amount_paid) || 0,
+  );
 
   const totalsRows: unknown[][] = [
     [
@@ -220,7 +225,7 @@ const buildDocDefinition = (
     [
       { text: "Balance Due", bold: true },
       {
-        text: formatMoney(total, currency),
+        text: formatMoney(balanceDue, currency),
         alignment: "right",
         bold: true,
       },
@@ -243,7 +248,7 @@ const buildDocDefinition = (
               },
               { text: " ", margin: [0, 8] },
               { text: "Balance Due", style: "label" },
-              { text: formatMoney(total, currency), style: "balanceDue" },
+              { text: formatMoney(balanceDue, currency), style: "balanceDue" },
             ],
           },
           {

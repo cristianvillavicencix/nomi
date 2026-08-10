@@ -42,7 +42,10 @@ import {
   downloadClientInvoicePdf,
 } from "@/modules/billing/clientInvoicePdf";
 import {
-  calculateInvoiceTotals,
+  resolveInvoiceBalanceDue,
+  resolveInvoiceDisplayTotals,
+} from "@/modules/billing/invoiceDisplayTotals";
+import {
   defaultInvoiceDescription,
   discountPercentFromAmount,
   dueDateFromTerms,
@@ -53,7 +56,6 @@ import {
   type InvoiceLineDraft,
 } from "@/modules/billing/invoiceLineUtils";
 import {
-  computeInvoiceBalanceDue,
   invoicePaymentModeFromRecord,
   upfrontPercentFromMode,
   canChargeClientInvoice,
@@ -304,8 +306,8 @@ export const StandaloneInvoiceEditPage = ({
   }, [issueDate, terms, hydrated]);
 
   const totals = useMemo(
-    () => calculateInvoiceTotals(lines, discountPercent),
-    [lines, discountPercent],
+    () => resolveInvoiceDisplayTotals(invoice, lines, discountPercent),
+    [invoice, lines, discountPercent],
   );
 
   const onlinePaymentValue = useMemo(
@@ -596,14 +598,8 @@ export const StandaloneInvoiceEditPage = ({
   };
 
   const invoiceBalanceDue = useMemo(
-    () =>
-      invoice
-        ? computeInvoiceBalanceDue(
-            totals.total,
-            Number(invoice.amount_paid) || 0,
-          )
-        : 0,
-    [invoice, totals.total],
+    () => (invoice ? resolveInvoiceBalanceDue(invoice, totals) : 0),
+    [invoice, totals],
   );
 
   const showResendReceipt =
@@ -712,7 +708,6 @@ export const StandaloneInvoiceEditPage = ({
     ? "flex min-h-0 flex-1 flex-col"
     : "flex min-h-0 flex-1 flex-col bg-muted/50";
 
-  const previewTotals = calculateInvoiceTotals(lines, discountPercent);
   const showSentEditGate = isSentInvoice && editable && !editUnlocked;
   const showReadOnlyDocument = isPaidInvoice || showSentEditGate;
 
@@ -746,14 +741,12 @@ export const StandaloneInvoiceEditPage = ({
             contact={contact}
             lines={lines}
             termsAndConditions={termsAndConditions}
-            subtotal={previewTotals.subtotal}
-            discountAmount={previewTotals.discountAmount}
-            feeAmount={previewTotals.feeAmount}
-            total={previewTotals.total}
-            balanceDue={computeInvoiceBalanceDue(
-              previewTotals.total,
-              Number(invoice.amount_paid) || 0,
-            )}
+            invoice={invoice}
+            subtotal={totals.subtotal}
+            discountAmount={totals.discountAmount}
+            feeAmount={totals.feeAmount}
+            total={totals.total}
+            balanceDue={invoiceBalanceDue}
           />
         </div>
       </div>
@@ -833,10 +826,11 @@ export const StandaloneInvoiceEditPage = ({
               contact={contact}
               lines={lines}
               termsAndConditions={termsAndConditions}
-              subtotal={previewTotals.subtotal}
-              discountAmount={previewTotals.discountAmount}
-              feeAmount={previewTotals.feeAmount}
-              total={previewTotals.total}
+              invoice={invoice}
+              subtotal={totals.subtotal}
+              discountAmount={totals.discountAmount}
+              feeAmount={totals.feeAmount}
+              total={totals.total}
               balanceDue={invoiceBalanceDue}
             />
           </div>
@@ -875,6 +869,7 @@ export const StandaloneInvoiceEditPage = ({
               contact={activeContact}
               invoiceNumber={invoice.invoice_number}
               amountPaid={Number(invoice.amount_paid) || 0}
+              invoice={invoice}
               documentRibbon={statusRibbon}
               paymentMethodBrand={invoice.payment_method_brand}
               paymentMethodLast4={invoice.payment_method_last4}

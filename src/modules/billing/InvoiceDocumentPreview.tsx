@@ -8,7 +8,11 @@ import {
   resolveBillToDisplay,
 } from "@/modules/billing/billingUtils";
 import {
-  calculateInvoiceTotals,
+  resolveInvoiceBalanceDue,
+  resolveInvoiceDisplayTotals,
+  type InvoiceDisplaySource,
+} from "@/modules/billing/invoiceDisplayTotals";
+import {
   STRIPE_TRANSFER_FEE_LABEL,
   type InvoiceLineDraft,
 } from "@/modules/billing/invoiceLineUtils";
@@ -42,8 +46,10 @@ type InvoiceDocumentPreviewProps = {
   discountAmount?: number;
   feeAmount?: number;
   total?: number;
-  /** Shown in Balance Due row; defaults to total. */
+  /** Shown in Balance Due row; defaults to total minus amount paid when invoice is set. */
   balanceDue?: number;
+  /** When set, subscription invoices skip transfer-fee gross-up for display totals. */
+  invoice?: InvoiceDisplaySource | null;
   className?: string;
 };
 
@@ -65,6 +71,7 @@ export const InvoiceDocumentPreview = ({
   feeAmount: feeOverride,
   total: totalOverride,
   balanceDue: balanceDueOverride,
+  invoice,
   className,
 }: InvoiceDocumentPreviewProps) => {
   const discountAmount = discountOverride ?? 0;
@@ -72,11 +79,15 @@ export const InvoiceDocumentPreview = ({
     subtotalOverride != null && subtotalOverride > 0 && discountAmount > 0
       ? (discountAmount / subtotalOverride) * 100
       : 0;
-  const calculated = calculateInvoiceTotals(lines, discountPercent);
+  const calculated = resolveInvoiceDisplayTotals(invoice, lines, discountPercent);
   const subtotal = subtotalOverride ?? calculated.subtotal;
   const feeAmount = feeOverride ?? calculated.feeAmount;
   const total = totalOverride ?? calculated.total;
-  const balanceDue = balanceDueOverride ?? total;
+  const balanceDue =
+    balanceDueOverride ??
+    (invoice
+      ? resolveInvoiceBalanceDue(invoice, { total })
+      : total);
   const billToDisplay = resolveBillToDisplay(company, contact);
   const billToNameLine = formatBillToNameLine(company, contact);
 

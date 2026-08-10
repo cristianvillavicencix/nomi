@@ -10,9 +10,13 @@ import {
   formatBillToNameLine,
   resolveBillToDisplay,
 } from "@/modules/billing/billingUtils";
+import {
+  resolveInvoiceBalanceDue,
+  resolveInvoiceDisplayTotals,
+  type InvoiceDisplaySource,
+} from "@/modules/billing/invoiceDisplayTotals";
 import type { InvoicePaymentCollectionMode } from "@/modules/billing/invoicePaymentUtils";
 import {
-  computeInvoiceBalanceDue,
   formatInvoicePaymentMethod,
 } from "@/modules/billing/invoicePaymentUtils";
 import {
@@ -20,7 +24,6 @@ import {
   type InvoiceRemainderScheduleConfig,
 } from "@/modules/billing/invoiceRemainderSchedule";
 import {
-  calculateInvoiceTotals,
   invoiceLineTotal,
   newInvoiceLineKey,
   STRIPE_TRANSFER_FEE_LABEL,
@@ -109,6 +112,8 @@ export type InlineInvoiceEditorProps = {
   invoiceNumber?: string | null;
   /** Payments already collected against this invoice. */
   amountPaid?: number;
+  /** When set, subscription invoices use stored totals instead of transfer-fee gross-up. */
+  invoice?: InvoiceDisplaySource | null;
   /** Ribbon text on the document corner (defaults to"Draft" on create). */
   documentRibbon?: string | null;
   paymentMethodBrand?: string | null;
@@ -148,16 +153,21 @@ export const InlineInvoiceEditor = ({
   contact,
   invoiceNumber,
   amountPaid = 0,
+  invoice,
   documentRibbon = DRAFT_INVOICE_NUMBER_LABEL,
   paymentMethodBrand,
   paymentMethodLast4,
   autoChargeRemainder = false,
 }: InlineInvoiceEditorProps) => {
-  const { subtotal, feeAmount, total } = calculateInvoiceTotals(
+  const { subtotal, feeAmount, total } = resolveInvoiceDisplayTotals(
+    invoice,
     lines,
     discountPercent,
   );
-  const balanceDue = computeInvoiceBalanceDue(total, amountPaid);
+  const balanceDue = resolveInvoiceBalanceDue(
+    invoice ? { ...invoice, amount_paid: amountPaid } : null,
+    { total },
+  );
   const paymentSummary = describeInvoiceOnlinePaymentSummary({
     paymentMode,
     depositPercent,
