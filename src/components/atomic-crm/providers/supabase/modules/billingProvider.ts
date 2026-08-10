@@ -675,7 +675,8 @@ export const billingProvider = {
       | "reactivate"
       | "send_setup"
       | "update"
-      | "apply_payment";
+      | "apply_payment"
+      | "sync_stripe";
     name?: string | null;
     description?: string | null;
     amount?: number | null;
@@ -698,6 +699,8 @@ export const billingProvider = {
       subscription: Record<string, unknown>;
       checkout_url?: string | null;
       setup_link_stale?: boolean;
+      synced?: boolean;
+      reason?: string;
       used_saved_card?: boolean;
       used_staff_card?: boolean;
       email_sent?: boolean;

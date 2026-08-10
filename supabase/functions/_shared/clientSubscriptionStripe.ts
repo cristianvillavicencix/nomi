@@ -636,6 +636,120 @@ export async function applyStripeSubscriptionSnapshot(
     .eq("id", subscriptionId);
 }
 
+const retrieveStripeSubscriptionExpanded = async (
+  stripe: Stripe,
+  stripeSubscriptionId: string,
+) =>
+  stripe.subscriptions.retrieve(stripeSubscriptionId, {
+    expand: ["default_payment_method"],
+  });
+
+const subscriptionMatchesSigmaRecord = (
+  stripeSub: Stripe.Subscription,
+  subscription: ClientSubscriptionRow,
+) => {
+  const metadataId = Number(stripeSub.metadata?.subscription_id);
+  if (
+    stripeSub.metadata?.type === CLIENT_SUBSCRIPTION_METADATA_TYPE &&
+    metadataId === subscription.id
+  ) {
+    return true;
+  }
+
+  const expectedAmountCents = amountToCents(Number(subscription.amount));
+  return stripeSub.items.data.some((item) => {
+    const unitAmount = item.price?.unit_amount;
+    return unitAmount != null && unitAmount === expectedAmountCents;
+  });
+};
+
+export async function syncClientSubscriptionFromStripe(
+  stripe: Stripe,
+  supabase: SupabaseClient,
+  subscription: ClientSubscriptionRow,
+) {
+  const metadata = buildSubscriptionMetadata({
+    orgId: subscription.org_id,
+    subscriptionId: subscription.id,
+    contactId: subscription.contact_id,
+    companyId: subscription.company_id,
+  });
+
+  const applyAndReturn = async (
+    stripeSub: Stripe.Subscription,
+    source: string,
+  ) => {
+    if (
+      stripeSub.metadata?.subscription_id !== String(subscription.id) ||
+      stripeSub.metadata?.type !== CLIENT_SUBSCRIPTION_METADATA_TYPE
+    ) {
+      await stripe.subscriptions.update(stripeSub.id, { metadata });
+    }
+    await applyStripeSubscriptionSnapshot(
+      supabase,
+      subscription.id,
+      stripeSub,
+    );
+    return { synced: true, source, stripe_subscription_id: stripeSub.id };
+  };
+
+  const existingStripeSubId = subscription.stripe_subscription_id?.trim();
+  if (existingStripeSubId) {
+    const stripeSub = await retrieveStripeSubscriptionExpanded(
+      stripe,
+      existingStripeSubId,
+    );
+    return applyAndReturn(stripeSub, "stripe_subscription_id");
+  }
+
+  const checkoutSessionId = subscription.stripe_checkout_session_id?.trim();
+  if (checkoutSessionId) {
+    const session = await stripe.checkout.sessions.retrieve(checkoutSessionId, {
+      expand: ["subscription"],
+    });
+    if (session.mode === "subscription" && session.subscription) {
+      const stripeSubId =
+        typeof session.subscription === "string"
+          ? session.subscription
+          : session.subscription.id;
+      const stripeSub = await retrieveStripeSubscriptionExpanded(
+        stripe,
+        stripeSubId,
+      );
+      return applyAndReturn(stripeSub, "checkout_session");
+    }
+  }
+
+  const customerId = subscription.stripe_customer_id?.trim();
+  if (customerId) {
+    const list = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "all",
+      limit: 20,
+      expand: ["data.default_payment_method"],
+    });
+
+    const preferredStatuses = new Set([
+      "active",
+      "trialing",
+      "past_due",
+      "unpaid",
+    ]);
+
+    const match =
+      list.data.find((stripeSub) =>
+        subscriptionMatchesSigmaRecord(stripeSub, subscription)
+      ) ??
+      list.data.find((stripeSub) => preferredStatuses.has(stripeSub.status));
+
+    if (match) {
+      return applyAndReturn(match, "customer_subscriptions");
+    }
+  }
+
+  return { synced: false, reason: "no_stripe_subscription_found" };
+}
+
 export async function mirrorSubscriptionInvoiceToSigma(
   supabase: SupabaseClient,
   params: {

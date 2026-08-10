@@ -16,6 +16,7 @@ import { SubscriptionInvoiceHistoryTab } from "@/modules/billing/subscriptions/S
 import { SubscriptionOverviewTab } from "@/modules/billing/subscriptions/SubscriptionOverviewTab";
 import { SubscriptionSavedCardsTab } from "@/modules/billing/subscriptions/SubscriptionSavedCardsTab";
 import type { ClientSubscription } from "@/modules/types";
+import { useSubscriptionStripeSync } from "@/modules/billing/subscriptions/useSubscriptionStripeSync";
 
 type StandaloneSubscriptionEditPageProps = {
   embedded?: boolean;
@@ -38,6 +39,8 @@ export const StandaloneSubscriptionEditPage = ({
     { id: subscriptionId },
     { enabled: Boolean(subscriptionId) },
   );
+
+  useSubscriptionStripeSync(subscription);
 
   if (isPending || !subscription) {
     return (

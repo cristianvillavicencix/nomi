@@ -54,6 +54,7 @@ const handleClientSubscriptionWebhook = async (
   switch (event.type) {
     case "checkout.session.completed": {
       const session = object as {
+        id?: string;
         mode?: string;
         subscription?: string | null;
         metadata?: Record<string, string> | null;
@@ -62,7 +63,16 @@ const handleClientSubscriptionWebhook = async (
         return { handled: false };
       }
 
-      const subscriptionId = resolveSubscriptionIdFromMetadata(session.metadata);
+      let subscriptionId = resolveSubscriptionIdFromMetadata(session.metadata);
+      if (!subscriptionId && session.id) {
+        const { data: bySession } = await supabaseAdmin
+          .from("client_subscriptions")
+          .select("id")
+          .eq("stripe_checkout_session_id", session.id)
+          .maybeSingle();
+        subscriptionId = bySession?.id ?? null;
+      }
+
       if (!subscriptionId || !session.subscription) {
         return { handled: false };
       }
@@ -93,6 +103,24 @@ const handleClientSubscriptionWebhook = async (
               resolveSubscriptionIdFromMetadata(subPartial.metadata)!,
             )
           : null);
+
+      if (!subscription) {
+        const customerId =
+          typeof (object as { customer?: string | null }).customer === "string"
+            ? (object as { customer?: string | null }).customer
+            : null;
+        if (customerId) {
+          const { data: pending } = await supabaseAdmin
+            .from("client_subscriptions")
+            .select("*")
+            .eq("stripe_customer_id", customerId)
+            .eq("status", "pending_setup")
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          subscription = (pending as ClientSubscriptionRow | null) ?? null;
+        }
+      }
 
       if (!subscription) {
         return { handled: false };

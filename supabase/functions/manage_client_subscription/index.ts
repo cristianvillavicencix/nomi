@@ -24,6 +24,7 @@ import {
   sumSubscriptionLineItemsAmount,
   updateStripeSubscriptionBilling,
   type BillingInterval,
+  syncClientSubscriptionFromStripe,
   type ClientSubscriptionRow,
   type SubscriptionPaymentMode,
 } from "../_shared/clientSubscriptionStripe.ts";
@@ -39,7 +40,8 @@ type ManageBody = {
     | "reactivate"
     | "send_setup"
     | "update"
-    | "apply_payment";
+    | "apply_payment"
+    | "sync_stripe";
   name?: string | null;
   description?: string | null;
   amount?: number | null;
@@ -128,6 +130,30 @@ Deno.serve(
 
         const stripe = await getStripeForOrg(member.org_id);
         const stripeSubId = subscription.stripe_subscription_id?.trim();
+
+        if (action === "sync_stripe") {
+          const syncResult = await syncClientSubscriptionFromStripe(
+            stripe,
+            supabaseAdmin,
+            subscription,
+          );
+          const { data: fresh } = await supabaseAdmin
+            .from("client_subscriptions")
+            .select("*")
+            .eq("id", subscription.id)
+            .single();
+
+          return new Response(
+            JSON.stringify({
+              subscription: fresh,
+              ...syncResult,
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
 
         if (action === "send_setup") {
           const stripeCustomerId = await ensureSubscriptionStripeCustomer(
