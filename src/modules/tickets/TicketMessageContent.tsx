@@ -29,16 +29,25 @@ export const TicketMessageContent = ({
     [fileAttachments],
   );
 
-  const resolvedHtmlBody = useTicketInlineHtml(htmlBody, fileAttachments);
+  const { html: resolvedHtmlBody, isResolving } = useTicketInlineHtml(
+    htmlBody,
+    fileAttachments,
+  );
+
+  const displayHtmlBody = isResolving
+    ? null
+    : (resolvedHtmlBody ?? htmlBody);
 
   const downloadableAssets = useMemo(
     () =>
-      filterDownloadableMessageAssets(
-        assets,
-        htmlBody,
-        resolvedHtmlBody ?? htmlBody,
-      ),
-    [assets, htmlBody, resolvedHtmlBody],
+      isResolving
+        ? []
+        : filterDownloadableMessageAssets(
+            assets,
+            htmlBody,
+            resolvedHtmlBody ?? htmlBody,
+          ),
+    [assets, htmlBody, resolvedHtmlBody, isResolving],
   );
 
   const attachmentSrcs = useMemo(
@@ -60,13 +69,17 @@ export const TicketMessageContent = ({
   return (
     <div className={cn(className)}>
       <TicketEmailAttachmentBar assets={downloadableAssets} />
-      <TicketMessageBody
-        body={body}
-        htmlBody={resolvedHtmlBody ?? htmlBody}
-        attachmentSrcs={attachmentSrcs}
-        attachmentTitles={attachmentTitles}
-        emailVariant={emailVariant}
-      />
+      {isResolving && !body?.trim() ? (
+        <p className="py-2 text-sm text-muted-foreground">Loading message…</p>
+      ) : (
+        <TicketMessageBody
+          body={body}
+          htmlBody={displayHtmlBody}
+          attachmentSrcs={attachmentSrcs}
+          attachmentTitles={attachmentTitles}
+          emailVariant={emailVariant}
+        />
+      )}
     </div>
   );
 };

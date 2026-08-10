@@ -104,13 +104,20 @@ const installEmailSanitizeHooks = () => {
         node.remove();
         return;
       }
-      node.removeAttribute("width");
-      node.removeAttribute("height");
-      node.style.setProperty("max-width", "100%", "important");
-      node.style.setProperty("max-height", "420px", "important");
-      node.style.setProperty("height", "auto", "important");
-      node.style.setProperty("width", "auto", "important");
-      node.style.setProperty("object-fit", "contain", "important");
+      if (preserveLayoutInHook) {
+        node.style.setProperty("max-width", "100%", "important");
+        if (!node.getAttribute("width") && !node.style.width) {
+          node.style.setProperty("height", "auto", "important");
+        }
+      } else {
+        node.removeAttribute("width");
+        node.removeAttribute("height");
+        node.style.setProperty("max-width", "100%", "important");
+        node.style.setProperty("max-height", "420px", "important");
+        node.style.setProperty("height", "auto", "important");
+        node.style.setProperty("width", "auto", "important");
+        node.style.setProperty("object-fit", "contain", "important");
+      }
     }
 
     if (node.tagName === "TABLE") {

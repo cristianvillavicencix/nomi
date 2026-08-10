@@ -24,7 +24,7 @@ const escapeHtmlAttr = (value: string) =>
     .replace(/</g, "&lt;");
 
 const buildInlineImageTag = (src: string, alt: string) =>
-  `<img src="${escapeHtmlAttr(src)}" alt="${escapeHtmlAttr(alt)}" style="max-width:100%;height:auto;display:block;margin:8px 0;" />`;
+  `<img src="${escapeHtmlAttr(src)}" alt="${escapeHtmlAttr(alt)}" style="display:block;margin:8px 0;max-width:100%;" />`;
 
 const signAttachmentReference = async (file: FileAttachment) => {
   const reference = attachmentStorageKey(file);

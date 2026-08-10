@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import {
   ChevronDown,
@@ -507,19 +507,47 @@ export const TicketThread = ({
   );
 
   const messageIdsKey = messageIds.join(",");
+  const prevMessageIdsRef = useRef<number[]>([]);
+  const prevMessageCountRef = useRef(0);
 
   useEffect(() => {
-    // Newest-first: expand the top message, collapse older ones.
     if (messageIds.length <= 1) {
       setCollapsedIds(new Set());
+      prevMessageIdsRef.current = messageIds;
       return;
     }
-    setCollapsedIds(new Set(messageIds.slice(1)));
-  }, [messageIdsKey]);
+
+    const prevIds = prevMessageIdsRef.current;
+    const prevSet = new Set(prevIds);
+
+    if (prevIds.length === 0) {
+      setCollapsedIds(new Set(messageIds.slice(1)));
+    } else if (messageIdsKey !== prevIds.join(",")) {
+      setCollapsedIds((current) => {
+        const next = new Set(current);
+        for (const id of messageIds.slice(1)) {
+          if (!prevSet.has(id)) {
+            next.add(id);
+          }
+        }
+        for (const id of next) {
+          if (!messageIds.includes(id)) {
+            next.delete(id);
+          }
+        }
+        return next;
+      });
+    }
+
+    prevMessageIdsRef.current = messageIds;
+  }, [messageIdsKey, messageIds]);
 
   useEffect(() => {
-    setShowAllEarlier(false);
-  }, [messageIdsKey]);
+    if (messageIds.length > prevMessageCountRef.current) {
+      setShowAllEarlier(false);
+    }
+    prevMessageCountRef.current = messageIds.length;
+  }, [messageIds.length]);
 
   const toggleMessage = (messageId: number) => {
     setCollapsedIds((current) => {

@@ -22,7 +22,7 @@ export const useTicketThreadMessages = (
       pagination: { page: 1, perPage: 500 },
       sort: { field: "created_at", order: "DESC" },
     },
-    { enabled: ticketId != null, staleTime: 5_000 },
+    { enabled: ticketId != null, staleTime: 30_000 },
   );
 
   const scrollToLatest = useCallback((behavior: ScrollBehavior = "smooth") => {

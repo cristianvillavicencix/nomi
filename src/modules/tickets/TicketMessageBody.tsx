@@ -32,7 +32,7 @@ const emailHtmlClassNameSafe = cn(
 const emailHtmlClassNameOriginal = cn(
   "ticket-email-html overflow-x-auto leading-relaxed break-words text-sm text-foreground",
   "[&_a]:font-medium [&_a]:text-blue-700 [&_a]:underline",
-  "[&_img]:!h-auto [&_img]:!max-w-full [&_img]:!max-h-[480px] [&_img]:!object-contain",
+  "[&_img]:block [&_img]:max-w-full",
   "[&_table]:!max-w-full",
   "[&_td]:break-words [&_th]:break-words",
   "[&_*]:max-w-full",
