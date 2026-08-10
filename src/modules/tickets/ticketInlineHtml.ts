@@ -4,6 +4,10 @@ import {
   normalizeContentId,
   rewriteCidReferencesInHtml,
 } from "@/modules/mail/mailInlineImages";
+import {
+  isInlineImageCandidate,
+  isInlineImageRenderedInHtml,
+} from "@/modules/tickets/ticketInlineHtmlUtils";
 
 const TICKET_ATTACHMENTS_BUCKET = "attachments";
 
@@ -13,52 +17,37 @@ const attachmentStorageKey = (file: FileAttachment) =>
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** Resolve cid: references and storage paths in ticket email HTML for display. */
-export async function resolveTicketInlineHtml(
-  html: string,
-  attachments: FileAttachment[],
-): Promise<string> {
-  if (!html.trim()) return html;
+const escapeHtmlAttr = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
 
-  let result = html;
-  const cidToUrl = new Map<string, string>();
+const buildInlineImageTag = (src: string, alt: string) =>
+  `<img src="${escapeHtmlAttr(src)}" alt="${escapeHtmlAttr(alt)}" style="max-width:100%;height:auto;display:block;margin:8px 0;" />`;
 
-  const inlineFiles = attachments.filter(
-    (file) => file.contentId?.trim() && attachmentStorageKey(file),
-  );
-
-  await Promise.all(
-    inlineFiles.map(async (file) => {
-      const reference = attachmentStorageKey(file);
-      const signed = await resolvePrivateStorageSignedUrl({
-        reference,
-        defaultBucket: TICKET_ATTACHMENTS_BUCKET,
-      });
-      if (!signed || !file.contentId) return;
-      cidToUrl.set(file.contentId, signed);
-      cidToUrl.set(normalizeContentId(file.contentId), signed);
-    }),
-  );
-
-  if (cidToUrl.size > 0) {
-    result = rewriteCidReferencesInHtml(result, cidToUrl);
+const signAttachmentReference = async (file: FileAttachment) => {
+  const reference = attachmentStorageKey(file);
+  if (!reference) return null;
+  if (
+    reference.startsWith("http://") ||
+    reference.startsWith("https://") ||
+    reference.startsWith("blob:") ||
+    reference.startsWith("data:")
+  ) {
+    return reference;
   }
+  return resolvePrivateStorageSignedUrl({
+    reference,
+    defaultBucket: TICKET_ATTACHMENTS_BUCKET,
+  });
+};
 
-  const pathToUrl = new Map<string, string>();
-
-  await Promise.all(
-    attachments.map(async (file) => {
-      const reference = attachmentStorageKey(file);
-      if (!reference || reference.startsWith("http")) return;
-      if (pathToUrl.has(reference)) return;
-      const signed = await resolvePrivateStorageSignedUrl({
-        reference,
-        defaultBucket: TICKET_ATTACHMENTS_BUCKET,
-      });
-      if (signed) pathToUrl.set(reference, signed);
-    }),
-  );
-
+const rewriteStoragePathsInHtml = (
+  html: string,
+  pathToUrl: Map<string, string>,
+) => {
+  let result = html;
   for (const [reference, signedUrl] of pathToUrl.entries()) {
     const escaped = escapeRegExp(reference);
     result = result.replace(
@@ -70,6 +59,73 @@ export async function resolveTicketInlineHtml(
       `$1${signedUrl}$2)`,
     );
   }
-
   return result;
+};
+
+/** Resolve inline images for ticket email HTML and append missing signature logos. */
+export async function resolveTicketDisplayHtml(
+  htmlBody: string | null | undefined,
+  attachments: FileAttachment[],
+): Promise<string | null> {
+  const sourceHtml = htmlBody?.trim() ?? "";
+  const signedUrls = new Map<FileAttachment, string>();
+
+  await Promise.all(
+    attachments.map(async (file) => {
+      const signed = await signAttachmentReference(file);
+      if (signed) signedUrls.set(file, signed);
+    }),
+  );
+
+  const cidToUrl = new Map<string, string>();
+  for (const file of attachments) {
+    const contentId = file.contentId?.trim();
+    const signed = signedUrls.get(file);
+    if (!contentId || !signed) continue;
+    cidToUrl.set(contentId, signed);
+    cidToUrl.set(normalizeContentId(contentId), signed);
+  }
+
+  let result = sourceHtml;
+  if (result && cidToUrl.size > 0) {
+    result = rewriteCidReferencesInHtml(result, cidToUrl);
+  }
+
+  if (result) {
+    const pathToUrl = new Map<string, string>();
+    for (const file of attachments) {
+      const reference = attachmentStorageKey(file);
+      const signed = signedUrls.get(file);
+      if (!reference || !signed || reference.startsWith("http")) continue;
+      pathToUrl.set(reference, signed);
+    }
+    result = rewriteStoragePathsInHtml(result, pathToUrl);
+  }
+
+  const inlineCandidates = attachments.filter((file) =>
+    isInlineImageCandidate(file, sourceHtml),
+  );
+
+  const missingInline = inlineCandidates.filter((file) => {
+    const signed = signedUrls.get(file);
+    if (!signed) return false;
+    return !isInlineImageRenderedInHtml(file, result, signed);
+  });
+
+  if (missingInline.length > 0) {
+    const block = missingInline
+      .map((file) =>
+        buildInlineImageTag(
+          signedUrls.get(file)!,
+          file.title?.trim() || "Inline image",
+        ),
+      )
+      .join("");
+    result = result ? `${result}<div>${block}</div>` : `<div>${block}</div>`;
+  }
+
+  return result || null;
 }
+
+/** @deprecated Use resolveTicketDisplayHtml */
+export const resolveTicketInlineHtml = resolveTicketDisplayHtml;

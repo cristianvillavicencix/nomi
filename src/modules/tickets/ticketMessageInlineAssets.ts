@@ -1,15 +1,8 @@
 import type { MessageAsset } from "@/modules/tickets/ticketMessageAssets";
-
-const normalizeAttachmentReference = (value: string) => {
-  const trimmed = value.trim().toLowerCase();
-  if (!trimmed) return "";
-  try {
-    const url = new URL(trimmed, "https://local.invalid");
-    return `${url.pathname}${url.search}`.replace(/^\//, "");
-  } catch {
-    return trimmed.replace(/^\//, "");
-  }
-};
+import {
+  isInlineImageRenderedInHtml,
+  normalizeAttachmentReference,
+} from "@/modules/tickets/ticketInlineHtmlUtils";
 
 /** Inline signature/logo images stay in the HTML body — not the attachment bar. */
 export const isInlineTicketAttachment = (
@@ -32,4 +25,22 @@ export const isInlineTicketAttachment = (
 export const filterDownloadableMessageAssets = (
   assets: MessageAsset[],
   htmlBody?: string | null,
-) => assets.filter((asset) => !isInlineTicketAttachment(asset, htmlBody));
+  displayHtml?: string | null,
+) =>
+  assets.filter((asset) => {
+    if (!isInlineTicketAttachment(asset, htmlBody ?? displayHtml)) {
+      return true;
+    }
+
+    return !isInlineImageRenderedInHtml(
+      {
+        title: asset.label,
+        type: asset.type,
+        src: asset.href,
+        path: asset.path,
+        contentId: asset.contentId,
+      },
+      displayHtml ?? htmlBody,
+      asset.href,
+    );
+  });

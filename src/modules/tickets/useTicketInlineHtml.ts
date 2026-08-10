@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FileAttachment } from "@/lib/fileAttachments";
-import { resolveTicketInlineHtml } from "@/modules/tickets/ticketInlineHtml";
+import { resolveTicketDisplayHtml } from "@/modules/tickets/ticketInlineHtml";
 
 export const useTicketInlineHtml = (
   html: string | null | undefined,
@@ -14,15 +14,9 @@ export const useTicketInlineHtml = (
     .join("\n");
 
   useEffect(() => {
-    const trimmed = html?.trim();
-    if (!trimmed) {
-      setResolved(null);
-      return;
-    }
-
     let cancelled = false;
 
-    void resolveTicketInlineHtml(trimmed, attachments).then((next) => {
+    void resolveTicketDisplayHtml(html, attachments).then((next) => {
       if (!cancelled) setResolved(next);
     });
 

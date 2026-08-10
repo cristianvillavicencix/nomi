@@ -29,12 +29,17 @@ export const TicketMessageContent = ({
     [fileAttachments],
   );
 
-  const downloadableAssets = useMemo(
-    () => filterDownloadableMessageAssets(assets, htmlBody),
-    [assets, htmlBody],
-  );
-
   const resolvedHtmlBody = useTicketInlineHtml(htmlBody, fileAttachments);
+
+  const downloadableAssets = useMemo(
+    () =>
+      filterDownloadableMessageAssets(
+        assets,
+        htmlBody,
+        resolvedHtmlBody ?? htmlBody,
+      ),
+    [assets, htmlBody, resolvedHtmlBody],
+  );
 
   const attachmentSrcs = useMemo(
     () =>
