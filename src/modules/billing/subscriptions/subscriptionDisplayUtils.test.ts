@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   buildSubscriptionListFilter,
   buildSubscriptionBankStatementPreview,
+  canShowSubscriptionSetupLink,
+  canSyncSubscriptionFromStripe,
   formatSubscriptionAmountLabel,
   formatSubscriptionNextBillingLabel,
+  hasSubscriptionSetupLink,
   isSubscriptionExpired,
   subscriptionMatchesStatusFilter,
   subscriptionStatusLabel,
@@ -67,5 +70,44 @@ describe("subscriptionDisplayUtils", () => {
         subscriptionName: "Monthly IT Support",
       }),
     ).toBe("LATINO BUS* MONTHLY IT SUPPORT");
+  });
+
+  it("hides setup link once subscription is active with a card", () => {
+    const withLink = {
+      status: "active" as const,
+      payment_method_last4: "2236",
+      setup_share_url: "https://www.nomicrm.com/sub/uGZm36Y",
+      setup_checkout_url: null,
+      setup_short_code: "uGZm36Y",
+    };
+    expect(hasSubscriptionSetupLink(withLink)).toBe(true);
+    expect(canShowSubscriptionSetupLink(withLink)).toBe(false);
+  });
+
+  it("shows setup link for pending setup subscriptions", () => {
+    expect(
+      canShowSubscriptionSetupLink({
+        status: "pending_setup",
+        payment_method_last4: null,
+        setup_share_url: "https://www.nomicrm.com/sub/abc",
+        setup_checkout_url: null,
+        setup_short_code: "abc",
+      }),
+    ).toBe(true);
+  });
+
+  it("allows Stripe sync for linked active subscriptions", () => {
+    expect(
+      canSyncSubscriptionFromStripe({
+        status: "active",
+        stripe_subscription_id: "sub_123",
+      }),
+    ).toBe(true);
+    expect(
+      canSyncSubscriptionFromStripe({
+        status: "pending_setup",
+        stripe_subscription_id: null,
+      }),
+    ).toBe(false);
   });
 });

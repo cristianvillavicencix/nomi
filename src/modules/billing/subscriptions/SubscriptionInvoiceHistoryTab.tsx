@@ -3,13 +3,17 @@ import { useGetList } from "ra-core";
 import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
 import { buildBillingInvoiceDetailPath } from "@/modules/billing/subscriptions/billingNavigation";
 import {
+  canSyncSubscriptionFromStripe,
+  formatSubscriptionNextBillingLabel,
+} from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
+import {
   invoiceStatusSidebarLabel,
   invoiceStatusSidebarVariant,
 } from "@/modules/billing/invoiceStatusSidebarLabel";
 import {
   formatSavedCardMask,
 } from "@/modules/billing/subscriptions/useClientSavedPaymentMethod";
-import type { ClientInvoice } from "@/modules/types";
+import type { ClientInvoice, ClientSubscription } from "@/modules/types";
 import { Badge } from "@/components/ui/badge";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import {
@@ -23,6 +27,7 @@ import {
 
 type SubscriptionInvoiceHistoryTabProps = {
   subscriptionId: string;
+  subscription?: ClientSubscription;
 };
 
 const formatChargedCard = (invoice: ClientInvoice) => {
@@ -32,8 +37,28 @@ const formatChargedCard = (invoice: ClientInvoice) => {
   return brand ? `${brand} ${formatSavedCardMask(last4)}` : formatSavedCardMask(last4);
 };
 
+const buildEmptyStateMessage = (subscription?: ClientSubscription) => {
+  if (!subscription) {
+    return "No invoices from this subscription yet. Invoices appear here after each successful billing cycle.";
+  }
+
+  if (
+    (subscription.status === "active" || subscription.status === "trialing") &&
+    !subscription.last_billed_at
+  ) {
+    const nextBilling = formatSubscriptionNextBillingLabel(subscription);
+    if (canSyncSubscriptionFromStripe(subscription)) {
+      return `No charges recorded in Sigma yet. ${nextBilling}. If Stripe already charged this subscription, use Sync from Stripe in the toolbar to import invoices.`;
+    }
+    return `No charges recorded yet. ${nextBilling}.`;
+  }
+
+  return "No invoices from this subscription yet. Invoices appear here after each successful billing cycle.";
+};
+
 export const SubscriptionInvoiceHistoryTab = ({
   subscriptionId,
+  subscription,
 }: SubscriptionInvoiceHistoryTabProps) => {
   const navigate = useNavigate();
   const { data: invoices = [], isPending } = useGetList<ClientInvoice>(
@@ -55,8 +80,7 @@ export const SubscriptionInvoiceHistoryTab = ({
   if (!invoices.length) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-        No invoices from this subscription yet. Invoices appear here after each
-        successful billing cycle.
+        {buildEmptyStateMessage(subscription)}
       </div>
     );
   }
@@ -93,10 +117,7 @@ export const SubscriptionInvoiceHistoryTab = ({
                 )}
               </TableCell>
               <TableCell className="text-right tabular-nums">
-                <MoneyText
-                  amount={Number(invoice.amount)}
-                  currency={invoice.currency ?? "USD"}
-                />
+                <MoneyText value={Number(invoice.amount)} />
               </TableCell>
               <TableCell className="font-mono text-sm text-muted-foreground">
                 {formatChargedCard(invoice)}

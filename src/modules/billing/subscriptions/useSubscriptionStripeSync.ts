@@ -12,6 +12,11 @@ const shouldAutoSyncSubscription = (subscription: ClientSubscription) => {
   );
 };
 
+type SyncStripeResult = {
+  synced?: boolean;
+  invoices_backfilled?: { mirrored?: number; skipped?: number };
+};
+
 export const useSubscriptionStripeSync = (
   subscription: ClientSubscription | undefined,
   options?: { enabled?: boolean },
@@ -27,8 +32,16 @@ export const useSubscriptionStripeSync = (
         subscriptionId: subscription!.id,
         action: "sync_stripe",
       }),
-    onSuccess: (result) => {
+    onSuccess: (result: SyncStripeResult) => {
       refresh();
+      const mirrored = result.invoices_backfilled?.mirrored ?? 0;
+      if (mirrored > 0) {
+        notify(
+          `Synced from Stripe (${mirrored} invoice${mirrored === 1 ? "" : "s"} imported)`,
+          { type: "success" },
+        );
+        return;
+      }
       if (result.synced) {
         notify("Subscription synced from Stripe", { type: "success" });
       }

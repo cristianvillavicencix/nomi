@@ -3,11 +3,9 @@ import {
   ChevronDown,
   Copy,
   CreditCard,
-  ExternalLink,
   Loader2,
   Mail,
   MessageSquare,
-  MoreHorizontal,
   Pause,
   Pencil,
   Play,
@@ -22,11 +20,14 @@ import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
 import { resolveSubscriptionSetupShareUrl } from "@/lib/publicAppUrl";
 import {
+  canShowSubscriptionSetupLink,
+  canSyncSubscriptionFromStripe,
   formatSubscriptionAmountLabel,
   isSubscriptionExpired,
   subscriptionStatusLabel,
   subscriptionStatusVariant,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
+import { useSubscriptionStripeSync } from "@/modules/billing/subscriptions/useSubscriptionStripeSync";
 import { SendSubscriptionSetupDialog } from "@/modules/billing/subscriptions/SendSubscriptionSetupDialog";
 import { CollectSubscriptionPaymentDialog } from "@/modules/billing/subscriptions/CollectSubscriptionPaymentDialog";
 import { FinishSubscriptionSetupDialog } from "@/modules/billing/subscriptions/FinishSubscriptionSetupDialog";
@@ -263,6 +264,10 @@ export const SubscriptionDetailToolbar = ({
   >(null);
   const [billingActionsOpen, setBillingActionsOpen] = useState(false);
 
+  const { syncFromStripe, isSyncing } = useSubscriptionStripeSync(subscription, {
+    enabled: false,
+  });
+
   const manageMutation = useMutation({
     mutationFn: (
       input: Parameters<CrmDataProvider["manageClientSubscription"]>[0],
@@ -340,12 +345,8 @@ export const SubscriptionDetailToolbar = ({
     notify("Setup link copied", { type: "success" });
   };
 
-  const hasCheckoutUrl = Boolean(
-    subscription.setup_share_url?.trim() || subscription.setup_checkout_url?.trim(),
-  );
-
-  const showMoreActions = hasCheckoutUrl;
-
+  const showSetupLink = canShowSubscriptionSetupLink(subscription);
+  const canSyncFromStripe = canSyncSubscriptionFromStripe(subscription);
   const showFinishSetup = canCollectPayment;
 
   const handleFinishSetupAction = (
@@ -485,14 +486,31 @@ export const SubscriptionDetailToolbar = ({
             </DropdownMenu>
           ) : null}
 
-          <ToolbarButton
-            disabled={busy || !hasCheckoutUrl}
-            onClick={() => void copyCheckoutUrl()}
-            title={hasCheckoutUrl ? "Copy checkout link" : "No setup link yet"}
-          >
-            <ExternalLink className="size-3.5" />
-            Share
-          </ToolbarButton>
+          {showSetupLink ? (
+            <ToolbarButton
+              disabled={busy}
+              onClick={() => void copyCheckoutUrl()}
+              title="Copy setup link"
+            >
+              <Copy className="size-3.5" />
+              Copy link
+            </ToolbarButton>
+          ) : null}
+
+          {canSyncFromStripe ? (
+            <ToolbarButton
+              disabled={busy || isSyncing}
+              onClick={() => syncFromStripe()}
+              title="Sync status and invoices from Stripe"
+            >
+              {isSyncing ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <RotateCcw className="size-3.5" />
+              )}
+              Sync from Stripe
+            </ToolbarButton>
+          ) : null}
 
           {canResume ? (
             <ToolbarButton
@@ -512,22 +530,6 @@ export const SubscriptionDetailToolbar = ({
               <Pause className="size-3.5" />
               Manage billing
             </ToolbarButton>
-          ) : null}
-
-          {showMoreActions ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <ToolbarButton disabled={busy} aria-label="More subscription actions">
-                  <MoreHorizontal className="size-3.5" />
-                </ToolbarButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onSelect={() => void copyCheckoutUrl()}>
-                  <Copy className="size-4" />
-                  Copy setup link
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           ) : null}
         </div>
 

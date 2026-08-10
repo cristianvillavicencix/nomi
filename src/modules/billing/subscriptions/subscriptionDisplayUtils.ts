@@ -188,6 +188,48 @@ export const formatSubscriptionNextBillingLabel = (
   return `Next billing · ${formatBillingDate(nextBilling)}`;
 };
 
+export const hasSubscriptionSetupLink = (
+  subscription: Pick<
+    ClientSubscription,
+    "setup_share_url" | "setup_checkout_url" | "setup_short_code"
+  >,
+) =>
+  Boolean(
+    subscription.setup_share_url?.trim() ||
+      subscription.setup_checkout_url?.trim() ||
+      subscription.setup_short_code?.trim(),
+  );
+
+export const canShowSubscriptionSetupLink = (
+  subscription: Pick<
+    ClientSubscription,
+    | "status"
+    | "payment_method_last4"
+    | "setup_share_url"
+    | "setup_checkout_url"
+    | "setup_short_code"
+  >,
+) => {
+  if (!hasSubscriptionSetupLink(subscription)) return false;
+  if (subscription.status === "pending_setup") return true;
+  if (
+    subscription.status === "past_due" &&
+    !subscription.payment_method_last4?.trim()
+  ) {
+    return true;
+  }
+  return false;
+};
+
+export const canSyncSubscriptionFromStripe = (
+  subscription: Pick<ClientSubscription, "status" | "stripe_subscription_id">,
+) =>
+  Boolean(subscription.stripe_subscription_id?.trim()) &&
+  (subscription.status === "active" ||
+    subscription.status === "trialing" ||
+    subscription.status === "past_due" ||
+    subscription.status === "paused");
+
 export const buildSubscriptionSetupSharePath = (shortCode: string) =>
   `/sub/${shortCode.trim()}`;
 

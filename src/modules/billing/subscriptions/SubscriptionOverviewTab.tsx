@@ -236,10 +236,7 @@ export const SubscriptionOverviewTab = ({
             {
               label: "Total billed",
               value: (
-                <MoneyText
-                  amount={totalBilled}
-                  currency={subscription.currency ?? "USD"}
-                />
+                <MoneyText value={totalBilled} />
               ),
             },
           ].map(({ label, value }) => (
@@ -284,16 +281,10 @@ export const SubscriptionOverviewTab = ({
                       {row.quantity}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      <MoneyText
-                        amount={row.unitPrice}
-                        currency={subscription.currency ?? "USD"}
-                      />
+                      <MoneyText value={row.unitPrice} />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      <MoneyText
-                        amount={row.amount}
-                        currency={subscription.currency ?? "USD"}
-                      />
+                      <MoneyText value={row.amount} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -302,19 +293,13 @@ export const SubscriptionOverviewTab = ({
           ) : (
             <p className="text-sm text-muted-foreground">
               {subscription.name} —{" "}
-              <MoneyText
-                amount={Number(subscription.amount)}
-                currency={subscription.currency ?? "USD"}
-              />
+              <MoneyText value={Number(subscription.amount)} />
             </p>
           )}
           <div className="mt-3 flex justify-end border-t pt-3 text-sm font-semibold">
             Total{" "}
             <span className="ml-2 tabular-nums">
-              <MoneyText
-                amount={Number(subscription.amount)}
-                currency={subscription.currency ?? "USD"}
-              />
+              <MoneyText value={Number(subscription.amount)} />
             </span>
           </div>
         </OverviewCard>

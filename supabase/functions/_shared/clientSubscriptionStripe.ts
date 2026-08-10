@@ -621,6 +621,8 @@ export async function applyStripeSubscriptionSnapshot(
   if (status === "active" || status === "trialing") {
     update.setup_checkout_url = null;
     update.stripe_checkout_session_id = null;
+    update.setup_share_url = null;
+    update.setup_short_code = null;
     if (!existing?.activated_at) {
       update.activated_at = now;
     }
@@ -690,7 +692,25 @@ export async function syncClientSubscriptionFromStripe(
       subscription.id,
       stripeSub,
     );
-    return { synced: true, source, stripe_subscription_id: stripeSub.id };
+
+    const { data: fresh } = await supabase
+      .from("client_subscriptions")
+      .select("*")
+      .eq("id", subscription.id)
+      .maybeSingle();
+
+    const invoicesBackfilled = await backfillSubscriptionInvoicesFromStripe(
+      stripe,
+      supabase,
+      (fresh ?? subscription) as ClientSubscriptionRow,
+    );
+
+    return {
+      synced: true,
+      source,
+      stripe_subscription_id: stripeSub.id,
+      invoices_backfilled: invoicesBackfilled,
+    };
   };
 
   const existingStripeSubId = subscription.stripe_subscription_id?.trim();
@@ -748,6 +768,40 @@ export async function syncClientSubscriptionFromStripe(
   }
 
   return { synced: false, reason: "no_stripe_subscription_found" };
+}
+
+export async function backfillSubscriptionInvoicesFromStripe(
+  stripe: Stripe,
+  supabase: SupabaseClient,
+  subscription: ClientSubscriptionRow,
+) {
+  const stripeSubId = subscription.stripe_subscription_id?.trim();
+  if (!stripeSubId) {
+    return { mirrored: 0, skipped: 0 };
+  }
+
+  const list = await stripe.invoices.list({
+    subscription: stripeSubId,
+    limit: 24,
+    status: "paid",
+  });
+
+  let mirrored = 0;
+  let skipped = 0;
+  for (const stripeInvoice of list.data) {
+    const result = await mirrorSubscriptionInvoiceToSigma(supabase, {
+      orgId: subscription.org_id,
+      subscription,
+      stripeInvoice,
+    });
+    if (result.skipped) {
+      skipped += 1;
+    } else {
+      mirrored += 1;
+    }
+  }
+
+  return { mirrored, skipped };
 }
 
 export async function mirrorSubscriptionInvoiceToSigma(

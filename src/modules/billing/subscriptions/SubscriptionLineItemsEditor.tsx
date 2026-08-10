@@ -126,11 +126,10 @@ export const SubscriptionLineItemsEditor = ({
                 <Label>Amount</Label>
                 <div className="flex h-9 items-center rounded-md border bg-background px-3 text-sm font-medium tabular-nums">
                   <MoneyText
-                    amount={
+                    value={
                       (Number(line.quantity) || 0) *
                       (Number(line.unit_price) || 0)
                     }
-                    currency={currency}
                   />
                 </div>
               </div>
@@ -142,7 +141,7 @@ export const SubscriptionLineItemsEditor = ({
       <div className="flex justify-end border-t pt-3 text-sm font-semibold">
         Total{" "}
         <span className="ml-2 tabular-nums">
-          <MoneyText amount={total} currency={currency} />
+          <MoneyText value={total} />
         </span>
       </div>
     </div>

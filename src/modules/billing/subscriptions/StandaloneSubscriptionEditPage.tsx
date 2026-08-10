@@ -76,6 +76,7 @@ export const StandaloneSubscriptionEditPage = ({
         {subview === "invoices" ? (
           <SubscriptionInvoiceHistoryTab
             subscriptionId={String(subscription.id)}
+            subscription={subscription}
           />
         ) : null}
         {subview === "cards" ? (
