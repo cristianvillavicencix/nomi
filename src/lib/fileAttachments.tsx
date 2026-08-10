@@ -15,6 +15,10 @@ export type FileAttachment = {
   type?: string;
   src?: string;
   path?: string;
+  /** MIME Content-ID for inline email images (cid:…). */
+  contentId?: string | null;
+  /** Stored attachment size when known (bytes). */
+  sizeBytes?: number | null;
 };
 
 export type FileKind =

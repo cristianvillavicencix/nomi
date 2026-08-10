@@ -11,6 +11,9 @@ export type MessageAsset = {
   previewSrc?: string;
   path?: string;
   type?: string;
+  /** MIME Content-ID when this file was an inline email part. */
+  contentId?: string | null;
+  sizeBytes?: number | null;
 };
 
 const normalizeHref = (value: string) => {
@@ -128,6 +131,11 @@ export const fileAttachmentToAsset = (
     previewSrc: category === "photo" ? href : undefined,
     path: file.path?.trim() || undefined,
     type: file.type?.trim() || undefined,
+    contentId: file.contentId?.trim() || null,
+    sizeBytes:
+      file.sizeBytes != null && Number.isFinite(Number(file.sizeBytes))
+        ? Number(file.sizeBytes)
+        : null,
   };
 };
 
@@ -169,6 +177,11 @@ export const extractMessageAssets = ({
  * extracting them into Documents. Kept for callers that still want that
  * behavior; ticket UI no longer strips body links (Gmail-like).
  */
+export {
+  filterDownloadableMessageAssets,
+  isInlineTicketAttachment,
+} from "@/modules/tickets/ticketMessageInlineAssets";
+
 export const collectStripHrefs = (assets: MessageAsset[]) =>
   assets
     .filter((asset) => asset.source === "link")

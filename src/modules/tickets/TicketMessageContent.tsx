@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import type { FileAttachment } from "@/lib/fileAttachments";
+import { TicketEmailAttachmentBar } from "@/modules/tickets/TicketEmailAttachmentBar";
 import { TicketMessageBody } from "@/modules/tickets/TicketMessageBody";
-import { TicketMessageAttachments } from "@/modules/tickets/TicketMessageAttachments";
 import {
   extractMessageAssets,
-  partitionMessageAssets,
+  filterDownloadableMessageAssets,
 } from "@/modules/tickets/ticketMessageAssets";
+import { useTicketInlineHtml } from "@/modules/tickets/useTicketInlineHtml";
 import { cn } from "@/lib/utils";
 
 export const TicketMessageContent = ({
@@ -28,28 +29,39 @@ export const TicketMessageContent = ({
     [fileAttachments],
   );
 
-  const { documents, videos, photos } = useMemo(
-    () => partitionMessageAssets(assets),
-    [assets],
+  const downloadableAssets = useMemo(
+    () => filterDownloadableMessageAssets(assets, htmlBody),
+    [assets, htmlBody],
   );
 
-  const hasFileAssets =
-    documents.length > 0 || videos.length > 0 || photos.length > 0;
+  const resolvedHtmlBody = useTicketInlineHtml(htmlBody, fileAttachments);
+
+  const attachmentSrcs = useMemo(
+    () =>
+      downloadableAssets
+        .map((asset) => asset.href)
+        .filter(Boolean),
+    [downloadableAssets],
+  );
+
+  const attachmentTitles = useMemo(
+    () =>
+      downloadableAssets
+        .map((asset) => asset.label)
+        .filter(Boolean),
+    [downloadableAssets],
+  );
 
   return (
     <div className={cn(className)}>
+      <TicketEmailAttachmentBar assets={downloadableAssets} />
       <TicketMessageBody
         body={body}
-        htmlBody={htmlBody}
+        htmlBody={resolvedHtmlBody ?? htmlBody}
+        attachmentSrcs={attachmentSrcs}
+        attachmentTitles={attachmentTitles}
         emailVariant={emailVariant}
       />
-      {hasFileAssets ? (
-        <TicketMessageAttachments
-          documents={documents}
-          videos={videos}
-          photos={photos}
-        />
-      ) : null}
     </div>
   );
 };
