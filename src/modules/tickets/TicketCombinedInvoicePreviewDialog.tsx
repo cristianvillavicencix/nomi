@@ -409,6 +409,7 @@ export const TicketCombinedInvoicePreviewDialog = ({
                   values={toEmails}
                   onChange={setToEmails}
                   placeholder="client@example.com"
+                  helperText="Press comma or Enter to add another recipient."
                 />
 
                 <div className="space-y-2">
@@ -470,6 +471,7 @@ export const TicketCombinedInvoicePreviewDialog = ({
                       values={phones}
                       onChange={setPhones}
                       placeholder="(203) 555-0100"
+                      helperText="US mobile numbers only · 10 digits each · press comma or Enter to add another."
                     />
                   ) : null}
                 </div>

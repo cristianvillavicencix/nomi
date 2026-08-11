@@ -27,6 +27,10 @@ import {
   sendTicketInvoiceSms,
 } from "./ticketInvoiceFlow.ts";
 import {
+  parseInvoiceRecipientEmailList,
+  parseInvoiceRecipientPhoneList,
+} from "./invoiceRecipientLists.ts";
+import {
   buildTicketPaymentSmsText,
   resolveTicketSmsServiceSubject,
 } from "./ticketInvoiceCopy.ts";
@@ -229,20 +233,20 @@ async function loadTicketsForCombinedInvoice(
     throw new Error("Add a valid recipient email before sending an invoice");
   }
 
-  const normalizedSelection =
-    selectedRecipientEmail?.trim().toLowerCase() ?? "";
+  const parsedSelection = selectedRecipientEmail?.trim()
+    ? parseInvoiceRecipientEmailList(selectedRecipientEmail)
+    : [];
   let recipientEmail = "";
 
-  if (normalizedSelection) {
-    if (!emailRegex.test(normalizedSelection)) {
-      throw new Error("Recipient email is invalid");
+  if (parsedSelection.length > 0) {
+    for (const email of parsedSelection) {
+      if (!availableEmails.includes(email)) {
+        throw new Error(
+          "Recipient email must match one of the selected ticket emails",
+        );
+      }
     }
-    if (!availableEmails.includes(normalizedSelection)) {
-      throw new Error(
-        "Recipient email must match one of the selected ticket emails",
-      );
-    }
-    recipientEmail = normalizedSelection;
+    recipientEmail = parsedSelection.join(", ");
   } else if (availableEmails.length === 1) {
     recipientEmail = availableEmails[0]!;
   } else {
@@ -740,10 +744,12 @@ export async function sendCombinedTicketInvoicePaymentLink(
 
   const invoiceEmail = await getOrgInvoiceEmailSendOptions(params.orgId, orgName);
 
+  const recipientEmails = parseInvoiceRecipientEmailList(recipientEmail);
+
   await sendTransactionalEmail({
     orgId: params.orgId,
     orgName,
-    to: recipientEmail,
+    to: recipientEmails,
     subject,
     textBody,
     htmlBody,
@@ -753,6 +759,11 @@ export async function sendCombinedTicketInvoicePaymentLink(
 
   let smsOutcome: { sent: boolean; skipped: boolean } | null = null;
   if (params.sendSms && params.smsTo?.trim()) {
+    const smsPhones = parseInvoiceRecipientPhoneList(params.smsTo);
+    if (!smsPhones.length) {
+      throw new Error("Enter a valid US mobile number for text delivery");
+    }
+
     const allDeliverables = (
       await Promise.all(
         tickets.map((ticket) =>
@@ -772,21 +783,26 @@ export async function sendCombinedTicketInvoicePaymentLink(
       recipientFirstName = contact?.first_name ?? null;
     }
 
-    smsOutcome = await sendTicketInvoiceSms(supabase, {
-      orgId: params.orgId,
-      memberId: params.memberId,
-      phoneRaw: params.smsTo.trim(),
-      body: buildTicketPaymentSmsText({
-        orgName,
-        paymentUrl: url,
-        recipientFirstName,
-        serviceSubject: resolveTicketSmsServiceSubject(
-          allDeliverables,
-          propertySummary,
-        ),
-      }),
-      contactId: primaryTicket.contact_id ?? null,
-    });
+    smsOutcome = { sent: false, skipped: false };
+    for (const smsPhone of smsPhones) {
+      const outcome = await sendTicketInvoiceSms(supabase, {
+        orgId: params.orgId,
+        memberId: params.memberId,
+        phoneRaw: smsPhone,
+        body: buildTicketPaymentSmsText({
+          orgName,
+          paymentUrl: url,
+          recipientFirstName,
+          serviceSubject: resolveTicketSmsServiceSubject(
+            allDeliverables,
+            propertySummary,
+          ),
+        }),
+        contactId: primaryTicket.contact_id ?? null,
+      });
+      if (outcome.sent) smsOutcome.sent = true;
+      if (outcome.skipped) smsOutcome.skipped = true;
+    }
   }
 
   await supabase
