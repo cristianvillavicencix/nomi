@@ -31,8 +31,8 @@ import {
   computeInvoiceUpfrontAmount,
   computeInvoiceBalanceDue,
 } from "@/modules/billing/invoicePaymentUtils";
-import { InvoicePaymentSchedulePanel } from "@/modules/billing/InvoicePaymentSchedulePanel";
 import { InvoicePaymentAmountPicker } from "@/modules/billing/public/InvoicePaymentAmountPicker";
+import { FocusPaymentInvoiceColumn } from "@/modules/billing/public/FocusPaymentInvoiceColumn";
 import {
   filterRemainderInstallmentRows,
   invoicePaymentConsentLabelForAmount,
@@ -59,10 +59,7 @@ import {
   publicInvoicePaymentShellClass,
   focusPaymentEntryShellClass,
 } from "@/modules/billing/public/payInvoiceDialogLayout";
-import {
-  PublicInvoicePaymentCardHeading,
-  PublicInvoicePaymentSummary,
-} from "@/modules/billing/public/PublicInvoicePaymentSummary";
+import { PublicInvoicePaymentCardHeading } from "@/modules/billing/public/PublicInvoicePaymentSummary";
 import { cn } from "@/lib/utils";
 
 const envPublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as
@@ -143,12 +140,22 @@ const resolveFocusPaymentEntryLabels = (
   }
 
   const chargeToday = selectedAmount > 0.01;
+  const hasScheduleOnLeft = summary.scheduleRows.some(
+    (row) =>
+      row.key === "deposit" ||
+      row.key === "remainder" ||
+      row.key.startsWith("remainder-"),
+  );
+
   return {
     submitLabel: "Add card",
     pendingLabel: "Adding card…",
-    footnote: chargeToday
-      ? `A payment of ${formatMoney(selectedAmount, currency)} will be processed today. Your card is saved for future automatic charges.`
-      : "Your card is saved securely with Stripe for scheduled payments on this invoice.",
+    // Deposit schedule is shown in the left column — keep the button area quiet.
+    footnote: hasScheduleOnLeft
+      ? null
+      : chargeToday
+        ? `A payment of ${formatMoney(selectedAmount, currency)} will be processed today. Your card is saved for future automatic charges.`
+        : "Your card is saved securely with Stripe for scheduled payments on this invoice.",
   };
 };
 
@@ -558,42 +565,6 @@ const FocusPaymentEntryLayout = ({
     <div className="min-w-0 lg:border-r lg:border-border/50">{summary}</div>
     <div className="flex min-w-0 flex-col lg:justify-center">{payment}</div>
   </div>
-);
-
-const isDepositPaymentSchedule = (
-  rows: InvoicePaymentSummary["scheduleRows"],
-) =>
-  rows.some(
-    (row) =>
-      row.key === "deposit" ||
-      row.key === "remainder" ||
-      row.key.startsWith("remainder-"),
-  );
-
-const FocusPaymentInvoiceColumn = ({
-  payload,
-  summary,
-}: {
-  payload: PublicInvoicePayload;
-  summary: InvoicePaymentSummary;
-}) => (
-  <>
-    <PublicInvoicePaymentSummary
-      payload={payload}
-      balanceDue={summary.balanceDue}
-      balanceDueFormatted={summary.balanceDueFormatted}
-    />
-    {isDepositPaymentSchedule(summary.scheduleRows) ? (
-      <div className="border-t border-border/50 px-4 py-4 sm:px-6">
-        <InvoicePaymentSchedulePanel
-          rows={summary.scheduleRows}
-          currency={summary.currency}
-          title="What you'll pay"
-          description="Today's charge, then automatic payments on the dates below."
-        />
-      </div>
-    ) : null}
-  </>
 );
 
 const InvoicePaymentReviewActions = ({
