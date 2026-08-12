@@ -118,6 +118,33 @@ const dataProviderWithCustomMethods = {
       }
     }
 
+    if (resource === "deals") {
+      const data = { ...(params.data as Record<string, unknown>) };
+      const { data: member, error: memberError } = await supabase
+        .from("organization_members")
+        .select("id, org_id")
+        .eq("user_id", (await supabase.auth.getUser()).data.user?.id ?? "")
+        .maybeSingle();
+
+      if (memberError || !member?.org_id || !member.id) {
+        throw new Error("Organization member not found");
+      }
+
+      data.org_id = member.org_id;
+      const teamIds = Array.isArray(data.salesperson_ids)
+        ? data.salesperson_ids
+            .map((id) => Number(id))
+            .filter((id) => Number.isFinite(id))
+        : [];
+      const creatorId = Number(member.id);
+      if (Number.isFinite(creatorId) && !teamIds.includes(creatorId)) {
+        teamIds.push(creatorId);
+      }
+      data.salesperson_ids = teamIds;
+
+      return baseDataProvider.create(resource, { ...params, data });
+    }
+
     return baseDataProvider.create(resource, params);
   },
   async update(resource: string, params: any) {
