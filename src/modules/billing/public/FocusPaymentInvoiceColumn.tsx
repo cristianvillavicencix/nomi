@@ -267,7 +267,7 @@ export const FocusPaymentInvoiceColumn = ({
       ) : null}
 
       <div className="border-t border-border/50 px-2 sm:px-3">
-        <Accordion type="single" collapsible className="w-full">
+        <Accordion type="single" collapsible defaultValue="invoice-details" className="w-full">
           <AccordionItem value="invoice-details" className="border-0">
             <AccordionTrigger className="px-2 py-4 text-sm font-semibold hover:no-underline sm:px-3">
               Invoice details
