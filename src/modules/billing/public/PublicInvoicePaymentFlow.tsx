@@ -31,6 +31,7 @@ import {
   computeInvoiceUpfrontAmount,
   computeInvoiceBalanceDue,
 } from "@/modules/billing/invoicePaymentUtils";
+import { InvoicePaymentSchedulePanel } from "@/modules/billing/InvoicePaymentSchedulePanel";
 import { InvoicePaymentAmountPicker } from "@/modules/billing/public/InvoicePaymentAmountPicker";
 import {
   filterRemainderInstallmentRows,
@@ -591,6 +592,7 @@ const InvoicePaymentReviewActions = ({
     balanceDue,
     autoChargeRemainder,
     saveCardForFutureCharges,
+    scheduleRows,
   } = summary;
   const {
     effectiveSelectedInstallmentNumbers,
@@ -615,7 +617,14 @@ const InvoicePaymentReviewActions = ({
     ? resolveFocusPaymentEntryLabels(summary, selectedAmount, currency)
     : null;
 
-  const payDisabled = !canPay || isPending || !amountValid;
+  const showFocusSchedule =
+    focusPaymentEntry &&
+    scheduleRows.some(
+      (row) =>
+        row.key === "deposit" ||
+        row.key === "remainder" ||
+        row.key.startsWith("remainder-"),
+    );
 
   return (
     <div
@@ -628,6 +637,16 @@ const InvoicePaymentReviewActions = ({
             : `${publicInvoicePaymentSectionPadding} pb-6 pt-2`,
       )}
     >
+      {showFocusSchedule ? (
+        <InvoicePaymentSchedulePanel
+          rows={scheduleRows}
+          currency={currency}
+          className="rounded-xl border border-border/50 bg-muted/20 px-3 py-3"
+          title="What you'll pay"
+          description="Today's charge, then automatic payments on the dates below."
+        />
+      ) : null}
+
       {!focusPaymentEntry ? (
         <label className="flex items-start gap-2.5 text-[13px] leading-snug text-muted-foreground">
           <Checkbox
