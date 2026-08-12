@@ -44,7 +44,15 @@ jobs:
               uses: supabase/setup-cli@v1
 
             - name: 📥 Download deps
-              run: npm ci
+              run: |
+                  for attempt in 1 2 3; do
+                    if npm ci; then
+                      exit 0
+                    fi
+                    echo "npm ci attempt ${attempt} failed; retrying in 20s…"
+                    sleep 20
+                  done
+                  exit 1
 
             - if: ${{ env.IS_SUPABASE_CONFIGURED }}
               name: 🔗 Supabase Link

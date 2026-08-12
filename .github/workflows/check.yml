@@ -35,7 +35,15 @@ jobs:
                   cache: npm
 
             - name: 📥 Download deps
-              run: npm ci
+              run: |
+                  for attempt in 1 2 3; do
+                    if npm ci; then
+                      exit 0
+                    fi
+                    echo "npm ci attempt ${attempt} failed; retrying in 20s…"
+                    sleep 20
+                  done
+                  exit 1
 
             - name: 🔬 Lint
               uses: wearerequired/lint-action@v2
@@ -61,7 +69,15 @@ jobs:
                   cache: npm
 
             - name: 📥 Download deps
-              run: npm ci
+              run: |
+                  for attempt in 1 2 3; do
+                    if npm ci; then
+                      exit 0
+                    fi
+                    echo "npm ci attempt ${attempt} failed; retrying in 20s…"
+                    sleep 20
+                  done
+                  exit 1
 
             - name: 🔎 Test
               run: make test-ci
@@ -83,7 +99,15 @@ jobs:
                   cache: npm
 
             - name: 📥 Download deps
-              run: npm ci
+              run: |
+                  for attempt in 1 2 3; do
+                    if npm ci; then
+                      exit 0
+                    fi
+                    echo "npm ci attempt ${attempt} failed; retrying in 20s…"
+                    sleep 20
+                  done
+                  exit 1
 
             - name: 🔨 Build
               run: npm run build
