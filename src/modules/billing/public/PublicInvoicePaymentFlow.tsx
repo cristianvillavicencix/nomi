@@ -560,6 +560,42 @@ const FocusPaymentEntryLayout = ({
   </div>
 );
 
+const isDepositPaymentSchedule = (
+  rows: InvoicePaymentSummary["scheduleRows"],
+) =>
+  rows.some(
+    (row) =>
+      row.key === "deposit" ||
+      row.key === "remainder" ||
+      row.key.startsWith("remainder-"),
+  );
+
+const FocusPaymentInvoiceColumn = ({
+  payload,
+  summary,
+}: {
+  payload: PublicInvoicePayload;
+  summary: InvoicePaymentSummary;
+}) => (
+  <>
+    <PublicInvoicePaymentSummary
+      payload={payload}
+      balanceDue={summary.balanceDue}
+      balanceDueFormatted={summary.balanceDueFormatted}
+    />
+    {isDepositPaymentSchedule(summary.scheduleRows) ? (
+      <div className="border-t border-border/50 px-4 py-4 sm:px-6">
+        <InvoicePaymentSchedulePanel
+          rows={summary.scheduleRows}
+          currency={summary.currency}
+          title="What you'll pay"
+          description="Today's charge, then automatic payments on the dates below."
+        />
+      </div>
+    ) : null}
+  </>
+);
+
 const InvoicePaymentReviewActions = ({
   summary,
   paymentAmountState,
@@ -592,7 +628,6 @@ const InvoicePaymentReviewActions = ({
     balanceDue,
     autoChargeRemainder,
     saveCardForFutureCharges,
-    scheduleRows,
   } = summary;
   const {
     effectiveSelectedInstallmentNumbers,
@@ -617,15 +652,6 @@ const InvoicePaymentReviewActions = ({
     ? resolveFocusPaymentEntryLabels(summary, selectedAmount, currency)
     : null;
 
-  const showFocusSchedule =
-    focusPaymentEntry &&
-    scheduleRows.some(
-      (row) =>
-        row.key === "deposit" ||
-        row.key === "remainder" ||
-        row.key.startsWith("remainder-"),
-    );
-
   return (
     <div
       className={cn(
@@ -637,16 +663,6 @@ const InvoicePaymentReviewActions = ({
             : `${publicInvoicePaymentSectionPadding} pb-6 pt-2`,
       )}
     >
-      {showFocusSchedule ? (
-        <InvoicePaymentSchedulePanel
-          rows={scheduleRows}
-          currency={currency}
-          className="rounded-xl border border-border/50 bg-muted/20 px-3 py-3"
-          title="What you'll pay"
-          description="Today's charge, then automatic payments on the dates below."
-        />
-      ) : null}
-
       {!focusPaymentEntry ? (
         <label className="flex items-start gap-2.5 text-[13px] leading-snug text-muted-foreground">
           <Checkbox
@@ -796,11 +812,7 @@ const InvoiceStripePaymentFormInner = ({
       {focusPaymentEntry ? (
         <FocusPaymentEntryLayout
           summary={
-            <PublicInvoicePaymentSummary
-              payload={payload}
-              balanceDue={summary.balanceDue}
-              balanceDueFormatted={summary.balanceDueFormatted}
-            />
+            <FocusPaymentInvoiceColumn payload={payload} summary={summary} />
           }
           payment={
             <>
@@ -1117,11 +1129,7 @@ const InvoiceMockPaymentForm = ({
       <div className={focusPaymentEntryShellClass}>
         <FocusPaymentEntryLayout
           summary={
-            <PublicInvoicePaymentSummary
-              payload={payload}
-              balanceDue={summary.balanceDue}
-              balanceDueFormatted={summary.balanceDueFormatted}
-            />
+            <FocusPaymentInvoiceColumn payload={payload} summary={summary} />
           }
           payment={
             <>
