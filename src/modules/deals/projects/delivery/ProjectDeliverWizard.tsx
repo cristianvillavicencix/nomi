@@ -7,15 +7,10 @@ import {
   useNotify,
   useRefresh,
 } from "ra-core";
-import {
-  AlertTriangle,
-  ChevronLeft,
-  Copy,
-  ExternalLink,
-  Rocket,
-} from "lucide-react";
+import { AlertTriangle, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -29,9 +24,7 @@ import { getContactEmail } from "@/modules/clients/clientShowUtils";
 import { getProjectBriefProgress } from "@/modules/deals/projectBriefProgress";
 import { resolveProjectDeploymentUrls } from "@/modules/deals/projects/projectDeploymentUrls";
 import { DeliverProjectFormFields } from "@/modules/deals/projects/delivery/DeliverProjectFormFields";
-import { ProjectDeliveryAnalysisStep } from "@/modules/deals/projects/delivery/ProjectDeliveryAnalysisStep";
-import { ProjectDeliveryEmailPreview } from "@/modules/deals/projects/delivery/ProjectDeliveryEmailPreview";
-import { ProjectDeliveryMaintenanceStep } from "@/modules/deals/projects/delivery/ProjectDeliveryMaintenanceStep";
+import { ProjectDeliveryDoneActions } from "@/modules/deals/projects/delivery/ProjectDeliveryDoneActions";
 import {
   buildProjectDeliveryAnalysis,
   formatDeliveryAnalysisBlockerMessage,
@@ -45,18 +38,15 @@ import {
 import {
   computeAutoMaintenanceReviewDate,
   MAINTENANCE_REVIEW_MILESTONE_TITLE,
-  type MaintenanceScheduleMode,
 } from "@/modules/deals/projects/delivery/projectMaintenanceReview";
 import { useDeliverProjectForm } from "@/modules/deals/projects/delivery/useDeliverProjectForm";
-import { useProjectPortalLink } from "@/modules/portal/useProjectPortalLink";
+import { useProjectPortalLink, getProjectPortalShortUrl } from "@/modules/portal/useProjectPortalLink";
 import type {
   ClientPortalAccount,
   DealResource,
   LbsDeal,
+  ProjectDelivery,
 } from "@/modules/types";
-
-const WIZARD_STEPS = ["analysis", "maintenance", "confirm", "email"] as const;
-type WizardStep = (typeof WIZARD_STEPS)[number];
 
 const randomToken = () =>
   crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
@@ -66,6 +56,8 @@ const generateShortCode = (length = 8) => {
   const bytes = crypto.getRandomValues(new Uint8Array(length));
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 };
+
+type WizardPhase = "form" | "done";
 
 type ProjectDeliverWizardProps = {
   open: boolean;
@@ -82,17 +74,14 @@ export const ProjectDeliverWizard = ({
   const refresh = useRefresh();
   const dataProvider = useDataProvider();
   const [create] = useCreate();
-  const [step, setStep] = useState<WizardStep>("analysis");
+  const [phase, setPhase] = useState<WizardPhase>("form");
   const [overrideOpen, setOverrideOpen] = useState(false);
   const [manualOverride, setManualOverride] =
     useState<ManualOverridePayload | null>(null);
-  const [scheduleMode, setScheduleMode] =
-    useState<MaintenanceScheduleMode>("auto");
-  const [scheduleFreeMonths, setScheduleFreeMonths] = useState(3);
-  const [manualReviewDate, setManualReviewDate] = useState(
-    computeAutoMaintenanceReviewDate(3),
-  );
+  const [maintenanceMonths, setMaintenanceMonths] = useState(3);
   const [portalShortCode, setPortalShortCode] = useState<string | null>(null);
+  const [completedDelivery, setCompletedDelivery] =
+    useState<ProjectDelivery | null>(null);
   const [analysisSkipped, setAnalysisSkipped] = useState(false);
 
   const { contactId, portalLink } = useProjectPortalLink(record);
@@ -100,6 +89,8 @@ export const ProjectDeliverWizard = ({
     () => getProjectBriefProgress(record),
     [record],
   );
+  const maintenanceReviewDate =
+    computeAutoMaintenanceReviewDate(maintenanceMonths);
 
   const { data: contact } = useGetOne<Contact>(
     "contacts",
@@ -120,7 +111,6 @@ export const ProjectDeliverWizard = ({
   const {
     total: pendingChecklistCount = 0,
     data: pendingChecklistItems = [],
-    isPending: checklistPending,
   } = useGetList<{ id: number; label: string }>(
     "deal_launch_checklist_items",
     {
@@ -143,30 +133,25 @@ export const ProjectDeliverWizard = ({
     [pendingChecklistItems],
   );
 
-  const { total: credentialsCount = 0, isPending: credentialsPending } =
-    useGetList(
-      "deal_access_entries",
-      {
-        filter: { "deal_id@eq": record.id },
-        pagination: { page: 1, perPage: 1 },
-        sort: { field: "id", order: "ASC" },
-      },
-      { enabled: open && !!record.id },
-    );
+  const { total: credentialsCount = 0 } = useGetList(
+    "deal_access_entries",
+    {
+      filter: { "deal_id@eq": record.id },
+      pagination: { page: 1, perPage: 1 },
+      sort: { field: "id", order: "ASC" },
+    },
+    { enabled: open && !!record.id },
+  );
 
-  const { total: resourcesCount = 0, isPending: resourcesPending } =
-    useGetList<DealResource>(
-      "deal_resources",
-      {
-        filter: { "deal_id@eq": record.id },
-        pagination: { page: 1, perPage: 1 },
-        sort: { field: "id", order: "ASC" },
-      },
-      { enabled: open && !!record.id },
-    );
-
-  const analysisLoading =
-    checklistPending || credentialsPending || resourcesPending;
+  const { total: resourcesCount = 0 } = useGetList<DealResource>(
+    "deal_resources",
+    {
+      filter: { "deal_id@eq": record.id },
+      pagination: { page: 1, perPage: 1 },
+      sort: { field: "id", order: "ASC" },
+    },
+    { enabled: open && !!record.id },
+  );
 
   const deploymentUrls = useMemo(
     () => resolveProjectDeploymentUrls(record),
@@ -197,15 +182,10 @@ export const ProjectDeliverWizard = ({
     ],
   );
 
-  const maintenanceReviewDate =
-    scheduleMode === "manual" && manualReviewDate
-      ? manualReviewDate
-      : computeAutoMaintenanceReviewDate(scheduleFreeMonths);
-
   const form = useDeliverProjectForm({
     record,
     enabled: open,
-    defaultMaintenanceMonths: scheduleFreeMonths,
+    defaultMaintenanceMonths: maintenanceMonths,
     maintenanceReviewDate,
     manualOverride: manualOverride ?? undefined,
   });
@@ -218,13 +198,25 @@ export const ProjectDeliverWizard = ({
       ? existingPortalAccount.short_code
       : null);
 
+  const resolvedPortalLink =
+    portalLink ??
+    (resolvedShortCode ? getProjectPortalShortUrl(resolvedShortCode) : null);
+
+  const analysisBlocked =
+    !analysisSkipped &&
+    !manualOverride &&
+    hasBlockingDeliveryAnalysis(analysisItems);
+  const blockingAnalysisItems = useMemo(
+    () => getBlockingDeliveryAnalysisItems(analysisItems),
+    [analysisItems],
+  );
+
   const resetWizard = () => {
-    setStep("analysis");
+    setPhase("form");
     setManualOverride(null);
-    setScheduleMode("auto");
-    setScheduleFreeMonths(3);
-    setManualReviewDate(computeAutoMaintenanceReviewDate(3));
+    setMaintenanceMonths(3);
     setPortalShortCode(null);
+    setCompletedDelivery(null);
     setAnalysisSkipped(false);
   };
 
@@ -289,13 +281,42 @@ export const ProjectDeliverWizard = ({
   };
 
   const handleDeliver = async () => {
+    if (analysisBlocked) {
+      notify(formatDeliveryAnalysisBlockerMessage(analysisItems), {
+        type: "warning",
+        autoHideDuration: 8000,
+      });
+      return;
+    }
+    if (!form.canSubmit) {
+      notify(
+        form.submitBlockers.length > 0
+          ? `Still required: ${form.submitBlockers.join(". ")}`
+          : "Complete required fields and confirm readiness",
+        { type: "warning", autoHideDuration: 8000 },
+      );
+      return;
+    }
+
     try {
+      form.setMaintenanceMonths(String(maintenanceMonths));
       await ensurePortalAccount();
-      await form.deliverMutation.mutateAsync();
+      const result = await form.deliverMutation.mutateAsync();
       await scheduleMaintenanceReview();
+      const deliveryFromApi = result?.delivery;
+      const delivery: ProjectDelivery = {
+        id: deliveryFromApi?.id ?? 0,
+        deal_id: record.id,
+        delivered_at:
+          deliveryFromApi?.delivered_at ?? new Date().toISOString(),
+        site_url: form.siteUrl,
+        plan_name: form.planName || null,
+        delivery_date: new Date().toISOString().slice(0, 10),
+      };
+      setCompletedDelivery(delivery);
+      setPhase("done");
       notify("Project delivered to client portal", { type: "info" });
       refresh();
-      handleClose();
     } catch (error) {
       notify(
         error instanceof Error ? error.message : "Could not deliver project",
@@ -304,119 +325,41 @@ export const ProjectDeliverWizard = ({
     }
   };
 
-  const stepTitle: Record<WizardStep, string> = {
-    analysis: "Analyzing project before delivery…",
-    maintenance: "Schedule next review",
-    confirm: "Confirm delivery details",
-    email: "Review client email",
-  };
-
-  const stepDescription: Record<WizardStep, string> = {
-    analysis: "Check readiness across brief, security, files, and portal.",
-    maintenance:
-      "Set when the team should run the next web maintenance review.",
-    confirm: `Handoff settings for ${record.name}.`,
-    email: "Preview what the client will receive after delivery.",
-  };
-
-  const goNext = () => {
-    if (step === "analysis") {
-      if (analysisBlocked) {
-        notify(formatDeliveryAnalysisBlockerMessage(analysisItems), {
-          type: "warning",
-          autoHideDuration: 8000,
-        });
-        return;
-      }
-      setStep("maintenance");
-    } else if (step === "maintenance") {
-      form.setMaintenanceMonths(String(scheduleFreeMonths));
-      setStep("confirm");
-    } else if (step === "confirm") {
-      if (!form.canSubmit) {
-        notify(
-          form.submitBlockers.length > 0
-            ? `Still required: ${form.submitBlockers.join(". ")}`
-            : "Complete required fields and confirm readiness",
-          { type: "warning", autoHideDuration: 8000 },
-        );
-        return;
-      }
-      setStep("email");
-    }
-  };
-
-  const goBack = () => {
-    if (step === "email") setStep("confirm");
-    else if (step === "confirm") setStep("maintenance");
-    else if (step === "maintenance") setStep("analysis");
-  };
-
-  const analysisBlocked =
-    !analysisSkipped && hasBlockingDeliveryAnalysis(analysisItems);
-  const blockingAnalysisItems = useMemo(
-    () => getBlockingDeliveryAnalysisItems(analysisItems),
-    [analysisItems],
-  );
-
   if (!open) return null;
 
-  if (form.alreadyDelivered) {
+  if (form.alreadyDelivered && phase !== "done") {
+    const existing = form.existingDelivery;
     return (
       <Dialog open={open} onOpenChange={(next) => !next && handleClose()}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Portal access</DialogTitle>
+            <DialogTitle>Delivery ready</DialogTitle>
             <DialogDescription>
-              This project was already delivered. To give the client access
-              again, share the portal link below — you do not need to run
-              delivery twice.
+              This project was already delivered. Download, print, or email the
+              handoff — or share the portal link again.
             </DialogDescription>
           </DialogHeader>
-
-          {portalLink ? (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Client portal link</p>
-                <Input readOnly value={portalLink} className="text-xs" />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    void navigator.clipboard.writeText(portalLink);
-                    notify("Portal link copied", { type: "info" });
-                  }}
-                >
-                  <Copy className="size-4" />
-                  Copy link
-                </Button>
-                <Button type="button" variant="secondary" asChild>
-                  <a
-                    href={portalLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="size-4" />
-                    Open portal
-                  </a>
-                </Button>
-              </div>
-              {clientEmail && clientEmail !== "—" ? (
-                <p className="text-xs text-muted-foreground">
-                  Portal account email: {clientEmail}
-                </p>
-              ) : null}
-            </div>
+          {existing ? (
+            <ProjectDeliveryDoneActions
+              projectName={record.name}
+              siteUrl={
+                String(existing.site_url ?? form.siteUrl ?? "").trim() ||
+                deploymentUrls.productionUrl
+              }
+              stagingUrl={deploymentUrls.stagingUrl}
+              planName={String(existing.plan_name ?? form.planName ?? "")}
+              domainName={form.domainName}
+              hostingProvider={form.hostingProvider}
+              clientEmail={clientEmail !== "—" ? clientEmail : ""}
+              portalLink={resolvedPortalLink}
+              delivery={existing}
+              credentials={form.credentials}
+            />
           ) : (
-            <div className="rounded-lg border border-warning/40 bg-warning/15 p-4 text-sm text-warning-foreground">
-              No portal account is linked yet. Link a client contact, then
-              create a portal invite from the project menu before sharing
-              access.
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Delivery exists, but details could not be loaded.
+            </p>
           )}
-
           <DialogFooter>
             <Button type="button" onClick={handleClose}>
               Close
@@ -440,80 +383,83 @@ export const ProjectDeliverWizard = ({
             force_approved_items: payload.force_approved_items,
           });
           setOverrideOpen(false);
-          setStep("maintenance");
+          setAnalysisSkipped(true);
         }}
       />
     );
   }
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={(next) => !next && handleClose()}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{stepTitle[step]}</DialogTitle>
-            <DialogDescription>{stepDescription[step]}</DialogDescription>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={(next) => !next && handleClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {phase === "done" ? "Delivery sent" : "Deliver website to client"}
+          </DialogTitle>
+          <DialogDescription>
+            {phase === "done"
+              ? "Download, print, or email the handoff summary."
+              : "Fill the handoff details, then deliver. You can download and email right after."}
+          </DialogDescription>
+        </DialogHeader>
 
-          {manualOverride ? (
-            <div className="rounded-lg border border-warning/40 bg-warning/15 p-3 text-sm">
-              <p className="font-medium text-warning-foreground">
-                Manual override active
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs italic">
-                "{manualOverride.reason}"
-              </p>
+        {phase === "form" ? (
+          <div className="space-y-4">
+            {manualOverride ? (
+              <div className="rounded-lg border border-warning/40 bg-warning/15 p-3 text-sm">
+                <p className="font-medium text-warning-foreground">
+                  Manual override active
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground italic">
+                  "{manualOverride.reason}"
+                </p>
+              </div>
+            ) : null}
+
+            {analysisBlocked ? (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <p className="font-medium">Fix these before delivering:</p>
+                <ul className="mt-2 list-disc space-y-1 pl-4">
+                  {blockingAnalysisItems.map((item) => (
+                    <li key={item.id}>
+                      <span className="font-medium">{item.label}</span>
+                      {item.fixHint ? ` — ${item.fixHint}` : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {!form.canSubmit && form.submitBlockers.length > 0 ? (
+              <div className="rounded-lg border border-warning/40 bg-warning/15 p-3 text-sm text-warning-foreground">
+                <p className="font-medium">Still required:</p>
+                <ul className="mt-2 list-disc space-y-1 pl-4">
+                  {form.submitBlockers.map((blocker) => (
+                    <li key={blocker}>{blocker}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="space-y-2">
+              <Label htmlFor="delivery-maintenance-months">
+                Free maintenance months
+              </Label>
+              <Input
+                id="delivery-maintenance-months"
+                type="number"
+                min={0}
+                max={36}
+                value={maintenanceMonths}
+                onChange={(event) => {
+                  const next = Number(event.target.value);
+                  setMaintenanceMonths(
+                    Number.isFinite(next) ? Math.max(0, Math.min(36, next)) : 0,
+                  );
+                }}
+              />
             </div>
-          ) : null}
 
-          {step === "analysis" ? (
-            <ProjectDeliveryAnalysisStep
-              items={analysisItems}
-              isLoading={analysisLoading}
-              analysisSkipped={analysisSkipped}
-              onSkipAnalysis={() => setAnalysisSkipped(true)}
-            />
-          ) : null}
-
-          {step === "analysis" && analysisBlocked ? (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-              <p className="font-medium">Fix these before continuing:</p>
-              <ul className="mt-2 list-disc space-y-1 pl-4">
-                {blockingAnalysisItems.map((item) => (
-                  <li key={item.id}>
-                    <span className="font-medium">{item.label}</span>
-                    {item.fixHint ? ` — ${item.fixHint}` : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {step === "confirm" &&
-          !form.canSubmit &&
-          form.submitBlockers.length > 0 ? (
-            <div className="rounded-lg border border-warning/40 bg-warning/15 p-3 text-sm text-warning-foreground">
-              <p className="font-medium">Still required on this step:</p>
-              <ul className="mt-2 list-disc space-y-1 pl-4">
-                {form.submitBlockers.map((blocker) => (
-                  <li key={blocker}>{blocker}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {step === "maintenance" ? (
-            <ProjectDeliveryMaintenanceStep
-              mode={scheduleMode}
-              onModeChange={setScheduleMode}
-              freeMonths={scheduleFreeMonths}
-              onFreeMonthsChange={setScheduleFreeMonths}
-              manualDate={manualReviewDate}
-              onManualDateChange={setManualReviewDate}
-            />
-          ) : null}
-
-          {step === "confirm" ? (
             <DeliverProjectFormFields
               idPrefix="wizard-delivery"
               siteUrl={form.siteUrl}
@@ -552,33 +498,30 @@ export const ProjectDeliverWizard = ({
               confirmed={form.confirmed}
               onConfirmedChange={form.setConfirmed}
             />
-          ) : null}
+          </div>
+        ) : completedDelivery ? (
+          <ProjectDeliveryDoneActions
+            projectName={record.name}
+            siteUrl={form.siteUrl}
+            stagingUrl={deploymentUrls.stagingUrl}
+            planName={form.planName}
+            domainName={form.domainName}
+            hostingProvider={form.hostingProvider}
+            clientEmail={clientEmail !== "—" ? clientEmail : ""}
+            portalLink={resolvedPortalLink}
+            delivery={completedDelivery}
+            credentials={form.credentials}
+            emailAlreadyQueued={form.notifyEmail}
+          />
+        ) : null}
 
-          {step === "email" ? (
-            <ProjectDeliveryEmailPreview
-              record={record}
-              clientEmail={clientEmail !== "—" ? clientEmail : ""}
-              portalShortCode={resolvedShortCode}
-              siteUrl={form.siteUrl}
-              notifyEmail={form.notifyEmail}
-            />
-          ) : null}
-
-          <DialogFooter className="gap-2 sm:justify-between">
-            <div className="flex gap-2">
-              {step !== "analysis" ? (
-                <Button type="button" variant="ghost" onClick={goBack}>
-                  <ChevronLeft className="size-4" />
-                  Back
-                </Button>
-              ) : (
-                <Button type="button" variant="ghost" onClick={handleClose}>
-                  Cancel
-                </Button>
-              )}
-            </div>
+        <DialogFooter className="gap-2 sm:justify-between">
+          <Button type="button" variant="ghost" onClick={handleClose}>
+            {phase === "done" ? "Close" : "Cancel"}
+          </Button>
+          {phase === "form" ? (
             <div className="flex flex-wrap gap-2">
-              {step === "analysis" && pendingChecklistCount > 0 ? (
+              {pendingChecklistCount > 0 || analysisBlocked ? (
                 <Button
                   type="button"
                   variant="secondary"
@@ -588,29 +531,20 @@ export const ProjectDeliverWizard = ({
                   Deliver anyway
                 </Button>
               ) : null}
-              {step === "email" ? (
-                <Button
-                  type="button"
-                  disabled={
-                    form.alreadyDelivered || form.deliverMutation.isPending
-                  }
-                  onClick={() => void handleDeliver()}
-                >
-                  <Rocket className="size-4" />
-                  {form.deliverMutation.isPending
-                    ? "Delivering…"
-                    : "Confirm delivery"}
-                </Button>
-              ) : (
-                <Button type="button" onClick={goNext}>
-                  <Rocket className="size-4" />
-                  Continue delivery
-                </Button>
-              )}
+              <Button
+                type="button"
+                disabled={form.deliverMutation.isPending}
+                onClick={() => void handleDeliver()}
+              >
+                <Rocket className="size-4" />
+                {form.deliverMutation.isPending
+                  ? "Delivering…"
+                  : "Deliver to client"}
+              </Button>
             </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          ) : null}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

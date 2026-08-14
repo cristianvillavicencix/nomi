@@ -213,6 +213,7 @@ export const useDeliverProjectForm = ({
   };
 
   const alreadyDelivered = Boolean(existingDeliveries[0]);
+  const existingDelivery = existingDeliveries[0] ?? null;
   const canSubmit = confirmed && siteUrl.trim().length > 0 && !alreadyDelivered;
 
   const submitBlockers = useMemo(() => {
@@ -268,6 +269,7 @@ export const useDeliverProjectForm = ({
     setCorporateEmailsText,
     credentials,
     alreadyDelivered,
+    existingDelivery,
     canSubmit,
     submitBlockers,
     togglePage,
