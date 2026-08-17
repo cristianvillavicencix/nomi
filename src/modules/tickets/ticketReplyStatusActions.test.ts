@@ -13,8 +13,8 @@ describe("ticketReplyStatusActions", () => {
     const transitions = getTicketReplyStatusTransitions("waiting");
     expect(transitions.map((item) => item.status)).toEqual(["open", "resolved"]);
     expect(transitions.map((item) => item.label)).toEqual([
-      "Reply & Open",
-      "Reply & Resolved",
+      "Send & Open",
+      "Send & Resolved",
     ]);
   });
 

@@ -37,14 +37,21 @@ const groupTicketsByStatus = (tickets: Ticket[]): TicketsByStatus => {
 };
 
 /** Stable signature so unstable list array refs don't retrigger sync. */
+const ticketKanbanRowKey = (ticket: Ticket) =>
+  [
+    ticket.id,
+    ticketStatusForKanban(ticket.status),
+    ticket.updated_at ?? "",
+    ticket.subject ?? "",
+    ticket.assignee_id ?? "",
+    ticket.priority ?? "",
+  ].join(":");
+
 const ticketsKanbanSyncKey = (tickets: Ticket[]) =>
   tickets
-    .map(
-      (ticket) =>
-        `${ticket.id}:${ticketStatusForKanban(ticket.status)}:${ticket.updated_at ?? ""}`,
-    )
+    .map((ticket) => ticketKanbanRowKey(ticket))
     .sort()
-    .join("| ");
+    .join("|");
 
 const isSameTicketsByStatus = (a: TicketsByStatus, b: TicketsByStatus) => {
   for (const column of TICKET_KANBAN_COLUMNS) {
@@ -52,8 +59,7 @@ const isSameTicketsByStatus = (a: TicketsByStatus, b: TicketsByStatus) => {
     const right = b[column.id];
     if (left.length !== right.length) return false;
     for (let i = 0; i < left.length; i += 1) {
-      if (String(left[i]?.id) !== String(right[i]?.id)) return false;
-      if (ticketStatusForKanban(left[i]?.status) !== ticketStatusForKanban(right[i]?.status)) {
+      if (ticketKanbanRowKey(left[i]!) !== ticketKanbanRowKey(right[i]!)) {
         return false;
       }
     }
@@ -257,13 +263,14 @@ export const TicketsKanban = ({
   const syncKey = useMemo(() => ticketsKanbanSyncKey(tickets), [tickets]);
 
   useEffect(() => {
+    if (isDragging) return;
     const next = groupTicketsByStatus(tickets);
     setTicketsByStatus((prev) =>
       isSameTicketsByStatus(prev, next) ? prev : next,
     );
-    // syncKey captures id/status/updated_at; tickets is read for fresh grouping.
+    // syncKey captures card fields shown on the board; skip while dragging.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid loops from unstable `data` refs
-  }, [syncKey]);
+  }, [syncKey, isDragging]);
 
   const onDragEnd: OnDragEndResponder = (result) => {
     setIsDragging(false);

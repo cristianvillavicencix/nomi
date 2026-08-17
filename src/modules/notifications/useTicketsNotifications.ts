@@ -13,6 +13,7 @@ import {
 } from "@/modules/notifications/ticketSelfActivity";
 import { TICKET_WORKSPACE_SETTINGS_QUERY_KEY } from "@/modules/settings/tickets/useTicketWorkspaceSettings";
 import { DEFAULT_TICKET_WORKSPACE_SETTINGS } from "@/modules/settings/tickets/ticketWorkspaceSettings";
+import { ticketAssigneeChanged } from "@/modules/notifications/ticketAssignmentRealtime";
 
 const trimNotifiedIds = (notifiedIds: Set<string>) => {
   if (notifiedIds.size <= 500) return;
@@ -173,14 +174,9 @@ export const useTicketsNotifications = () => {
         },
         (payload) => {
           const ticket = payload.new as Ticket | undefined;
-          const previous = payload.old as Ticket | undefined;
+          const previous = payload.old as Record<string, unknown> | undefined;
           if (!ticket?.id) return;
-          if (ticket.assignee_id == null) return;
-          if (
-            String(ticket.assignee_id) === String(previous?.assignee_id ?? "")
-          ) {
-            return;
-          }
+          if (!ticketAssigneeChanged(ticket, previous)) return;
           notifyAssignment(ticket);
         },
       )

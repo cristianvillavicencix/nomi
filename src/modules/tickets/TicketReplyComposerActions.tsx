@@ -134,7 +134,7 @@ export const TicketReplyComposerActions = ({
             )}
             {primaryIsInvoice
               ? "Create invoice & request payment"
-              : "Reply"}
+              : "Send"}
           </Button>
 
           {showStatusMenu ? (

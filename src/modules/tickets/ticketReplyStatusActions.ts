@@ -39,7 +39,7 @@ export const getTicketReplyStatusTransitions = (
   return REPLY_TRANSITION_STATUSES.filter((status) => status !== normalized).map(
     (status) => ({
       status,
-      label: `Reply & ${formatReplyStatusLabel(status)}`,
+      label: `Send & ${formatReplyStatusLabel(status)}`,
     }),
   );
 };
