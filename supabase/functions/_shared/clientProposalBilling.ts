@@ -238,16 +238,21 @@ export async function applyClientInvoicePaymentFromStripe(
       chargeAmount: chargedAmount,
     })
   ) {
-    const receipt = await notifyInvoicePaymentReceipt(supabase, {
-      orgId: params.orgId,
-      invoiceId: params.invoiceId,
-      stripePaymentIntentId: params.stripePaymentIntentId,
-      chargedAmount,
-    });
-    if (!receipt.sent) {
-      console.warn("applyClientInvoicePaymentFromStripe.receipt", receipt);
+    try {
+      const receipt = await notifyInvoicePaymentReceipt(supabase, {
+        orgId: params.orgId,
+        invoiceId: params.invoiceId,
+        stripePaymentIntentId: params.stripePaymentIntentId,
+        chargedAmount,
+      });
+      if (!receipt.sent) {
+        console.warn("applyClientInvoicePaymentFromStripe.receipt", receipt);
+      }
+      return { handled: true, skipped: true, duplicate: true, receipt };
+    } catch (error) {
+      console.error("applyClientInvoicePaymentFromStripe.receipt", error);
+      return { handled: true, skipped: true, duplicate: true };
     }
-    return { handled: true, skipped: true, duplicate: true, receipt };
   }
 
   const remainderInstallmentNumbers =
@@ -261,12 +266,16 @@ export async function applyClientInvoicePaymentFromStripe(
     clearAutoChargeError: params.metadata?.auto_charge === "1",
   });
 
-  await notifyInvoicePaymentReceipt(supabase, {
-    orgId: params.orgId,
-    invoiceId: params.invoiceId,
-    stripePaymentIntentId: params.stripePaymentIntentId,
-    chargedAmount: result.charged_amount,
-  });
+  try {
+    await notifyInvoicePaymentReceipt(supabase, {
+      orgId: params.orgId,
+      invoiceId: params.invoiceId,
+      stripePaymentIntentId: params.stripePaymentIntentId,
+      chargedAmount: result.charged_amount,
+    });
+  } catch (error) {
+    console.error("applyClientInvoicePaymentFromStripe.receipt", error);
+  }
 
   return {
     handled: true,

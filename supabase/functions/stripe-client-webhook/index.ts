@@ -19,6 +19,34 @@ import {
 import { createErrorResponse } from "../_shared/utils.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
+const jsonResponse = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+/** Stripe Invoice.subscription, expanded object, or Basil parent.subscription_details. */
+export const stripeSubscriptionIdFromInvoice = (
+  invoice: Record<string, unknown>,
+): string | null => {
+  const direct = invoice.subscription;
+  if (typeof direct === "string" && direct) return direct;
+  if (direct && typeof direct === "object") {
+    const id = (direct as { id?: unknown }).id;
+    if (typeof id === "string" && id) return id;
+  }
+  const parent = invoice.parent;
+  if (parent && typeof parent === "object") {
+    const nested = (
+      parent as {
+        subscription_details?: { subscription?: unknown };
+      }
+    ).subscription_details?.subscription;
+    if (typeof nested === "string" && nested) return nested;
+  }
+  return null;
+};
+
 const loadSubscriptionByStripeId = async (stripeSubscriptionId: string) => {
   const { data } = await supabaseAdmin
     .from("client_subscriptions")
@@ -139,15 +167,8 @@ const handleClientSubscriptionWebhook = async (
 
     case "invoice.paid":
     case "invoice.payment_failed": {
-      const invoice = object as {
-        id?: string;
-        subscription?: string | null;
-        metadata?: Record<string, string> | null;
-      };
-      const stripeSubId =
-        typeof invoice.subscription === "string"
-          ? invoice.subscription
-          : null;
+      const invoice = object as Record<string, unknown>;
+      const stripeSubId = stripeSubscriptionIdFromInvoice(invoice);
       if (!stripeSubId) {
         return { handled: false };
       }
@@ -168,7 +189,11 @@ const handleClientSubscriptionWebhook = async (
         return { handled: true, subscription_id: subscription.id, past_due: true };
       }
 
-      const fullInvoice = await stripe.invoices.retrieve(invoice.id as string);
+      const invoiceId = typeof invoice.id === "string" ? invoice.id : null;
+      if (!invoiceId) {
+        return { handled: false };
+      }
+      const fullInvoice = await stripe.invoices.retrieve(invoiceId);
       const mirror = await mirrorSubscriptionInvoiceToSigma(supabaseAdmin, {
         orgId: subscription.org_id,
         subscription,
@@ -223,75 +248,80 @@ Deno.serve(async (req: Request) => {
     return createErrorResponse(400, (e as Error).message);
   }
 
-  try {
-    const subscriptionResult = await handleClientSubscriptionWebhook(
-      stripe,
-      event,
-    );
-    if (subscriptionResult.handled) {
-      return new Response(
-        JSON.stringify({ received: true, ...subscriptionResult }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    const object = event.data.object as {
-      id: string;
-      metadata?: Record<string, string> | null;
-      amount?: number;
-      status?: string;
-      last_payment_error?: {
-        code?: string;
-        message?: string;
-        decline_code?: string;
-      } | null;
-    };
-
-    const metadata = object.metadata ?? undefined;
-    const isInvoicePayment = metadata?.type === "client_invoice";
-    const isProposalPayment = isClientPaymentMetadata(metadata);
-
-    if (!isInvoicePayment && !isProposalPayment) {
-      return new Response(JSON.stringify({ received: true, ignored: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    switch (event.type) {
-      case "payment_intent.succeeded": {
-        const result = await processPaymentIntentSucceeded(supabaseAdmin, {
-          id: object.id,
-          amount: object.amount,
-          metadata: object.metadata ?? null,
-        });
-        return new Response(JSON.stringify({ received: true, ...result }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      case "payment_intent.payment_failed": {
-        const result = await processPaymentIntentFailed(supabaseAdmin, {
-          id: object.id,
-          amount: object.amount ?? 0,
-          metadata: object.metadata ?? null,
-          last_payment_error: object.last_payment_error ?? null,
-          status: object.status,
-        });
-        return new Response(JSON.stringify({ received: true, ...result }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      default:
-        return new Response(JSON.stringify({ received: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-    }
-  } catch (error) {
+  // Valid signature: always 200 so Stripe does not disable the endpoint.
+  // Emails / ticket delivery can exceed Stripe's ~20s timeout ("other errors").
+  const work = processVerifiedEvent(stripe, event).catch((error) => {
     console.error("stripe-client-webhook.error", error);
-    return createErrorResponse(
-      500,
-      error instanceof Error ? error.message : "Unexpected error",
-    );
+    return {
+      error: error instanceof Error ? error.message : "Unexpected error",
+    };
+  });
+
+  const waitUntil = (
+    globalThis as {
+      EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void };
+    }
+  ).EdgeRuntime?.waitUntil;
+  if (typeof waitUntil === "function") {
+    waitUntil(work);
+    return jsonResponse({ received: true });
   }
+
+  const result = await work;
+  return jsonResponse({ received: true, ...result });
 });
+
+async function processVerifiedEvent(
+  stripe: Awaited<ReturnType<typeof getStripeForWebhookVerification>>,
+  event: {
+    type: string;
+    data: { object: Record<string, unknown> };
+  },
+) {
+  const subscriptionResult = await handleClientSubscriptionWebhook(
+    stripe,
+    event,
+  );
+  if (subscriptionResult.handled) {
+    return subscriptionResult;
+  }
+
+  const object = event.data.object as {
+    id: string;
+    metadata?: Record<string, string> | null;
+    amount?: number;
+    status?: string;
+    last_payment_error?: {
+      code?: string;
+      message?: string;
+      decline_code?: string;
+    } | null;
+  };
+
+  const metadata = object.metadata ?? undefined;
+  const isInvoicePayment = metadata?.type === "client_invoice";
+  const isProposalPayment = isClientPaymentMetadata(metadata);
+
+  if (!isInvoicePayment && !isProposalPayment) {
+    return { ignored: true };
+  }
+
+  switch (event.type) {
+    case "payment_intent.succeeded":
+      return processPaymentIntentSucceeded(supabaseAdmin, {
+        id: object.id,
+        amount: object.amount,
+        metadata: object.metadata ?? null,
+      });
+    case "payment_intent.payment_failed":
+      return processPaymentIntentFailed(supabaseAdmin, {
+        id: object.id,
+        amount: object.amount ?? 0,
+        metadata: object.metadata ?? null,
+        last_payment_error: object.last_payment_error ?? null,
+        status: object.status,
+      });
+    default:
+      return {};
+  }
+}

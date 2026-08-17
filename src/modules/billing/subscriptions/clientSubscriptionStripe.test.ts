@@ -44,4 +44,38 @@ describe("clientSubscriptionStripe helpers", () => {
       company_id: "9",
     });
   });
+
+  it("reads Stripe invoice subscription ids from current and Basil shapes", () => {
+    const stripeSubscriptionIdFromInvoice = (
+      invoice: Record<string, unknown>,
+    ): string | null => {
+      const direct = invoice.subscription;
+      if (typeof direct === "string" && direct) return direct;
+      if (direct && typeof direct === "object") {
+        const id = (direct as { id?: unknown }).id;
+        if (typeof id === "string" && id) return id;
+      }
+      const parent = invoice.parent;
+      if (parent && typeof parent === "object") {
+        const nested = (
+          parent as { subscription_details?: { subscription?: unknown } }
+        ).subscription_details?.subscription;
+        if (typeof nested === "string" && nested) return nested;
+      }
+      return null;
+    };
+
+    expect(stripeSubscriptionIdFromInvoice({ subscription: "sub_1" })).toBe(
+      "sub_1",
+    );
+    expect(
+      stripeSubscriptionIdFromInvoice({ subscription: { id: "sub_2" } }),
+    ).toBe("sub_2");
+    expect(
+      stripeSubscriptionIdFromInvoice({
+        parent: { subscription_details: { subscription: "sub_3" } },
+      }),
+    ).toBe("sub_3");
+    expect(stripeSubscriptionIdFromInvoice({})).toBeNull();
+  });
 });
