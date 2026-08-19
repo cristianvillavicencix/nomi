@@ -114,20 +114,20 @@ function triggerBlobDownload(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), BLOB_REVOKE_MS);
 }
 
-function openBlobInNewTab(blob: Blob, filename: string) {
+/** Must run in the click stack — browsers block window.open after await. */
+function openPreviewTab(): Window | null {
+  return window.open("about:blank", "_blank");
+}
+
+function showBlobInOpenedTab(tab: Window, blob: Blob, filename: string) {
   const preview = blobForInlinePreview(blob, filename);
   const objectUrl = URL.createObjectURL(preview);
-  const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
-  if (!opened) {
+  try {
+    tab.location.replace(objectUrl);
+    tab.opener = null;
+  } catch {
     URL.revokeObjectURL(objectUrl);
-    if (
-      preview.type === "application/pdf" ||
-      isPdfPreviewName(filename)
-    ) {
-      throw new Error("Pop-up blocked");
-    }
-    triggerBlobDownload(blob, filename);
-    return;
+    throw new Error("Pop-up blocked");
   }
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), BLOB_REVOKE_MS);
 }
@@ -163,6 +163,9 @@ export async function downloadPrivateStorageFile(
 export async function openPrivateStorageFile(
   input: PrivateStorageLocation | PrivateStorageReferenceInput,
 ): Promise<void> {
+  const tab = openPreviewTab();
+  if (!tab) throw new Error("Pop-up blocked");
+
   const location = resolvePrivateStorageLocation(input);
   const refInput = input as PrivateStorageReferenceInput;
   const filename =
@@ -171,14 +174,16 @@ export async function openPrivateStorageFile(
     location?.path.split("/").pop() ??
     "file";
 
-  if (!location && refInput.reference && isExternalHttpUrl(refInput.reference)) {
-    const blob = await fetchRemoteFileBlob(refInput.reference);
-    openBlobInNewTab(blob, filename);
-    return;
+  try {
+    const blob =
+      !location && refInput.reference && isExternalHttpUrl(refInput.reference)
+        ? await fetchRemoteFileBlob(refInput.reference)
+        : await blobFromPrivateStorage(input);
+    showBlobInOpenedTab(tab, blob, filename);
+  } catch (error) {
+    tab.close();
+    throw error;
   }
-
-  const blob = await blobFromPrivateStorage(input);
-  openBlobInNewTab(blob, filename);
 }
 
 /** Returns a blob: URL; caller must revoke when done. */

@@ -149,7 +149,7 @@ export const FileAttachmentPill = ({ file }: { file: FileAttachment }) => {
             reference,
             defaultBucket: "attachments",
             filename: file.title || "file.pdf",
-          });
+          }).catch(() => {});
           return;
         }
         if (!href) event.preventDefault();

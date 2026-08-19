@@ -1,10 +1,12 @@
 import { File, FileText } from "lucide-react";
 import { useState } from "react";
+import { useNotify } from "ra-core";
 import { getFileKind } from "@/lib/fileAttachments";
 import type { MessageAsset } from "@/modules/tickets/ticketMessageAssets";
 import {
   downloadTicketAssets,
   isDownloadableFileAsset,
+  isPreviewablePdfAsset,
   openTicketAsset,
 } from "@/modules/tickets/downloadTicketAssets";
 import { cn } from "@/lib/utils";
@@ -17,6 +19,7 @@ const formatBytes = (size: number | null | undefined) => {
 };
 
 const AttachmentChip = ({ asset }: { asset: MessageAsset }) => {
+  const notify = useNotify();
   const [isDownloading, setIsDownloading] = useState(false);
   const kind = getFileKind({
     title: asset.label,
@@ -25,15 +28,23 @@ const AttachmentChip = ({ asset }: { asset: MessageAsset }) => {
     path: asset.path,
   });
   const Icon = kind === "pdf" ? FileText : File;
+  const isPdf = isPreviewablePdfAsset(asset);
+  const canOpen = isDownloadableFileAsset(asset);
 
   return (
     <button
       type="button"
       title={asset.label}
-      disabled={!isDownloadableFileAsset(asset) || isDownloading}
+      disabled={!canOpen || (isDownloading && !isPdf)}
       onClick={(event) => {
         event.stopPropagation();
-        if (!isDownloadableFileAsset(asset)) return;
+        if (!canOpen) return;
+        if (isPdf) {
+          void openTicketAsset(asset).catch(() => {
+            notify("Allow pop-ups to open this PDF", { type: "warning" });
+          });
+          return;
+        }
         setIsDownloading(true);
         void openTicketAsset(asset).finally(() => setIsDownloading(false));
       }}

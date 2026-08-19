@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   blobForInlinePreview,
+  openPrivateStorageFile,
   resolvePrivateStorageLocation,
   sanitizePrivateStorageFilename,
 } from "./privateStorageFile";
@@ -103,5 +104,38 @@ describe("privateStorageFile", () => {
       filename: undefined,
       expiresIn: undefined,
     });
+  });
+
+  it("opens a blank tab before fetching the file", async () => {
+    const replace = vi.fn();
+    const previewTab = {
+      location: { replace },
+      close: vi.fn(),
+      opener: {},
+    } as unknown as Window;
+    const open = vi.spyOn(window, "open").mockReturnValue(previewTab);
+
+    let finishFetch!: (value: Response) => void;
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishFetch = resolve;
+        }),
+    );
+
+    const pending = openPrivateStorageFile({
+      reference: "https://example.com/quote.pdf",
+      filename: "quote.pdf",
+    });
+
+    expect(open).toHaveBeenCalledWith("about:blank", "_blank");
+
+    finishFetch({
+      ok: true,
+      blob: async () => new Blob(["%PDF"], { type: "application/octet-stream" }),
+    } as Response);
+
+    await pending;
+    expect(replace).toHaveBeenCalled();
   });
 });
