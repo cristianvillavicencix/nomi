@@ -36,6 +36,7 @@ import {
   invoiceStatusSidebarLabel,
   invoiceStatusSidebarVariant,
 } from "@/modules/billing/invoiceStatusSidebarLabel";
+import { invoiceListTotals } from "@/modules/billing/invoicePaymentUtils";
 import type { FormSubmissionV2 } from "@/modules/forms/types";
 import { ClientTabEmpty } from "@/modules/clients/ClientContactsTab";
 import { formatDateTime } from "@/modules/clients/clientShowUtils";
@@ -242,11 +243,14 @@ export const ClientInvoicesTab = ({
             <TableHead>Status</TableHead>
             <TableHead className="hidden md:table-cell">Issue date</TableHead>
             <TableHead className="hidden lg:table-cell">Ticket</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
+            <TableHead className="text-right">Total</TableHead>
+            <TableHead className="text-right">Balance</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((invoice) => (
+          {data.map((invoice) => {
+            const { total, balance, isPartial } = invoiceListTotals(invoice);
+            return (
             <TableRow key={invoice.id}>
               <TableCell>
                 <Link
@@ -264,7 +268,9 @@ export const ClientInvoicesTab = ({
                   )}
                   className="capitalize"
                 >
-                  {invoiceStatusSidebarLabel(invoice.status, invoice.due_date)}
+                  {invoiceStatusSidebarLabel(invoice.status, invoice.due_date, {
+                    isPartial,
+                  })}
                 </Badge>
               </TableCell>
               <TableCell className="hidden text-muted-foreground md:table-cell">
@@ -283,10 +289,14 @@ export const ClientInvoicesTab = ({
                 )}
               </TableCell>
               <TableCell className="text-right text-muted-foreground">
-                <MoneyText value={invoice.amount} />
+                <MoneyText value={total} />
+              </TableCell>
+              <TableCell className="text-right font-medium">
+                <MoneyText value={balance} />
               </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
         </TableBody>
       </Table>
     </div>

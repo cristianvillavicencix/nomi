@@ -16,6 +16,7 @@ import {
   todayIso,
 } from "@/modules/billing/billingDisplayUtils";
 import { formatInvoiceMoney } from "@/modules/billing/invoiceEmailTemplate";
+import { invoiceListTotals } from "@/modules/billing/invoicePaymentUtils";
 import { DashboardModuleCard } from "@/modules/dashboard/DashboardModuleCard";
 
 const isInvoiceOverdue = (invoice: ClientInvoice) =>
@@ -42,7 +43,10 @@ export const DashboardInvoicesCard = () => {
 
   const totalUnpaid = useMemo(
     () =>
-      invoices.reduce((sum, invoice) => sum + (Number(invoice.amount) || 0), 0),
+      invoices.reduce(
+        (sum, invoice) => sum + invoiceListTotals(invoice).balance,
+        0,
+      ),
     [invoices],
   );
 
@@ -110,6 +114,7 @@ export const DashboardInvoicesCard = () => {
           {preview.map((invoice) => {
             const overdueInvoice = isInvoiceOverdue(invoice);
             const dueLabel = formatBillingDate(invoice.due_date);
+            const { balance, total, isPartial } = invoiceListTotals(invoice);
 
             return (
               <li
@@ -127,9 +132,12 @@ export const DashboardInvoicesCard = () => {
                   </Link>
                   <p className="truncate text-xs text-muted-foreground">
                     {formatInvoiceMoney(
-                      Number(invoice.amount) || 0,
+                      balance,
                       invoice.currency ?? "USD",
                     )}
+                    {isPartial
+                      ? ` due · ${formatInvoiceMoney(total, invoice.currency ?? "USD")} total`
+                      : ""}
                   </p>
                 </div>
                 {dueLabel ? (

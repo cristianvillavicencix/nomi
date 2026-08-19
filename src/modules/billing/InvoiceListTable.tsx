@@ -8,6 +8,7 @@ import {
   invoiceStatusSidebarVariant,
 } from "@/modules/billing/invoiceStatusSidebarLabel";
 import { invoiceMatchesSearchQuery } from "@/modules/billing/invoiceListSearch";
+import { invoiceListTotals } from "@/modules/billing/invoicePaymentUtils";
 import type { ClientInvoice } from "@/modules/types";
 import { Badge } from "@/components/ui/badge";
 import { MoneyText } from "@/lib/permissions/MoneyText";
@@ -100,12 +101,13 @@ export const InvoiceListTable = ({
       <Table>
         <TableHeader className="sticky top-0 z-10 bg-background">
           <TableRow>
-            <TableHead className="w-[28%]">Customer</TableHead>
-            <TableHead className="w-[14%]">Invoice #</TableHead>
-            <TableHead className="w-[12%]">Issue date</TableHead>
-            <TableHead className="w-[12%]">Due date</TableHead>
-            <TableHead className="w-[14%]">Status</TableHead>
-            <TableHead className="w-[14%] text-right">Amount</TableHead>
+            <TableHead className="w-[24%]">Customer</TableHead>
+            <TableHead className="w-[12%]">Invoice #</TableHead>
+            <TableHead className="w-[10%]">Issue date</TableHead>
+            <TableHead className="w-[10%]">Due date</TableHead>
+            <TableHead className="w-[16%]">Status</TableHead>
+            <TableHead className="w-[11%] text-right">Total</TableHead>
+            <TableHead className="w-[11%] text-right">Balance</TableHead>
             <TableHead className="w-[6%]" aria-label="Sent" />
           </TableRow>
         </TableHeader>
@@ -115,9 +117,11 @@ export const InvoiceListTable = ({
               ? companyById.get(String(invoice.company_id))
               : null;
             const isSelected = String(invoice.id) === String(selectedInvoiceId);
+            const { total, balance, isPartial } = invoiceListTotals(invoice);
             const statusLabel = invoiceStatusSidebarLabel(
               invoice.status,
               invoice.due_date,
+              { isPartial },
             );
             return (
               <TableRow
@@ -153,8 +157,11 @@ export const InvoiceListTable = ({
                     {statusLabel}
                   </Badge>
                 </TableCell>
+                <TableCell className="text-right tabular-nums text-muted-foreground">
+                  <MoneyText value={total} />
+                </TableCell>
                 <TableCell className="text-right font-medium tabular-nums">
-                  <MoneyText value={Number(invoice.amount) || 0} />
+                  <MoneyText value={balance} />
                 </TableCell>
                 <TableCell>
                   {invoice.sent_at ? (

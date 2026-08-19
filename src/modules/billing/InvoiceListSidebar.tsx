@@ -8,6 +8,7 @@ import {
   invoiceStatusSidebarVariant,
 } from "@/modules/billing/invoiceStatusSidebarLabel";
 import { invoiceMatchesSearchQuery } from "@/modules/billing/invoiceListSearch";
+import { invoiceListTotals } from "@/modules/billing/invoicePaymentUtils";
 import type { ClientInvoice } from "@/modules/types";
 import { Badge } from "@/components/ui/badge";
 import { MoneyText } from "@/lib/permissions/MoneyText";
@@ -95,9 +96,11 @@ export const InvoiceListSidebar = ({
             ? companyById.get(String(invoice.company_id))
             : null;
           const isSelected = String(invoice.id) === String(selectedInvoiceId);
+          const { total, balance, isPartial } = invoiceListTotals(invoice);
           const statusLabel = invoiceStatusSidebarLabel(
             invoice.status,
             invoice.due_date,
+            { isPartial },
           );
 
           return (
@@ -115,8 +118,13 @@ export const InvoiceListSidebar = ({
                   <span className="min-w-0 truncate text-sm font-medium">
                     {company?.name ?? "No customer"}
                   </span>
-                  <span className="shrink-0 text-sm font-medium tabular-nums">
-                    <MoneyText value={Number(invoice.amount) || 0} />
+                  <span className="shrink-0 text-right text-sm font-medium tabular-nums">
+                    <MoneyText value={isPartial ? balance : total} />
+                    {isPartial ? (
+                      <span className="mt-0.5 block text-[10px] font-normal text-muted-foreground">
+                        of <MoneyText value={total} />
+                      </span>
+                    ) : null}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2">

@@ -39,6 +39,34 @@ export const computeInvoiceUpfrontAmount = (
 export const computeInvoiceBalanceDue = (total: number, amountPaid = 0) =>
   Math.max(Math.round((total - amountPaid) * 100) / 100, 0);
 
+export const isInvoicePartiallyPaid = (
+  total: number,
+  amountPaid = 0,
+  status?: string | null,
+) => {
+  const normalized = status?.toLowerCase() ?? "";
+  if (normalized === "paid" || normalized === "void") return false;
+  return (
+    amountPaid > 0.01 && computeInvoiceBalanceDue(total, amountPaid) > 0.01
+  );
+};
+
+export const invoiceListTotals = (invoice: {
+  amount?: number | null;
+  amount_paid?: number | null;
+  status?: string | null;
+}) => {
+  const total = Number(invoice.amount) || 0;
+  const paid = Number(invoice.amount_paid) || 0;
+  const balance = computeInvoiceBalanceDue(total, paid);
+  return {
+    total,
+    paid,
+    balance,
+    isPartial: isInvoicePartiallyPaid(total, paid, invoice.status),
+  };
+};
+
 /** Stripe minimum charge for USD card payments. */
 export const STRIPE_MINIMUM_CHARGE_USD = 0.5;
 

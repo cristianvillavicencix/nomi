@@ -5,26 +5,31 @@ import { todayIso } from "@/modules/billing/billingDisplayUtils";
 export const invoiceStatusSidebarLabel = (
   status?: string | null,
   dueDate?: string | null,
+  options?: { isPartial?: boolean },
 ) => {
   const normalized = status?.toLowerCase() ?? "";
 
-  if (normalized === "draft") return "Draft";
-  if (normalized === "paid") return "Paid";
-  if (normalized === "void") return "Void";
-  if (normalized === "sent" && dueDate) {
+  let label = status?.replace(/_/g, " ") ?? "—";
+  if (normalized === "draft") label = "Draft";
+  else if (normalized === "paid") label = "Paid";
+  else if (normalized === "void") label = "Void";
+  else if (normalized === "sent" && dueDate) {
     const today = parseISO(todayIso());
     const due = parseISO(dueDate);
     const days = differenceInCalendarDays(due, today);
     if (days < 0) {
       const overdue = Math.abs(days);
-      return overdue === 1 ? "Overdue by 1 day" : `Overdue by ${overdue} days`;
-    }
-    if (days === 0) return "Due today";
-    if (days === 1) return "Due in 1 day";
-    return `Due in ${days} days`;
+      label =
+        overdue === 1 ? "Overdue by 1 day" : `Overdue by ${overdue} days`;
+    } else if (days === 0) label = "Due today";
+    else if (days === 1) label = "Due in 1 day";
+    else label = `Due in ${days} days`;
+  } else if (normalized === "sent") label = "Sent";
+
+  if (options?.isPartial && normalized !== "paid" && normalized !== "void") {
+    return `Partial · ${label}`;
   }
-  if (normalized === "sent") return "Sent";
-  return status?.replace(/_/g, " ") ?? "—";
+  return label;
 };
 
 export const invoiceStatusSidebarVariant = (
