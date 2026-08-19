@@ -3,9 +3,9 @@ import { useState } from "react";
 import { getFileKind } from "@/lib/fileAttachments";
 import type { MessageAsset } from "@/modules/tickets/ticketMessageAssets";
 import {
-  downloadTicketAsset,
   downloadTicketAssets,
   isDownloadableFileAsset,
+  openTicketAsset,
 } from "@/modules/tickets/downloadTicketAssets";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +35,7 @@ const AttachmentChip = ({ asset }: { asset: MessageAsset }) => {
         event.stopPropagation();
         if (!isDownloadableFileAsset(asset)) return;
         setIsDownloading(true);
-        void downloadTicketAsset(asset).finally(() => setIsDownloading(false));
+        void openTicketAsset(asset).finally(() => setIsDownloading(false));
       }}
       className="inline-flex max-w-full items-center gap-2 rounded-md border border-border/80 bg-muted/40 px-2.5 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-muted/70 disabled:opacity-60"
     >
