@@ -106,36 +106,32 @@ describe("privateStorageFile", () => {
     });
   });
 
-  it("opens a blank tab before fetching the file", async () => {
-    const replace = vi.fn();
+  it("opens a preview tab immediately and streams the PDF url", async () => {
+    const write = vi.fn();
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
     const previewTab = {
-      location: { replace },
+      document: {
+        open: vi.fn(),
+        write,
+        close: vi.fn(),
+      },
+      location: { replace: vi.fn() },
       close: vi.fn(),
       opener: {},
     } as unknown as Window;
     const open = vi.spyOn(window, "open").mockReturnValue(previewTab);
 
-    let finishFetch!: (value: Response) => void;
-    vi.spyOn(globalThis, "fetch").mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          finishFetch = resolve;
-        }),
-    );
-
-    const pending = openPrivateStorageFile({
+    await openPrivateStorageFile({
       reference: "https://example.com/quote.pdf",
       filename: "quote.pdf",
     });
 
     expect(open).toHaveBeenCalledWith("about:blank", "_blank");
-
-    finishFetch({
-      ok: true,
-      blob: async () => new Blob(["%PDF"], { type: "application/octet-stream" }),
-    } as Response);
-
-    await pending;
-    expect(replace).toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(
+      write.mock.calls.some((call) =>
+        String(call[0]).includes("https://example.com/quote.pdf"),
+      ),
+    ).toBe(true);
   });
 });

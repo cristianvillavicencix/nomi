@@ -114,9 +114,42 @@ function triggerBlobDownload(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), BLOB_REVOKE_MS);
 }
 
+function escapeHtmlAttr(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
+
+function writePreviewTab(tab: Window, html: string) {
+  tab.document.open();
+  tab.document.write(html);
+  tab.document.close();
+  tab.opener = null;
+}
+
 /** Must run in the click stack — browsers block window.open after await. */
-function openPreviewTab(): Window | null {
-  return window.open("about:blank", "_blank");
+function openPreviewTab(filename: string): Window | null {
+  const tab = window.open("about:blank", "_blank");
+  if (!tab) return null;
+  const title = sanitizePrivateStorageFilename(filename);
+  try {
+    writePreviewTab(
+      tab,
+      `<!DOCTYPE html><title>${escapeHtmlAttr(title)}</title><body style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;font:14px system-ui,sans-serif;color:#444">Opening…</body>`,
+    );
+  } catch {
+    // Tab is still usable; we'll replace the document when the file URL is ready.
+  }
+  return tab;
+}
+
+function showPdfInOpenedTab(tab: Window, fileUrl: string, filename: string) {
+  const title = sanitizePrivateStorageFilename(filename);
+  writePreviewTab(
+    tab,
+    `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtmlAttr(title)}</title><style>html,body,embed{margin:0;border:0;width:100%;height:100%}html,body{height:100%;overflow:hidden}</style></head><body><embed src="${escapeHtmlAttr(fileUrl)}" type="application/pdf" title="${escapeHtmlAttr(title)}" /></body></html>`,
+  );
 }
 
 function showBlobInOpenedTab(tab: Window, blob: Blob, filename: string) {
@@ -163,9 +196,6 @@ export async function downloadPrivateStorageFile(
 export async function openPrivateStorageFile(
   input: PrivateStorageLocation | PrivateStorageReferenceInput,
 ): Promise<void> {
-  const tab = openPreviewTab();
-  if (!tab) throw new Error("Pop-up blocked");
-
   const location = resolvePrivateStorageLocation(input);
   const refInput = input as PrivateStorageReferenceInput;
   const filename =
@@ -174,11 +204,21 @@ export async function openPrivateStorageFile(
     location?.path.split("/").pop() ??
     "file";
 
+  const tab = openPreviewTab(filename);
+  if (!tab) throw new Error("Pop-up blocked");
+
+  const previewPdf = isPdfPreviewName(filename);
+
   try {
-    const blob =
-      !location && refInput.reference && isExternalHttpUrl(refInput.reference)
-        ? await fetchRemoteFileBlob(refInput.reference)
-        : await blobFromPrivateStorage(input);
+    const signedUrl = await resolvePrivateStorageSignedUrl(input);
+    if (!signedUrl) throw new Error("Could not resolve file");
+
+    if (previewPdf) {
+      showPdfInOpenedTab(tab, signedUrl, filename);
+      return;
+    }
+
+    const blob = await fetchRemoteFileBlob(signedUrl);
     showBlobInOpenedTab(tab, blob, filename);
   } catch (error) {
     tab.close();
