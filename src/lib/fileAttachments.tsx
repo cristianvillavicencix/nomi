@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
+import { openPrivateStorageFile } from "@/lib/supabase/privateStorageFile";
 import { isResolvableStorageReference } from "@/lib/supabase/storageObjectUrl";
 
 export type FileAttachment = {
@@ -115,11 +116,14 @@ export const FileAttachmentPill = ({ file }: { file: FileAttachment }) => {
   const kind = getFileKind(file);
   const { Icon, iconClassName } = FILE_KIND_META[kind];
   const reference = file.src?.trim() || file.path?.trim();
+  const isPdf = kind === "pdf";
   const href = useStorageSignedUrl(reference, {
     path: file.path,
     defaultBucket: "attachments",
+    enabled: !isPdf,
   });
   const isResolving =
+    !isPdf &&
     Boolean(reference) &&
     !href &&
     isResolvableStorageReference(reference, "attachments");
@@ -128,7 +132,7 @@ export const FileAttachmentPill = ({ file }: { file: FileAttachment }) => {
 
   return (
     <a
-      href={href ?? "#"}
+      href={isPdf ? "#" : (href ?? "#")}
       target="_blank"
       rel="noreferrer"
       title={file.title || "Attachment"}
@@ -139,6 +143,15 @@ export const FileAttachmentPill = ({ file }: { file: FileAttachment }) => {
       )}
       onClick={(event) => {
         event.stopPropagation();
+        if (isPdf) {
+          event.preventDefault();
+          void openPrivateStorageFile({
+            reference,
+            defaultBucket: "attachments",
+            filename: file.title || "file.pdf",
+          });
+          return;
+        }
         if (!href) event.preventDefault();
       }}
     >

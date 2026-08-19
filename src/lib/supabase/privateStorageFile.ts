@@ -89,6 +89,19 @@ async function blobFromPrivateStorage(
   return fetchRemoteFileBlob(signedUrl);
 }
 
+export const isPdfPreviewName = (filename: string) =>
+  filename.toLowerCase().endsWith(".pdf");
+
+/** Chrome downloads octet-stream blobs; PDFs need an explicit MIME for the viewer. */
+export function blobForInlinePreview(blob: Blob, filename?: string): Blob {
+  if (blob.type.includes("pdf") || isPdfPreviewName(filename ?? "")) {
+    return blob.type === "application/pdf"
+      ? blob
+      : new Blob([blob], { type: "application/pdf" });
+  }
+  return blob;
+}
+
 function triggerBlobDownload(blob: Blob, filename: string) {
   const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -98,6 +111,24 @@ function triggerBlobDownload(blob: Blob, filename: string) {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), BLOB_REVOKE_MS);
+}
+
+function openBlobInNewTab(blob: Blob, filename: string) {
+  const preview = blobForInlinePreview(blob, filename);
+  const objectUrl = URL.createObjectURL(preview);
+  const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
+  if (!opened) {
+    URL.revokeObjectURL(objectUrl);
+    if (
+      preview.type === "application/pdf" ||
+      isPdfPreviewName(filename)
+    ) {
+      throw new Error("Pop-up blocked");
+    }
+    triggerBlobDownload(blob, filename);
+    return;
+  }
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), BLOB_REVOKE_MS);
 }
 
@@ -134,33 +165,20 @@ export async function openPrivateStorageFile(
 ): Promise<void> {
   const location = resolvePrivateStorageLocation(input);
   const refInput = input as PrivateStorageReferenceInput;
+  const filename =
+    location?.filename ??
+    refInput.filename ??
+    location?.path.split("/").pop() ??
+    "file";
 
   if (!location && refInput.reference && isExternalHttpUrl(refInput.reference)) {
     const blob = await fetchRemoteFileBlob(refInput.reference);
-    const objectUrl = URL.createObjectURL(blob);
-    const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
-    if (!opened) {
-      URL.revokeObjectURL(objectUrl);
-      throw new Error("Pop-up blocked");
-    }
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), BLOB_REVOKE_MS);
+    openBlobInNewTab(blob, filename);
     return;
   }
 
   const blob = await blobFromPrivateStorage(input);
-  const objectUrl = URL.createObjectURL(blob);
-  const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
-  if (!opened) {
-    URL.revokeObjectURL(objectUrl);
-    const filename =
-      location?.filename ??
-      refInput.filename ??
-      location?.path.split("/").pop() ??
-      "file";
-    triggerBlobDownload(blob, filename);
-    return;
-  }
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), BLOB_REVOKE_MS);
+  openBlobInNewTab(blob, filename);
 }
 
 /** Returns a blob: URL; caller must revoke when done. */

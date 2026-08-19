@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  blobForInlinePreview,
   resolvePrivateStorageLocation,
   sanitizePrivateStorageFilename,
 } from "./privateStorageFile";
@@ -24,6 +25,20 @@ describe("privateStorageFile", () => {
       "bad-name--test-.pdf",
     );
     expect(sanitizePrivateStorageFilename("")).toBe("file");
+  });
+
+  it("forces application/pdf on preview blobs", () => {
+    const octet = new Blob(["%PDF"], { type: "application/octet-stream" });
+    expect(blobForInlinePreview(octet, "quote.pdf").type).toBe("application/pdf");
+
+    const typed = new Blob(["%PDF"], { type: "application/pdf" });
+    expect(blobForInlinePreview(typed, "quote.pdf")).toBe(typed);
+
+    const byMime = new Blob(["%PDF"], { type: "application/pdf;charset=utf-8" });
+    expect(blobForInlinePreview(byMime, "file.bin").type).toBe("application/pdf");
+
+    const docx = new Blob(["PK"], { type: "" });
+    expect(blobForInlinePreview(docx, "letter.docx").type).toBe("");
   });
 
   it("parses bucket/path locations", () => {
