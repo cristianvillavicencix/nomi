@@ -114,6 +114,13 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   }, [accountFilter, folder, listFilter, labelId, search, perPage]);
 
   useEffect(() => {
+    if (isPending) return;
+    if (page > 1 && threads.length === 0 && listPagination.total > 0) {
+      setPage((current) => Math.max(1, current - 1));
+    }
+  }, [isPending, page, threads.length, listPagination.total]);
+
+  useEffect(() => {
     writeMailFolder(folder);
   }, [folder]);
 
@@ -219,6 +226,9 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
 
     try {
       await applyMailThreadAction(thread.id, action);
+      if (leavesFolderForAction(action, thread)) {
+        void queryClient.invalidateQueries({ queryKey: ["mail_threads"] });
+      }
       if (shouldRefreshMailQueriesAfterAction(action)) {
         void queryClient.invalidateQueries({
           queryKey: ["mail_unread_count"],
@@ -264,6 +274,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     try {
       await applyMailThreadAction(ids, action);
       setSelectedIds(new Set());
+      void queryClient.invalidateQueries({ queryKey: ["mail_threads"] });
     } catch (e) {
       invalidate();
       notify(e instanceof Error ? e.message : "Action failed", {
@@ -673,6 +684,16 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
             }}
             syncToolbar={{
               syncing,
+              unreadActive: listFilter === "unread",
+              unreadCount: inboxUnreadCount,
+              onToggleUnread: () => {
+                setListFilter((current) =>
+                  current === "unread" ? "all" : "unread",
+                );
+                setPage(1);
+                setSelected(null);
+                setMobileShowThread(false);
+              },
               onSync: () => {
                 void runQuickSync();
               },
