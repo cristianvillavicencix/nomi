@@ -204,7 +204,12 @@ const ProjectShowContent = () => {
     <ProjectBriefActionsProvider record={record}>
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden">
         <ProjectDeliveredStamp record={record} />
-        <div className="shrink-0 space-y-2 px-1 sm:px-0">
+        <div
+          className={cn(
+            "shrink-0 space-y-2 px-1 sm:px-0",
+            isMobile && "max-h-[42%] space-y-1.5 overflow-y-auto overscroll-contain",
+          )}
+        >
           {isMobile ? (
             <div className="flex items-center gap-1 pt-1">
               <MobileBackButton to="/deals" />
@@ -248,7 +253,10 @@ const ProjectShowContent = () => {
             stages={displayStages}
             currentStage={displayCurrentStage}
             onStageChange={handleStageChange}
-            className="rounded-b-none pb-2"
+            className={cn(
+              "rounded-b-none pb-2",
+              isMobile && "overflow-x-auto",
+            )}
           />
         </div>
 
@@ -269,12 +277,12 @@ const ProjectShowContent = () => {
           <Sheet open={mobileContextOpen} onOpenChange={setMobileContextOpen}>
             <SheetContent
               side="right"
-              className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
+              className="flex h-full min-h-0 w-full flex-col gap-0 p-0 sm:max-w-md"
             >
               <SheetHeader className="shrink-0 border-b px-4 py-3 text-left">
                 <SheetTitle>Project context</SheetTitle>
               </SheetHeader>
-              <div className="min-h-0 flex-1 overflow-hidden [&_aside]:!w-full [&_aside]:border-l-0">
+              <div className="min-h-0 flex-1 overflow-hidden [&_aside]:!h-full [&_aside]:!w-full [&_aside]:border-l-0">
                 <ProjectContextPanel
                   record={record}
                   collapsed={false}

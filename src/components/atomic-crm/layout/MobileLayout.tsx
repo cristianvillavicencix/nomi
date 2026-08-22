@@ -15,10 +15,15 @@ export const MobileLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const matchMessages = useMatch("/messages");
   const matchDealShow = useMatch("/deals/:id/show");
+  const matchTicketShow = useMatch("/tickets/:id/show");
   const hideFab =
     Boolean(matchMessages) ||
     Boolean(matchDealShow) ||
-    location.pathname.startsWith("/messages");
+    Boolean(matchTicketShow) ||
+    location.pathname.startsWith("/messages") ||
+    location.pathname.startsWith("/tickets") ||
+    location.pathname.startsWith("/billing") ||
+    location.pathname.startsWith("/accounts");
 
   return (
     <>

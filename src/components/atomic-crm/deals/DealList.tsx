@@ -69,6 +69,8 @@ const DealList = () => {
         filters={dealFilters}
         actions={false}
         pagination={null}
+        contentScrollable={false}
+        className="min-h-0 flex-1"
       >
         <MobileDealListLayout />
         <ProjectCreateFlow />

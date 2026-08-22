@@ -163,7 +163,7 @@ export const MobileDealListLayout = () => {
   const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
 
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <MobileHeader>
         <div className="flex w-full items-center justify-between gap-2">
           <h1 className="shrink-0 text-xl font-semibold">Projects</h1>
@@ -171,13 +171,13 @@ export const MobileDealListLayout = () => {
         </div>
       </MobileHeader>
       <MobileContent>
-        <div className="space-y-3">
+        <div className="space-y-3 pb-2">
           <ModuleToolbar className="shrink-0 border-0 bg-transparent p-0 shadow-none">
             <MobileDealSearchField />
           </ModuleToolbar>
           <MobileDealListContent />
         </div>
       </MobileContent>
-    </>
+    </div>
   );
 };

@@ -27,7 +27,7 @@ import {
 import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { getClientShowPath } from "@/app/routing";
+import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import { buildAccountsCompanyPreviewParams } from "@/modules/accounts/AccountsCompanyPreviewSheet";
 import { buildAccountsPersonPreviewParams } from "@/modules/accounts/AccountsLeadPreviewSheet";
 import {
@@ -93,7 +93,7 @@ export const AccountsCompaniesList = ({
   if (!identity) return null;
 
   return (
-    <div className="w-full space-y-3">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <List
         resource="companies"
         title={false}
@@ -101,6 +101,8 @@ export const AccountsCompaniesList = ({
         perPage={25}
         sort={{ field: "name", order: "ASC" }}
         actions={false}
+        contentScrollable={false}
+        className="min-h-0 flex-1"
         pagination={<ListPagination rowsPerPageOptions={[10, 25, 50, 100]} />}
       >
         <AccountsCompaniesListBody accountsChrome={accountsChrome} />
@@ -154,6 +156,15 @@ const AccountsCompaniesListBody = ({
     contact: Pick<Company, "primary_contact_id" | "primary_contact_status">,
   ) => {
     if (!contact.primary_contact_id) return;
+    if (isMobile) {
+      navigate(
+        getPersonShowPath({
+          id: contact.primary_contact_id,
+          status: contact.primary_contact_status,
+        }),
+      );
+      return;
+    }
     setSearchParams(
       buildAccountsPersonPreviewParams(searchParams, {
         id: contact.primary_contact_id,
@@ -201,15 +212,55 @@ const AccountsCompaniesListBody = ({
   }
 
   return (
-    <div className="space-y-3">
-      {toolbar}
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <div className="shrink-0">{toolbar}</div>
 
       {!data.length ? (
         <div className="py-12 text-center text-sm text-muted-foreground">
           No companies match your search.
         </div>
+      ) : isMobile ? (
+        <ul className="min-h-0 flex-1 divide-y divide-border/50 overflow-y-auto overscroll-contain rounded-lg border border-border/50 bg-background">
+          {data.map((company) => {
+            const contactName = primaryContactName(company);
+            const status = statusLabel(company);
+            const phone = resolveCompanyPhoneRaw(company);
+            return (
+              <li key={String(company.id)}>
+                <button
+                  type="button"
+                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted/60 hover:bg-muted/40"
+                  onClick={() => openCompany(company.id)}
+                >
+                  <CompanyAvatar record={company} width={36} />
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="truncate font-semibold text-foreground">
+                        {company.name?.trim() || "Untitled company"}
+                      </span>
+                      {status ? (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "shrink-0 text-[10px] font-medium",
+                            statusBadgeClass(company, status),
+                          )}
+                        >
+                          {status}
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <div className="truncate text-sm text-muted-foreground">
+                      {contactName || phone || "No primary contact"}
+                    </div>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       ) : (
-        <div className="overflow-x-auto rounded-md border">
+        <div className="min-h-0 flex-1 overflow-auto rounded-md border">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
