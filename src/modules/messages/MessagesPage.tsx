@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
 import { PageLayout } from "@/components/atomic-crm/layout/page-shell";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { Contact, Conversation } from "@/modules/types";
 import { MessagesWorkspace } from "@/modules/messages/MessagesWorkspace";
@@ -249,7 +250,14 @@ export const MessagesPage = () => {
   );
 
   return (
-    <PageLayout className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border/40 bg-background shadow-sm">
+    <PageLayout
+      className={cn(
+        "flex min-h-0 flex-1 flex-col overflow-hidden bg-background",
+        isMobile
+          ? "rounded-none border-0 shadow-none"
+          : "h-full rounded-xl border border-border/40 shadow-sm",
+      )}
+    >
       <MessagesWorkspace
         conversations={conversations}
         deals={deals}
@@ -268,7 +276,10 @@ export const MessagesPage = () => {
         isPending={isPending}
         isMobile={isMobile}
         showMobileChat={mobileShowChat}
-        onMobileBack={() => setMobileShowChat(false)}
+        onMobileBack={() => {
+          clearDraftSms();
+          setMobileShowChat(false);
+        }}
         className="min-h-0 flex-1"
         onLoadMoreInbox={() => {
           setLoadingMoreInbox(true);

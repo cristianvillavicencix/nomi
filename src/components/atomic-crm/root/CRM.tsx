@@ -22,7 +22,6 @@ import { OAuthConsentPage } from "@/components/supabase/oauth-consent-page";
 import companies from "../companies";
 import contacts from "../contacts";
 import { Dashboard } from "../dashboard/Dashboard";
-import { MobileDashboard } from "../dashboard/MobileDashboard";
 import deals from "../deals";
 import { DesktopLayout } from "../layout/DesktopLayout";
 import { MobileLayout } from "../layout/MobileLayout";
@@ -449,6 +448,8 @@ const SettingsProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+const MobileHomeRedirect = () => <Navigate to="/messages" replace />;
+
 const MobileAdmin = (props: CoreAdminProps) => {
   const queryClient = useCrmQueryClient();
   const asyncStoragePersister = createAsyncStoragePersister({
@@ -466,7 +467,7 @@ const MobileAdmin = (props: CoreAdminProps) => {
       <Admin
         queryClient={queryClient}
         layout={MobileLayoutWithProviders}
-        dashboard={MobileDashboard}
+        dashboard={MobileHomeRedirect}
         {...props}
       >
         <CustomRoutes noLayout>
@@ -489,7 +490,10 @@ const MobileAdmin = (props: CoreAdminProps) => {
             {renderLbsPublicPortalRoutes()}
           </>
         </CustomRoutes>
-        <CustomRoutes>{renderLbsCustomRoutes({ ProtectedRoute })}</CustomRoutes>
+        <CustomRoutes>
+          <Route path="/projects" element={<Navigate to="/deals" replace />} />
+          {renderLbsCustomRoutes({ ProtectedRoute })}
+        </CustomRoutes>
         <Resource
           name="contacts"
           list={ContactListMobile}
@@ -500,19 +504,20 @@ const MobileAdmin = (props: CoreAdminProps) => {
         </Resource>
         <Resource name="companies" show={CompanyShow} />
         <Resource name="tasks" list={MobileTasksList} />
-        <Resource name="deals" />
+        <Resource name="deals" {...deals} />
         <Resource name="proposals" />
         <Resource name="contracts" />
         <Resource name="tickets" />
         <Resource name="ticket_deliverables" />
         <Resource name="ticket_internal_files" />
         <Resource name="conversations" />
+        <Resource name="conversation_messages" />
         <Resource name="calendar_events" />
         <Resource name="monitored_websites" />
         <Resource name="hostinger_domains" />
         <Resource name="proposal_payment_installments" />
         <Resource name="client_invoices" />
-      <Resource name="client_subscriptions" />
+        <Resource name="client_subscriptions" />
         <Resource name="forms" />
         <Resource name="form_submissions_v2" />
         <Resource name="report_web_agency_metrics" />
