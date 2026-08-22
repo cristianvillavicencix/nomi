@@ -2,17 +2,34 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Icon } from "@phosphor-icons/react";
-import { Briefcase, ChatCircle } from "@phosphor-icons/react";
+import {
+  Briefcase,
+  ChatCircle,
+  Receipt,
+  Ticket,
+  Users,
+} from "@phosphor-icons/react";
 import { Link, matchPath, useLocation } from "react-router";
 import { sidebarNavIconWeight } from "@/app/SidebarNavIcon";
+import { getAccountsHubPath } from "@/app/routing";
+import { isAccountsHubEnabled } from "@/lib/featureFlags";
 import { useMessagesUnreadCounts } from "@/modules/messages/useMessagesUnreadCounts";
 import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
+import { useNotificationUnreadCounts } from "@/modules/notifications/useNotificationUnreadCounts";
 
-type MobileTab = "/messages" | "/deals";
+type MobileTab =
+  | "/messages"
+  | "/deals"
+  | "/tickets"
+  | "/contacts"
+  | "/billing";
 
 export const MobileNavigation = () => {
   const location = useLocation();
   const { totalUnread } = useMessagesUnreadCounts();
+  const { tickets: ticketsUnread } = useNotificationUnreadCounts();
+  const accountsHub = isAccountsHubEnabled();
+  const contactsHref = accountsHub ? getAccountsHubPath("list") : "/contacts";
 
   let currentPath: MobileTab | false = false;
   if (
@@ -25,6 +42,31 @@ export const MobileNavigation = () => {
     matchPath("/deals/*", location.pathname)
   ) {
     currentPath = "/deals";
+  } else if (
+    matchPath("/tickets", location.pathname) ||
+    matchPath("/tickets/*", location.pathname)
+  ) {
+    currentPath = "/tickets";
+  } else if (
+    accountsHub &&
+    (matchPath("/accounts", location.pathname) ||
+      matchPath("/accounts/*", location.pathname) ||
+      matchPath("/contacts/*", location.pathname) ||
+      matchPath("/companies/*", location.pathname) ||
+      matchPath("/clients/*", location.pathname) ||
+      matchPath("/leads/*", location.pathname))
+  ) {
+    currentPath = "/contacts";
+  } else if (
+    matchPath("/contacts", location.pathname) ||
+    matchPath("/contacts/*", location.pathname)
+  ) {
+    currentPath = "/contacts";
+  } else if (
+    matchPath("/billing", location.pathname) ||
+    matchPath("/billing/*", location.pathname)
+  ) {
+    currentPath = "/billing";
   }
 
   const isPwa = window.matchMedia("(display-mode: standalone)").matches;
@@ -57,6 +99,25 @@ export const MobileNavigation = () => {
           label="Projects"
           isActive={currentPath === "/deals"}
         />
+        <NavigationButton
+          href="/tickets"
+          Icon={Ticket}
+          label="Tickets"
+          isActive={currentPath === "/tickets"}
+          badgeCount={ticketsUnread}
+        />
+        <NavigationButton
+          href={contactsHref}
+          Icon={Users}
+          label={accountsHub ? "Accounts" : "Contacts"}
+          isActive={currentPath === "/contacts"}
+        />
+        <NavigationButton
+          href="/billing"
+          Icon={Receipt}
+          label="Invoices"
+          isActive={currentPath === "/billing"}
+        />
       </div>
     </nav>
   );
@@ -79,13 +140,13 @@ const NavigationButton = ({
     asChild
     variant="ghost"
     className={cn(
-      "h-auto flex-1 flex-col gap-1 rounded-none px-1 py-2",
+      "h-auto min-w-0 flex-1 flex-col gap-0.5 rounded-none px-0.5 py-2",
       isActive ? null : "text-muted-foreground",
     )}
   >
-    <Link to={href} className="relative flex flex-col items-center gap-1">
+    <Link to={href} className="relative flex flex-col items-center gap-0.5">
       <span className="relative">
-        <Icon className="size-6" weight={sidebarNavIconWeight(isActive)} />
+        <Icon className="size-5" weight={sidebarNavIconWeight(isActive)} />
         {badgeCount > 0 ? (
           <Badge
             variant="default"
@@ -95,7 +156,9 @@ const NavigationButton = ({
           </Badge>
         ) : null}
       </span>
-      <span className="text-[0.6rem] font-medium">{label}</span>
+      <span className="max-w-full truncate text-[0.55rem] font-medium leading-tight">
+        {label}
+      </span>
     </Link>
   </Button>
 );
