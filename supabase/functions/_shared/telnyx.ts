@@ -174,15 +174,24 @@ export async function createTelnyxTelephonyCredentialToken(params: {
       },
     },
   );
-  const json = (await response.json().catch(() => ({}))) as {
-    data?: string | { token?: string };
-    errors?: Array<{ detail?: string }>;
-  };
+  const raw = (await response.text()).trim();
   if (!response.ok) {
-    throw new Error(
-      json.errors?.[0]?.detail || "Failed to create Telnyx WebRTC token",
-    );
+    let detail = "Failed to create Telnyx WebRTC token";
+    try {
+      const json = JSON.parse(raw) as { errors?: Array<{ detail?: string }> };
+      detail = json.errors?.[0]?.detail || detail;
+    } catch {
+      // keep default
+    }
+    throw new Error(detail);
   }
+  // Telnyx often returns a bare JWT string (not JSON).
+  if (raw.split(".").length >= 3 && !raw.startsWith("{")) {
+    return raw;
+  }
+  const json = JSON.parse(raw) as {
+    data?: string | { token?: string };
+  };
   if (typeof json.data === "string" && json.data.trim()) {
     return json.data.trim();
   }

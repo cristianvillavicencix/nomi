@@ -412,6 +412,27 @@ export async function upsertMessagingSettings(
     payload.messaging_provider = normalizeProvider(input.messaging_provider);
   }
 
+  const nextProvider =
+    input.messaging_provider !== undefined
+      ? normalizeProvider(input.messaging_provider)
+      : normalizeProvider(existing?.messaging_provider);
+  if (nextProvider === "telnyx") {
+    const nextPhone =
+      input.telnyx_phone_number !== undefined
+        ? telnyxPhone
+        : existing?.telnyx_phone_number?.trim() || null;
+    const nextKey =
+      telnyxApiKey ||
+      (input.keepExistingTelnyxApiKey ? existing?.telnyx_api_key : null) ||
+      existing?.telnyx_api_key ||
+      null;
+    if (!nextPhone || !nextKey?.trim()) {
+      throw new Error(
+        "Cannot use Telnyx without an API key and phone number. Save Telnyx credentials first.",
+      );
+    }
+  }
+
   if (
     input.twilio_account_sid !== undefined ||
     input.twilio_phone_number !== undefined ||

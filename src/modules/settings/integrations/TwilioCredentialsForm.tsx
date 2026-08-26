@@ -38,8 +38,11 @@ export const TwilioCredentialsForm = ({
   onSaveSuccess,
   onTestSms,
 }: Props) => {
-  const provider: MessagingProvider =
+  const savedProvider: MessagingProvider =
     settings?.messaging_provider === "telnyx" ? "telnyx" : "twilio";
+  const [draftProvider, setDraftProvider] =
+    useState<MessagingProvider>(savedProvider);
+  const provider = draftProvider;
 
   const [accountSid, setAccountSid] = useState("");
   const [authToken, setAuthToken] = useState("");
@@ -74,6 +77,9 @@ export const TwilioCredentialsForm = ({
 
   useEffect(() => {
     if (!settings) return;
+    setDraftProvider(
+      settings.messaging_provider === "telnyx" ? "telnyx" : "twilio",
+    );
     setAccountSid(settings.twilio_account_sid ?? "");
     setPhoneNumber(settings.twilio_phone_number ?? "");
     setAuthToken("");
@@ -107,6 +113,14 @@ export const TwilioCredentialsForm = ({
   const saveCredentials = useMutation({
     mutationFn: () => {
       if (provider === "telnyx") {
+        const hasKey =
+          Boolean(telnyxApiKey.trim()) || settings?.has_telnyx_api_key === true;
+        const hasPhone = Boolean(telnyxPhone.trim());
+        if (!hasKey || !hasPhone) {
+          throw new Error(
+            "Telnyx requires an API key and phone number before switching. Fill them in and Save.",
+          );
+        }
         return onSave({
           messaging_provider: "telnyx",
           telnyx_api_key: telnyxApiKey.trim() || null,
@@ -167,7 +181,8 @@ export const TwilioCredentialsForm = ({
       <RadioGroup
         value={provider}
         onValueChange={(value) => {
-          void onPatch({ messaging_provider: value as MessagingProvider });
+          // Draft only — persist on Save so we never flip live provider without keys.
+          setDraftProvider(value as MessagingProvider);
         }}
         className="grid gap-2 sm:grid-cols-2"
         disabled={patching || saving}
