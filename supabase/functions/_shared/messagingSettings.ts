@@ -540,13 +540,15 @@ export async function upsertMessagingSettings(
     }
   }
 
-  if (input.telnyx_api_key !== undefined) {
+  // Only write the secret when a new value is provided. Empty + keepExisting
+  // must skip — calling set_* with "" clears the encrypted column.
+  if (input.telnyx_api_key !== undefined && telnyxApiKey) {
     if (!key) throw new Error("PGCRYPTO_KEY is not configured");
     const { error: telnyxKeyError } = await supabaseAdmin.rpc(
       "set_telnyx_api_key",
       {
         p_org_id: orgId,
-        p_token: telnyxApiKey ?? "",
+        p_token: telnyxApiKey,
         p_key: key,
       },
     );
@@ -557,13 +559,13 @@ export async function upsertMessagingSettings(
     }
   }
 
-  if (input.telnyx_sip_password !== undefined) {
+  if (input.telnyx_sip_password !== undefined && telnyxSipPassword) {
     if (!key) throw new Error("PGCRYPTO_KEY is not configured");
     const { error: sipError } = await supabaseAdmin.rpc(
       "set_telnyx_sip_password",
       {
         p_org_id: orgId,
-        p_token: telnyxSipPassword ?? "",
+        p_token: telnyxSipPassword,
         p_key: key,
       },
     );

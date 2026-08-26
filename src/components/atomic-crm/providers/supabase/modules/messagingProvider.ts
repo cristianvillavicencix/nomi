@@ -209,8 +209,10 @@ export const messagingProvider = {
     });
     if (error) {
       throw new Error(
-        (error as { message?: string }).message ??
+        await readEdgeFunctionErrorMessage(
+          error,
           "Failed to save messaging settings",
+        ),
       );
     }
     if (!data) {
@@ -649,26 +651,8 @@ export const messagingProvider = {
       },
     });
     if (error) {
-      const response = (error as { context?: Response }).context;
-      if (response) {
-        try {
-          const payload = (await response.clone().json()) as {
-            message?: string;
-          };
-          if (payload?.message) {
-            throw new Error(payload.message);
-          }
-        } catch (parseError) {
-          if (
-            parseError instanceof Error &&
-            parseError.message !== "Failed to send SMS"
-          ) {
-            throw parseError;
-          }
-        }
-      }
       throw new Error(
-        (error as { message?: string }).message ?? "Failed to send SMS",
+        await readEdgeFunctionErrorMessage(error, "Failed to send SMS"),
       );
     }
     return {
