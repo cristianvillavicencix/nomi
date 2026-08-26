@@ -58,7 +58,11 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, wh) as typeof event;
+    event = (await stripe.webhooks.constructEventAsync(
+      body,
+      signature,
+      wh,
+    )) as typeof event;
   } catch (e) {
     return createErrorResponse(400, (e as Error).message);
   }

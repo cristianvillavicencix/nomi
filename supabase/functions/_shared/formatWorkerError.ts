@@ -44,3 +44,10 @@ export async function readWorkerErrorResponse(res: Response): Promise<string> {
   const text = await res.text();
   return formatWorkerError(text, res.status);
 }
+
+/** Auth failures need a human reconnect; timeouts must not disable cron sync. */
+export function isPermanentMailAuthError(message: string): boolean {
+  return /invalid_grant|invalid[_ ]credentials|authentication failed|unauthorized|access denied|token.*(revoked|expired|invalid)|needs.?reconnect|login failed|auth(entication)? (error|fail)/i.test(
+    message,
+  );
+}

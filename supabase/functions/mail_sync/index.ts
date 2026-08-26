@@ -1,5 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { formatWorkerError, readWorkerErrorResponse } from "../_shared/formatWorkerError.ts";
+import {
+  formatWorkerError,
+  isPermanentMailAuthError,
+  readWorkerErrorResponse,
+} from "../_shared/formatWorkerError.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
@@ -583,11 +587,13 @@ async function runSync(accountId: number, opts: SyncOptions) {
           ? (e as { message: string }).message
           : "Sync failed";
     const message = formatWorkerError(rawMessage);
+    const permanent = isPermanentMailAuthError(message);
     await supabaseAdmin
       .from("mail_accounts")
       .update({
-        status: "error",
+        status: permanent ? "error" : "connected",
         error_message: message,
+        last_sync_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", account.id);

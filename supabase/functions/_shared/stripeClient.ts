@@ -51,7 +51,7 @@ export async function getClientWebhookSecret(orgId?: number | null) {
   return resolved;
 }
 
-/** Any Stripe instance works for constructEvent; webhook secret must match the account. */
+/** Any Stripe instance works for constructEventAsync; webhook secret must match the account. */
 export async function getStripeForWebhookVerification() {
   try {
     return getStripe();

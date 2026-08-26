@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { formatWorkerError } from "../../../supabase/functions/_shared/formatWorkerError.ts";
+import {
+  formatWorkerError,
+  isPermanentMailAuthError,
+} from "../../../supabase/functions/_shared/formatWorkerError.ts";
 
 describe("formatWorkerError", () => {
   it("maps HTML 522 pages to a short message", () => {
@@ -13,5 +16,23 @@ describe("formatWorkerError", () => {
     expect(formatWorkerError('{"error":"SMTP connection failed"}')).toBe(
       "SMTP connection failed",
     );
+  });
+});
+
+describe("isPermanentMailAuthError", () => {
+  it("keeps IMAP timeouts retryable", () => {
+    expect(
+      isPermanentMailAuthError(
+        "Failed to establish connection in required time",
+      ),
+    ).toBe(false);
+    expect(
+      isPermanentMailAuthError("IMAP worker unreachable (timeout)."),
+    ).toBe(false);
+  });
+
+  it("marks OAuth/credential failures as permanent", () => {
+    expect(isPermanentMailAuthError("invalid_grant")).toBe(true);
+    expect(isPermanentMailAuthError("Authentication failed")).toBe(true);
   });
 });
