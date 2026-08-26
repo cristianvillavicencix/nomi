@@ -32,6 +32,18 @@ import {
   formatVoiceDeviceError,
   isTransientVoiceDeviceError,
 } from "@/modules/voice/voiceDeviceErrors";
+import {
+  connectTelnyxClient,
+  createTelnyxClient,
+  disconnectTelnyxClient,
+  getTelnyxRemotePhone,
+  isTelnyxCallUpdate,
+  isTelnyxInboundRinging,
+  mapTelnyxCallState,
+  type INotification,
+  type TelnyxCall,
+  type TelnyxRTC,
+} from "@/modules/voice/telnyxVoiceClient";
 
 /** US East primary edge (Stamford CT / Ashburn); roaming fallback if unreachable. */
 const VOICE_DEVICE_EDGE: string[] = ["ashburn", "roaming"];
@@ -73,15 +85,21 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
   const dataProvider = useDataProvider<CrmDataProvider>();
   const queryClient = useQueryClient();
   const { identity } = useGetIdentity();
-  const { voiceEnabled, isPending } = useMessagingEnabled();
+  const { voiceEnabled, messagingProvider, isPending } = useMessagingEnabled();
+  const isTelnyx = messagingProvider === "telnyx";
   const deviceRef = useRef<Device | null>(null);
+  const telnyxClientRef = useRef<TelnyxRTC | null>(null);
+  const telnyxCallerIdRef = useRef<string | null>(null);
   const activeCallRef = useRef<Call | null>(null);
   const incomingCallRef = useRef<Call | null>(null);
+  const activeTelnyxCallRef = useRef<TelnyxCall | null>(null);
+  const incomingTelnyxCallRef = useRef<TelnyxCall | null>(null);
   const tokenRefreshInFlightRef = useRef<Promise<void> | null>(null);
   const lastTokenRefreshAtRef = useRef(0);
+  const ensureDeviceRef = useRef<() => Promise<unknown>>(async () => null);
   const [callState, setCallState] = useState<VoiceCallState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [incomingCall, setIncomingCall] = useState<Call | null>(null);
+  const [incomingCall, setIncomingCall] = useState<unknown | null>(null);
   const [incomingCallerLabel, setIncomingCallerLabel] = useState<string | null>(
     null,
   );
@@ -101,7 +119,13 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
   );
 
   const hasLiveCall = useCallback(
-    () => Boolean(activeCallRef.current || incomingCallRef.current),
+    () =>
+      Boolean(
+        activeCallRef.current ||
+          incomingCallRef.current ||
+          activeTelnyxCallRef.current ||
+          incomingTelnyxCallRef.current,
+      ),
     [],
   );
 
@@ -127,6 +151,18 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
       activeCallRef.current?.disconnect();
       activeCallRef.current = null;
       incomingCallRef.current = null;
+      try {
+        activeTelnyxCallRef.current?.hangup();
+      } catch {
+        // ignore
+      }
+      activeTelnyxCallRef.current = null;
+      try {
+        incomingTelnyxCallRef.current?.hangup();
+      } catch {
+        // ignore
+      }
+      incomingTelnyxCallRef.current = null;
       setIncomingCall(null);
       setIncomingCallerLabel(null);
       setIncomingCallerInfo(null);
@@ -146,6 +182,10 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
         void device.unregister().catch(() => undefined);
         device.destroy();
       }
+      const telnyx = telnyxClientRef.current;
+      telnyxClientRef.current = null;
+      telnyxCallerIdRef.current = null;
+      void disconnectTelnyxClient(telnyx);
     },
     [hasLiveCall],
   );
@@ -234,9 +274,6 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
   );
 
   const refreshToken = useCallback(async () => {
-    const device = deviceRef.current;
-    if (!device) return;
-
     const now = Date.now();
     if (now - lastTokenRefreshAtRef.current < TOKEN_REFRESH_MIN_INTERVAL_MS) {
       return;
@@ -248,6 +285,18 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     }
 
     const refreshPromise = (async () => {
+      if (isTelnyx) {
+        if (hasLiveCall()) return;
+        const existing = telnyxClientRef.current;
+        telnyxClientRef.current = null;
+        await disconnectTelnyxClient(existing);
+        await ensureDeviceRef.current();
+        lastTokenRefreshAtRef.current = Date.now();
+        return;
+      }
+
+      const device = deviceRef.current;
+      if (!device) return;
       const { token } = await dataProvider.getVoiceToken();
       await device.updateToken(token);
       lastTokenRefreshAtRef.current = Date.now();
@@ -261,7 +310,7 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
         tokenRefreshInFlightRef.current = null;
       }
     }
-  }, [dataProvider]);
+  }, [dataProvider, hasLiveCall, isTelnyx]);
 
   const resolveIncomingCaller = useCallback(
     async (params: Record<string, string | undefined>) => {
@@ -363,9 +412,154 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     [dataProvider],
   );
 
-  const ensureDevice = useCallback(async () => {
+  const clearIncomingUi = useCallback(() => {
+    setIncomingCall(null);
+    incomingCallRef.current = null;
+    incomingTelnyxCallRef.current = null;
+    setIncomingCallerLabel(null);
+    setIncomingCallerInfo(null);
+    setIncomingUiMinimized(false);
+  }, []);
+
+  const handleTelnyxNotification = useCallback(
+    (notification: INotification) => {
+      if (!isTelnyxCallUpdate(notification)) return;
+      const call = notification.call;
+      const mapped = mapTelnyxCallState(call.state);
+
+      if (isTelnyxInboundRinging(call)) {
+        const previous = incomingTelnyxCallRef.current;
+        if (previous && previous.id !== call.id) {
+          try {
+            void previous.hangup();
+          } catch {
+            // ignore
+          }
+        }
+        setIncomingUiMinimized(false);
+        incomingTelnyxCallRef.current = call;
+        setIncomingCall(call);
+        const phone = getTelnyxRemotePhone(call);
+        void resolveIncomingCaller(
+          phone ? { From: phone, Caller: phone } : {},
+        );
+        return;
+      }
+
+      const isActive = activeTelnyxCallRef.current?.id === call.id;
+      const isIncoming = incomingTelnyxCallRef.current?.id === call.id;
+
+      if (mapped === "ended") {
+        if (isIncoming) {
+          clearIncomingUi();
+        }
+        if (isActive) {
+          activeTelnyxCallRef.current = null;
+          clearActiveCallUi({
+            setActiveCallLabel,
+            setActiveCallParty,
+            setCallConnectedAt,
+            setIsMuted,
+            setCallWorkspaceOpen,
+          });
+          setCallState("idle");
+          invalidateCallHistory();
+        }
+        return;
+      }
+
+      if (!isActive && !isIncoming) {
+        // Outbound call we just placed may land here before we assign the ref.
+        if (
+          String(call.direction).toLowerCase() === "outbound" &&
+          !activeTelnyxCallRef.current
+        ) {
+          activeTelnyxCallRef.current = call;
+        } else {
+          return;
+        }
+      }
+
+      if (isIncoming && mapped === "open") {
+        // Answered elsewhere / auto-accepted — promote to active.
+        clearIncomingUi();
+        activeTelnyxCallRef.current = call;
+      }
+
+      if (activeTelnyxCallRef.current?.id === call.id || isActive) {
+        if (mapped === "open") {
+          setErrorMessage(null);
+          setCallConnectedAt((current) => current ?? Date.now());
+          setIsMuted(Boolean(call.isAudioMuted));
+          setCallState("open");
+        } else if (mapped === "ringing") {
+          setCallState("ringing");
+          setErrorMessage(null);
+        } else if (mapped === "connecting") {
+          setCallState("connecting");
+        }
+      }
+    },
+    [clearIncomingUi, invalidateCallHistory, resolveIncomingCaller],
+  );
+
+  const ensureTelnyxClient = useCallback(async () => {
+    if (telnyxClientRef.current) {
+      return telnyxClientRef.current;
+    }
+
+    // Drop Twilio softphone if we switched providers.
+    if (deviceRef.current) {
+      const device = deviceRef.current;
+      deviceRef.current = null;
+      device.removeAllListeners();
+      void device.unregister().catch(() => undefined);
+      device.destroy();
+    }
+
+    setErrorMessage(null);
+    const voice = await dataProvider.getVoiceToken();
+    telnyxCallerIdRef.current = voice.caller_id?.trim() || null;
+
+    const client = createTelnyxClient({
+      token: voice.token,
+      login: voice.login,
+      password: voice.password,
+      callerId: voice.caller_id,
+    });
+
+    client.on("telnyx.notification", handleTelnyxNotification);
+    client.on("telnyx.error", (error) => {
+      if (hasLiveCall()) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Telnyx voice error",
+        );
+        setCallState("error");
+      }
+    });
+
+    telnyxClientRef.current = client;
+    await connectTelnyxClient(client);
+    void unlockVoiceCallAudio();
+    setIsRegistered(true);
+    if (!activeTelnyxCallRef.current && !incomingTelnyxCallRef.current) {
+      setCallState("idle");
+    }
+    return client;
+  }, [dataProvider, handleTelnyxNotification, hasLiveCall]);
+
+  const ensureTwilioDevice = useCallback(async () => {
     if (deviceRef.current) {
       return deviceRef.current;
+    }
+
+    if (telnyxClientRef.current) {
+      const telnyx = telnyxClientRef.current;
+      telnyxClientRef.current = null;
+      telnyxCallerIdRef.current = null;
+      await disconnectTelnyxClient(telnyx);
     }
 
     setErrorMessage(null);
@@ -398,7 +592,14 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     device.on("incoming", (call) => {
       setIncomingUiMinimized(false);
       setIncomingCall((current) => {
-        current?.reject();
+        if (
+          current &&
+          typeof current === "object" &&
+          "reject" in current &&
+          typeof (current as Call).reject === "function"
+        ) {
+          (current as Call).reject();
+        }
         return call;
       });
       incomingCallRef.current = call;
@@ -442,6 +643,15 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     return device;
   }, [dataProvider, hasLiveCall, refreshToken, resolveIncomingCaller]);
 
+  const ensureDevice = useCallback(async () => {
+    if (isTelnyx) {
+      return ensureTelnyxClient();
+    }
+    return ensureTwilioDevice();
+  }, [ensureTelnyxClient, ensureTwilioDevice, isTelnyx]);
+
+  ensureDeviceRef.current = ensureDevice;
+
   useEffect(() => {
     if (!shouldRegister) {
       if (!hasLiveCall()) {
@@ -463,9 +673,9 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     return () => {
       cancelled = true;
     };
-    // Register once per voice-enabled session; ensureDevice is stable enough for this flow.
+    // Register once per voice-enabled session / provider; ensureDevice is stable enough.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldRegister]);
+  }, [shouldRegister, messagingProvider]);
 
   useEffect(
     () => () => {
@@ -475,8 +685,17 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
   );
 
   const hangUp = useCallback(() => {
-    activeCallRef.current?.disconnect();
-    activeCallRef.current = null;
+    if (activeTelnyxCallRef.current) {
+      try {
+        void activeTelnyxCallRef.current.hangup();
+      } catch (error) {
+        console.error("[VoiceCallProvider] telnyx hangup failed", error);
+      }
+      activeTelnyxCallRef.current = null;
+    } else {
+      activeCallRef.current?.disconnect();
+      activeCallRef.current = null;
+    }
     clearActiveCallUi({
       setActiveCallLabel,
       setActiveCallParty,
@@ -489,9 +708,20 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
   }, []);
 
   const setMuted = useCallback((muted: boolean) => {
-    const call = activeCallRef.current;
-    // Optimistic UI so the bar reacts even if Twilio is slow to emit `mute`.
     setIsMuted(muted);
+    const telnyxCall = activeTelnyxCallRef.current;
+    if (telnyxCall) {
+      try {
+        if (muted) telnyxCall.muteAudio();
+        else telnyxCall.unmuteAudio();
+        setIsMuted(Boolean(telnyxCall.isAudioMuted));
+      } catch (error) {
+        console.error("[VoiceCallProvider] telnyx mute failed", error);
+        setIsMuted(!muted);
+      }
+      return;
+    }
+    const call = activeCallRef.current;
     if (!call) return;
     try {
       call.mute(muted);
@@ -503,8 +733,18 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
   }, []);
 
   const sendDigits = useCallback((digits: string) => {
+    if (!digits) return;
+    const telnyxCall = activeTelnyxCallRef.current;
+    if (telnyxCall) {
+      try {
+        telnyxCall.dtmf(digits);
+      } catch (error) {
+        console.error("[VoiceCallProvider] telnyx dtmf failed", error);
+      }
+      return;
+    }
     const call = activeCallRef.current;
-    if (!call || !digits) return;
+    if (!call) return;
     try {
       call.sendDigits(digits);
     } catch (error) {
@@ -544,7 +784,18 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
         dealId: params.dealId ?? null,
       });
 
-      const device = await ensureDevice();
+      if (isTelnyx) {
+        const client = await ensureTelnyxClient();
+        const callerNumber = telnyxCallerIdRef.current || undefined;
+        const call = client.newCall({
+          destinationNumber: normalizedTo,
+          callerNumber,
+        });
+        activeTelnyxCallRef.current = call;
+        return;
+      }
+
+      const device = await ensureTwilioDevice();
       const connectParams: Record<string, string> = {
         To: normalizedTo,
         member_id: String(memberId),
@@ -562,13 +813,52 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
       const call = await device.connect({ params: connectParams });
       activeCallRef.current = call;
       bindCallEvents(call);
-      return call;
     },
-    [bindCallEvents, ensureDevice, identity?.id, shouldRegister],
+    [
+      bindCallEvents,
+      ensureTelnyxClient,
+      ensureTwilioDevice,
+      identity?.id,
+      isTelnyx,
+      shouldRegister,
+    ],
   );
 
   const acceptIncoming = useCallback(() => {
-    const call = incomingCall;
+    if (isTelnyx) {
+      const call = incomingTelnyxCallRef.current;
+      if (!call) return;
+      const info = incomingCallerInfo;
+      const label =
+        info?.contactName ??
+        incomingCallerLabel ??
+        info?.displayPhone ??
+        null;
+      const phoneLabel = info?.displayPhone ?? label ?? "Incoming call";
+      clearIncomingUi();
+      setActiveCallLabel(label);
+      setActiveCallParty({
+        phoneLabel,
+        contactId: info?.contactId ?? null,
+        conversationId: info?.conversationId ?? null,
+        contactName: info?.contactName ?? null,
+        companyName: info?.companyName ?? null,
+      });
+      setCallConnectedAt(null);
+      setIsMuted(false);
+      setCallState("connecting");
+      activeTelnyxCallRef.current = call;
+      void call.answer().catch((error) => {
+        console.error("[VoiceCallProvider] telnyx answer failed", error);
+        setErrorMessage(
+          error instanceof Error ? error.message : "Could not answer call",
+        );
+        setCallState("error");
+      });
+      return;
+    }
+
+    const call = incomingCallRef.current;
     if (!call) return;
     const info = incomingCallerInfo;
     const label =
@@ -602,16 +892,31 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
       setIsMuted(call.isMuted());
       setCallState("open");
     }
-  }, [bindCallEvents, incomingCall, incomingCallerInfo, incomingCallerLabel]);
+  }, [
+    bindCallEvents,
+    clearIncomingUi,
+    incomingCallerInfo,
+    incomingCallerLabel,
+    isTelnyx,
+  ]);
 
   const rejectIncoming = useCallback(() => {
-    incomingCall?.reject();
+    if (isTelnyx) {
+      try {
+        void incomingTelnyxCallRef.current?.hangup();
+      } catch {
+        // ignore
+      }
+      clearIncomingUi();
+      return;
+    }
+    incomingCallRef.current?.reject();
     setIncomingCall(null);
     incomingCallRef.current = null;
     setIncomingCallerLabel(null);
     setIncomingCallerInfo(null);
     setIncomingUiMinimized(false);
-  }, [incomingCall]);
+  }, [clearIncomingUi, isTelnyx]);
 
   const dismissIncomingUi = useCallback(() => {
     setIncomingUiMinimized(true);

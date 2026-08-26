@@ -171,10 +171,19 @@ export const messagingProvider = {
     return data;
   },
   async updateMessagingSettings(params: {
+    messaging_provider?: "twilio" | "telnyx";
     twilio_account_sid?: string | null;
     twilio_auth_token?: string | null;
     twilio_phone_number?: string | null;
     sms_enabled?: boolean;
+    telnyx_api_key?: string | null;
+    telnyx_phone_number?: string | null;
+    telnyx_messaging_profile_id?: string | null;
+    telnyx_sip_connection_id?: string | null;
+    telnyx_telephony_credential_id?: string | null;
+    telnyx_sip_username?: string | null;
+    telnyx_sip_password?: string | null;
+    telnyx_caller_id?: string | null;
     business_hours?: import("@/modules/types").BusinessHoursConfig | null;
     out_of_hours_message?: string | null;
     auto_acknowledge_enabled?: boolean;
@@ -213,11 +222,15 @@ export const messagingProvider = {
     const { data, error } = await invokeEdgeFunction<{
       token: string;
       identity: string;
+      provider?: "twilio" | "telnyx";
+      caller_id?: string | null;
+      login?: string | null;
+      password?: string | null;
     }>("voice_token", {
       method: "POST",
       body: {},
     });
-    if (error || !data?.token) {
+    if (error || (!data?.token && !(data?.login && data?.password))) {
       throw new Error(
         await readEdgeFunctionErrorMessage(
           error ?? { message: "Voice calling is not configured" },

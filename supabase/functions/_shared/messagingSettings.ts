@@ -8,13 +8,26 @@ import {
   type VoiceSettingsPublic,
 } from "./voiceSettings.ts";
 
+export type MessagingProvider = "twilio" | "telnyx";
+
 export type MessagingSettingsPublic = {
   org_id: number;
+  messaging_provider: MessagingProvider;
   twilio_account_sid: string | null;
   twilio_phone_number: string | null;
   sms_enabled: boolean;
   has_auth_token: boolean;
   webhook_url: string | null;
+  telnyx_phone_number: string | null;
+  telnyx_messaging_profile_id: string | null;
+  telnyx_sip_connection_id: string | null;
+  telnyx_telephony_credential_id: string | null;
+  telnyx_sip_username: string | null;
+  telnyx_caller_id: string | null;
+  has_telnyx_api_key: boolean;
+  has_telnyx_sip_password: boolean;
+  telnyx_webhook_url: string | null;
+  telnyx_status_webhook_url: string | null;
   business_hours?: Record<
     string,
     { open?: string | null; close?: string | null; closed?: boolean }
@@ -29,19 +42,45 @@ export type MessagingSettingsPublic = {
 
 export type MessagingSettingsSecrets = {
   org_id: number;
+  messaging_provider: MessagingProvider;
   twilio_account_sid: string | null;
   twilio_auth_token: string | null;
   twilio_phone_number: string | null;
   sms_enabled: boolean;
+  telnyx_api_key: string | null;
+  telnyx_phone_number: string | null;
+  telnyx_messaging_profile_id: string | null;
+  telnyx_sip_connection_id: string | null;
+  telnyx_telephony_credential_id: string | null;
+  telnyx_sip_username: string | null;
+  telnyx_sip_password: string | null;
+  telnyx_caller_id: string | null;
+};
+
+const getFunctionsBase = () => {
+  const base = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "");
+  return base ? `${base}/functions/v1` : null;
 };
 
 const getWebhookUrl = () => {
-  const base = Deno.env.get("SUPABASE_URL");
-  if (!base) return null;
-  return `${base}/functions/v1/twilio_inbound_sms`;
+  const base = getFunctionsBase();
+  return base ? `${base}/twilio_inbound_sms` : null;
+};
+
+const getTelnyxWebhookUrl = () => {
+  const base = getFunctionsBase();
+  return base ? `${base}/telnyx_inbound_sms` : null;
+};
+
+const getTelnyxStatusWebhookUrl = () => {
+  const base = getFunctionsBase();
+  return base ? `${base}/telnyx_sms_status` : null;
 };
 
 const getPgcryptoKey = () => Deno.env.get("PGCRYPTO_KEY")?.trim() ?? "";
+
+const normalizeProvider = (value: unknown): MessagingProvider =>
+  value === "telnyx" ? "telnyx" : "twilio";
 
 const resolveTwilioAuthToken = async (
   orgId: number,
@@ -72,6 +111,43 @@ const resolveTwilioAuthToken = async (
   return legacy ?? null;
 };
 
+const resolveTelnyxApiKey = async (orgId: number, encrypted?: string | null) => {
+  if (!encrypted?.trim()) return null;
+  const key = getPgcryptoKey();
+  if (!key) {
+    throw new Error("PGCRYPTO_KEY is not configured for Telnyx key decryption");
+  }
+  const { data, error } = await supabaseAdmin.rpc("get_telnyx_api_key", {
+    p_org_id: orgId,
+    p_key: key,
+  });
+  if (error) {
+    throw new Error(error.message ?? "Failed to decrypt Telnyx API key");
+  }
+  return typeof data === "string" && data.trim() ? data.trim() : null;
+};
+
+const resolveTelnyxSipPassword = async (
+  orgId: number,
+  encrypted?: string | null,
+) => {
+  if (!encrypted?.trim()) return null;
+  const key = getPgcryptoKey();
+  if (!key) {
+    throw new Error(
+      "PGCRYPTO_KEY is not configured for Telnyx SIP password decryption",
+    );
+  }
+  const { data, error } = await supabaseAdmin.rpc("get_telnyx_sip_password", {
+    p_org_id: orgId,
+    p_key: key,
+  });
+  if (error) {
+    throw new Error(error.message ?? "Failed to decrypt Telnyx SIP password");
+  }
+  return typeof data === "string" && data.trim() ? data.trim() : null;
+};
+
 export async function assertOrgAdministrator(user: User, orgId: number) {
   const member = await getUserOrganizationMember(user);
   if (!member?.administrator) {
@@ -83,14 +159,15 @@ export async function assertOrgAdministrator(user: User, orgId: number) {
   return member;
 }
 
+const PUBLIC_SELECT =
+  "org_id, messaging_provider, twilio_account_sid, twilio_phone_number, sms_enabled, twilio_auth_token, twilio_auth_token_encrypted, telnyx_api_key_encrypted, telnyx_phone_number, telnyx_messaging_profile_id, telnyx_sip_connection_id, telnyx_telephony_credential_id, telnyx_sip_username, telnyx_sip_password_encrypted, telnyx_caller_id, business_hours, out_of_hours_message, auto_acknowledge_enabled, auto_acknowledge_message, twilio_marketing_messaging_service_sid, twilio_marketing_phone_number, marketing_email_from, voice_enabled, voice_twiml_app_sid, voice_api_key_sid, voice_api_key_secret_encrypted, voice_caller_id, voice_recording_default";
+
 export async function getMessagingSettingsPublic(
   orgId: number,
 ): Promise<MessagingSettingsPublic> {
   const { data, error } = await supabaseAdmin
     .from("organization_messaging_settings")
-    .select(
-      "org_id, twilio_account_sid, twilio_phone_number, sms_enabled, twilio_auth_token, twilio_auth_token_encrypted, business_hours, out_of_hours_message, auto_acknowledge_enabled, auto_acknowledge_message, twilio_marketing_messaging_service_sid, twilio_marketing_phone_number, marketing_email_from, voice_enabled, voice_twiml_app_sid, voice_api_key_sid, voice_api_key_secret_encrypted, voice_caller_id, voice_recording_default",
-    )
+    .select(PUBLIC_SELECT)
     .eq("org_id", orgId)
     .maybeSingle();
 
@@ -100,6 +177,7 @@ export async function getMessagingSettingsPublic(
 
   return {
     org_id: orgId,
+    messaging_provider: normalizeProvider(data?.messaging_provider),
     twilio_account_sid: data?.twilio_account_sid ?? null,
     twilio_phone_number: data?.twilio_phone_number ?? null,
     sms_enabled: data?.sms_enabled === true,
@@ -108,6 +186,19 @@ export async function getMessagingSettingsPublic(
         data?.twilio_auth_token?.trim(),
     ),
     webhook_url: getWebhookUrl(),
+    telnyx_phone_number: data?.telnyx_phone_number ?? null,
+    telnyx_messaging_profile_id: data?.telnyx_messaging_profile_id ?? null,
+    telnyx_sip_connection_id: data?.telnyx_sip_connection_id ?? null,
+    telnyx_telephony_credential_id:
+      data?.telnyx_telephony_credential_id ?? null,
+    telnyx_sip_username: data?.telnyx_sip_username ?? null,
+    telnyx_caller_id: data?.telnyx_caller_id ?? null,
+    has_telnyx_api_key: Boolean(data?.telnyx_api_key_encrypted?.trim()),
+    has_telnyx_sip_password: Boolean(
+      data?.telnyx_sip_password_encrypted?.trim(),
+    ),
+    telnyx_webhook_url: getTelnyxWebhookUrl(),
+    telnyx_status_webhook_url: getTelnyxStatusWebhookUrl(),
     business_hours:
       (data?.business_hours as MessagingSettingsPublic["business_hours"]) ??
       null,
@@ -138,20 +229,51 @@ export async function getMessagingSettingsSecrets(
   if (!data) return null;
 
   const authToken = await resolveTwilioAuthToken(orgId, data);
+  const telnyxApiKey = await resolveTelnyxApiKey(
+    orgId,
+    data.telnyx_api_key_encrypted,
+  );
+  const telnyxSipPassword = await resolveTelnyxSipPassword(
+    orgId,
+    data.telnyx_sip_password_encrypted,
+  );
 
   return {
     org_id: Number(data.org_id),
+    messaging_provider: normalizeProvider(data.messaging_provider),
     twilio_account_sid: data.twilio_account_sid ?? null,
     twilio_auth_token: authToken,
     twilio_phone_number: data.twilio_phone_number ?? null,
     sms_enabled: data.sms_enabled === true,
+    telnyx_api_key: telnyxApiKey,
+    telnyx_phone_number: data.telnyx_phone_number ?? null,
+    telnyx_messaging_profile_id: data.telnyx_messaging_profile_id ?? null,
+    telnyx_sip_connection_id: data.telnyx_sip_connection_id ?? null,
+    telnyx_telephony_credential_id: data.telnyx_telephony_credential_id ?? null,
+    telnyx_sip_username: data.telnyx_sip_username ?? null,
+    telnyx_sip_password: telnyxSipPassword,
+    telnyx_caller_id: data.telnyx_caller_id ?? null,
   };
 }
 
-export async function findOrgByTwilioPhone(toPhone: string) {
+const matchPhoneRow = (
+  rows: Array<Record<string, unknown>>,
+  toPhone: string,
+  column: string,
+) => {
   const normalized = normalizeUsPhoneToE164(toPhone) ?? toPhone.trim();
   if (!normalized) return null;
+  return (
+    rows.find((row) => {
+      const stored = row[column];
+      if (typeof stored !== "string") return false;
+      const storedNormalized = normalizeUsPhoneToE164(stored) ?? stored.trim();
+      return storedNormalized === normalized;
+    }) ?? null
+  );
+};
 
+export async function findOrgByTwilioPhone(toPhone: string) {
   const { data, error } = await supabaseAdmin
     .from("organization_messaging_settings")
     .select("*")
@@ -159,25 +281,40 @@ export async function findOrgByTwilioPhone(toPhone: string) {
     .not("twilio_phone_number", "is", null);
 
   if (error || !data?.length) return null;
+  return matchPhoneRow(data, toPhone, "twilio_phone_number");
+}
 
-  return (
-    data.find((row) => {
-      const stored = row.twilio_phone_number;
-      if (typeof stored !== "string") return false;
-      const storedNormalized = normalizeUsPhoneToE164(stored) ?? stored.trim();
-      return storedNormalized === normalized;
-    }) ?? null
-  );
+export async function findOrgByTelnyxPhone(toPhone: string) {
+  const { data, error } = await supabaseAdmin
+    .from("organization_messaging_settings")
+    .select("*")
+    .eq("sms_enabled", true)
+    .eq("messaging_provider", "telnyx")
+    .not("telnyx_phone_number", "is", null);
+
+  if (error || !data?.length) return null;
+  return matchPhoneRow(data, toPhone, "telnyx_phone_number");
 }
 
 export async function upsertMessagingSettings(
   orgId: number,
   input: {
+    messaging_provider?: MessagingProvider;
     twilio_account_sid?: string | null;
     twilio_auth_token?: string | null;
     twilio_phone_number?: string | null;
     sms_enabled?: boolean;
     keepExistingToken?: boolean;
+    telnyx_api_key?: string | null;
+    keepExistingTelnyxApiKey?: boolean;
+    telnyx_phone_number?: string | null;
+    telnyx_messaging_profile_id?: string | null;
+    telnyx_sip_connection_id?: string | null;
+    telnyx_telephony_credential_id?: string | null;
+    telnyx_sip_username?: string | null;
+    telnyx_sip_password?: string | null;
+    keepExistingTelnyxSipPassword?: boolean;
+    telnyx_caller_id?: string | null;
     business_hours?: MessagingSettingsPublic["business_hours"];
     out_of_hours_message?: string | null;
     auto_acknowledge_enabled?: boolean;
@@ -209,9 +346,47 @@ export async function upsertMessagingSettings(
     throw new Error("Invalid Twilio phone number. Use 10 digits.");
   }
 
+  const telnyxPhoneRaw =
+    input.telnyx_phone_number !== undefined
+      ? input.telnyx_phone_number?.trim() || null
+      : undefined;
+  const telnyxPhoneNumber =
+    telnyxPhoneRaw === undefined
+      ? undefined
+      : telnyxPhoneRaw
+        ? normalizeUsPhoneToE164(telnyxPhoneRaw)
+        : null;
+  if (telnyxPhoneRaw && !telnyxPhoneNumber) {
+    throw new Error("Invalid Telnyx phone number. Use 10 digits.");
+  }
+
+  const telnyxCallerRaw =
+    input.telnyx_caller_id !== undefined
+      ? input.telnyx_caller_id?.trim() || null
+      : undefined;
+  const telnyxCallerId =
+    telnyxCallerRaw === undefined
+      ? undefined
+      : telnyxCallerRaw
+        ? normalizeUsPhoneToE164(telnyxCallerRaw)
+        : null;
+  if (telnyxCallerRaw && !telnyxCallerId) {
+    throw new Error("Invalid Telnyx caller ID. Use 10 digits.");
+  }
+
   let authToken = input.twilio_auth_token?.trim() || null;
   if (input.keepExistingToken && !authToken) {
     authToken = existing?.twilio_auth_token ?? null;
+  }
+
+  let telnyxApiKey = input.telnyx_api_key?.trim() || null;
+  if (input.keepExistingTelnyxApiKey && !telnyxApiKey) {
+    telnyxApiKey = existing?.telnyx_api_key ?? null;
+  }
+
+  let telnyxSipPassword = input.telnyx_sip_password?.trim() || null;
+  if (input.keepExistingTelnyxSipPassword && !telnyxSipPassword) {
+    telnyxSipPassword = existing?.telnyx_sip_password ?? null;
   }
 
   const callerRaw =
@@ -232,6 +407,10 @@ export async function upsertMessagingSettings(
     org_id: orgId,
     updated_at: new Date().toISOString(),
   };
+
+  if (input.messaging_provider !== undefined) {
+    payload.messaging_provider = normalizeProvider(input.messaging_provider);
+  }
 
   if (
     input.twilio_account_sid !== undefined ||
@@ -255,6 +434,32 @@ export async function upsertMessagingSettings(
       input.auto_acknowledge_enabled ?? undefined;
     payload.auto_acknowledge_message =
       input.auto_acknowledge_message ?? undefined;
+  }
+
+  if (input.sms_enabled !== undefined && payload.sms_enabled === undefined) {
+    payload.sms_enabled = input.sms_enabled === true;
+  }
+
+  if (input.telnyx_phone_number !== undefined) {
+    payload.telnyx_phone_number = telnyxPhoneNumber ?? null;
+  }
+  if (input.telnyx_messaging_profile_id !== undefined) {
+    payload.telnyx_messaging_profile_id =
+      input.telnyx_messaging_profile_id?.trim() || null;
+  }
+  if (input.telnyx_sip_connection_id !== undefined) {
+    payload.telnyx_sip_connection_id =
+      input.telnyx_sip_connection_id?.trim() || null;
+  }
+  if (input.telnyx_telephony_credential_id !== undefined) {
+    payload.telnyx_telephony_credential_id =
+      input.telnyx_telephony_credential_id?.trim() || null;
+  }
+  if (input.telnyx_sip_username !== undefined) {
+    payload.telnyx_sip_username = input.telnyx_sip_username?.trim() || null;
+  }
+  if (input.telnyx_caller_id !== undefined) {
+    payload.telnyx_caller_id = telnyxCallerId ?? null;
   }
 
   if (input.voice_enabled !== undefined) {
@@ -299,18 +504,13 @@ export async function upsertMessagingSettings(
     throw new Error(error.message ?? "Failed to save messaging settings");
   }
 
+  const key = getPgcryptoKey();
+
   if (authToken) {
-    const key = getPgcryptoKey();
-    if (!key) {
-      throw new Error("PGCRYPTO_KEY is not configured");
-    }
+    if (!key) throw new Error("PGCRYPTO_KEY is not configured");
     const { error: encryptError } = await supabaseAdmin.rpc(
       "set_twilio_auth_token",
-      {
-        p_org_id: orgId,
-        p_token: authToken,
-        p_key: key,
-      },
+      { p_org_id: orgId, p_token: authToken, p_key: key },
     );
     if (encryptError) {
       throw new Error(
@@ -319,11 +519,42 @@ export async function upsertMessagingSettings(
     }
   }
 
-  if (input.voice_api_key_secret?.trim()) {
-    const key = getPgcryptoKey();
-    if (!key) {
-      throw new Error("PGCRYPTO_KEY is not configured");
+  if (input.telnyx_api_key !== undefined) {
+    if (!key) throw new Error("PGCRYPTO_KEY is not configured");
+    const { error: telnyxKeyError } = await supabaseAdmin.rpc(
+      "set_telnyx_api_key",
+      {
+        p_org_id: orgId,
+        p_token: telnyxApiKey ?? "",
+        p_key: key,
+      },
+    );
+    if (telnyxKeyError) {
+      throw new Error(
+        telnyxKeyError.message ?? "Failed to encrypt Telnyx API key",
+      );
     }
+  }
+
+  if (input.telnyx_sip_password !== undefined) {
+    if (!key) throw new Error("PGCRYPTO_KEY is not configured");
+    const { error: sipError } = await supabaseAdmin.rpc(
+      "set_telnyx_sip_password",
+      {
+        p_org_id: orgId,
+        p_token: telnyxSipPassword ?? "",
+        p_key: key,
+      },
+    );
+    if (sipError) {
+      throw new Error(
+        sipError.message ?? "Failed to encrypt Telnyx SIP password",
+      );
+    }
+  }
+
+  if (input.voice_api_key_secret?.trim()) {
+    if (!key) throw new Error("PGCRYPTO_KEY is not configured");
     const { error: voiceKeyError } = await supabaseAdmin.rpc(
       "set_voice_api_key_secret",
       {
@@ -340,9 +571,15 @@ export async function upsertMessagingSettings(
   } else if (input.keepExistingVoiceApiKeySecret === false) {
     await supabaseAdmin
       .from("organization_messaging_settings")
-      .update({ voice_api_key_secret_encrypted: null, updated_at: new Date().toISOString() })
+      .update({
+        voice_api_key_secret_encrypted: null,
+        updated_at: new Date().toISOString(),
+      })
       .eq("org_id", orgId);
   }
 
   return getMessagingSettingsPublic(orgId);
 }
+
+// Re-export for callers that imported webhook helpers from voiceSettings via messaging
+export { getVoiceWebhookUrls };

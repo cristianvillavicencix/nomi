@@ -7,7 +7,7 @@ import {
 } from "./transactionalEmail.ts";
 import { getOrgInvoiceEmailSendOptions } from "./organizationEmailSenders.ts";
 import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
-import { sendTwilioSms } from "./twilio.ts";
+import { sendOrgSms } from "./sendOrgSms.ts";
 import { normalizeUsPhoneToE164 } from "./phone.ts";
 import {
   ensureClientConversation,
@@ -226,13 +226,6 @@ export async function sendTicketInvoiceSms(
 
   const settings = await getMessagingSettingsSecrets(params.orgId);
   if (!settings?.sms_enabled) {
-    return { sent: false, skipped: true, reason: "sms_disabled" as const };
-  }
-
-  const accountSid = settings.twilio_account_sid?.trim();
-  const authToken = settings.twilio_auth_token?.trim();
-  const fromNumber = settings.twilio_phone_number?.trim();
-  if (!accountSid || !authToken || !fromNumber) {
     return {
       sent: false,
       skipped: true,
@@ -245,10 +238,8 @@ export async function sendTicketInvoiceSms(
     throw new Error("Text message body is empty");
   }
 
-  const twilioResponse = await sendTwilioSms({
-    accountSid,
-    authToken,
-    from: fromNumber,
+  const twilioResponse = await sendOrgSms({
+    orgId: params.orgId,
     to: normalizedPhone,
     body,
   });

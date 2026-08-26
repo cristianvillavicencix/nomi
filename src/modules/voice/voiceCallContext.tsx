@@ -1,5 +1,4 @@
 import { createContext, useContext } from "react";
-import type { Call } from "@twilio/voice-sdk";
 import type {
   ActiveCallParty,
   IncomingCallerInfo,
@@ -10,7 +9,8 @@ import type {
 export type VoiceCallContextValue = {
   callState: VoiceCallState;
   errorMessage: string | null;
-  incomingCall: Call | null;
+  /** Truthy while an inbound invite is pending (Twilio or Telnyx). */
+  incomingCall: unknown | null;
   incomingCallerLabel: string | null;
   incomingCallerInfo: IncomingCallerInfo | null;
   activeCallLabel: string | null;
@@ -22,7 +22,7 @@ export type VoiceCallContextValue = {
   sendDigits: (digits: string) => void;
   callWorkspaceOpen: boolean;
   setCallWorkspaceOpen: (open: boolean) => void;
-  placeCall: (params: PlaceVoiceCallParams) => Promise<Call>;
+  placeCall: (params: PlaceVoiceCallParams) => Promise<void>;
   hangUp: () => void;
   acceptIncoming: () => void;
   rejectIncoming: () => void;

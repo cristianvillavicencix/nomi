@@ -21,15 +21,24 @@ export const TwilioIntegrationPanel = ({ settings, isPending }: Props) => {
   const queryClient = useQueryClient();
   const [testOpen, setTestOpen] = useState(false);
 
-  const connected = Boolean(
-    settings?.has_auth_token && settings?.twilio_account_sid,
-  );
+  const provider =
+    settings?.messaging_provider === "telnyx" ? "telnyx" : "twilio";
+
+  const connected =
+    provider === "telnyx"
+      ? Boolean(settings?.has_telnyx_api_key)
+      : Boolean(settings?.has_auth_token && settings?.twilio_account_sid);
+
+  const activePhone =
+    provider === "telnyx"
+      ? settings?.telnyx_phone_number
+      : settings?.twilio_phone_number;
 
   const status = useMemo(() => {
     if (!connected) return "off" as const;
-    if (!settings?.twilio_phone_number) return "partial" as const;
+    if (!activePhone) return "partial" as const;
     return "connected" as const;
-  }, [connected, settings?.twilio_phone_number]);
+  }, [connected, activePhone]);
 
   const updateMutation = useMutation({
     mutationFn: (
@@ -37,7 +46,7 @@ export const TwilioIntegrationPanel = ({ settings, isPending }: Props) => {
     ) => dataProvider.updateMessagingSettings(payload),
     onSuccess: (saved) => {
       queryClient.setQueryData(["messaging-settings"], saved);
-      notify("Twilio updated", { type: "success" });
+      notify("Messaging settings updated", { type: "success" });
     },
     onError: (error) => {
       notify(error instanceof Error ? error.message : "Failed to save", {
@@ -63,7 +72,7 @@ export const TwilioIntegrationPanel = ({ settings, isPending }: Props) => {
   const removeCredentials = () => {
     if (
       !window.confirm(
-        "Remove Twilio credentials? SMS, voice, and campaigns will stop working.",
+        "Remove messaging credentials? SMS, voice, and campaigns will stop working.",
       )
     ) {
       return;
@@ -72,6 +81,14 @@ export const TwilioIntegrationPanel = ({ settings, isPending }: Props) => {
       twilio_account_sid: null,
       twilio_auth_token: null,
       twilio_phone_number: null,
+      telnyx_api_key: null,
+      telnyx_phone_number: null,
+      telnyx_messaging_profile_id: null,
+      telnyx_sip_connection_id: null,
+      telnyx_telephony_credential_id: null,
+      telnyx_sip_username: null,
+      telnyx_sip_password: null,
+      telnyx_caller_id: null,
       sms_enabled: false,
       voice_enabled: false,
       twilio_marketing_messaging_service_sid: null,
@@ -89,7 +106,7 @@ export const TwilioIntegrationPanel = ({ settings, isPending }: Props) => {
     return (
       <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" />
-        Loading Twilio…
+        Loading messaging…
       </div>
     );
   }
@@ -97,10 +114,10 @@ export const TwilioIntegrationPanel = ({ settings, isPending }: Props) => {
   return (
     <div className="space-y-6">
       <IntegrationPanelHeader
-        title="Twilio"
-        description="SMS, voice, marketing campaigns, and shared credentials for system email."
+        title="Phone & SMS"
+        description="SMS and voice via Twilio or Telnyx. Campaigns use Twilio when selected."
         status={status}
-        meta={settings?.twilio_phone_number ?? settings?.twilio_account_sid ?? undefined}
+        meta={activePhone ?? undefined}
         actions={
           connected ? (
             <Button
@@ -130,7 +147,7 @@ export const TwilioIntegrationPanel = ({ settings, isPending }: Props) => {
       <IntegrationTestDialog
         open={testOpen}
         onOpenChange={setTestOpen}
-        title="Test Twilio SMS"
+        title="Test SMS"
         label="Send test to"
         placeholder="+12035551234"
         inputType="tel"

@@ -12,7 +12,7 @@ import {
 } from "../_shared/transactionalEmail.ts";
 import { getOrgInvoiceEmailSendOptions } from "../_shared/organizationEmailSenders.ts";
 import { getMessagingSettingsSecrets } from "../_shared/messagingSettings.ts";
-import { sendTwilioSms } from "../_shared/twilio.ts";
+import { sendOrgSms } from "../_shared/sendOrgSms.ts";
 import { normalizeUsPhoneToE164 } from "../_shared/phone.ts";
 import {
   ensureClientConversation,
@@ -82,13 +82,6 @@ async function sendInvoiceSms(params: {
 
   const settings = await getMessagingSettingsSecrets(params.orgId);
   if (!settings?.sms_enabled) {
-    return { sent: false, skipped: true, reason: "sms_disabled" as const };
-  }
-
-  const accountSid = settings.twilio_account_sid?.trim();
-  const authToken = settings.twilio_auth_token?.trim();
-  const fromNumber = settings.twilio_phone_number?.trim();
-  if (!accountSid || !authToken || !fromNumber) {
     return {
       sent: false,
       skipped: true,
@@ -101,10 +94,8 @@ async function sendInvoiceSms(params: {
     throw new Error("Text message body is empty");
   }
 
-  const twilioResponse = await sendTwilioSms({
-    accountSid,
-    authToken,
-    from: fromNumber,
+  const twilioResponse = await sendOrgSms({
+    orgId: params.orgId,
     to: normalizedPhone,
     body,
   });

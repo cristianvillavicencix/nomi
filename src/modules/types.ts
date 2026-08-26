@@ -652,11 +652,22 @@ export type BusinessHoursConfig = Record<string, BusinessHoursDay>;
 
 export type MessagingSettingsPublic = {
   org_id: number;
+  messaging_provider?: "twilio" | "telnyx";
   twilio_account_sid: string | null;
   twilio_phone_number: string | null;
   sms_enabled: boolean;
   has_auth_token: boolean;
   webhook_url: string | null;
+  telnyx_phone_number?: string | null;
+  telnyx_messaging_profile_id?: string | null;
+  telnyx_sip_connection_id?: string | null;
+  telnyx_telephony_credential_id?: string | null;
+  telnyx_sip_username?: string | null;
+  telnyx_caller_id?: string | null;
+  has_telnyx_api_key?: boolean;
+  has_telnyx_sip_password?: boolean;
+  telnyx_webhook_url?: string | null;
+  telnyx_status_webhook_url?: string | null;
   business_hours?: BusinessHoursConfig | null;
   out_of_hours_message?: string | null;
   auto_acknowledge_enabled?: boolean;

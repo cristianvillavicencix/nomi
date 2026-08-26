@@ -27,6 +27,7 @@ export type VoiceSettingsPublic = {
 
 export type VoiceSettingsSecrets = {
   org_id: number;
+  messaging_provider: "twilio" | "telnyx";
   twilio_account_sid: string | null;
   twilio_auth_token: string | null;
   twilio_phone_number: string | null;
@@ -36,6 +37,12 @@ export type VoiceSettingsSecrets = {
   voice_api_key_secret: string | null;
   voice_caller_id: string | null;
   voice_recording_default: boolean;
+  telnyx_api_key: string | null;
+  telnyx_phone_number: string | null;
+  telnyx_telephony_credential_id: string | null;
+  telnyx_sip_username: string | null;
+  telnyx_sip_password: string | null;
+  telnyx_caller_id: string | null;
 };
 
 const resolveVoiceApiKeySecret = async (
@@ -123,6 +130,8 @@ export async function getVoiceSettingsSecrets(
 
   return {
     org_id: orgId,
+    messaging_provider:
+      smsSecrets?.messaging_provider === "telnyx" ? "telnyx" : "twilio",
     twilio_account_sid:
       smsSecrets?.twilio_account_sid ?? data.twilio_account_sid ?? null,
     twilio_auth_token: smsSecrets?.twilio_auth_token ?? null,
@@ -134,6 +143,13 @@ export async function getVoiceSettingsSecrets(
     voice_api_key_secret: apiKeySecret,
     voice_caller_id: data.voice_caller_id ?? null,
     voice_recording_default: data.voice_recording_default === true,
+    telnyx_api_key: smsSecrets?.telnyx_api_key ?? null,
+    telnyx_phone_number: smsSecrets?.telnyx_phone_number ?? null,
+    telnyx_telephony_credential_id:
+      smsSecrets?.telnyx_telephony_credential_id ?? null,
+    telnyx_sip_username: smsSecrets?.telnyx_sip_username ?? null,
+    telnyx_sip_password: smsSecrets?.telnyx_sip_password ?? null,
+    telnyx_caller_id: smsSecrets?.telnyx_caller_id ?? null,
   };
 }
 
@@ -156,15 +172,41 @@ export async function findOrgVoiceSettingsByTwimlAppSid(applicationSid: string) 
   return getVoiceSettingsSecrets(Number(data.org_id));
 }
 
-/** Browser dialer token — needs Account SID + API key, not Auth Token. */
+/** Browser dialer token — Twilio API key or Telnyx WebRTC credentials. */
 export function assertVoiceTokenConfigured(
   settings: VoiceSettingsSecrets | null,
 ): asserts settings is VoiceSettingsSecrets {
   if (!settings?.voice_enabled) {
     throw new Error(
-      "Voice calling is not enabled. Turn it on in Settings → Communications.",
+      "Voice calling is not enabled. Turn it on in Settings → Connectors.",
     );
   }
+
+  if (settings.messaging_provider === "telnyx") {
+    const apiKey = settings.telnyx_api_key?.trim();
+    const telephonyId = settings.telnyx_telephony_credential_id?.trim();
+    const sipUser = settings.telnyx_sip_username?.trim();
+    const sipPass = settings.telnyx_sip_password?.trim();
+    const callerId =
+      settings.telnyx_caller_id?.trim() ||
+      settings.telnyx_phone_number?.trim() ||
+      settings.voice_caller_id?.trim();
+    if (!apiKey && !(sipUser && sipPass)) {
+      throw new Error(
+        "Telnyx API key or SIP username/password is required for voice.",
+      );
+    }
+    if (!telephonyId && !(sipUser && sipPass)) {
+      throw new Error(
+        "Telnyx Telephony Credential ID or SIP username/password is required for voice.",
+      );
+    }
+    if (!callerId) {
+      throw new Error("Outbound caller ID is required for Telnyx voice");
+    }
+    return;
+  }
+
   const accountSid = settings.twilio_account_sid?.trim();
   const twimlAppSid = settings.voice_twiml_app_sid?.trim();
   const apiKeySid = settings.voice_api_key_sid?.trim();
@@ -174,7 +216,7 @@ export function assertVoiceTokenConfigured(
 
   if (!accountSid) {
     throw new Error(
-      "Twilio Account SID is missing. Re-save Twilio SMS settings in Settings → Communications, then try again.",
+      "Twilio Account SID is missing. Re-save Twilio SMS settings in Settings → Connectors, then try again.",
     );
   }
   if (!twimlAppSid) {
@@ -188,22 +230,27 @@ export function assertVoiceTokenConfigured(
   }
 }
 
-/** TwiML webhooks — needs Auth Token for signature validation. */
+/** TwiML webhooks — needs Auth Token for signature validation (Twilio only). */
 export function assertVoiceConfigured(
   settings: VoiceSettingsSecrets | null,
 ): asserts settings is VoiceSettingsSecrets {
   assertVoiceTokenConfigured(settings);
+  if (settings.messaging_provider === "telnyx") return;
   const authToken = settings.twilio_auth_token?.trim();
   if (!authToken) {
     throw new Error(
-      "Twilio Auth Token is missing. Re-save your Auth Token in Settings → Communications → Twilio SMS.",
+      "Twilio Auth Token is missing. Re-save your Auth Token in Settings → Connectors.",
     );
   }
 }
 
 export const resolveOutboundCallerId = (settings: VoiceSettingsSecrets) => {
   const callerId =
-    settings.voice_caller_id?.trim() || settings.twilio_phone_number?.trim();
+    settings.messaging_provider === "telnyx"
+      ? settings.telnyx_caller_id?.trim() ||
+        settings.telnyx_phone_number?.trim() ||
+        settings.voice_caller_id?.trim()
+      : settings.voice_caller_id?.trim() || settings.twilio_phone_number?.trim();
   const normalized = callerId ? normalizeUsPhoneToE164(callerId) : null;
   return normalized ?? callerId ?? null;
 };

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
 import { resolveMemberNotificationPhone } from "./notifyMeeting.ts";
-import { sendTwilioSms } from "./twilio.ts";
+import { sendOrgSms } from "./sendOrgSms.ts";
 
 type TaskRow = {
   id: number;
@@ -124,11 +124,7 @@ export async function notifyTaskRescheduled(
     return { ...result, ok: false, reasons: ["settings_error"] };
   }
 
-  const accountSid = settings.twilio_account_sid?.trim();
-  const authToken = settings.twilio_auth_token?.trim();
-  const fromNumber = settings.twilio_phone_number?.trim();
-
-  if (!settings.sms_enabled || !accountSid || !authToken || !fromNumber) {
+  if (!settings?.sms_enabled) {
     return { ...result, reasons: ["sms_not_configured"] };
   }
 
@@ -151,10 +147,8 @@ export async function notifyTaskRescheduled(
     }
 
     try {
-      await sendTwilioSms({
-        accountSid,
-        authToken,
-        from: fromNumber,
+      await sendOrgSms({
+        orgId: params.orgId,
         to: phone,
         body: body.slice(0, 1600),
       });

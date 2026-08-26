@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
 import { normalizeUsPhoneToE164 } from "./phone.ts";
-import { sendTwilioSms } from "./twilio.ts";
+import { sendOrgSms } from "./sendOrgSms.ts";
 import {
   formatFollowUpWhenLabel,
   notifyFollowUpForCalendarEvent,
@@ -191,11 +191,7 @@ export const sendGuestBookingConfirmationSms = async (
     return { sent: false, reason: "settings_error" };
   }
 
-  const accountSid = settings.twilio_account_sid?.trim();
-  const authToken = settings.twilio_auth_token?.trim();
-  const fromNumber = settings.twilio_phone_number?.trim();
-
-  if (!settings.sms_enabled || !accountSid || !authToken || !fromNumber) {
+  if (!settings?.sms_enabled) {
     return { sent: false, reason: "sms_not_configured" };
   }
 
@@ -210,10 +206,8 @@ export const sendGuestBookingConfirmationSms = async (
   });
 
   try {
-    await sendTwilioSms({
-      accountSid,
-      authToken,
-      from: fromNumber,
+    await sendOrgSms({
+      orgId: row.org_id,
       to: guestPhone,
       body,
     });
@@ -267,11 +261,7 @@ export const sendGuestBookingReminderSms = async (
     return { sent: false, reason: "settings_error" };
   }
 
-  const accountSid = settings.twilio_account_sid?.trim();
-  const authToken = settings.twilio_auth_token?.trim();
-  const fromNumber = settings.twilio_phone_number?.trim();
-
-  if (!settings.sms_enabled || !accountSid || !authToken || !fromNumber) {
+  if (!settings?.sms_enabled) {
     return { sent: false, reason: "sms_not_configured" };
   }
 
@@ -285,10 +275,8 @@ export const sendGuestBookingReminderSms = async (
   });
 
   try {
-    await sendTwilioSms({
-      accountSid,
-      authToken,
-      from: fromNumber,
+    await sendOrgSms({
+      orgId: row.org_id,
       to: guestPhone,
       body,
     });

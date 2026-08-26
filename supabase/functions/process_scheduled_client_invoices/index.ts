@@ -10,7 +10,7 @@ import {
 } from "../_shared/transactionalEmail.ts";
 import { getOrgInvoiceEmailSendOptions } from "../_shared/organizationEmailSenders.ts";
 import { getMessagingSettingsSecrets } from "../_shared/messagingSettings.ts";
-import { sendTwilioSms } from "../_shared/twilio.ts";
+import { sendOrgSms } from "../_shared/sendOrgSms.ts";
 import { normalizeUsPhoneToE164 } from "../_shared/phone.ts";
 import { sanitizeMessageBody } from "../_shared/messagingUtils.ts";
 
@@ -134,17 +134,9 @@ Deno.serve(
           if (scheduledSmsTo && scheduledSmsBody) {
             const normalizedPhone = normalizeUsPhoneToE164(scheduledSmsTo);
             const settings = await getMessagingSettingsSecrets(row.org_id);
-            if (
-              normalizedPhone &&
-              settings?.sms_enabled &&
-              settings.twilio_account_sid?.trim() &&
-              settings.twilio_auth_token?.trim() &&
-              settings.twilio_phone_number?.trim()
-            ) {
-              await sendTwilioSms({
-                accountSid: settings.twilio_account_sid.trim(),
-                authToken: settings.twilio_auth_token.trim(),
-                from: settings.twilio_phone_number.trim(),
+            if (normalizedPhone && settings?.sms_enabled) {
+              await sendOrgSms({
+                orgId: row.org_id,
                 to: normalizedPhone,
                 body: sanitizeMessageBody(scheduledSmsBody),
               });

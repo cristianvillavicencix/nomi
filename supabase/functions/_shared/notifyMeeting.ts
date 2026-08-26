@@ -29,7 +29,7 @@ import {
 } from "./transactionalEmail.ts";
 import { resolveOrgGeneralFrom } from "./organizationEmailSenders.ts";
 import { resolveContactEmail } from "./clientProposalBilling.ts";
-import { sendTwilioSms } from "./twilio.ts";
+import { sendOrgSms as sendOrgSmsMessage } from "./sendOrgSms.ts";
 import {
   ensureClientConversation,
   insertSmsMessage,
@@ -225,17 +225,12 @@ async function sendOrgSms(
   } catch {
     return { ok: false, reason: "sms_settings_error" };
   }
-  const accountSid = settings?.twilio_account_sid?.trim();
-  const authToken = settings?.twilio_auth_token?.trim();
-  const fromNumber = settings?.twilio_phone_number?.trim();
-  if (!settings?.sms_enabled || !accountSid || !authToken || !fromNumber) {
+  if (!settings?.sms_enabled) {
     return { ok: false, reason: "sms_not_configured" };
   }
   try {
-    const twilioResponse = await sendTwilioSms({
-      accountSid,
-      authToken,
-      from: fromNumber,
+    const sendResult = await sendOrgSmsMessage({
+      orgId,
       to,
       body,
     });
@@ -255,25 +250,21 @@ async function sendOrgSms(
           body,
           direction: "outbound",
           authorMemberId: options.memberId ?? null,
-          externalId: twilioResponse.sid ?? null,
-          smsDeliveryStatus: twilioResponse.status?.trim() || "queued",
+          externalId: sendResult.sid ?? sendResult.id ?? null,
+          smsDeliveryStatus: sendResult.status ?? "queued",
         });
-        await touchConversationFirstResponse(
-          Number(conversation.id),
-          message.created_at ?? new Date().toISOString(),
-        );
+        void message;
       } catch (logError) {
-        // SMS already delivered — do not fail the invite over inbox logging.
-        console.error("notifyMeeting.log_conversation_failed", logError);
+        console.warn("[notifyMeeting] SMS conversation log failed", logError);
       }
     }
 
     return { ok: true };
   } catch (error) {
-    console.error("notifyMeeting.sms_failed", error);
+    console.error("[notifyMeeting] SMS send failed", error);
     return {
       ok: false,
-      reason: error instanceof Error ? error.message : "sms_failed",
+      reason: error instanceof Error ? error.message : "sms_send_failed",
     };
   }
 }

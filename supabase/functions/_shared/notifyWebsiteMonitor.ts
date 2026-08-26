@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
 import { normalizeUsPhoneToE164 } from "./phone.ts";
-import { sendTwilioSms } from "./twilio.ts";
+import { sendOrgSms } from "./sendOrgSms.ts";
 import { getWebsiteMonitorSettings } from "./websiteMonitorSettings.ts";
 import type {
   WebsiteCheckResult,
@@ -97,11 +97,7 @@ export const notifyWebsiteMonitorAlert = async (
   }
 
   const settings = await getMessagingSettingsSecrets(site.org_id);
-  if (
-    !settings?.twilio_account_sid ||
-    !settings.twilio_auth_token ||
-    !settings.twilio_phone_number
-  ) {
+  if (!settings?.sms_enabled) {
     return { sent: false, reason: "no_messaging_settings" };
   }
 
@@ -140,10 +136,8 @@ export const notifyWebsiteMonitorAlert = async (
     const phone = await resolveMemberPhone(supabase, member.id);
     if (!phone) continue;
     try {
-      await sendTwilioSms({
-        accountSid: settings.twilio_account_sid,
-        authToken: settings.twilio_auth_token,
-        from: settings.twilio_phone_number,
+      await sendOrgSms({
+        orgId: site.org_id,
         to: phone,
         body: message.slice(0, 1500),
       });

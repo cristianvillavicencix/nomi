@@ -2,8 +2,9 @@ import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
 import {
   assertMemberCanAccessConversation,
 } from "./messagingConversations.ts";
-import { sendTwilioSms } from "./twilio.ts";
+import { sendOrgSms } from "./sendOrgSms.ts";
 import { resolveTwilioMediaUrls } from "./twilioMedia.ts";
+import { normalizeTelnyxDeliveryStatus } from "./telnyx.ts";
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 
 const normalizeTwilioDeliveryStatus = (raw: string | undefined | null) => {
@@ -93,32 +94,25 @@ export async function resendFailedClientSms(params: {
 
   const settings = await getMessagingSettingsSecrets(params.orgId);
   if (!settings?.sms_enabled) {
-    throw new Error("SMS is disabled in Settings → Communications");
+    throw new Error("SMS is disabled in Settings → Connectors");
   }
 
-  const accountSid = settings.twilio_account_sid?.trim();
-  const authToken = settings.twilio_auth_token?.trim();
-  const fromNumber = settings.twilio_phone_number?.trim();
-
-  if (!accountSid || !authToken || !fromNumber) {
-    throw new Error(
-      "Twilio is not fully configured in Settings → Communications",
-    );
-  }
-
-  const twilioMediaUrls = await resolveTwilioMediaUrls(mediaUrls);
-  const twilioResponse = await sendTwilioSms({
-    accountSid,
-    authToken,
-    from: fromNumber,
+  const mediaForSend =
+    settings.messaging_provider === "telnyx"
+      ? mediaUrls
+      : await resolveTwilioMediaUrls(mediaUrls);
+  const sendResult = await sendOrgSms({
+    orgId: params.orgId,
     to: phoneRow.external_phone,
     body,
-    mediaUrls: twilioMediaUrls,
+    mediaUrls: mediaForSend,
   });
 
-  const externalId = twilioResponse.sid ?? null;
+  const externalId = sendResult.sid ?? sendResult.id ?? null;
   const initialDeliveryStatus = externalId
-    ? (normalizeTwilioDeliveryStatus(twilioResponse.status) ?? "queued")
+    ? sendResult.provider === "telnyx"
+      ? (normalizeTelnyxDeliveryStatus(sendResult.status) ?? "queued")
+      : (normalizeTwilioDeliveryStatus(sendResult.status) ?? "queued")
     : null;
 
   const { data: message, error: updateError } = await supabaseAdmin

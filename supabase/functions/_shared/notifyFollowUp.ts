@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
 import { normalizeUsPhoneToE164 } from "./phone.ts";
-import { sendTwilioSms } from "./twilio.ts";
+import { sendOrgSms } from "./sendOrgSms.ts";
 
 export type FollowUpNotificationKind = "scheduled" | "reminder" | "rescheduled";
 
@@ -346,11 +346,7 @@ export async function notifyFollowUpForCalendarEvent(
     };
   }
 
-  const accountSid = settings.twilio_account_sid?.trim();
-  const authToken = settings.twilio_auth_token?.trim();
-  const fromNumber = settings.twilio_phone_number?.trim();
-
-  if (!settings.sms_enabled || !accountSid || !authToken || !fromNumber) {
+  if (!settings?.sms_enabled) {
     return {
       ok: true,
       sent: false,
@@ -388,10 +384,8 @@ export async function notifyFollowUpForCalendarEvent(
   });
 
   try {
-    await sendTwilioSms({
-      accountSid,
-      authToken,
-      from: fromNumber,
+    await sendOrgSms({
+      orgId: row.org_id,
       to,
       body,
     });

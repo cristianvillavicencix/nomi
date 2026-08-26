@@ -7,8 +7,10 @@ import { hasMemberVoiceCallCapability } from "../_shared/memberModulePermissions
 import {
   assertVoiceTokenConfigured,
   getVoiceSettingsSecrets,
+  resolveOutboundCallerId,
 } from "../_shared/voiceSettings.ts";
 import { createTwilioVoiceAccessToken } from "../_shared/twilioAccessToken.ts";
+import { createTelnyxTelephonyCredentialToken } from "../_shared/telnyx.ts";
 
 Deno.serve((req: Request) =>
   OptionsMiddleware(req, async (req) => {
@@ -42,18 +44,70 @@ Deno.serve((req: Request) =>
           );
         }
 
+        const identity = `member-${member.org_id}-${member.id}`;
+        const callerId = resolveOutboundCallerId(settings!);
+
+        if (settings!.messaging_provider === "telnyx") {
+          const apiKey = settings!.telnyx_api_key?.trim();
+          const telephonyId = settings!.telnyx_telephony_credential_id?.trim();
+          const sipUser = settings!.telnyx_sip_username?.trim();
+          const sipPass = settings!.telnyx_sip_password?.trim();
+
+          if (telephonyId && apiKey) {
+            const token = await createTelnyxTelephonyCredentialToken({
+              apiKey,
+              telephonyCredentialId: telephonyId,
+            });
+            return new Response(
+              JSON.stringify({
+                provider: "telnyx",
+                token,
+                identity,
+                caller_id: callerId,
+              }),
+              {
+                headers: { "Content-Type": "application/json", ...corsHeaders },
+              },
+            );
+          }
+
+          if (sipUser && sipPass) {
+            return new Response(
+              JSON.stringify({
+                provider: "telnyx",
+                token: "",
+                login: sipUser,
+                password: sipPass,
+                identity,
+                caller_id: callerId,
+              }),
+              {
+                headers: { "Content-Type": "application/json", ...corsHeaders },
+              },
+            );
+          }
+
+          return createErrorResponse(
+            503,
+            "Telnyx voice credentials are incomplete",
+            { code: "VOICE_NOT_CONFIGURED" },
+          );
+        }
+
         const token = await createTwilioVoiceAccessToken({
           accountSid: settings!.twilio_account_sid!.trim(),
           apiKeySid: settings!.voice_api_key_sid!.trim(),
           apiKeySecret: settings!.voice_api_key_secret!.trim(),
           twimlAppSid: settings!.voice_twiml_app_sid!.trim(),
-          identity: `member-${member.org_id}-${member.id}`,
+          identity,
         });
 
         return new Response(
           JSON.stringify({
+            provider: "twilio",
             token,
-            identity: `member-${member.org_id}-${member.id}`,
+            identity,
+            caller_id: callerId,
           }),
           {
             headers: { "Content-Type": "application/json", ...corsHeaders },

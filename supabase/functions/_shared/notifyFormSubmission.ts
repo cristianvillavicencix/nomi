@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
 import { normalizeUsPhoneToE164 } from "./phone.ts";
-import { sendTwilioSms } from "./twilio.ts";
+import { sendOrgSms } from "./sendOrgSms.ts";
 
 type FormInstance = {
   id: number;
@@ -141,11 +141,7 @@ export async function notifyTeamOnSubmit(
     return;
   }
 
-  const accountSid = settings.twilio_account_sid?.trim();
-  const authToken = settings.twilio_auth_token?.trim();
-  const fromNumber = settings.twilio_phone_number?.trim();
-
-  if (!settings.sms_enabled || !accountSid || !authToken || !fromNumber) {
+  if (!settings?.sms_enabled) {
     console.warn("[notifyFormSubmission] SMS not configured for org", {
       orgId: instance.org_id,
     });
@@ -175,10 +171,8 @@ export async function notifyTeamOnSubmit(
     }
 
     try {
-      await sendTwilioSms({
-        accountSid,
-        authToken,
-        from: fromNumber,
+      await sendOrgSms({
+        orgId: instance.org_id,
         to,
         body,
       });

@@ -5,19 +5,28 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import {
   assertOrgAdministrator,
   getMessagingSettingsPublic,
-  getMessagingSettingsSecrets,
   upsertMessagingSettings,
+  type MessagingProvider,
 } from "../_shared/messagingSettings.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
-import { sendTwilioSms } from "../_shared/twilio.ts";
+import { sendOrgSms } from "../_shared/sendOrgSms.ts";
 import { normalizeUsPhoneToE164 } from "../_shared/phone.ts";
 
 type SettingsBody = {
   action?: "get" | "update" | "test_sms";
+  messaging_provider?: MessagingProvider;
   twilio_account_sid?: string | null;
   twilio_auth_token?: string | null;
   twilio_phone_number?: string | null;
   sms_enabled?: boolean;
+  telnyx_api_key?: string | null;
+  telnyx_phone_number?: string | null;
+  telnyx_messaging_profile_id?: string | null;
+  telnyx_sip_connection_id?: string | null;
+  telnyx_telephony_credential_id?: string | null;
+  telnyx_sip_username?: string | null;
+  telnyx_sip_password?: string | null;
+  telnyx_caller_id?: string | null;
   business_hours?: Record<
     string,
     { open?: string | null; close?: string | null; closed?: boolean }
@@ -68,27 +77,16 @@ Deno.serve((req: Request) =>
 
         if (action === "test_sms") {
           await assertOrgAdministrator(user, orgId);
-          const settings = await getMessagingSettingsSecrets(orgId);
-          if (!settings?.sms_enabled) {
-            throw new Error("SMS is not enabled");
-          }
-          const accountSid = settings.twilio_account_sid?.trim();
-          const authToken = settings.twilio_auth_token?.trim();
-          const fromNumber = settings.twilio_phone_number?.trim();
           const toNumber = normalizeUsPhoneToE164(
             body.test_phone?.trim() ?? "",
           );
-          if (!accountSid || !authToken || !fromNumber || !toNumber) {
-            throw new Error(
-              "Twilio credentials or test phone number are missing",
-            );
+          if (!toNumber) {
+            throw new Error("Test phone number is missing or invalid");
           }
-          await sendTwilioSms({
-            accountSid,
-            authToken,
-            from: fromNumber,
+          await sendOrgSms({
+            orgId,
             to: toNumber,
-            body: "Sigma by Latino Business Support test SMS — your Twilio integration is working.",
+            body: "Sigma by Latino Business Support test SMS — your messaging integration is working.",
           });
           return new Response(JSON.stringify({ ok: true }), {
             headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -102,6 +100,9 @@ Deno.serve((req: Request) =>
         await assertOrgAdministrator(user, orgId);
 
         const settings = await upsertMessagingSettings(orgId, {
+          ...(body.messaging_provider !== undefined
+            ? { messaging_provider: body.messaging_provider }
+            : {}),
           ...(body.twilio_account_sid !== undefined
             ? { twilio_account_sid: body.twilio_account_sid }
             : {}),
@@ -113,6 +114,39 @@ Deno.serve((req: Request) =>
             : {}),
           ...(body.twilio_phone_number !== undefined
             ? { twilio_phone_number: body.twilio_phone_number }
+            : {}),
+          ...(body.telnyx_api_key !== undefined
+            ? {
+                telnyx_api_key: body.telnyx_api_key,
+                keepExistingTelnyxApiKey: !body.telnyx_api_key?.trim(),
+              }
+            : {}),
+          ...(body.telnyx_phone_number !== undefined
+            ? { telnyx_phone_number: body.telnyx_phone_number }
+            : {}),
+          ...(body.telnyx_messaging_profile_id !== undefined
+            ? { telnyx_messaging_profile_id: body.telnyx_messaging_profile_id }
+            : {}),
+          ...(body.telnyx_sip_connection_id !== undefined
+            ? { telnyx_sip_connection_id: body.telnyx_sip_connection_id }
+            : {}),
+          ...(body.telnyx_telephony_credential_id !== undefined
+            ? {
+                telnyx_telephony_credential_id:
+                  body.telnyx_telephony_credential_id,
+              }
+            : {}),
+          ...(body.telnyx_sip_username !== undefined
+            ? { telnyx_sip_username: body.telnyx_sip_username }
+            : {}),
+          ...(body.telnyx_sip_password !== undefined
+            ? {
+                telnyx_sip_password: body.telnyx_sip_password,
+                keepExistingTelnyxSipPassword: !body.telnyx_sip_password?.trim(),
+              }
+            : {}),
+          ...(body.telnyx_caller_id !== undefined
+            ? { telnyx_caller_id: body.telnyx_caller_id }
             : {}),
           ...(body.sms_enabled !== undefined
             ? { sms_enabled: body.sms_enabled === true }
@@ -159,7 +193,8 @@ Deno.serve((req: Request) =>
             : {}),
           ...(body.twilio_marketing_phone_number !== undefined
             ? {
-                twilio_marketing_phone_number: body.twilio_marketing_phone_number,
+                twilio_marketing_phone_number:
+                  body.twilio_marketing_phone_number,
               }
             : {}),
           ...(body.marketing_email_from !== undefined

@@ -18,8 +18,9 @@ import {
   sanitizeMessageBody,
 } from "../_shared/messagingUtils.ts";
 import { assertSmsBodyWithinLimit } from "../_shared/smsMessageLimits.ts";
-import { sendTwilioSms } from "../_shared/twilio.ts";
+import { sendOrgSms } from "../_shared/sendOrgSms.ts";
 import { resolveTwilioMediaUrls } from "../_shared/twilioMedia.ts";
+import { normalizeTelnyxDeliveryStatus } from "../_shared/telnyx.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { normalizeUsPhoneToE164, contactHasPhone } from "../_shared/phone.ts";
 
@@ -345,31 +346,24 @@ Deno.serve((req: Request) =>
 
           const settings = await getMessagingSettingsSecrets(orgId);
           if (!settings?.sms_enabled) {
-            throw new Error("SMS is disabled in Settings → Communications");
+            throw new Error("SMS is disabled in Settings → Connectors");
           }
 
-          const accountSid = settings.twilio_account_sid?.trim();
-          const authToken = settings.twilio_auth_token?.trim();
-          const fromNumber = settings.twilio_phone_number?.trim();
-
-          if (!accountSid || !authToken || !fromNumber) {
-            throw new Error(
-              "Twilio is not fully configured in Settings → Communications",
-            );
-          }
-
-          const twilioMediaUrls = await resolveTwilioMediaUrls(mediaUrls);
-          const twilioResponse = await sendTwilioSms({
-            accountSid,
-            authToken,
-            from: fromNumber,
+          const mediaForSend =
+            settings.messaging_provider === "telnyx"
+              ? mediaUrls
+              : await resolveTwilioMediaUrls(mediaUrls);
+          const sendResult = await sendOrgSms({
+            orgId,
             to: externalPhone,
             body,
-            mediaUrls: twilioMediaUrls,
+            mediaUrls: mediaForSend,
           });
-          externalId = twilioResponse.sid ?? null;
+          externalId = sendResult.sid ?? sendResult.id ?? null;
           initialDeliveryStatus = externalId
-            ? (normalizeTwilioDeliveryStatus(twilioResponse.status) ?? "queued")
+            ? sendResult.provider === "telnyx"
+              ? (normalizeTelnyxDeliveryStatus(sendResult.status) ?? "queued")
+              : (normalizeTwilioDeliveryStatus(sendResult.status) ?? "queued")
             : null;
         }
 

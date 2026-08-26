@@ -329,6 +329,12 @@ verify_jwt = false
 [functions.twilio_inbound_sms]
 verify_jwt = false
 
+[functions.telnyx_inbound_sms]
+verify_jwt = false
+
+[functions.telnyx_sms_status]
+verify_jwt = false
+
 [functions.marketing_campaigns]
 verify_jwt = false
 

@@ -17,6 +17,8 @@ export const useMessagingEnabled = () => {
   return {
     smsEnabled: data?.sms_enabled === true,
     voiceEnabled: data?.voice_enabled === true,
+    messagingProvider:
+      data?.messaging_provider === "telnyx" ? "telnyx" : "twilio",
     // Avoid unregistering the softphone when refetching settings on tab focus.
     isPending: identityPending || (isPending && !data),
   };

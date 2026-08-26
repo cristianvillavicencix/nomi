@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
-import { sendTwilioSms } from "./twilio.ts";
+import { sendOrgSms } from "./sendOrgSms.ts";
 import { appendSmsStopFooter } from "./marketingOptOut.ts";
 import { loadSmsSuppressions } from "./marketingAudience.ts";
 
@@ -11,15 +11,23 @@ export type MarketingOrgSettings = {
 
 export async function getMarketingOrgSmsSettings(
   orgId: number,
-): Promise<MarketingOrgSettings & { accountSid: string; authToken: string }> {
+): Promise<MarketingOrgSettings> {
   const secrets = await getMessagingSettingsSecrets(orgId);
   if (!secrets?.sms_enabled) {
     throw new Error("SMS is not enabled for this organization");
   }
 
-  const accountSid = secrets.twilio_account_sid?.trim();
-  const authToken = secrets.twilio_auth_token?.trim();
-  if (!accountSid || !authToken) {
+  if (secrets.messaging_provider === "telnyx") {
+    const fromNumber = secrets.telnyx_phone_number?.trim() || null;
+    if (!secrets.telnyx_api_key?.trim() || !fromNumber) {
+      throw new Error(
+        "Telnyx API key and phone number are required for marketing SMS",
+      );
+    }
+    return { messagingServiceSid: null, fromNumber };
+  }
+
+  if (!secrets.twilio_account_sid?.trim() || !secrets.twilio_auth_token?.trim()) {
     throw new Error("Twilio credentials are not configured");
   }
 
@@ -49,12 +57,7 @@ export async function getMarketingOrgSmsSettings(
     );
   }
 
-  return {
-    accountSid,
-    authToken,
-    messagingServiceSid,
-    fromNumber,
-  };
+  return { messagingServiceSid, fromNumber };
 }
 
 export async function sendMarketingSms(params: {
@@ -74,12 +77,11 @@ export async function sendMarketingSms(params: {
       ? params.body.trim()
       : appendSmsStopFooter(params.body);
 
-  return sendTwilioSms({
-    accountSid: settings.accountSid,
-    authToken: settings.authToken,
+  return sendOrgSms({
+    orgId: params.orgId,
     to: params.to,
     body,
     messagingServiceSid: settings.messagingServiceSid,
-    from: settings.messagingServiceSid ? undefined : settings.fromNumber ?? undefined,
+    from: settings.messagingServiceSid ? null : settings.fromNumber,
   });
 }

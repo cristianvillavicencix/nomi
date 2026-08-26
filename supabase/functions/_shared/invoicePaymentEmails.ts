@@ -28,7 +28,7 @@ import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
 import { normalizeUsPhoneToE164 } from "./phone.ts";
 import { getStripeForOrg } from "./stripeClient.ts";
 import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
-import { sendTwilioSms } from "./twilio.ts";
+import { sendOrgSms } from "./sendOrgSms.ts";
 
 const formatMoney = (amount: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", {
@@ -338,22 +338,6 @@ export async function notifyInvoicePaymentReceiptSms(
         referenceKey,
         recipientEmail: toPhone,
         deliveryStatus: "skipped",
-        errorMessage: "sms_disabled",
-      });
-      return { sent: false, skipped: true, reason: "sms_disabled" as const };
-    }
-
-    const accountSid = settings.twilio_account_sid?.trim();
-    const authToken = settings.twilio_auth_token?.trim();
-    const fromNumber = settings.twilio_phone_number?.trim();
-    if (!accountSid || !authToken || !fromNumber) {
-      await logEmailAttempt(supabase, {
-        orgId: params.invoice.org_id,
-        invoiceId: params.invoice.id,
-        emailType: "payment_receipt_sms",
-        referenceKey,
-        recipientEmail: toPhone,
-        deliveryStatus: "skipped",
         errorMessage: "sms_not_configured",
       });
       return {
@@ -367,10 +351,8 @@ export async function notifyInvoicePaymentReceiptSms(
       `Thanks for your payment on ${params.invoice.invoice_number}. ` +
       "We emailed your receipt and PDF attachments — please check your inbox/spam.";
 
-    await sendTwilioSms({
-      accountSid,
-      authToken,
-      from: fromNumber,
+    await sendOrgSms({
+      orgId: params.invoice.org_id,
       to: toPhone,
       body,
     });
