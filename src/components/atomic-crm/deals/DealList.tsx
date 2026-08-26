@@ -17,6 +17,7 @@ import {
 } from "@/components/atomic-crm/layout/ModuleToolbar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { KanbanSquare, List as ListIcon } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
@@ -24,6 +25,7 @@ import { DealArchivedList } from "./DealArchivedList";
 import { DealEdit } from "./DealEdit";
 import { DealTableView } from "./DealTableView";
 import { DealShow } from "./DealShow";
+import { MobileDealListLayout } from "./MobileDealList";
 import { ProjectCreateFlow } from "@/modules/deals/ProjectCreateFlow";
 import { NewDealCreateButton } from "@/modules/deals/NewDealCreateButton";
 import { LbsDealBoardContent } from "@/modules/deals/LbsDealBoardContent";
@@ -32,6 +34,7 @@ import { useDealsViewPreference } from "./useDealsViewPreference";
 
 const DealList = () => {
   const location = useLocation();
+  const isMobile = useIsMobile();
   const matchShow = matchPath("/deals/:id/show", location.pathname);
   const { identity } = useGetIdentity();
   const { dealCategories } = useConfigurationContext();
@@ -55,10 +58,30 @@ const DealList = () => {
     />,
   ];
 
+  if (isMobile) {
+    return (
+      <List
+        perPage={50}
+        filter={{ "archived_at@is": null }}
+        title={false}
+        disableBreadcrumb
+        sort={{ field: "updated_at", order: "DESC" }}
+        filters={dealFilters}
+        actions={false}
+        pagination={null}
+        contentScrollable={false}
+        className="min-h-0 flex-1"
+      >
+        <MobileDealListLayout />
+        <ProjectCreateFlow />
+      </List>
+    );
+  }
+
   return (
     <List
       perPage={100}
-      filter={{"archived_at@is": null }}
+      filter={{ "archived_at@is": null }}
       title={false}
       disableBreadcrumb
       sort={{ field: "index", order: "DESC" }}
@@ -163,7 +186,8 @@ const DealLayout = () => {
   const config = useConfigurationContext();
   const selectedPipelineId =
     (filterValues?.pipeline_id as string | undefined) ||
-    getDefaultPipeline(config)?.id || "default";
+    getDefaultPipeline(config)?.id ||
+    "default";
 
   useEffect(() => {
     if (!listFilterValues.pipeline_id && selectedPipelineId) {

@@ -1,4 +1,4 @@
-import { MessageSquare, UserPlus } from "lucide-react";
+import { ChevronLeft, MessageSquare, UserPlus } from "lucide-react";
 import { useState } from "react";
 import type { Identifier } from "ra-core";
 import {
@@ -22,6 +22,7 @@ import {
 } from "@/modules/messages/messageContactUtils";
 import { SaveSmsContactDialog } from "@/modules/messages/SaveSmsContactDialog";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { useMessagesQuickAccess } from "@/modules/messages/messagesQuickAccessContext";
 import { ConversationThread } from "@/modules/messages/ConversationThread";
 import { ConversationChatHeader } from "@/modules/messages/ConversationChatHeader";
@@ -204,15 +205,26 @@ export const MessagesWorkspace = ({
                   compact ? "py-2.5" : "py-3",
                 )}
               >
-                <div className="min-w-0">
-                  <div className="truncate font-semibold">
-                    {getClientSmsDraftLabel(clientSmsDraft)}
-                  </div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {clientSmsDraft.contact?.company_name?.trim() ||
-                      (clientSmsDraft.externalPhone && !clientSmsDraft.contact
-                        ? "Unsaved number"
-                        : "New SMS")}
+                <div className="flex min-w-0 items-center gap-1">
+                  {isMobile && onMobileBack ? (
+                    <IconButton
+                      className="size-8 shrink-0"
+                      aria-label="Back to inbox"
+                      onClick={onMobileBack}
+                    >
+                      <ChevronLeft className="size-5" />
+                    </IconButton>
+                  ) : null}
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold">
+                      {getClientSmsDraftLabel(clientSmsDraft)}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {clientSmsDraft.contact?.company_name?.trim() ||
+                        (clientSmsDraft.externalPhone && !clientSmsDraft.contact
+                          ? "Unsaved number"
+                          : "New SMS")}
+                    </div>
                   </div>
                 </div>
                 {unsavedSmsPhone && activeSmsPhone ? (

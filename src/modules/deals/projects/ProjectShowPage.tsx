@@ -8,10 +8,20 @@ import {
   useRefresh,
   useUpdate,
 } from "ra-core";
+import { ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { DealsExplorerPanel } from "@/components/atomic-crm/deals/DealsExplorerPanel";
 import { ProjectStageFlow } from "@/components/atomic-crm/deals/ProjectStageFlow";
 import { useNavigationLayoutPreference } from "@/components/atomic-crm/layout/navigationLayoutPreference";
+import { MobileBackButton } from "@/components/atomic-crm/misc/MobileBackButton";
+import { IconButton } from "@/components/ui/icon-button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { deliveryStatusForStage } from "@/modules/deals/lbsAgencyProjectModel";
 import { LbsDealHeaderOverview } from "@/modules/deals/LbsDealHeaderOverview";
 import { LbsProjectDeliveryUrgency } from "@/modules/deals/LbsProjectDeliveryUrgency";
@@ -56,6 +66,7 @@ const readTasksRailCollapsed = () => {
 
 const ProjectShowContent = () => {
   const record = useRecordContext<LbsDeal>();
+  const isMobile = useIsMobile();
   const { data: identity } = useGetIdentity();
   const dataProvider = useDataProvider();
   const [tasksRailCollapsed, setTasksRailCollapsed] = useState(
@@ -63,6 +74,7 @@ const ProjectShowContent = () => {
   );
   const [tasksDialogOpen, setTasksDialogOpen] = useState(false);
   const [portalDialogOpen, setPortalDialogOpen] = useState(false);
+  const [mobileContextOpen, setMobileContextOpen] = useState(false);
 
   const handleToggleRail = () => {
     setTasksRailCollapsed((prev) => {
@@ -192,7 +204,29 @@ const ProjectShowContent = () => {
     <ProjectBriefActionsProvider record={record}>
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden">
         <ProjectDeliveredStamp record={record} />
-        <div className="shrink-0 space-y-2">
+        <div
+          className={cn(
+            "shrink-0 space-y-2 px-1 sm:px-0",
+            isMobile && "max-h-[42%] space-y-1.5 overflow-y-auto overscroll-contain",
+          )}
+        >
+          {isMobile ? (
+            <div className="flex items-center gap-1 pt-1">
+              <MobileBackButton to="/deals" />
+              <span className="text-sm font-medium text-muted-foreground">
+                Projects
+              </span>
+              <div className="ml-auto">
+                <IconButton
+                  aria-label="Open project context"
+                  onClick={() => setMobileContextOpen(true)}
+                >
+                  <ListChecks className="size-5" />
+                </IconButton>
+              </div>
+            </div>
+          ) : null}
+
           {record.archived_at ? <ArchivedTitle /> : null}
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -205,7 +239,11 @@ const ProjectShowContent = () => {
               <ProjectDeliverButton record={record} />
               <ProjectActionsMenu
                 record={record}
-                onOpenTasks={() => setTasksDialogOpen(true)}
+                onOpenTasks={() =>
+                  isMobile
+                    ? setMobileContextOpen(true)
+                    : setTasksDialogOpen(true)
+                }
                 onOpenPortal={() => setPortalDialogOpen(true)}
               />
             </div>
@@ -215,7 +253,10 @@ const ProjectShowContent = () => {
             stages={displayStages}
             currentStage={displayCurrentStage}
             onStageChange={handleStageChange}
-            className="rounded-b-none pb-2"
+            className={cn(
+              "rounded-b-none pb-2",
+              isMobile && "overflow-x-auto",
+            )}
           />
         </div>
 
@@ -231,6 +272,26 @@ const ProjectShowContent = () => {
             />
           </div>
         </div>
+
+        {isMobile ? (
+          <Sheet open={mobileContextOpen} onOpenChange={setMobileContextOpen}>
+            <SheetContent
+              side="right"
+              className="flex h-full min-h-0 w-full flex-col gap-0 p-0 sm:max-w-md"
+            >
+              <SheetHeader className="shrink-0 border-b px-4 py-3 text-left">
+                <SheetTitle>Project context</SheetTitle>
+              </SheetHeader>
+              <div className="min-h-0 flex-1 overflow-hidden [&_aside]:!h-full [&_aside]:!w-full [&_aside]:border-l-0">
+                <ProjectContextPanel
+                  record={record}
+                  collapsed={false}
+                  onToggleCollapsed={() => setMobileContextOpen(false)}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
+        ) : null}
 
         <ProjectTasksDialog
           record={record}
@@ -248,15 +309,20 @@ const ProjectShowContent = () => {
 };
 
 export const ProjectShowPage = ({ id }: { id?: string }) => {
+  const isMobile = useIsMobile();
   const [layoutMode] = useNavigationLayoutPreference();
   const validId = isValidRecordId(id) ? id : undefined;
-  const showExplorerPanel = layoutMode === "top" && !!validId;
+  const showExplorerPanel = !isMobile && layoutMode === "top" && !!validId;
 
   return (
     <div
       className={cn(
         "flex h-full min-h-0 w-full flex-col",
-        layoutMode === "sidebar" ? "px-4" : "py-2",
+        isMobile
+          ? "px-2 pt-1"
+          : layoutMode === "sidebar"
+            ? "px-4"
+            : "py-2",
       )}
     >
       <div

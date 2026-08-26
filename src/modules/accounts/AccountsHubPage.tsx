@@ -114,20 +114,22 @@ export const AccountsHubPage = () => {
     <div
       className={
         activeView === "board"
-          ? "flex h-full min-h-0 w-full flex-col gap-3"
-          : "w-full space-y-3"
+          ? "flex h-full min-h-0 w-full flex-col gap-3 overflow-hidden"
+          : "flex h-full min-h-0 w-full flex-col gap-3 overflow-hidden"
       }
     >
-      <PageActions>
+      <PageActions className="shrink-0">
         <PageTitle label="Accounts" />
       </PageActions>
 
       {activeView === "board" ? (
-        <div className="min-h-0 flex-1">
+        <div className="min-h-0 flex-1 overflow-hidden">
           <LeadsBoardPanel embedded accountsChrome={chrome} />
         </div>
       ) : canList ? (
-        <AccountsGroupedList accountsChrome={chrome} />
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <AccountsGroupedList accountsChrome={chrome} />
+        </div>
       ) : null}
 
       <NewClientDialog

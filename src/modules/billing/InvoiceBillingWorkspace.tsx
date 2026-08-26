@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { ChevronLeft, FileText } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -31,11 +31,15 @@ export const InvoiceBillingWorkspace = ({
   const selectedInvoiceId = searchParams.get("invoice");
 
   const handleSelectInvoice = (invoiceId: string) => {
-    setSearchParams({ invoice: invoiceId });
+    const next = new URLSearchParams(searchParams);
+    next.set("invoice", invoiceId);
+    setSearchParams(next, { replace: true });
   };
 
   const handleBackToList = () => {
-    setSearchParams({});
+    const next = new URLSearchParams(searchParams);
+    next.delete("invoice");
+    setSearchParams(next, { replace: true });
   };
 
   const hasSelection = Boolean(selectedInvoiceId);
@@ -54,10 +58,10 @@ export const InvoiceBillingWorkspace = ({
       {showSidebar ? (
         <aside
           className={cn(
-            "flex min-h-0 flex-col bg-muted/10",
+            "flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/10",
             hasSelection &&
               !isMobile &&
-              "w-full max-w-[320px] shrink-0 border-r",
+              "w-full max-w-[320px] shrink-0 flex-none border-r",
             (!hasSelection || isMobile) && "w-full",
           )}
         >
@@ -77,40 +81,46 @@ export const InvoiceBillingWorkspace = ({
               />
             </div>
           ) : null}
-          {hasSelection || isMobile ? (
-            <InvoiceListSidebar
-              selectedInvoiceId={selectedInvoiceId}
-              onSelectInvoice={handleSelectInvoice}
-              searchQuery={searchQuery}
-            />
-          ) : (
-            <InvoiceListTable
-              selectedInvoiceId={selectedInvoiceId}
-              onSelectInvoice={handleSelectInvoice}
-              searchQuery={searchQuery}
-            />
-          )}
+          <div className="min-h-0 flex-1 overflow-hidden">
+            {hasSelection || isMobile ? (
+              <InvoiceListSidebar
+                selectedInvoiceId={selectedInvoiceId}
+                onSelectInvoice={handleSelectInvoice}
+                searchQuery={searchQuery}
+              />
+            ) : (
+              <InvoiceListTable
+                selectedInvoiceId={selectedInvoiceId}
+                onSelectInvoice={handleSelectInvoice}
+                searchQuery={searchQuery}
+              />
+            )}
+          </div>
         </aside>
       ) : null}
 
       {showDetail && hasSelection ? (
         <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/50">
           {isMobile ? (
-            <div className="border-b bg-background px-3 py-2">
+            <div className="flex shrink-0 items-center gap-1 border-b bg-background px-2 py-1.5">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
+                className="gap-1 px-2"
                 onClick={handleBackToList}
               >
-                ← All invoices
+                <ChevronLeft className="size-4" />
+                All invoices
               </Button>
             </div>
           ) : null}
-          <StandaloneInvoiceEditPage
-            embedded
-            invoiceId={selectedInvoiceId ?? undefined}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <StandaloneInvoiceEditPage
+              embedded
+              invoiceId={selectedInvoiceId ?? undefined}
+            />
+          </div>
         </section>
       ) : !showSidebar ? (
         <section className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center text-muted-foreground">

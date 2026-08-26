@@ -16,10 +16,12 @@ import {
   type BillingTabId,
 } from "@/modules/billing/subscriptions/billingNavigation";
 import { SettingsSubNav } from "@/modules/settings/SettingsSubNav";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 export const ClientBillingPage = () => {
   const { identity } = useGetIdentity();
+  const isMobile = useIsMobile();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = resolveBillingTab(searchParams);
@@ -32,6 +34,7 @@ export const ClientBillingPage = () => {
     location.search,
   );
   const hasWorkspaceOpen = hasInvoiceOpen || hasSubscriptionOpen;
+  const fillHeight = isMobile || hasWorkspaceOpen;
 
   if (!identity) return null;
 
@@ -42,8 +45,8 @@ export const ClientBillingPage = () => {
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-col",
-        hasWorkspaceOpen ? "h-full flex-1 overflow-hidden" : "flex-1 gap-3",
+        "flex min-h-0 flex-1 flex-col overflow-hidden",
+        fillHeight ? "h-full" : "gap-3",
       )}
     >
       <PageActions>
@@ -54,8 +57,10 @@ export const ClientBillingPage = () => {
         value={activeTab}
         onValueChange={handleTabChange}
         items={BILLING_TABS}
-        fillHeight={hasWorkspaceOpen && activeTab !== "reports"}
-        className={hasWorkspaceOpen && activeTab !== "reports" ? "min-h-0 flex-1" : undefined}
+        fillHeight={fillHeight && activeTab !== "reports"}
+        className={
+          fillHeight && activeTab !== "reports" ? "min-h-0 flex-1" : undefined
+        }
         content={
           activeTab === "subscriptions" ? (
             <ClientSubscriptionsTab />

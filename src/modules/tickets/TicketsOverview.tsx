@@ -38,6 +38,7 @@ import {
   ticketPreviewSheetTransition,
 } from "@/modules/tickets/ticketContextLayout";
 import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
+import { TicketListItem } from "@/modules/tickets/TicketListItem";
 import { TicketsKanban } from "@/modules/tickets/TicketsKanban";
 import { TicketsOverviewTable } from "@/modules/tickets/TicketsOverviewTable";
 import { useTicketsInboxRealtime } from "@/modules/tickets/useTicketsInboxRealtime";
@@ -83,6 +84,13 @@ export const TicketsOverview = () => {
     setSearchParams(next, { replace: true });
   };
 
+  // Mobile always uses a scrollable card list (not table/kanban).
+  useEffect(() => {
+    if (isMobile && view !== "table") {
+      setView("table");
+    }
+  }, [isMobile, view]);
+
   const handleSelectTicket = (ticketId: string) => {
     if (isMobile) {
       navigate(ticketShowPath(ticketId));
@@ -98,19 +106,19 @@ export const TicketsOverview = () => {
       resource="tickets"
       title={false}
       disableBreadcrumb
-      contentScrollable={view === "table"}
-      pagination={view === "table" ? undefined : false}
-      perPage={view === "kanban" ? 200 : 50}
+      contentScrollable={false}
+      pagination={isMobile || view === "kanban" ? false : undefined}
+      perPage={view === "kanban" && !isMobile ? 200 : 50}
       sort={{ field: "updated_at", order: "DESC" }}
       filter={OVERVIEW_LIST_FILTER}
       disableSyncWithLocation
-      storeKey={`tickets.overview.${view}`}
+      storeKey={`tickets.overview.${isMobile ? "mobile" : view}`}
       queryOptions={{ refetchInterval: 30_000 }}
-      className={view === "kanban" ? "mt-0 min-h-0 flex-1" : undefined}
+      className="mt-0 min-h-0 flex-1"
       actions={<TicketsOverviewActions />}
     >
       <TicketsOverviewBody
-        view={view}
+        view={isMobile ? "table" : view}
         onViewChange={setView}
         selectedTicketId={selectedTicketId}
         onSelectTicket={handleSelectTicket}
@@ -255,15 +263,35 @@ const TicketsOverviewBody = ({
 
   const hasBulkSelection = selectedTicketIds.length > 0;
 
+  const filteredTickets = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return allTickets;
+    return allTickets.filter((ticket) => {
+      const company = companyById.get(String(ticket.company_id ?? ""));
+      const contact = contactById.get(String(ticket.contact_id ?? ""));
+      const haystack = [
+        ticket.subject,
+        ticket.id,
+        company?.name,
+        contact?.first_name,
+        contact?.last_name,
+        contact?.email,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [allTickets, companyById, contactById, searchQuery]);
+
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-3",
-        view === "kanban" ? "pb-2" : "pb-3",
+        "flex min-h-0 flex-1 flex-col gap-3 overflow-hidden",
         hasBulkSelection && "pb-20",
       )}
     >
-      <ModuleToolbar>
+      <ModuleToolbar className="shrink-0">
         <ModuleSearchField
           value={searchQuery}
           onChange={setSearchQuery}
@@ -272,48 +300,81 @@ const TicketsOverviewBody = ({
           itemSingular="ticket"
         />
         <ModuleToolbarActions>
-          <ToggleGroup
-            type="single"
-            value={view}
-            onValueChange={(value) => {
-              if (value === "table" || value === "kanban") onViewChange(value);
-            }}
-            variant="outline"
-            size="sm"
-            className="w-fit shrink-0"
-          >
-            <ToggleGroupItem value="table" aria-label="List view">
-              <ListIcon className="size-4" />
-              List
-            </ToggleGroupItem>
-            <ToggleGroupItem value="kanban" aria-label="Board view">
-              <KanbanSquare className="size-4" />
-              Board
-            </ToggleGroupItem>
-          </ToggleGroup>
+          {!isMobile ? (
+            <ToggleGroup
+              type="single"
+              value={view}
+              onValueChange={(value) => {
+                if (value === "table" || value === "kanban") onViewChange(value);
+              }}
+              variant="outline"
+              size="sm"
+              className="w-fit shrink-0"
+            >
+              <ToggleGroupItem value="table" aria-label="List view">
+                <ListIcon className="size-4" />
+                List
+              </ToggleGroupItem>
+              <ToggleGroupItem value="kanban" aria-label="Board view">
+                <KanbanSquare className="size-4" />
+                Board
+              </ToggleGroupItem>
+            </ToggleGroup>
+          ) : null}
           <CreateTicketButton alwaysShowLabel />
         </ModuleToolbarActions>
       </ModuleToolbar>
 
-      {view === "table" ? (
-        <TicketsOverviewTable
-          selectedTicketId={selectedTicketId}
-          onSelectTicket={onSelectTicket}
-          searchQuery={searchQuery}
-          selectedTicketIds={selectedTicketIds}
-          onToggleTicketSelection={toggleTicketSelection}
-          onToggleAllVisible={toggleAllVisible}
-          selectionEnabled={canManage}
-        />
+      {isMobile ? (
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-lg border border-border/50 bg-background">
+          {filteredTickets.length === 0 ? (
+            <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+              No tickets found.
+            </div>
+          ) : (
+            <ul>
+              {filteredTickets.map((ticket) => (
+                <TicketListItem
+                  key={ticket.id}
+                  ticket={ticket}
+                  selected={false}
+                  bulkSelected={selectedTicketIds.includes(String(ticket.id))}
+                  selectionEnabled={canManage}
+                  canManage={canManage}
+                  company={companyById.get(String(ticket.company_id ?? ""))}
+                  contact={contactById.get(String(ticket.contact_id ?? ""))}
+                  onSelect={() => onSelectTicket(String(ticket.id))}
+                  onToggleBulkSelect={(checked) =>
+                    toggleTicketSelection(String(ticket.id), checked)
+                  }
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : view === "table" ? (
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <TicketsOverviewTable
+            selectedTicketId={selectedTicketId}
+            onSelectTicket={onSelectTicket}
+            searchQuery={searchQuery}
+            selectedTicketIds={selectedTicketIds}
+            onToggleTicketSelection={toggleTicketSelection}
+            onToggleAllVisible={toggleAllVisible}
+            selectionEnabled={canManage}
+          />
+        </div>
       ) : (
-        <TicketsKanban
-          selectedTicketId={selectedTicketId}
-          onSelectTicket={onSelectTicket}
-          searchQuery={searchQuery}
-          selectedTicketIds={selectedTicketIds}
-          onToggleTicketSelection={toggleTicketSelection}
-          selectionEnabled={canManage}
-        />
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <TicketsKanban
+            selectedTicketId={selectedTicketId}
+            onSelectTicket={onSelectTicket}
+            searchQuery={searchQuery}
+            selectedTicketIds={selectedTicketIds}
+            onToggleTicketSelection={toggleTicketSelection}
+            selectionEnabled={canManage}
+          />
+        </div>
       )}
       {canManage ? (
         <TicketInboxBulkBar
