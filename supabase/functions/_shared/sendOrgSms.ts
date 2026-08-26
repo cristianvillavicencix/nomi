@@ -33,9 +33,19 @@ export async function sendOrgSms(params: {
       params.from?.trim() ||
       settings.telnyx_phone_number?.trim() ||
       null;
-    if (!apiKey || !from) {
+    if (!apiKey && !from) {
       throw new Error(
         "Telnyx API key and phone number are required. Configure them in Settings → Connectors.",
+      );
+    }
+    if (!apiKey) {
+      throw new Error(
+        "Telnyx API key is missing or could not be decrypted. Re-save the API key in Settings → Connectors.",
+      );
+    }
+    if (!from) {
+      throw new Error(
+        "Telnyx phone number is required. Configure it in Settings → Connectors.",
       );
     }
     const result = await sendTelnyxSms({

@@ -419,7 +419,7 @@ export async function upsertMessagingSettings(
   if (nextProvider === "telnyx") {
     const nextPhone =
       input.telnyx_phone_number !== undefined
-        ? telnyxPhone
+        ? telnyxPhoneNumber
         : existing?.telnyx_phone_number?.trim() || null;
     const nextKey =
       telnyxApiKey ||
