@@ -77,10 +77,10 @@ export async function validateEmailConfig(
       return {
         valid: false,
         message:
-          "Email is not configured. Add Twilio credentials under Settings → Integrations → Mail.",
+          "Transactional email is not configured. Add Twilio credentials under Settings → Integrations → Mail.",
       };
     }
-    return { valid: true, message: "Email is configured" };
+    return { valid: true, message: "Twilio email is configured" };
   } catch (error) {
     await logError({
       module: "configValidator",
@@ -112,6 +112,30 @@ export async function validateSmsConfig(
       };
     }
 
+    const provider =
+      settings.messaging_provider === "telnyx" ? "telnyx" : "twilio";
+
+    if (provider === "telnyx") {
+      const apiKey = settings.telnyx_api_key?.trim();
+      const phoneNumber = settings.telnyx_phone_number?.trim();
+
+      if (!apiKey) {
+        return {
+          valid: false,
+          message: "Telnyx API key not configured for SMS.",
+        };
+      }
+
+      if (!phoneNumber) {
+        return {
+          valid: false,
+          message: "Telnyx phone number not configured for SMS.",
+        };
+      }
+
+      return { valid: true, message: "Telnyx SMS is configured" };
+    }
+
     const accountSid = settings.twilio_account_sid?.trim();
     const authToken = settings.twilio_auth_token?.trim();
     const messagingServiceSid = settings.twilio_messaging_service_sid?.trim();
@@ -132,7 +156,7 @@ export async function validateSmsConfig(
       };
     }
 
-    return { valid: true, message: "SMS is configured" };
+    return { valid: true, message: "Twilio SMS is configured" };
   } catch (error) {
     await logError({
       module: "configValidator",

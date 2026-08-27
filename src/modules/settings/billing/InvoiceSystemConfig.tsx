@@ -40,6 +40,8 @@ export const InvoiceSystemConfig = () => {
         );
 
         const row = messaging.data[0] as Record<string, unknown> | undefined;
+        const provider =
+          row?.messaging_provider === "telnyx" ? "telnyx" : "twilio";
 
         const stripeConfigured = Boolean(
           org.data.stripe_secret_key_encrypted ||
@@ -48,12 +50,27 @@ export const InvoiceSystemConfig = () => {
         const emailConfigured = Boolean(
           row?.twilio_account_sid && row?.twilio_auth_token,
         );
+
+        const smsEnabled = row?.sms_enabled === true;
         const smsConfigured =
-          emailConfigured &&
-          row?.sms_enabled === true &&
-          Boolean(
-            row?.twilio_messaging_service_sid || row?.twilio_phone_number,
-          );
+          smsEnabled &&
+          (provider === "telnyx"
+            ? Boolean(row?.telnyx_api_key && row?.telnyx_phone_number)
+            : Boolean(
+                row?.twilio_account_sid &&
+                  row?.twilio_auth_token &&
+                  (row?.twilio_messaging_service_sid ||
+                    row?.twilio_phone_number),
+              ));
+
+        const smsMessage =
+          provider === "telnyx"
+            ? smsConfigured
+              ? "Telnyx SMS enabled"
+              : "Enable Telnyx and add API key + phone number."
+            : smsConfigured
+              ? "Twilio SMS enabled"
+              : "Enable Twilio SMS and add Account SID, Auth Token and phone number.";
 
         setStatuses([
           {
@@ -64,7 +81,7 @@ export const InvoiceSystemConfig = () => {
               : "Add your Stripe keys in Integrations.",
           },
           {
-            name: "Email delivery",
+            name: "Email delivery (Twilio)",
             configured: emailConfigured,
             message: emailConfigured
               ? "Ready to send invoices and receipts"
@@ -73,9 +90,7 @@ export const InvoiceSystemConfig = () => {
           {
             name: "SMS delivery",
             configured: smsConfigured,
-            message: smsConfigured
-              ? "SMS notifications enabled"
-              : "Enable SMS and add a Twilio phone number in Integrations.",
+            message: smsMessage,
           },
         ]);
       } catch (err) {

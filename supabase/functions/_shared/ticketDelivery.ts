@@ -8,7 +8,6 @@ import { buildTicketDeliveryEmailHtml } from "./ticketEmailTemplates.ts";
 import { loadCombinedInvoiceTicketIds } from "./combinedTicketInvoiceFlow.ts";
 import { createPublicFileLinksForStoragePaths } from "./fileAccessToken.ts";
 import { parseStorageObjectReference } from "./storageObjectUrl.ts";
-import { supabaseAdmin } from "./supabaseAdmin.ts";
 import { logError, logWarn, logInfo, logDebug } from "./structuredLogger.ts";
 import {
   validateTicketDeliveryConfig,
