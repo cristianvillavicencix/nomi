@@ -4,6 +4,7 @@ import { BILLING_REPORT_DRILLDOWN } from "@/modules/billing/reports/billingRepor
 import {
   ReportChartCard,
   ReportMetricCard,
+  ReportMetricsGrid,
   ReportSection,
 } from "@/modules/billing/reports/ReportUi";
 import { billingReportBarChartDefaults } from "@/modules/billing/reports/reportChartUtils";
@@ -31,10 +32,9 @@ export const BillingReportsOverview = ({
   return (
     <div className="space-y-6">
       <ReportSection
-        title="Overview"
         description={`Billing performance for ${snapshot.range.label.toLowerCase()}.`}
       >
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <ReportMetricsGrid>
           <ReportMetricCard
             metric={snapshot.overview.collected}
             href={BILLING_REPORT_DRILLDOWN.collected}
@@ -63,18 +63,20 @@ export const BillingReportsOverview = ({
             metric={snapshot.overview.activeSubscriptions}
             href={BILLING_REPORT_DRILLDOWN.activeSubscriptions}
           />
-        </div>
+        </ReportMetricsGrid>
       </ReportSection>
 
       <ReportChartCard title="Billing activity">
         {isPending ? (
-          <p className="py-8 text-sm text-muted-foreground">Loading chart…</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Loading chart…
+          </p>
         ) : !hasChartData ? (
-          <p className="py-8 text-sm text-muted-foreground">
+          <p className="py-8 text-center text-sm text-muted-foreground">
             No billing activity in this period yet.
           </p>
         ) : (
-          <div className="h-[320px] min-h-[220px]">
+          <div className="h-[280px] min-h-[200px] sm:h-[320px]">
             <ResponsiveBar
               data={chartData}
               keys={["Collected", "Invoiced", "Recurring"]}
