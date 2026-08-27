@@ -70,7 +70,7 @@ export const MobileDealListContent = () => {
   }
 
   return (
-    <ul className="glass-grouped overflow-hidden rounded-xl">
+    <ul className="glass-grouped">
       {deals.map((deal) => {
         const company = companiesById[deal.company_id];
         const stageColor = getStageColor(

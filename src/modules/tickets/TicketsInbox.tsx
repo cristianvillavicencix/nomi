@@ -475,7 +475,7 @@ const TicketsInboxLayout = ({
             </ModuleToolbar>
           </div>
 
-          <div className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain", isMobile && "px-3 py-2")}>
+          <div className={cn("min-h-0 flex-1 mobile-scroll", isMobile && "px-3 py-2")}>
             {!visibleTickets.length ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
                 {isSearching
@@ -503,7 +503,7 @@ const TicketsInboxLayout = ({
                     </Label>
                   </div>
                 ) : null}
-                <ul className={cn(isMobile && "glass-grouped rounded-xl")}>
+                <ul className={cn(isMobile && "glass-grouped")}>
                   {visibleTickets.map((ticket) => {
                     const ticketId = String(ticket.id);
                     return (

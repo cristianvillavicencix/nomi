@@ -28,7 +28,7 @@ export const MobilePageChrome = ({
       </div>
       {search ? <div className="px-4 pt-1 pb-3">{search}</div> : null}
     </header>
-    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-mobile-dock">
+    <div className="min-h-0 flex-1 mobile-scroll px-4 pb-mobile-dock">
       {children}
     </div>
   </div>

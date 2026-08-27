@@ -279,7 +279,7 @@ export const MessagesInbox = (props: {
         </div>
       </div>
       {activeTab === "team" ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto mobile-scroll">
           <div className="px-3 pt-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Team members
           </div>

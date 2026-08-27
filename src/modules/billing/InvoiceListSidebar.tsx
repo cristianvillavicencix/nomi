@@ -91,11 +91,11 @@ export const InvoiceListSidebar = ({
   }
 
   return (
-    <div className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain", isMobile && "px-4 pb-mobile-dock pt-2")}>
+    <div className={cn("min-h-0 flex-1 mobile-scroll", isMobile && "px-4 pb-mobile-dock pt-2")}>
       <ul
         className={cn(
           isMobile
-            ? "glass-grouped overflow-hidden rounded-xl"
+            ? "glass-grouped"
             : "divide-y",
         )}
       >

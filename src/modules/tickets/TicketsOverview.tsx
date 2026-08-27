@@ -306,7 +306,7 @@ const TicketsOverviewBody = ({
             No tickets found.
           </p>
         ) : (
-          <ul className="glass-grouped rounded-xl">
+          <ul className="glass-grouped">
             {filteredTickets.map((ticket) => (
               <TicketListItem
                 key={ticket.id}
