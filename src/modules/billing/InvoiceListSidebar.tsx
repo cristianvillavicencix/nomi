@@ -117,10 +117,10 @@ export const InvoiceListSidebar = ({
                 type="button"
                 onClick={() => onSelectInvoice(String(invoice.id))}
                 className={cn(
-                  "flex w-full flex-col gap-1.5 px-3 py-3 text-left transition-colors hover:bg-muted/40",
+                  "flex w-full flex-col gap-1.5 px-1 py-3 text-left transition-colors hover:bg-black/[0.03] active:bg-black/[0.05] dark:hover:bg-white/[0.04]",
                   isSelected &&
                     (isMobile
-                      ? "bg-muted/50"
+                      ? "bg-black/[0.04] dark:bg-white/[0.08]"
                       : "bg-primary/5 ring-1 ring-inset ring-primary/20"),
                 )}
               >

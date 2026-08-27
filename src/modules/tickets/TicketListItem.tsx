@@ -100,7 +100,7 @@ export const TicketListItem = ({
           "flex w-full text-left transition-colors",
           isMobile
             ? cn(
-                "px-4 py-3.5 hover:bg-black/[0.03] active:bg-black/[0.05] dark:hover:bg-white/[0.04] dark:active:bg-white/[0.06]",
+                "px-1 py-3.5 hover:bg-black/[0.03] active:bg-black/[0.05] dark:hover:bg-white/[0.04] dark:active:bg-white/[0.06]",
               )
             : cn(
                 "border-b hover:bg-muted/30",

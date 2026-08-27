@@ -83,8 +83,8 @@ export const MobileDealListContent = () => {
             <Link
               to={`/deals/${deal.id}/show`}
               className={cn(
-                "flex flex-col gap-1.5 px-4 py-3.5 transition-colors",
-                "hover:bg-muted/40 active:bg-muted/50",
+                "flex flex-col gap-1.5 px-1 py-3.5 transition-colors",
+                "hover:bg-black/[0.03] active:bg-black/[0.05] dark:hover:bg-white/[0.04]",
               )}
             >
               <div className="flex items-start justify-between gap-2">
