@@ -10,7 +10,11 @@ import {
   isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "./transactionalEmail.ts";
-import { getOrgInvoiceEmailSendOptions } from "./organizationEmailSenders.ts";
+import {
+  formatSenderPreview,
+  getOrgInvoiceEmailSendOptions,
+  resolveOrgBillingFrom,
+} from "./organizationEmailSenders.ts";
 import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
 import {
   allDeliverablesHaveBilling,
@@ -34,7 +38,6 @@ import {
   buildTicketPaymentSmsText,
   resolveTicketSmsServiceSubject,
 } from "./ticketInvoiceCopy.ts";
-import { getTransactionalFromEmail } from "./transactionalEmail.ts";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -843,14 +846,14 @@ export async function sendCombinedTicketInvoicePaymentLink(
     [member?.first_name, member?.last_name].filter(Boolean).join(" ").trim() ||
     member?.email?.trim() ||
     "Team";
-  const fromEmail =
-    (await getTransactionalFromEmail(params.orgId)) ??
-    INVOICE_ORGANIZATION_NAME;
+  const billingFrom = await resolveOrgBillingFrom(params.orgId, orgName);
+  const fromEmail = formatSenderPreview(billingFrom);
 
   for (const ticket of tickets) {
     const noteContext = await loadTicketInvoiceSentNoteContext(supabase, {
       orgId: params.orgId,
       ticketId: ticket.id,
+      invoiceId,
       invoiceNumber: invoiceRow.invoice_number,
       amountFormatted: balanceFormatted,
       dueDate: invoiceRow.due_date,

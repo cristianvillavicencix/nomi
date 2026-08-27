@@ -263,6 +263,7 @@ export async function loadTicketInvoiceSentNoteContext(
   params: {
     orgId: number;
     ticketId: number;
+    invoiceId: number;
     invoiceNumber: string;
     amountFormatted: string;
     dueDate?: string | null;
@@ -283,11 +284,13 @@ export async function loadTicketInvoiceSentNoteContext(
     .eq("org_id", params.orgId)
     .maybeSingle();
 
+  // Only files on this invoice — avoid listing prior paid cycles on the same ticket.
   const { data: deliverables } = await supabase
     .from("ticket_deliverables")
     .select("title, billing_kind, billing_line_count, created_at")
     .eq("ticket_id", params.ticketId)
     .eq("org_id", params.orgId)
+    .eq("invoiced_invoice_id", params.invoiceId)
     .order("sort_order", { ascending: true });
 
   const { data: messages } = await supabase

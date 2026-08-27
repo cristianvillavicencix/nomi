@@ -5,7 +5,11 @@ import {
   isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "./transactionalEmail.ts";
-import { getOrgInvoiceEmailSendOptions } from "./organizationEmailSenders.ts";
+import {
+  formatSenderPreview,
+  getOrgInvoiceEmailSendOptions,
+  resolveOrgBillingFrom,
+} from "./organizationEmailSenders.ts";
 import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
 import { sendOrgSms } from "./sendOrgSms.ts";
 import { normalizeUsPhoneToE164 } from "./phone.ts";
@@ -37,7 +41,6 @@ import {
   buildTicketInvoiceSentInternalNoteBody,
   loadTicketInvoiceSentNoteContext,
 } from "./ticketInvoiceInternalNoteSummary.ts";
-import { getTransactionalFromEmail } from "./transactionalEmail.ts";
 import {
   buildTicketPaymentSmsText,
   resolveTicketSmsServiceSubject,
@@ -1096,13 +1099,13 @@ export async function sendTicketInvoicePaymentLink(
     member?.email?.trim() ||
     "Team";
 
-  const fromEmail =
-    (await getTransactionalFromEmail(params.orgId)) ??
-    INVOICE_ORGANIZATION_NAME;
+  const billingFrom = await resolveOrgBillingFrom(params.orgId, orgName);
+  const fromEmail = formatSenderPreview(billingFrom);
 
   const noteContext = await loadTicketInvoiceSentNoteContext(supabase, {
     orgId: params.orgId,
     ticketId: ticket.id,
+    invoiceId: Number(invoice.id),
     invoiceNumber: invoice.invoice_number,
     amountFormatted: balanceFormatted,
     dueDate: invoice.due_date,
