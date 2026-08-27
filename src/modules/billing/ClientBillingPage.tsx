@@ -22,6 +22,12 @@ import { SettingsSubNav } from "@/modules/settings/SettingsSubNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
+const billingTabTitle = (tab: BillingTabId) => {
+  if (tab === "subscriptions") return "Subscriptions";
+  if (tab === "reports") return "Reports";
+  return "Invoices";
+};
+
 export const ClientBillingPage = () => {
   const { identity } = useGetIdentity();
   const isMobile = useIsMobile();
@@ -38,13 +44,18 @@ export const ClientBillingPage = () => {
   );
   const hasWorkspaceOpen = hasInvoiceOpen || hasSubscriptionOpen;
   const fillHeight = isMobile || hasWorkspaceOpen;
-  const showMobileCreate =
-    activeTab === "invoices" && !hasInvoiceOpen;
 
   if (!identity) return null;
 
   const handleTabChange = (tab: BillingTabId) => {
     setSearchParams(buildBillingTabSearchParams(tab, searchParams));
+  };
+
+  const openSubscriptionCreate = () => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", "subscriptions");
+    next.set("create", "subscription");
+    setSearchParams(next);
   };
 
   const tabContent =
@@ -56,8 +67,23 @@ export const ClientBillingPage = () => {
       <ClientInvoicesTab />
     );
 
+  const mobileAction =
+    activeTab === "invoices" && !hasInvoiceOpen ? (
+      <IconButton aria-label="New invoice" asChild>
+        <Link to="/billing/invoices/new">
+          <Plus className="size-6" />
+        </Link>
+      </IconButton>
+    ) : activeTab === "subscriptions" && !hasSubscriptionOpen ? (
+      <IconButton
+        aria-label="New subscription"
+        onClick={openSubscriptionCreate}
+      >
+        <Plus className="size-6" />
+      </IconButton>
+    ) : undefined;
+
   if (isMobile) {
-    // Detail views keep their own chrome; list hubs use the shared large title.
     if (hasWorkspaceOpen) {
       return (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-[env(safe-area-inset-top,0px)]">
@@ -68,17 +94,9 @@ export const ClientBillingPage = () => {
 
     return (
       <MobilePageChrome
-        title="Invoices"
+        title={billingTabTitle(activeTab)}
         scrollBody={false}
-        action={
-          showMobileCreate ? (
-            <IconButton aria-label="New invoice" asChild>
-              <Link to="/billing/invoices/new">
-                <Plus className="size-6" />
-              </Link>
-            </IconButton>
-          ) : undefined
-        }
+        action={mobileAction}
         search={
           <SettingsSubNav
             value={activeTab}

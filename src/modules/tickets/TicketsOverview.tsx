@@ -24,8 +24,13 @@ import { useMemberCapability } from "@/components/atomic-crm/providers/commons/u
 import { MobilePageChrome } from "@/components/atomic-crm/layout/MobilePageChrome";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { BillingStatusFilterMenu } from "@/modules/billing/BillingStatusFilterMenu";
 import { useMarkTicketNotificationsReadOnVisit } from "@/modules/notifications/useMarkTicketNotificationsReadOnVisit";
 import { CreateTicketButton } from "@/modules/tickets/CreateTicketButton";
+import {
+  TICKET_STATUS_FILTERS,
+  type TicketStatusFilterId,
+} from "@/modules/tickets/ticketInboxConfig";
 import {
   readPersistedTicketsOverviewView,
   TICKETS_OVERVIEW_VIEW_KEY,
@@ -85,13 +90,6 @@ export const TicketsOverview = () => {
     setSearchParams(next, { replace: true });
   };
 
-  // Mobile always uses a scrollable card list (not table/kanban).
-  useEffect(() => {
-    if (isMobile && view !== "table") {
-      setView("table");
-    }
-  }, [isMobile, view]);
-
   const handleSelectTicket = (ticketId: string) => {
     if (isMobile) {
       navigate(ticketShowPath(ticketId));
@@ -108,18 +106,18 @@ export const TicketsOverview = () => {
       title={false}
       disableBreadcrumb
       contentScrollable={false}
-      pagination={isMobile || view === "kanban" ? false : undefined}
-      perPage={view === "kanban" && !isMobile ? 200 : 50}
+      pagination={view === "kanban" || isMobile ? false : undefined}
+      perPage={view === "kanban" ? 200 : 50}
       sort={{ field: "updated_at", order: "DESC" }}
       filter={OVERVIEW_LIST_FILTER}
       disableSyncWithLocation
-      storeKey={`tickets.overview.${isMobile ? "mobile" : view}`}
+      storeKey={`tickets.overview.${view}`}
       queryOptions={{ refetchInterval: 30_000 }}
       className="mt-0 min-h-0 flex-1"
       actions={isMobile ? false : <TicketsOverviewActions />}
     >
       <TicketsOverviewBody
-        view={isMobile ? "table" : view}
+        view={view}
         onViewChange={setView}
         selectedTicketId={selectedTicketId}
         onSelectTicket={handleSelectTicket}
@@ -156,6 +154,8 @@ const TicketsOverviewBody = ({
 }) => {
   const { total, data: tickets = [] } = useListContext<Ticket>();
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState<TicketStatusFilterId>("all");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const [previewContextExpanded, setPreviewContextExpanded] = useState(false);
   const canManage = useMemberCapability("support.tickets.manage");
@@ -266,42 +266,116 @@ const TicketsOverviewBody = ({
 
   const filteredTickets = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return allTickets;
-    return allTickets.filter((ticket) => {
-      const company = companyById.get(String(ticket.company_id ?? ""));
-      const contact = contactById.get(String(ticket.contact_id ?? ""));
-      const haystack = [
-        ticket.subject,
-        ticket.id,
-        company?.name,
-        contact?.first_name,
-        contact?.last_name,
-        contact?.email,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(query);
-    });
-  }, [allTickets, companyById, contactById, searchQuery]);
+    const searched = !query
+      ? allTickets
+      : allTickets.filter((ticket) => {
+          const company = companyById.get(String(ticket.company_id ?? ""));
+          const contact = contactById.get(String(ticket.contact_id ?? ""));
+          const haystack = [
+            ticket.subject,
+            ticket.id,
+            company?.name,
+            contact?.first_name,
+            contact?.last_name,
+            contact?.email,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(query);
+        });
+    if (statusFilter === "all") return searched;
+    return searched.filter((ticket) => ticket.status === statusFilter);
+  }, [allTickets, companyById, contactById, searchQuery, statusFilter]);
+
+  const statusFilterCounts = useMemo(() => {
+    const counts = {
+      all: allTickets.length,
+      new: 0,
+      open: 0,
+      waiting: 0,
+      resolved: 0,
+    } satisfies Record<TicketStatusFilterId, number>;
+    for (const ticket of allTickets) {
+      const status = ticket.status;
+      if (
+        status === "new" ||
+        status === "open" ||
+        status === "waiting" ||
+        status === "resolved"
+      ) {
+        counts[status] += 1;
+      }
+    }
+    return counts;
+  }, [allTickets]);
+
+  const ticketStatusFilterOptions = TICKET_STATUS_FILTERS.map((item) => ({
+    value: item.id,
+    label: item.label,
+  }));
 
   if (isMobile) {
     return (
       <MobilePageChrome
         title="Tickets"
         action={<CreateTicketButton iconOnly />}
+        scrollBody={view === "table"}
         search={
-          <ModuleSearchField
-            value={searchQuery}
-            onChange={setSearchQuery}
-            basePlaceholder="Search tickets"
-            total={total}
-            itemSingular="ticket"
-            className="w-full"
-          />
+          <div className="space-y-2">
+            <div className="flex w-full min-w-0 items-center gap-2">
+              <BillingStatusFilterMenu
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={ticketStatusFilterOptions}
+                counts={statusFilterCounts}
+                ariaLabel="Filter tickets"
+              />
+              <ModuleSearchField
+                value={searchQuery}
+                onChange={setSearchQuery}
+                basePlaceholder="Search tickets"
+                total={filteredTickets.length}
+                itemSingular="ticket"
+                className="w-full min-w-0 flex-1 [&>div]:max-w-none"
+              />
+            </div>
+            <ToggleGroup
+              type="single"
+              value={view}
+              onValueChange={(value) => {
+                if (value === "table" || value === "kanban") onViewChange(value);
+              }}
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+            >
+              <ToggleGroupItem value="table" aria-label="List view" className="flex-1">
+                <ListIcon className="size-4" />
+                List
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="kanban"
+                aria-label="Board view"
+                className="flex-1"
+              >
+                <KanbanSquare className="size-4" />
+                Board
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         }
       >
-        {filteredTickets.length === 0 ? (
+        {view === "kanban" ? (
+          <div className="min-h-0 flex-1 overflow-hidden pb-mobile-dock">
+            <TicketsKanban
+              onSelectTicket={onSelectTicket}
+              searchQuery={searchQuery}
+              statusFilter={statusFilter}
+              selectionEnabled={false}
+            />
+          </div>
+        ) : filteredTickets.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
             No tickets found.
           </p>

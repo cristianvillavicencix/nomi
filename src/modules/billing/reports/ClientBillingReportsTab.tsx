@@ -113,7 +113,7 @@ export const ClientBillingReportsTab = () => {
   const showFilteredEmpty = hasActiveFilters && !isPending && !hasFilteredRecords;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
       <BillingReportsToolbar
         activeView={activeView}
         activePeriod={activePeriod}
@@ -136,7 +136,7 @@ export const ClientBillingReportsTab = () => {
 
       {dataCapReached ? <ReportDataCapBanner /> : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
+      <div className="min-h-0 flex-1 mobile-scroll px-4 pb-mobile-dock md:px-0 md:pb-6">
         <div className="space-y-6">
           <ReportDocumentHeader
             orgLabel={orgLabel}

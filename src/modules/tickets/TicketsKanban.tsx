@@ -71,6 +71,7 @@ export const TicketsKanban = ({
   selectedTicketId,
   onSelectTicket,
   searchQuery = "",
+  statusFilter = "all",
   selectedTicketIds = [],
   onToggleTicketSelection,
   selectionEnabled = false,
@@ -78,6 +79,7 @@ export const TicketsKanban = ({
   selectedTicketId?: string | null;
   onSelectTicket: (ticketId: string) => void;
   searchQuery?: string;
+  statusFilter?: string;
   selectedTicketIds?: string[];
   onToggleTicketSelection?: (ticketId: string, checked: boolean) => void;
   selectionEnabled?: boolean;
@@ -244,21 +246,24 @@ export const TicketsKanban = ({
 
   const tickets = useMemo(() => {
     const trimmed = searchQuery.trim();
-    if (!trimmed) return allTickets;
-    return allTickets.filter((ticket) => {
-      const company =
-        ticket.company_id != null
-          ? companiesById.get(Number(ticket.company_id))
-          : null;
-      return matchesTicketSearch(ticket, trimmed, {
-        email: company?.primary_contact_email_jsonb?.find((entry) =>
-          entry.email?.trim(),
-        )?.email,
-        phone: company?.phone_number,
-        contactName: company?.name,
-      });
-    });
-  }, [allTickets, companiesById, searchQuery]);
+    const searched = !trimmed
+      ? allTickets
+      : allTickets.filter((ticket) => {
+          const company =
+            ticket.company_id != null
+              ? companiesById.get(Number(ticket.company_id))
+              : null;
+          return matchesTicketSearch(ticket, trimmed, {
+            email: company?.primary_contact_email_jsonb?.find((entry) =>
+              entry.email?.trim(),
+            )?.email,
+            phone: company?.phone_number,
+            contactName: company?.name,
+          });
+        });
+    if (!statusFilter || statusFilter === "all") return searched;
+    return searched.filter((ticket) => ticket.status === statusFilter);
+  }, [allTickets, companiesById, searchQuery, statusFilter]);
 
   const syncKey = useMemo(() => ticketsKanbanSyncKey(tickets), [tickets]);
 
