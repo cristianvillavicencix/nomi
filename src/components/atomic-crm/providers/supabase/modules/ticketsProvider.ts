@@ -180,6 +180,8 @@ export const ticketsProvider = {
       invoice: Record<string, unknown>;
       payment_url: string;
       to: string;
+      sms_sent?: boolean;
+      sms_skipped?: boolean;
     }>("send_ticket_invoice", {
       method: "POST",
       body: {

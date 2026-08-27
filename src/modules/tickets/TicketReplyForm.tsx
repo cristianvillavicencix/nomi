@@ -49,6 +49,10 @@ import {
   TICKET_AWAITING_PAYMENT_ATTACHMENT_HINT,
   TICKET_AWAITING_PAYMENT_ATTACHMENT_MESSAGE,
 } from "@/modules/tickets/ticketOutboundAttachments";
+import {
+  paintSendProgress,
+  useSendProgressDock,
+} from "@/modules/tickets/SendProgressDock";
 import { TicketComposerToolbar } from "@/modules/tickets/TicketComposerToolbar";
 import { TicketMessageBody } from "@/modules/tickets/TicketMessageBody";
 import { TicketReplyRichComposer } from "@/modules/tickets/TicketReplyRichComposer";
@@ -157,6 +161,7 @@ export const TicketReplyForm = forwardRef<
   const notify = useNotify();
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
+  const sendProgress = useSendProgressDock();
   const canManageTickets = useMemberCapability("support.tickets.manage");
   const canSendInvoices = useMemberCapability("proposals.send");
   const canReplyAndCharge = canManageTickets && canSendInvoices;
@@ -672,16 +677,82 @@ export const TicketReplyForm = forwardRef<
         })
         .filter((entry): entry is TicketReplyAttachment => Boolean(entry));
 
-      return dataProvider.replyTicket({
-        ticketId: ticket.id,
-        body: messageBody,
-        htmlBody,
-        isInternalNote,
-        attachments: uploadedAttachments,
-        toEmails,
-        ccEmails,
-        nextStatus,
-      });
+      const attachmentCount = uploadedAttachments.length;
+      sendProgress.begin(
+        isInternalNote ? "Saving internal note" : "Sending reply",
+        [
+          {
+            id: "attachments",
+            label:
+              attachmentCount > 0
+                ? `Attachments (${attachmentCount})`
+                : "Attachments",
+          },
+          {
+            id: "send",
+            label: isInternalNote
+              ? "Save internal note"
+              : "Send email",
+          },
+          { id: "save", label: "Save on ticket" },
+        ],
+      );
+      sendProgress.runStep("attachments");
+      await paintSendProgress();
+      if (attachmentCount > 0) {
+        sendProgress.completeStep(
+          "attachments",
+          `${attachmentCount} file${attachmentCount === 1 ? "" : "s"} ready`,
+        );
+      } else {
+        sendProgress.skipStep("attachments", "None");
+      }
+      sendProgress.runStep("send");
+      sendProgress.runStep("save");
+
+      try {
+        const result = await dataProvider.replyTicket({
+          ticketId: ticket.id,
+          body: messageBody,
+          htmlBody,
+          isInternalNote,
+          attachments: uploadedAttachments,
+          toEmails,
+          ccEmails,
+          nextStatus,
+        });
+        if (isInternalNote || result.is_internal_note) {
+          sendProgress.completeStep("send", "Saved for the team");
+        } else if (result.email_sent) {
+          sendProgress.completeStep(
+            "send",
+            toEmails?.length ? toEmails.join(", ") : undefined,
+          );
+        } else if (result.email_skipped) {
+          sendProgress.skipStep(
+            "send",
+            "Email skipped — check Communications settings",
+          );
+        } else {
+          sendProgress.completeStep("send");
+        }
+        sendProgress.completeStep("save");
+        sendProgress.succeed(
+          isInternalNote || result.is_internal_note
+            ? "Internal note saved"
+            : result.email_sent
+              ? "Reply sent successfully"
+              : result.email_skipped
+                ? "Saved — email was not sent"
+                : "Reply saved",
+        );
+        return result;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to send message";
+        sendProgress.failStep("send", message);
+        throw error;
+      }
     },
     onSuccess: (result) => {
       setIsExpanded(false);
@@ -888,11 +959,13 @@ export const TicketReplyForm = forwardRef<
   );
 
   if (!isExpanded) {
-    return null;
+    return <>{sendProgress.dock}</>;
   }
 
   if (isMinimized) {
     return (
+      <>
+      {sendProgress.dock}
       <div
         className={cn(
           "flex justify-end border-t bg-background px-4 py-2.5 md:px-5",
@@ -930,11 +1003,14 @@ export const TicketReplyForm = forwardRef<
           </IconButton>
         </div>
       </div>
+      </>
     );
   }
 
   if (composeMode === "internal") {
     return (
+      <>
+      {sendProgress.dock}
       <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
         <div
           className={cn(
@@ -1043,10 +1119,13 @@ export const TicketReplyForm = forwardRef<
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   return (
+    <>
+    {sendProgress.dock}
     <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
       <div
         className={cn(
@@ -1280,5 +1359,6 @@ export const TicketReplyForm = forwardRef<
         />
       </div>
     </div>
+    </>
   );
 });

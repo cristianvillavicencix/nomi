@@ -39,6 +39,10 @@ import {
 } from "@/modules/tickets/ticketInvoicePreview";
 import { buildTicketPaymentCopyFromDeliverables } from "@/modules/tickets/ticketInvoiceCopy";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
+import {
+  paintSendProgress,
+  useSendProgressDock,
+} from "@/modules/tickets/SendProgressDock";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -100,6 +104,7 @@ export const TicketInvoicePreviewDialog = ({
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const { title, companyLegalName } = useConfigurationContext();
+  const sendProgress = useSendProgressDock();
   const [step, setStep] = useState<PreviewStep>("invoice");
   const [draftInvoice, setDraftInvoice] = useState<ClientInvoice | null>(null);
   const [lineItems, setLineItems] = useState<ClientInvoiceLineItem[]>([]);
@@ -114,6 +119,8 @@ export const TicketInvoicePreviewDialog = ({
   const [phones, setPhones] = useState<string[]>([]);
   const [sendSms, setSendSms] = useState(false);
   const sentRef = useRef(false);
+  const sendSmsRef = useRef(sendSms);
+  sendSmsRef.current = sendSms;
 
   const recipientEmail = toEmails.join(", ");
   const phone = phones.join(", ");
@@ -178,16 +185,56 @@ export const TicketInvoicePreviewDialog = ({
   });
 
   const sendMutation = useMutation({
-    mutationFn: () =>
-      dataProvider.sendTicketInvoice({
-        ticketId: ticket.id,
-        baseUrl: window.location.origin,
-        message: emailMessage,
-        subject: subject.trim(),
-        recipientEmail,
-        smsTo: sendSms ? phone : undefined,
-        sendSms,
-      }),
+    mutationFn: async () => {
+      const withSms = sendSmsRef.current;
+      const stepDefs = [
+        { id: "validate", label: "Check recipients" },
+        { id: "email", label: "Send payment email (billing@)" },
+        ...(withSms
+          ? [{ id: "sms", label: "Send payment text (SMS)" }]
+          : []),
+        { id: "save", label: "Record invoice on ticket" },
+      ];
+      sendProgress.begin("Sending invoice", stepDefs);
+      sendProgress.runStep("validate");
+      await paintSendProgress();
+      sendProgress.completeStep("validate", recipientEmail);
+      sendProgress.runStep("email");
+      if (withSms) sendProgress.runStep("sms");
+      sendProgress.runStep("save");
+
+      try {
+        const data = await dataProvider.sendTicketInvoice({
+          ticketId: ticket.id,
+          baseUrl: window.location.origin,
+          message: emailMessage,
+          subject: subject.trim(),
+          recipientEmail,
+          smsTo: withSms ? phone : undefined,
+          sendSms: withSms,
+        });
+        sendProgress.completeStep("email", data.to || recipientEmail);
+        if (withSms) {
+          if (data.sms_sent) {
+            sendProgress.completeStep("sms", phone);
+          } else if (data.sms_skipped) {
+            sendProgress.skipStep("sms", "SMS skipped or not configured");
+          } else {
+            sendProgress.completeStep("sms", phone);
+          }
+        }
+        sendProgress.completeStep("save");
+        sendProgress.succeed(
+          "Invoice sent — files deliver automatically after payment",
+        );
+        return data;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Could not send invoice";
+        sendProgress.failStep("email", message);
+        throw error;
+      }
+    },
     onSuccess: () => {
       sentRef.current = true;
       notify("Invoice sent — files will deliver after payment", {
@@ -292,6 +339,8 @@ export const TicketInvoicePreviewDialog = ({
       : "sm:max-w-[min(96vw,72rem)]";
 
   return (
+    <>
+    {sendProgress.dock}
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
         className={cn(
@@ -527,5 +576,6 @@ export const TicketInvoicePreviewDialog = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 };
