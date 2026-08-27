@@ -388,7 +388,7 @@ input[type="time"] {
     -webkit-backdrop-filter: none;
   }
   .glass-header {
-    background: var(--background);
+    background: transparent;
   }
   .glass-dock {
     background: var(--secondary);
