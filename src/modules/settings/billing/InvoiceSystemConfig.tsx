@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useDataProvider } from "ra-core";
+import { useDataProvider, useGetIdentity } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, XCircle, AlertCircle } from "lucide-react";
@@ -20,6 +20,8 @@ const statusIcon = (configured: boolean) =>
 
 export const InvoiceSystemConfig = () => {
   const dataProvider = useDataProvider<CrmDataProvider>();
+  const { identity } = useGetIdentity();
+  const orgId = Number(identity?.org_id ?? 1);
   const [loading, setLoading] = useState(true);
   const [statuses, setStatuses] = useState<ConfigStatus[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export const InvoiceSystemConfig = () => {
   useEffect(() => {
     const check = async () => {
       try {
-        const org = await dataProvider.getOne("organizations", { id: 0 });
+        const org = await dataProvider.getOne("organizations", { id: orgId });
         const messaging = await dataProvider.getList(
           "organization_messaging_settings",
           {
@@ -85,7 +87,7 @@ export const InvoiceSystemConfig = () => {
       }
     };
     check();
-  }, [dataProvider]);
+  }, [dataProvider, orgId]);
 
   return (
     <Card>

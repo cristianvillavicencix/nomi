@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
+import { supabaseAdmin } from "./supabaseAdmin.ts";
 
 export enum LogLevel {
   ERROR = "error",
@@ -196,6 +197,3 @@ export async function logDebug(params: {
     ticketId: params.ticketId,
   });
 }
-
-// Importar supabaseAdmin para logging (se asume que ya existe en el proyecto)
-import { supabaseAdmin } from "./supabaseAdmin.ts";

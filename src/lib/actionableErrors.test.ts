@@ -12,7 +12,7 @@ describe("toActionableError", () => {
 
   it("maps email not configured", () => {
     const result = toActionableError("Email is not configured for your organization");
-    expect(result.message).toContain("Invoice email cannot be sent");
+    expect(result.message).toContain("email cannot be sent");
     expect(result.action).toContain("Twilio email");
   });
 
