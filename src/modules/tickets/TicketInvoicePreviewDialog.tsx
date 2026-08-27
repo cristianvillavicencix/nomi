@@ -237,15 +237,12 @@ export const TicketInvoicePreviewDialog = ({
     },
     onSuccess: () => {
       sentRef.current = true;
-      notify("Invoice sent — files will deliver after payment", {
-        type: "success",
-      });
       onInvoiceSent?.();
       onOpenChange(false);
       refresh();
     },
-    onError: (error: Error) =>
-      notify(error.message || "Could not send invoice", { type: "error" }),
+    // Errors surface in SendProgressDock — no duplicate toast.
+    onError: () => undefined,
   });
 
   const cancelMutation = useMutation({

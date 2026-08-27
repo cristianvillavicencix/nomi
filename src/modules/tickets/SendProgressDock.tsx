@@ -24,7 +24,7 @@ export type SendProgressOutcome = "idle" | "running" | "success" | "error";
 
 type StepDef = { id: string; label: string };
 
-const AUTO_CLOSE_MS = 4500;
+const AUTO_CLOSE_MS = 5500;
 
 const statusIcon = (status: SendProgressStepStatus) => {
   switch (status) {

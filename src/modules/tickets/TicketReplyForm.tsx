@@ -681,31 +681,28 @@ export const TicketReplyForm = forwardRef<
       sendProgress.begin(
         isInternalNote ? "Saving internal note" : "Sending reply",
         [
-          {
-            id: "attachments",
-            label:
-              attachmentCount > 0
-                ? `Attachments (${attachmentCount})`
-                : "Attachments",
-          },
+          ...(attachmentCount > 0
+            ? [
+                {
+                  id: "attachments",
+                  label: `Attachments (${attachmentCount})`,
+                },
+              ]
+            : []),
           {
             id: "send",
-            label: isInternalNote
-              ? "Save internal note"
-              : "Send email",
+            label: isInternalNote ? "Save internal note" : "Send email",
           },
           { id: "save", label: "Save on ticket" },
         ],
       );
-      sendProgress.runStep("attachments");
-      await paintSendProgress();
       if (attachmentCount > 0) {
+        sendProgress.runStep("attachments");
+        await paintSendProgress();
         sendProgress.completeStep(
           "attachments",
           `${attachmentCount} file${attachmentCount === 1 ? "" : "s"} ready`,
         );
-      } else {
-        sendProgress.skipStep("attachments", "None");
       }
       sendProgress.runStep("send");
       sendProgress.runStep("save");
@@ -754,40 +751,16 @@ export const TicketReplyForm = forwardRef<
         throw error;
       }
     },
-    onSuccess: (result) => {
+    onSuccess: () => {
       setIsExpanded(false);
       setIsMinimized(false);
       resetDraft();
       refresh();
       onSent?.();
-      if (result.is_internal_note) {
-        notify("Internal note saved", { type: "success" });
-        return;
-      }
-      if (result.email_sent) {
-        notify(composeMode === "forward" ? "Message forwarded" : "Reply sent", {
-          type: "success",
-        });
-      } else if (result.email_skipped) {
-        notify(
-          "Reply saved. Email was not sent — check Communications settings.",
-          { type: "warning" },
-        );
-      } else {
-        notify(composeMode === "forward" ? "Message forwarded" : "Reply sent", {
-          type: "success",
-        });
-      }
+      // Success / skip details live in SendProgressDock — no toast globes.
     },
-    onError: (error: Error, variables) => {
-      notify(
-        error.message ||
-          (variables.isInternalNote
-            ? "Failed to add internal note"
-            : "Failed to send message"),
-        { type: "error" },
-      );
-    },
+    // Errors surface in SendProgressDock — no duplicate toast.
+    onError: () => undefined,
     onSettled: () => setSubmittingAs(null),
   });
 
