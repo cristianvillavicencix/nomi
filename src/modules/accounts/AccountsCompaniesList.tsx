@@ -256,7 +256,7 @@ const AccountsCompaniesListBody = ({
             No companies match your search.
           </p>
         ) : (
-          <ul className="glass-grouped divide-y divide-border/50 rounded-xl">
+          <ul className="glass-grouped rounded-xl">
             {data.map((company) => {
               const contactName = primaryContactName(company);
               const status = statusLabel(company);

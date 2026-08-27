@@ -95,7 +95,7 @@ export const InvoiceListSidebar = ({
       <ul
         className={cn(
           isMobile
-            ? "glass-grouped divide-y divide-border/50 overflow-hidden rounded-xl"
+            ? "glass-grouped overflow-hidden rounded-xl"
             : "divide-y",
         )}
       >

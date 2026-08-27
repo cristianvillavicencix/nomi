@@ -503,7 +503,7 @@ const TicketsInboxLayout = ({
                     </Label>
                   </div>
                 ) : null}
-                <ul className={cn(isMobile && "glass-grouped divide-y divide-border/50 rounded-xl")}>
+                <ul className={cn(isMobile && "glass-grouped rounded-xl")}>
                   {visibleTickets.map((ticket) => {
                     const ticketId = String(ticket.id);
                     return (

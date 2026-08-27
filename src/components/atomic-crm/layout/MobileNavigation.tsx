@@ -74,7 +74,7 @@ export const MobileNavigation = () => {
       className="pointer-events-none fixed inset-x-4 z-50 pb-[max(0.625rem,env(safe-area-inset-bottom,0px))]"
       style={{ bottom: 0 }}
     >
-      <div className="glass-dock pointer-events-auto mx-auto flex h-14 w-full max-w-lg items-stretch rounded-[22px] px-1">
+      <div className="glass-dock pointer-events-auto relative z-10 mx-auto flex h-14 w-full max-w-lg items-stretch rounded-[28px] px-1.5">
         <NavigationButton
           href="/messages"
           Icon={ChatCircle}
@@ -128,7 +128,7 @@ const NavigationButton = ({
   <Link
     to={href}
     className={cn(
-      "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-muted-foreground transition-transform active:scale-[0.96]",
+      "relative z-10 flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-muted-foreground transition-transform active:scale-[0.96]",
       isActive && "text-foreground",
     )}
   >
@@ -136,7 +136,7 @@ const NavigationButton = ({
       className={cn(
         "relative flex size-8 items-center justify-center rounded-2xl transition-colors",
         isActive &&
-          "bg-white/50 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.7)] dark:bg-white/12",
+          "bg-white/55 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.85),0_1px_6px_rgb(0_0_0_/_0.06)] dark:bg-white/14",
       )}
     >
       <Icon className="size-5" weight={sidebarNavIconWeight(isActive)} />
