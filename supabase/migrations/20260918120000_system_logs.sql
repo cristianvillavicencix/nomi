@@ -61,11 +61,12 @@ create policy "system_logs_insert_service_only"
 
 create policy "system_logs_update_service_only"
   on public.system_logs for update to service_role
+  using (true)
   with check (true);
 
 create policy "system_logs_delete_service_only"
   on public.system_logs for delete to service_role
-  with check (true);
+  using (true);
 
 -- Authenticated users can only read their own org's logs
 create policy "system_logs_select_org_scoped"

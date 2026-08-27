@@ -1,4 +1,3 @@
-import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 
 export enum LogLevel {
@@ -21,37 +20,30 @@ export interface LogEntry {
   paymentIntentId?: string;
 }
 
-/**
- * Sistema de logging estructurado para mejor monitoreo y debugging
- * Reemplaza console.error/warn genéricos con logging contextual
- */
+/** Structured logger for edge functions; writes to system_logs when available. */
 export async function logStructured(entry: LogEntry) {
   const timestamp = entry.timestamp || new Date().toISOString();
 
-  // Guardar en tabla de logs (si existe la tabla)
-  try {
-    await supabaseAdmin.from("system_logs").insert({
-      level: entry.level,
-      module: entry.module,
-      operation: entry.operation,
-      context: entry.context,
-      timestamp,
-      user_id: entry.userId,
-      org_id: entry.orgId,
-      invoice_id: entry.invoiceId,
-      ticket_id: entry.ticketId,
-      payment_intent_id: entry.paymentIntentId,
-      created_at: timestamp,
-    });
-  } catch (dbError) {
-    // Si la tabla no existe, no fallar el sistema
-    // Solo loggear a console para debugging
+  // supabase-js returns { error } instead of throwing on PostgREST failures
+  const { error: dbError } = await supabaseAdmin.from("system_logs").insert({
+    level: entry.level,
+    module: entry.module,
+    operation: entry.operation,
+    context: entry.context,
+    timestamp,
+    user_id: entry.userId,
+    org_id: entry.orgId,
+    invoice_id: entry.invoiceId,
+    ticket_id: entry.ticketId,
+    payment_intent_id: entry.paymentIntentId,
+    created_at: timestamp,
+  });
+  if (dbError) {
     console.warn("[structuredLogger] Database logging unavailable", {
-      error: dbError instanceof Error ? dbError.message : String(dbError),
+      error: dbError.message,
     });
   }
 
-  // También console para debugging local con formato estructurado
   const consoleMethod =
     entry.level === LogLevel.ERROR
       ? console.error
@@ -74,9 +66,7 @@ export async function logStructured(entry: LogEntry) {
   consoleMethod(logPrefix, logContext);
 }
 
-/**
- * Helper para logging de errores con contexto completo
- */
+/** Log an error with full context. */
 export async function logError(params: {
   module: string;
   operation: string;
@@ -111,9 +101,7 @@ export async function logError(params: {
   });
 }
 
-/**
- * Helper para logging de warnings
- */
+/** Log a warning. */
 export async function logWarn(params: {
   module: string;
   operation: string;
@@ -140,9 +128,7 @@ export async function logWarn(params: {
   });
 }
 
-/**
- * Helper para logging de información
- */
+/** Log informational context. */
 export async function logInfo(params: {
   module: string;
   operation: string;
@@ -169,9 +155,7 @@ export async function logInfo(params: {
   });
 }
 
-/**
- * Helper para logging de debug
- */
+/** Log debug context. */
 export async function logDebug(params: {
   module: string;
   operation: string;
