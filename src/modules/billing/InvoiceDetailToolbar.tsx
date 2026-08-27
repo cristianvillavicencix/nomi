@@ -12,6 +12,7 @@ import {
   Mail,
   MessageSquare,
   MoreHorizontal,
+  Package,
   Pencil,
   Receipt,
   Save,
@@ -102,6 +103,72 @@ const formatScheduledSendLabel = (value: string) => {
     `${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`,
   );
   return `${dateLabel} at ${timeLabel}`;
+};
+
+const deliveryStatusConfig: Record<
+  string,
+  { label: string; className: string }
+> = {
+  pending_payment: {
+    label: "Awaiting payment",
+    className: "text-amber-600 bg-amber-50",
+  },
+  payment_processing: {
+    label: "Payment processing",
+    className: "text-primary bg-primary/10",
+  },
+  payment_received: {
+    label: "Payment received",
+    className: "text-emerald-600 bg-emerald-50",
+  },
+  delivering_files: {
+    label: "Delivering files",
+    className: "text-primary bg-primary/10",
+  },
+  delivery_succeeded: {
+    label: "Files delivered",
+    className: "text-emerald-600 bg-emerald-50",
+  },
+  delivery_failed: {
+    label: "Delivery failed",
+    className: "text-destructive bg-destructive/10",
+  },
+  delivery_manually_sent: {
+    label: "Files sent manually",
+    className: "text-muted-foreground bg-muted",
+  },
+};
+
+const InvoiceDeliveryStatusBadge = ({
+  status,
+  errorMessage,
+}: {
+  status: string | null;
+  errorMessage?: string | null;
+}) => {
+  if (!status || status === "pending_payment") return null;
+  const config = deliveryStatusConfig[status] || {
+    label: status,
+    className: "text-muted-foreground bg-muted",
+  };
+
+  return (
+    <div
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+        config.className,
+      )}
+      title={errorMessage || undefined}
+    >
+      <Package className="size-3.5" />
+      {config.label}
+      {status === "delivery_failed" && errorMessage ? (
+        <span className="max-w-[180px] truncate font-normal opacity-80">
+          — {errorMessage}
+        </span>
+      ) : null}
+    </div>
+  );
 };
 
 export const InvoiceDraftWhatsNextBanner = ({
@@ -642,6 +709,11 @@ export const InvoiceDetailToolbar = ({
           </Button>
         ) : null}
       </div>
+
+      <InvoiceDeliveryStatusBadge
+        status={invoice.delivery_status}
+        errorMessage={invoice.delivery_error_message}
+      />
 
       {isDraft ? (
         <InvoiceDraftWhatsNextBanner

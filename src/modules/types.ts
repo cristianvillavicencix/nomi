@@ -182,6 +182,9 @@ export type ClientInvoice = {
   currency?: string;
   description: string;
   status?: "draft" | "sent" | "paid" | "void" | "overdue";
+  delivery_status?: string | null;
+  delivery_status_at?: string | null;
+  delivery_error_message?: string | null;
   sent_at?: string | null;
   paid_at?: string | null;
   void_reason?: string | null;

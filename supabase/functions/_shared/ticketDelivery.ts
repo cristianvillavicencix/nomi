@@ -9,6 +9,11 @@ import { loadCombinedInvoiceTicketIds } from "./combinedTicketInvoiceFlow.ts";
 import { createPublicFileLinksForStoragePaths } from "./fileAccessToken.ts";
 import { parseStorageObjectReference } from "./storageObjectUrl.ts";
 import { supabaseAdmin } from "./supabaseAdmin.ts";
+import { logError, logWarn, logInfo, logDebug } from "./structuredLogger.ts";
+import {
+  validateTicketDeliveryConfig,
+  ConfigurationError,
+} from "./configValidator.ts";
 
 const buildMessageId = (ticketId: number) =>
   `<ticket-${ticketId}-${crypto.randomUUID()}@nomicrm.com>`;
@@ -47,7 +52,12 @@ export async function noteTicketDeliveryFailure(
       created_at: new Date().toISOString(),
     });
   } catch (noteError) {
-    console.error("noteTicketDeliveryFailure.failed", noteError);
+    await logError({
+      module: "ticketDelivery",
+      operation: "noteTicketDeliveryFailure",
+      error: noteError,
+      context: { ticketId: params.ticketId },
+    });
   }
 }
 
@@ -254,6 +264,48 @@ async function deliverOneTicketForInvoicePayment(
   });
   const outboundMessageId = buildMessageId(ticket.id);
 
+  // Validar que el email esté configurado antes de enviar
+  try {
+    await validateTicketDeliveryConfig(supabase, params.orgId);
+  } catch (configError) {
+    await logError({
+      module: "ticketDelivery",
+      operation: "deliverOneTicketForInvoicePayment",
+      error: configError,
+      context: {
+        invoiceId: params.invoiceId,
+        ticketId: params.ticketId,
+        orgId: params.orgId,
+      },
+      orgId: params.orgId,
+      ticketId: params.ticketId,
+      invoiceId: params.invoiceId,
+    });
+    throw new ConfigurationError(
+      configError instanceof Error
+        ? configError.message
+        : "Email not configured for delivery",
+      {
+        stripe: true,
+        email: false,
+        sms: true,
+        storage: true,
+        details: {
+          stripe: { configured: true, message: "Not required for delivery" },
+          email: {
+            configured: false,
+            message:
+              configError instanceof Error
+                ? configError.message
+                : "Email not configured",
+          },
+          sms: { configured: true, message: "Not required for delivery" },
+          storage: { configured: true, message: "Storage available" },
+        },
+      },
+    );
+  }
+
   const emailResult = await sendTransactionalEmail({
     orgId: params.orgId,
     to: [recipient],
@@ -377,6 +429,170 @@ async function deliverOneTicketForInvoicePayment(
   };
 }
 
+async function validateDeliveryPreconditions(
+  supabase: SupabaseClient,
+  params: { invoiceId: number; orgId: number },
+): Promise<{ valid: boolean; reason?: string }> {
+  const { data: invoice } = await supabase
+    .from("client_invoices")
+    .select("id, status")
+    .eq("id", params.invoiceId)
+    .eq("org_id", params.orgId)
+    .maybeSingle();
+
+  if (!invoice?.id) {
+    return { valid: false, reason: "invoice_not_found" };
+  }
+
+  if (invoice.status !== "paid") {
+    return { valid: false, reason: "invoice_not_paid" };
+  }
+
+  return { valid: true };
+}
+
+async function resolveTicketIdWithFallbacks(
+  supabase: SupabaseClient,
+  params: { invoiceId: number; orgId: number },
+): Promise<{ ticketId: number | null; method: string }> {
+  // Fallback 1: invoice.ticket_id (método actual - backward compatibility)
+  const { data: invoice } = await supabase
+    .from("client_invoices")
+    .select("ticket_id")
+    .eq("id", params.invoiceId)
+    .eq("org_id", params.orgId)
+    .maybeSingle();
+
+  if (invoice?.ticket_id) {
+    return { ticketId: Number(invoice.ticket_id), method: "invoice_ticket_id" };
+  }
+
+  // Fallback 2: client_invoice_tickets (combined invoices)
+  const linkedTicketIds = await loadCombinedInvoiceTicketIds(
+    supabase,
+    params.orgId,
+    params.invoiceId,
+  );
+
+  if (linkedTicketIds.length > 0) {
+    return { ticketId: linkedTicketIds[0], method: "combined_invoice_tickets" };
+  }
+
+  // Fallback 3: ticket_deliverables.invoiced_invoice_id (direct file linkage)
+  const { data: deliverableLink } = await supabase
+    .from("ticket_deliverables")
+    .select("ticket_id")
+    .eq("org_id", params.orgId)
+    .eq("invoiced_invoice_id", params.invoiceId)
+    .is("delivered_at", null)
+    .order("id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (deliverableLink?.ticket_id) {
+    return {
+      ticketId: Number(deliverableLink.ticket_id),
+      method: "deliverable_invoice_link",
+    };
+  }
+
+  // Fallback 4: tickets.invoice_id (backward compatibility - ticket might still have invoice_id)
+  const { data: ticketByInvoiceId } = await supabase
+    .from("tickets")
+    .select("id")
+    .eq("invoice_id", params.invoiceId)
+    .eq("org_id", params.orgId)
+    .maybeSingle();
+
+  if (ticketByInvoiceId?.id) {
+    return {
+      ticketId: Number(ticketByInvoiceId.id),
+      method: "ticket_invoice_id_backward_compat",
+    };
+  }
+
+  return { ticketId: null, method: "all_fallbacks_failed" };
+}
+
+async function validateDeliverableLinks(
+  supabase: SupabaseClient,
+  params: { invoiceId: number; orgId: number; ticketId: number },
+): Promise<{ valid: boolean; deliverableCount: number; reason?: string }> {
+  const { count } = await supabase
+    .from("ticket_deliverables")
+    .select("id", { count: "exact", head: true })
+    .eq("ticket_id", params.ticketId)
+    .eq("org_id", params.orgId)
+    .eq("invoiced_invoice_id", params.invoiceId)
+    .is("delivered_at", null);
+
+  const deliverableCount = count ?? 0;
+
+  if (deliverableCount === 0) {
+    return {
+      valid: false,
+      deliverableCount: 0,
+      reason: "no_undelivered_deliverables",
+    };
+  }
+
+  return { valid: true, deliverableCount };
+}
+
+async function deliverWithRetry(
+  supabase: SupabaseClient,
+  params: {
+    invoiceId: number;
+    orgId: number;
+    ticketId: number;
+    invoiceNumber: string;
+  },
+  maxRetries: number = 3,
+): Promise<{
+  delivered: boolean;
+  skipped: boolean;
+  reason?: string;
+  attempts: number;
+}> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await deliverOneTicketForInvoicePayment(supabase, params);
+
+      if (result.delivered || result.skipped) {
+        return { ...result, attempts: attempt };
+      }
+
+      // Si no fue entregido y no fue skipped, intentar retry
+      lastError = new Error(`Delivery attempt ${attempt} failed`);
+
+      // Exponential backoff: 1s, 2s, 4s
+      if (attempt < maxRetries) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.pow(2, attempt - 1) * 1000),
+        );
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      if (attempt < maxRetries) {
+        // Exponential backoff
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.pow(2, attempt - 1) * 1000),
+        );
+      }
+    }
+  }
+
+  return {
+    delivered: false,
+    skipped: false,
+    reason: lastError?.message || "max_retries_exceeded",
+    attempts: maxRetries,
+  };
+}
+
 export async function deliverTicketAfterInvoicePayment(
   supabase: SupabaseClient,
   params: {
@@ -384,71 +600,144 @@ export async function deliverTicketAfterInvoicePayment(
     orgId: number;
   },
 ) {
-  const { data: invoice } = await supabase
+  // 1. Validación inicial con logging estructurado
+  const validation = await validateDeliveryPreconditions(supabase, params);
+  if (!validation.valid) {
+    await logError({
+      module: "ticketDelivery",
+      operation: "validateDeliveryPreconditions",
+      error: new Error(validation.reason),
+      context: {
+        invoiceId: params.invoiceId,
+        orgId: params.orgId,
+        reason: validation.reason,
+      },
+    });
+    return { delivered: false, skipped: true, reason: validation.reason };
+  }
+
+  // 2. Sistema de fallback multi-capa para encontrar ticket_id
+  const { ticketId, method } = await resolveTicketIdWithFallbacks(
+    supabase,
+    params,
+  );
+
+  if (!ticketId) {
+    await logError({
+      module: "ticketDelivery",
+      operation: "resolveTicketIdWithFallbacks",
+      error: new Error("No ticket found via any fallback method"),
+      context: { invoiceId: params.invoiceId, orgId: params.orgId, method },
+    });
+    return { delivered: false, skipped: true, reason: "no_ticket_found" };
+  }
+
+  await logInfo({
+    module: "ticketDelivery",
+    operation: "resolveTicketIdWithFallbacks",
+    message: "Ticket resolved successfully",
+    context: {
+      invoiceId: params.invoiceId,
+      orgId: params.orgId,
+      ticketId,
+      method,
+    },
+  });
+
+  // 3. Validación de que los archivos estén correctamente vinculados
+  const deliverableCheck = await validateDeliverableLinks(supabase, {
+    ...params,
+    ticketId,
+  });
+
+  if (!deliverableCheck.valid) {
+    await logWarn({
+      module: "ticketDelivery",
+      operation: "validateDeliverableLinks",
+      message: "No deliverables to send",
+      context: {
+        invoiceId: params.invoiceId,
+        ticketId,
+        deliverableCount: deliverableCheck.deliverableCount,
+        reason: deliverableCheck.reason,
+      },
+    });
+    return { delivered: false, skipped: true, reason: deliverableCheck.reason };
+  }
+
+  // 4. Actualizar invoice.ticket_id si está null (para backward compatibility)
+  const nowIso = new Date().toISOString();
+  const { data: currentInvoice } = await supabase
     .from("client_invoices")
-    .select("id, org_id, ticket_id, invoice_number, status")
+    .select("ticket_id")
     .eq("id", params.invoiceId)
     .eq("org_id", params.orgId)
     .maybeSingle();
 
-  if (!invoice?.id || invoice.status !== "paid") {
-    return { delivered: false, skipped: true, reason: "no_ticket_or_unpaid" };
-  }
-
-  const linkedTicketIds = await loadCombinedInvoiceTicketIds(
-    supabase,
-    params.orgId,
-    params.invoiceId,
-  );
-
-  let ticketIds = linkedTicketIds;
-  if (!ticketIds.length) {
-    let ticketId = invoice.ticket_id ? Number(invoice.ticket_id) : null;
-
-    if (!ticketId) {
-      const { data: deliverableLink } = await supabase
-        .from("ticket_deliverables")
-        .select("ticket_id")
-        .eq("org_id", params.orgId)
-        .eq("invoiced_invoice_id", invoice.id)
-        .is("delivered_at", null)
-        .order("id", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      ticketId = deliverableLink?.ticket_id
-        ? Number(deliverableLink.ticket_id)
-        : null;
-    }
-
-    if (!ticketId) {
-      return { delivered: false, skipped: true, reason: "no_ticket" };
-    }
-
-    ticketIds = [ticketId];
-  }
-
-  const nowIso = new Date().toISOString();
-  if (!invoice.ticket_id && ticketIds[0]) {
+  if (currentInvoice && !currentInvoice.ticket_id) {
     await supabase
       .from("client_invoices")
-      .update({ ticket_id: ticketIds[0], updated_at: nowIso })
-      .eq("id", invoice.id)
+      .update({ ticket_id: ticketId, updated_at: nowIso })
+      .eq("id", params.invoiceId)
       .eq("org_id", params.orgId);
+
+    await logInfo({
+      module: "ticketDelivery",
+      operation: "updateInvoiceTicketId",
+      message: "Updated invoice.ticket_id for backward compatibility",
+      context: { invoiceId: params.invoiceId, ticketId },
+    });
   }
 
-  const results = [];
-  for (const ticketId of ticketIds) {
-    results.push(
-      await deliverOneTicketForInvoicePayment(supabase, {
+  // 5. Obtener invoice_number para delivery
+  const { data: invoice } = await supabase
+    .from("client_invoices")
+    .select("invoice_number")
+    .eq("id", params.invoiceId)
+    .eq("org_id", params.orgId)
+    .maybeSingle();
+
+  if (!invoice?.invoice_number) {
+    await logError({
+      module: "ticketDelivery",
+      operation: "getInvoiceNumber",
+      error: new Error("Invoice number missing"),
+      context: { invoiceId: params.invoiceId },
+    });
+    return {
+      delivered: false,
+      skipped: true,
+      reason: "invoice_number_missing",
+    };
+  }
+
+  // 6. Sistema de retry con exponential backoff
+  const result = await deliverWithRetry(supabase, {
+    invoiceId: params.invoiceId,
+    orgId: params.orgId,
+    ticketId,
+    invoiceNumber: invoice.invoice_number,
+  });
+
+  if (!result.delivered && !result.skipped) {
+    await logError({
+      module: "ticketDelivery",
+      operation: "deliverWithRetry",
+      error: new Error(result.reason || "Delivery failed after retries"),
+      context: {
         invoiceId: params.invoiceId,
-        orgId: params.orgId,
         ticketId,
-        invoiceNumber: invoice.invoice_number,
-      }),
-    );
+        attempts: result.attempts,
+        reason: result.reason,
+      },
+    });
+
+    // Notificar fallo de delivery
+    await noteTicketDeliveryFailure(supabase, {
+      ticketId,
+      error: new Error(result.reason || "Delivery failed after retries"),
+    });
   }
 
-  const deliveredResult = results.find((result) => result.delivered);
-  return deliveredResult ?? results[0] ?? { delivered: false, skipped: true };
+  return result;
 }

@@ -23,6 +23,8 @@ import { resolveContactEmail } from "./clientProposalBilling.ts";
 import { resolveBillingRecipientEmailFromParts } from "./billingRecipientResolution.ts";
 import { INVOICE_ORGANIZATION_NAME } from "./invoiceOrganizationInfo.ts";
 import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
+import { validateInvoiceSendConfig } from "./configValidator.ts";
+import { logError, logWarn, logInfo } from "./structuredLogger.ts";
 import {
   parseInvoiceRecipientEmailList,
   parseInvoiceRecipientPhoneList,
@@ -409,8 +411,10 @@ async function loadTicketForInvoice(
     : null;
 
   let companyContextLinks: string[] | null = null;
-  let primaryContactEmails: Array<{ email?: string; isPrimary?: boolean }> | null =
-    null;
+  let primaryContactEmails: Array<{
+    email?: string;
+    isPrimary?: boolean;
+  }> | null = null;
   if (ticket.company_id) {
     const { data: company } = await supabase
       .from("companies_summary")
@@ -429,11 +433,17 @@ async function loadTicketForInvoice(
   const recipientEmail = resolveBillingRecipientEmailFromParts({
     companyContextLinks,
     primaryContactEmails,
-    contactEmails: contactEmails as Array<{ email?: string; isPrimary?: boolean }> | null,
+    contactEmails: contactEmails as Array<{
+      email?: string;
+      isPrimary?: boolean;
+    }> | null,
     ticketRequesterEmail: ticket.requester_email,
   });
 
-  if (!recipientEmail || !emailRegex.test(recipientEmail.split(",")[0]?.trim() ?? "")) {
+  if (
+    !recipientEmail ||
+    !emailRegex.test(recipientEmail.split(",")[0]?.trim() ?? "")
+  ) {
     throw new Error("Add a valid recipient email before sending an invoice");
   }
 
@@ -960,8 +970,22 @@ export async function sendTicketInvoicePaymentLink(
     );
   }
 
-  if (!(await isOrgTransactionalEmailConfigured(params.orgId))) {
-    throw new Error("Email is not configured for your organization");
+  try {
+    await validateInvoiceSendConfig(supabase, params.orgId);
+  } catch (configError) {
+    await logError({
+      module: "ticketInvoiceFlow",
+      operation: "sendTicketInvoicePaymentLink",
+      error: configError,
+      context: { orgId: params.orgId, ticketId: params.ticketId },
+      orgId: params.orgId,
+      ticketId: params.ticketId,
+    });
+    throw new Error(
+      configError instanceof Error
+        ? configError.message
+        : "Email is not configured for your organization",
+    );
   }
 
   const baseUrl = (params.baseUrl?.trim() || resolvePublicAppBaseUrl()).replace(
@@ -999,7 +1023,10 @@ export async function sendTicketInvoicePaymentLink(
 
   const now = new Date().toISOString();
 
-  const invoiceEmail = await getOrgInvoiceEmailSendOptions(params.orgId, orgName);
+  const invoiceEmail = await getOrgInvoiceEmailSendOptions(
+    params.orgId,
+    orgName,
+  );
 
   await sendTransactionalEmail({
     orgId: params.orgId,

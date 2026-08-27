@@ -29,6 +29,8 @@ import { normalizeUsPhoneToE164 } from "./phone.ts";
 import { getStripeForOrg } from "./stripeClient.ts";
 import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
 import { sendOrgSms } from "./sendOrgSms.ts";
+import { logError, logWarn, logInfo, logDebug } from "./structuredLogger.ts";
+import { validateInvoiceSendConfig } from "./configValidator.ts";
 
 const formatMoney = (amount: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", {
@@ -129,7 +131,17 @@ async function resolvePaymentReceiptDate(
       return new Date(charge.created * 1000).toISOString().slice(0, 10);
     }
   } catch (error) {
-    console.warn("invoicePaymentEmails.receipt_date_lookup_failed", error);
+    await logWarn({
+      module: "invoicePaymentEmails",
+      operation: "resolvePaymentReceiptDate",
+      message: "Failed to lookup receipt date from Stripe",
+      context: {
+        stripePaymentIntentId,
+        orgId,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      orgId,
+    });
   }
 
   return today;
@@ -218,7 +230,18 @@ async function logEmailAttempt(
     { onConflict: "invoice_id,reference_key" },
   );
   if (error) {
-    console.warn("invoicePaymentEmails.log_attempt_failed", error.message);
+    await logWarn({
+      module: "invoicePaymentEmails",
+      operation: "logEmailAttempt",
+      message: "Failed to log email attempt",
+      context: {
+        invoiceId: params.invoiceId,
+        emailType: params.emailType,
+        error: error.message,
+      },
+      orgId: params.orgId,
+      invoiceId: params.invoiceId,
+    });
   }
 }
 
@@ -282,7 +305,9 @@ export async function notifyInvoicePaymentReceipt(
   const shouldNotifySms =
     emailResult.sent === true || emailResult.reason === "duplicate";
 
-  let sms: Awaited<ReturnType<typeof notifyInvoicePaymentReceiptSms>> | undefined;
+  let sms:
+    | Awaited<ReturnType<typeof notifyInvoicePaymentReceiptSms>>
+    | undefined;
   if (shouldNotifySms) {
     sms = await notifyInvoicePaymentReceiptSms(supabase, {
       invoice,
@@ -315,7 +340,10 @@ export async function notifyInvoicePaymentReceiptSms(
       return { sent: false, skipped: true, reason: "duplicate" as const };
     }
 
-    const toPhone = await resolveInvoiceRecipientPhone(supabase, params.invoice);
+    const toPhone = await resolveInvoiceRecipientPhone(
+      supabase,
+      params.invoice,
+    );
     if (!toPhone) {
       await logEmailAttempt(supabase, {
         orgId: params.invoice.org_id,
@@ -368,7 +396,18 @@ export async function notifyInvoicePaymentReceiptSms(
     return { sent: true, skipped: false, to: toPhone };
   } catch (error) {
     const message = error instanceof Error ? error.message : "sms_send_failed";
-    console.error("invoicePaymentEmails.receipt_sms_failed", error);
+    await logError({
+      module: "invoicePaymentEmails",
+      operation: "notifyInvoicePaymentReceiptSms",
+      error: error,
+      context: {
+        invoiceId: params.invoice.id,
+        toPhone,
+        message,
+      },
+      orgId: params.invoice.org_id,
+      invoiceId: params.invoice.id,
+    });
     await logEmailAttempt(supabase, {
       orgId: params.invoice.org_id,
       invoiceId: params.invoice.id,
@@ -420,38 +459,22 @@ export async function sendClientInvoicePaymentReceipt(
     return { sent: false, skipped: true, reason: "no_email" as const };
   }
 
-  let emailConfigured = false;
   try {
-    emailConfigured = await isOrgTransactionalEmailConfigured(
-      params.invoice.org_id,
-    );
+    await validateInvoiceSendConfig(supabase, params.invoice.org_id);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "email_config_check_failed";
-    console.error("invoicePaymentEmails.receipt_config_failed", message);
-    await logEmailAttempt(supabase, {
+    await logError({
+      module: "invoicePaymentEmails",
+      operation: "sendClientInvoicePaymentReceipt",
+      error: error,
+      context: {
+        invoiceId: params.invoice.id,
+        message,
+      },
       orgId: params.invoice.org_id,
       invoiceId: params.invoice.id,
-      emailType: "payment_receipt",
-      referenceKey,
-      recipientEmail: to,
-      deliveryStatus: "failed",
-      errorMessage: message,
     });
-    return {
-      sent: false,
-      skipped: true,
-      reason: "email_not_configured" as const,
-      error: message,
-    };
-  }
-
-  if (!emailConfigured) {
-    console.warn(
-      "invoicePaymentEmails.receipt_skipped",
-      "Twilio email not configured for org",
-      params.invoice.org_id,
-    );
     await logEmailAttempt(supabase, {
       orgId: params.invoice.org_id,
       invoiceId: params.invoice.id,
@@ -459,12 +482,13 @@ export async function sendClientInvoicePaymentReceipt(
       referenceKey,
       recipientEmail: to,
       deliveryStatus: "skipped",
-      errorMessage: "email_not_configured",
+      errorMessage: message,
     });
     return {
       sent: false,
       skipped: true,
       reason: "email_not_configured" as const,
+      error: message,
     };
   }
 
@@ -588,10 +612,17 @@ export async function sendClientInvoicePaymentReceipt(
       ],
     });
     if (sendResult.skipped) {
-      console.warn(
-        "invoicePaymentEmails.receipt_skipped",
-        "SKIP_TRANSACTIONAL_EMAIL",
-      );
+      await logWarn({
+        module: "invoicePaymentEmails",
+        operation: "sendClientInvoicePaymentReceipt",
+        message: "Email skipped - SKIP_TRANSACTIONAL_EMAIL",
+        context: {
+          invoiceId: params.invoice.id,
+          referenceKey,
+        },
+        orgId: params.invoice.org_id,
+        invoiceId: params.invoice.id,
+      });
       await logEmailAttempt(supabase, {
         orgId: params.invoice.org_id,
         invoiceId: params.invoice.id,
@@ -614,7 +645,18 @@ export async function sendClientInvoicePaymentReceipt(
     return { sent: true, skipped: false };
   } catch (error) {
     const message = error instanceof Error ? error.message : "send_failed";
-    console.error("invoicePaymentEmails.receipt_failed", error);
+    await logError({
+      module: "invoicePaymentEmails",
+      operation: "sendClientInvoicePaymentReceipt",
+      error: error,
+      context: {
+        invoiceId: params.invoice.id,
+        referenceKey,
+        message,
+      },
+      orgId: params.invoice.org_id,
+      invoiceId: params.invoice.id,
+    });
     await logEmailAttempt(supabase, {
       orgId: params.invoice.org_id,
       invoiceId: params.invoice.id,
@@ -872,7 +914,17 @@ export async function sendClientInvoicePaymentReminder(
     });
     return { sent: true, skipped: false };
   } catch (error) {
-    console.error("invoicePaymentEmails.reminder_failed", error);
+    await logError({
+      module: "invoicePaymentEmails",
+      operation: "sendPaymentReminderEmail",
+      error: error,
+      context: {
+        invoiceId: params.invoiceId,
+        orgId: params.orgId,
+      },
+      orgId: params.orgId,
+      invoiceId: params.invoiceId,
+    });
     return {
       sent: false,
       skipped: true,

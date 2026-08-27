@@ -6,7 +6,11 @@ import {
   rescheduleRemainderAfterEarlyPayments,
 } from "./invoiceRemainderSchedule.ts";
 import { markInstallmentPaidFromStripe } from "./proposalFlow.ts";
-import { deliverTicketAfterInvoicePayment, noteTicketDeliveryFailure } from "./ticketDelivery.ts";
+import {
+  deliverTicketAfterInvoicePayment,
+  noteTicketDeliveryFailure,
+} from "./ticketDelivery.ts";
+import { logError, logWarn, logInfo, logDebug } from "./structuredLogger.ts";
 
 const isDepositInstallment = (row: {
   installment_number?: number | null;
@@ -149,6 +153,35 @@ export async function propagateProposalCardToSiblingInvoices(
     .in("status", ["draft", "sent"]);
 }
 
+export async function updateInvoiceDeliveryStatus(
+  supabase: SupabaseClient,
+  invoiceId: number,
+  orgId: number,
+  status: string,
+  errorMessage?: string | null,
+) {
+  const { error } = await supabase
+    .from("client_invoices")
+    .update({
+      delivery_status: status,
+      delivery_status_at: new Date().toISOString(),
+      delivery_error_message: errorMessage?.trim() || null,
+    })
+    .eq("id", invoiceId)
+    .eq("org_id", orgId);
+
+  if (error) {
+    await logError({
+      module: "clientInvoicePayment",
+      operation: "updateInvoiceDeliveryStatus",
+      error: error,
+      context: { invoiceId, orgId, status },
+      orgId,
+      invoiceId,
+    });
+  }
+}
+
 export async function applyClientInvoicePaymentUpdate(
   supabase: SupabaseClient,
   params: {
@@ -168,30 +201,52 @@ export async function applyClientInvoicePaymentUpdate(
   const paid = Number(invoice.amount_paid) || 0;
   const upfrontPercent = Number(invoice.upfront_percent ?? 100);
   const now = new Date().toISOString();
-  const alreadyPaidInFull =
-    invoice.status === "paid" || paid >= total - 0.01;
+  const alreadyPaidInFull = invoice.status === "paid" || paid >= total - 0.01;
 
   // Never stack a second charge onto an invoice that is already settled,
   // even if Stripe returns a different PaymentIntent id.
   if (alreadyPaidInFull) {
     const balanceDue = Math.max(Math.round((total - paid) * 100) / 100, 0);
-    if (invoice.ticket_id) {
-      try {
-        await deliverTicketAfterInvoicePayment(supabase, {
+
+    // Intentar delivery incluso si invoice.ticket_id es null - el sistema mejorado tiene fallbacks
+    try {
+      const deliveryResult = await deliverTicketAfterInvoicePayment(supabase, {
+        invoiceId: invoice.id,
+        orgId: invoice.org_id,
+      });
+
+      await logInfo({
+        module: "clientInvoicePayment",
+        operation: "deliverTicket.alreadyPaid",
+        message: "Delivery attempt for already-paid invoice",
+        context: {
           invoiceId: invoice.id,
-          orgId: invoice.org_id,
-        });
-      } catch (error) {
-        console.error(
-          "applyClientInvoicePaymentUpdate.deliverTicket.alreadyPaid",
-          error,
-        );
+          ticketId: invoice.ticket_id,
+          deliveryResult,
+        },
+        orgId: invoice.org_id,
+      });
+    } catch (error) {
+      await logError({
+        module: "clientInvoicePayment",
+        operation: "deliverTicket.alreadyPaid",
+        error: error,
+        context: {
+          invoiceId: invoice.id,
+          ticketId: invoice.ticket_id,
+        },
+        orgId: invoice.org_id,
+      });
+
+      // Solo notificar fallo si tenemos un ticket_id conocido
+      if (invoice.ticket_id) {
         await noteTicketDeliveryFailure(supabase, {
           ticketId: Number(invoice.ticket_id),
           error,
         });
       }
     }
+
     return {
       duplicate: true,
       invoice,
@@ -210,6 +265,7 @@ export async function applyClientInvoicePaymentUpdate(
   ) {
     const balanceDue = Math.max(Math.round((total - paid) * 100) / 100, 0);
     const paidInFull = paid >= total - 0.01;
+
     if (paidInFull) {
       try {
         await syncProposalInstallmentFromPaidInvoice(supabase, {
@@ -218,22 +274,54 @@ export async function applyClientInvoicePaymentUpdate(
           stripePaymentIntentId: params.stripePaymentIntentId,
         });
       } catch (error) {
-        console.error(
-          "applyClientInvoicePaymentUpdate.syncProposalInstallment.duplicate",
-          error,
-        );
+        await logError({
+          module: "clientInvoicePayment",
+          operation: "syncProposalInstallment.duplicate",
+          error: error,
+          context: {
+            invoiceId: invoice.id,
+            installmentId: invoice.installment_id,
+          },
+          orgId: invoice.org_id,
+          invoiceId: invoice.id,
+        });
       }
-      if (invoice.ticket_id) {
-        try {
-          await deliverTicketAfterInvoicePayment(supabase, {
+
+      // Intentar delivery con el sistema mejorado que tiene fallbacks
+      try {
+        const deliveryResult = await deliverTicketAfterInvoicePayment(
+          supabase,
+          {
             invoiceId: invoice.id,
             orgId: invoice.org_id,
-          });
-        } catch (error) {
-          console.error(
-            "applyClientInvoicePaymentUpdate.deliverTicket.duplicate",
-            error,
-          );
+          },
+        );
+
+        await logInfo({
+          module: "clientInvoicePayment",
+          operation: "deliverTicket.duplicate",
+          message: "Delivery attempt for duplicate payment",
+          context: {
+            invoiceId: invoice.id,
+            ticketId: invoice.ticket_id,
+            deliveryResult,
+          },
+          orgId: invoice.org_id,
+        });
+      } catch (error) {
+        await logError({
+          module: "clientInvoicePayment",
+          operation: "deliverTicket.duplicate",
+          error: error,
+          context: {
+            invoiceId: invoice.id,
+            ticketId: invoice.ticket_id,
+          },
+          orgId: invoice.org_id,
+        });
+
+        // Solo notificar fallo si tenemos un ticket_id conocido
+        if (invoice.ticket_id) {
           await noteTicketDeliveryFailure(supabase, {
             ticketId: Number(invoice.ticket_id),
             error,
@@ -241,6 +329,7 @@ export async function applyClientInvoicePaymentUpdate(
         }
       }
     }
+
     return {
       duplicate: true,
       invoice,
@@ -329,6 +418,13 @@ export async function applyClientInvoicePaymentUpdate(
   }
 
   if (isPaidInFull) {
+    await updateInvoiceDeliveryStatus(
+      supabase,
+      invoice.id,
+      invoice.org_id,
+      "payment_received",
+    );
+
     try {
       await syncProposalInstallmentFromPaidInvoice(supabase, {
         invoiceId: invoice.id,
@@ -336,25 +432,69 @@ export async function applyClientInvoicePaymentUpdate(
         stripePaymentIntentId: params.stripePaymentIntentId,
       });
     } catch (error) {
-      console.error(
-        "applyClientInvoicePaymentUpdate.syncProposalInstallment",
-        error,
-      );
+      await logError({
+        module: "clientInvoicePayment",
+        operation: "syncProposalInstallment",
+        error: error,
+        context: {
+          invoiceId: invoice.id,
+          installmentId: invoice.installment_id,
+        },
+        orgId: invoice.org_id,
+        invoiceId: invoice.id,
+      });
     }
 
     if (updated?.ticket_id) {
+      await updateInvoiceDeliveryStatus(
+        supabase,
+        invoice.id,
+        invoice.org_id,
+        "delivering_files",
+      );
       try {
         await deliverTicketAfterInvoicePayment(supabase, {
           invoiceId: invoice.id,
           orgId: invoice.org_id,
         });
+        await updateInvoiceDeliveryStatus(
+          supabase,
+          invoice.id,
+          invoice.org_id,
+          "delivery_succeeded",
+        );
       } catch (error) {
-        console.error("applyClientInvoicePaymentUpdate.deliverTicket", error);
+        await logError({
+          module: "clientInvoicePayment",
+          operation: "deliverTicket.paidInFull",
+          error: error,
+          context: {
+            invoiceId: invoice.id,
+            ticketId: updated.ticket_id,
+          },
+          orgId: invoice.org_id,
+          invoiceId: invoice.id,
+          ticketId: Number(updated.ticket_id),
+        });
+        await updateInvoiceDeliveryStatus(
+          supabase,
+          invoice.id,
+          invoice.org_id,
+          "delivery_failed",
+          error instanceof Error ? error.message : "Unknown delivery error",
+        );
         await noteTicketDeliveryFailure(supabase, {
           ticketId: Number(updated.ticket_id),
           error,
         });
       }
+    } else {
+      await updateInvoiceDeliveryStatus(
+        supabase,
+        invoice.id,
+        invoice.org_id,
+        "delivery_succeeded",
+      );
     }
   }
 

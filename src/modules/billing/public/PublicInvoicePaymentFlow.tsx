@@ -61,6 +61,17 @@ import {
 } from "@/modules/billing/public/payInvoiceDialogLayout";
 import { PublicInvoicePaymentCardHeading } from "@/modules/billing/public/PublicInvoicePaymentSummary";
 import { cn } from "@/lib/utils";
+import { toActionableError } from "@/lib/actionableErrors";
+
+const ActionableErrorAlert = ({ error }: { error: string }) => {
+  const { message, action } = toActionableError(error);
+  return (
+    <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+      <p className="font-medium text-destructive">{message}</p>
+      {action ? <p className="mt-1 text-muted-foreground">{action}</p> : null}
+    </div>
+  );
+};
 
 const envPublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as
   | string
@@ -409,7 +420,10 @@ const useStablePaymentCheckoutSession = (
           paymentIntentId: storedPaymentIntentId,
         });
 
-        if (result.billing_mode === "mock" || result.billing_mode === "manual") {
+        if (
+          result.billing_mode === "mock" ||
+          result.billing_mode === "manual"
+        ) {
           clearStoredInvoicePaymentIntentId(token);
           setSession({
             paymentIntentId: "",
@@ -493,7 +507,13 @@ const useStablePaymentCheckoutSession = (
     return () => {
       cancelled = true;
     };
-  }, [token, summary.isPaid, paymentAmountState.amountValid, runPrepare, syncKey]);
+  }, [
+    token,
+    summary.isPaid,
+    paymentAmountState.amountValid,
+    runPrepare,
+    syncKey,
+  ]);
 
   useEffect(() => {
     if (isInitialLoading || !session?.paymentIntentId || summary.isPaid) return;
@@ -645,13 +665,9 @@ const InvoicePaymentReviewActions = ({
         </label>
       ) : null}
 
-      {paymentError ? (
-        <p className="text-sm text-destructive">{paymentError}</p>
-      ) : null}
+      {paymentError ? <ActionableErrorAlert error={paymentError} /> : null}
 
-      {flowError ? (
-        <p className="text-sm text-destructive">{flowError}</p>
-      ) : null}
+      {flowError ? <ActionableErrorAlert error={flowError} /> : null}
 
       {focusLabels?.footnote ? (
         <p className="text-center text-xs leading-relaxed text-muted-foreground">
@@ -991,9 +1007,7 @@ const InvoiceStripeCheckout = ({
           )}
         >
           <Loader2 className="size-4 animate-spin" />
-          {focusPaymentEntry
-            ? "Loading invoice…"
-            : "Loading payment options…"}
+          {focusPaymentEntry ? "Loading invoice…" : "Loading payment options…"}
         </div>
       ) : checkout.initialError ? (
         <p
@@ -1212,8 +1226,8 @@ export const PublicInvoicePaymentFlow = (props: PaymentFlowProps) => {
       <div
         className={`mx-auto max-w-[560px] rounded-[14px] border border-amber-200 bg-amber-50 ${publicInvoicePaymentSectionPadding} py-5 text-sm text-amber-900`}
       >
-        Online card payment is not available for this invoice. Contact the office
-        to pay.
+        Online card payment is not available for this invoice. Contact the
+        office to pay.
       </div>
     );
   }
