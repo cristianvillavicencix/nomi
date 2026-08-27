@@ -377,8 +377,9 @@ input[type="time"] {
   touch-action: pan-y;
 }
 
+/* Dock h-[3.75rem] + ~0.5rem float + breathing room above capsule */
 @utility pb-mobile-dock {
-  padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
 }
 
 @media (prefers-reduced-transparency: reduce) {

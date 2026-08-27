@@ -71,10 +71,10 @@ export const MobileNavigation = () => {
   return (
     <nav
       aria-label="CRM navigation"
-      className="pointer-events-none fixed inset-x-4 z-50 pb-[max(0.625rem,env(safe-area-inset-bottom,0px))]"
+      className="pointer-events-none fixed inset-x-3 z-50 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
       style={{ bottom: 0 }}
     >
-      <div className="glass-dock pointer-events-auto relative z-10 mx-auto flex h-14 w-full max-w-lg items-stretch rounded-[28px] px-1.5">
+      <div className="glass-dock pointer-events-auto relative z-10 mx-auto flex h-[3.75rem] w-full max-w-lg items-stretch rounded-[26px] px-1">
         <NavigationButton
           href="/messages"
           Icon={ChatCircle}
@@ -128,29 +128,30 @@ const NavigationButton = ({
   <Link
     to={href}
     className={cn(
-      "relative z-10 flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-muted-foreground transition-transform active:scale-[0.96]",
+      "relative z-10 flex min-w-0 flex-1 items-stretch justify-center px-0.5 py-1 text-muted-foreground transition-transform active:scale-[0.96]",
       isActive && "text-foreground",
     )}
   >
     <span
       className={cn(
-        "relative flex size-8 items-center justify-center rounded-2xl transition-colors",
-        isActive &&
-          "bg-white/55 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.85),0_1px_6px_rgb(0_0_0_/_0.06)] dark:bg-white/14",
+        "relative flex w-full max-w-[4.75rem] flex-col items-center justify-center gap-0.5 rounded-[14px] px-1 py-1 transition-colors",
+        isActive && "bg-black/[0.08] dark:bg-white/14",
       )}
     >
-      <Icon className="size-5" weight={sidebarNavIconWeight(isActive)} />
-      {badgeCount > 0 ? (
-        <Badge
-          variant="default"
-          className="absolute -right-2 -top-1 min-w-4 rounded-full border-0 px-1 py-0 text-[10px] leading-4"
-        >
-          {formatUnreadBadgeCount(badgeCount)}
-        </Badge>
-      ) : null}
-    </span>
-    <span className="max-w-full truncate text-[0.62rem] font-medium leading-tight tracking-tight">
-      {label}
+      <span className="relative flex size-6 items-center justify-center">
+        <Icon className="size-6" weight={sidebarNavIconWeight(isActive)} />
+        {badgeCount > 0 ? (
+          <Badge
+            variant="default"
+            className="absolute -right-2.5 -top-1.5 min-w-4 rounded-full border-0 px-1 py-0 text-[10px] leading-4"
+          >
+            {formatUnreadBadgeCount(badgeCount)}
+          </Badge>
+        ) : null}
+      </span>
+      <span className="max-w-full truncate text-[10px] font-medium leading-none tracking-tight">
+        {label}
+      </span>
     </span>
   </Link>
 );
