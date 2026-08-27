@@ -100,11 +100,9 @@ export const TicketListItem = ({
           "flex w-full text-left transition-colors",
           isMobile
             ? cn(
-                "hover:bg-white/25 dark:hover:bg-white/5",
-                selected && "bg-white/45 dark:bg-white/10",
-                !selected && bulkSelected && "bg-primary/10",
-                !selected && !bulkSelected && awaitingPayment && "bg-warning/15",
-                !selected && !bulkSelected && isUnread && "bg-info/10",
+                "px-4 py-3.5 hover:bg-muted/40 active:bg-muted/50",
+                awaitingPayment && "bg-warning/10",
+                isUnread && !awaitingPayment && "bg-info/5",
               )
             : cn(
                 "border-b hover:bg-muted/30",
@@ -120,18 +118,18 @@ export const TicketListItem = ({
               ),
         )}
       >
-        <div
-          className="flex items-start px-2 pt-3.5"
-          onClick={(event) => event.stopPropagation()}
-        >
-          {selectionEnabled ? (
+        {selectionEnabled ? (
+          <div
+            className="flex items-start px-2 pt-3.5"
+            onClick={(event) => event.stopPropagation()}
+          >
             <Checkbox
               checked={bulkSelected}
               onCheckedChange={(value) => onToggleBulkSelect(value === true)}
               aria-label={`Select ticket #${ticket.id}`}
             />
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         <div
           role="button"
@@ -143,7 +141,10 @@ export const TicketListItem = ({
               onSelect();
             }
           }}
-          className="min-w-0 flex-1 cursor-pointer py-3 pr-3"
+          className={cn(
+            "min-w-0 flex-1 cursor-pointer",
+            isMobile ? "pr-1" : "py-3 pr-3",
+          )}
         >
           <div className="flex min-w-0 flex-col gap-1">
             {/* Row 1: subject + time */}

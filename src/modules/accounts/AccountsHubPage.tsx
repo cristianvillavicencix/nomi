@@ -28,10 +28,12 @@ import { NewClientDialog } from "@/modules/clients/NewClientDialog";
 import { NewContactDialog } from "@/modules/clients/NewContactDialog";
 import { NewLeadDialog } from "@/modules/leads/NewLeadDialog";
 import { LeadsBoardPanel } from "@/modules/leads/LeadsBoardPanel";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 /** Accounts hub — List (company-first) | Board (leads Kanban). */
 export const AccountsHubPage = () => {
   const { data: identity } = useGetIdentity();
+  const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -118,9 +120,11 @@ export const AccountsHubPage = () => {
           : "flex h-full min-h-0 w-full flex-col gap-3 overflow-hidden"
       }
     >
-      <PageActions className="shrink-0">
-        <PageTitle label="Accounts" />
-      </PageActions>
+      {isMobile ? null : (
+        <PageActions className="shrink-0">
+          <PageTitle label="Accounts" />
+        </PageActions>
+      )}
 
       {activeView === "board" ? (
         <div className="min-h-0 flex-1 overflow-hidden">

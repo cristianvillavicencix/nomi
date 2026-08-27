@@ -71,7 +71,7 @@ export const MobileNavigation = () => {
   return (
     <nav
       aria-label="CRM navigation"
-      className="pointer-events-none fixed inset-x-3 z-50 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
+      className="pointer-events-none fixed inset-x-4 z-50 pb-[max(0.625rem,env(safe-area-inset-bottom,0px))]"
       style={{ bottom: 0 }}
     >
       <div className="glass-dock pointer-events-auto mx-auto flex h-14 w-full max-w-lg items-stretch rounded-[22px] px-1">

@@ -6,23 +6,20 @@ import {
   useListFilterContext,
 } from "ra-core";
 import { Link } from "react-router";
+import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { ProjectDeliveryCountdownText } from "@/modules/deals/ProjectDeliveryCountdownText";
 import { getNewDealManualCreatePath } from "@/modules/deals/projectCreatePaths";
 import { buttonVariants } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Company, Deal } from "../types";
 import { getStageColor, getStageLabel } from "./pipelines";
-import MobileHeader from "../layout/MobileHeader";
-import { MobileContent } from "../layout/MobileContent";
-import {
-  ModuleSearchField,
-  ModuleToolbar,
-} from "../layout/ModuleToolbar";
+import { MobilePageChrome } from "../layout/MobilePageChrome";
+import { ModuleSearchField } from "../layout/ModuleToolbar";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
-import { NewDealCreateButton } from "@/modules/deals/NewDealCreateButton";
 
 export const MobileDealListContent = () => {
   const { data: deals = [], isPending } = useListContext<Deal>();
@@ -73,7 +70,7 @@ export const MobileDealListContent = () => {
   }
 
   return (
-    <ul className="glass-grouped divide-y divide-white/30 overflow-hidden rounded-[20px] dark:divide-white/10">
+    <ul className="glass-grouped divide-y divide-border/50 overflow-hidden rounded-xl">
       {deals.map((deal) => {
         const company = companiesById[deal.company_id];
         const stageColor = getStageColor(
@@ -86,8 +83,8 @@ export const MobileDealListContent = () => {
             <Link
               to={`/deals/${deal.id}/show`}
               className={cn(
-                "flex flex-col gap-1.5 px-4 py-3 transition-colors",
-                "hover:bg-white/25 active:bg-white/40 dark:hover:bg-white/5",
+                "flex flex-col gap-1.5 px-4 py-3.5 transition-colors",
+                "hover:bg-muted/40 active:bg-muted/50",
               )}
             >
               <div className="flex items-start justify-between gap-2">
@@ -163,21 +160,20 @@ export const MobileDealListLayout = () => {
   const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <MobileHeader>
-        <div className="flex w-full items-center justify-between gap-2">
-          <h1 className="shrink-0 text-2xl font-semibold tracking-tight">Projects</h1>
-          {canManageSales ? <NewDealCreateButton /> : null}
-        </div>
-      </MobileHeader>
-      <MobileContent>
-        <div className="space-y-3 pb-2">
-          <ModuleToolbar className="shrink-0 border-0 bg-transparent p-0 shadow-none">
-            <MobileDealSearchField />
-          </ModuleToolbar>
-          <MobileDealListContent />
-        </div>
-      </MobileContent>
-    </div>
+    <MobilePageChrome
+      title="Projects"
+      action={
+        canManageSales ? (
+          <IconButton aria-label="New project" asChild>
+            <Link to={getNewDealManualCreatePath()}>
+              <Plus className="size-6" />
+            </Link>
+          </IconButton>
+        ) : undefined
+      }
+      search={<MobileDealSearchField />}
+    >
+      <MobileDealListContent />
+    </MobilePageChrome>
   );
 };

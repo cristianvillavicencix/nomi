@@ -53,7 +53,7 @@ export const InboxTabs = ({
   const assigneeLabel = getAssigneeLabel(filters.assigneeMemberId, members);
 
   return (
-    <div className="glass-header flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-3 py-2 md:bg-background md:px-4 md:[backdrop-filter:none] md:[-webkit-backdrop-filter:none] md:shadow-none">
+    <div className="glass-header flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2 md:bg-background md:px-4 md:[backdrop-filter:none] md:[-webkit-backdrop-filter:none] md:shadow-none">
       <div className="flex flex-wrap gap-1.5">
         {TABS.map((tab) => {
           const count = counts[tab.id] ?? 0;

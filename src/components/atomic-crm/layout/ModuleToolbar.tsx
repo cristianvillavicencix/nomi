@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 /**
@@ -84,6 +85,7 @@ export const ModuleSearchField = ({
   /** Stretch input to fill parent height (e.g. KPI strip row). */
   fillHeight?: boolean;
 }) => {
+  const isMobile = useIsMobile();
   const countLabel =
     itemSingular != null
       ? formatModuleItemCount(total, itemSingular, itemPlural)
@@ -100,7 +102,7 @@ export const ModuleSearchField = ({
       <div
         className={cn(
           "relative w-full",
-          fillHeight ? "h-full" : "sm:max-w-lg",
+          fillHeight ? "h-full" : isMobile ? "max-w-none" : "sm:max-w-lg",
         )}
       >
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -109,7 +111,13 @@ export const ModuleSearchField = ({
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           aria-label={ariaLabel}
-          className={cn(fillHeight ? "h-full min-h-[44px]" : "h-8", "pl-9", inputClassName)}
+          className={cn(
+            fillHeight ? "h-full min-h-[44px]" : isMobile ? "h-11" : "h-8",
+            "pl-9",
+            isMobile &&
+              "rounded-full border-0 bg-black/[0.06] shadow-none dark:bg-white/10",
+            inputClassName,
+          )}
         />
       </div>
     </div>

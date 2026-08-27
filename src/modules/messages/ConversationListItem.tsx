@@ -59,10 +59,10 @@ export const ConversationListItem = ({
         "flex w-full items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition-colors",
         isMobile
           ? isActive
-            ? "bg-white/45 dark:bg-white/10"
+            ? "bg-muted/50"
             : hasUnread
-              ? "bg-white/20 dark:bg-white/[0.07]"
-              : "hover:bg-white/25 dark:hover:bg-white/5"
+              ? "bg-muted/25"
+              : "hover:bg-muted/35"
           : isActive
             ? "bg-muted/50"
             : hasUnread

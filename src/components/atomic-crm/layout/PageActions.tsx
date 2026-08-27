@@ -134,7 +134,7 @@ export const PageTitle = ({
   count?: number | null;
 }) => {
   return (
-    <h1 className="mr-2 flex items-baseline gap-1.5 whitespace-nowrap text-2xl font-semibold tracking-tight max-md:px-4 max-md:pt-3 md:mr-2 md:px-0 md:pt-0 md:text-sm md:tracking-normal">
+    <h1 className="mr-2 flex items-baseline gap-1.5 text-sm font-semibold whitespace-nowrap">
       <span>{label}</span>
       {count != null ? (
         <span className="text-xs font-normal text-muted-foreground tabular-nums">

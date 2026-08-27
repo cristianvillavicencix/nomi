@@ -486,7 +486,7 @@ const TicketsInboxLayout = ({
               </p>
             ) : (
               <>
-                {canManage ? (
+                {canManage && !isMobile ? (
                   <div className="flex items-center gap-2 border-b px-4 py-2">
                     <Checkbox
                       id="tickets-select-all"
@@ -503,7 +503,7 @@ const TicketsInboxLayout = ({
                     </Label>
                   </div>
                 ) : null}
-                <ul className={cn(isMobile && "glass-grouped divide-y divide-white/30 rounded-[20px] dark:divide-white/10")}>
+                <ul className={cn(isMobile && "glass-grouped divide-y divide-border/50 rounded-xl")}>
                   {visibleTickets.map((ticket) => {
                     const ticketId = String(ticket.id);
                     return (
@@ -512,7 +512,7 @@ const TicketsInboxLayout = ({
                         ticket={ticket}
                         selected={String(selectedId) === ticketId}
                         bulkSelected={selectedTicketIds.includes(ticketId)}
-                        selectionEnabled={canManage}
+                        selectionEnabled={canManage && !isMobile}
                         canManage={canManage}
                         company={
                           ticket.company_id

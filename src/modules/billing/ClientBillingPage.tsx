@@ -49,9 +49,11 @@ export const ClientBillingPage = () => {
         fillHeight ? "h-full" : "gap-3",
       )}
     >
-      <PageActions>
-        <PageTitle label="Billing" />
-      </PageActions>
+      {isMobile ? null : (
+        <PageActions>
+          <PageTitle label="Billing" />
+        </PageActions>
+      )}
 
       <SettingsSubNav
         value={activeTab}

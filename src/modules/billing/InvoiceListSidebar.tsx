@@ -91,11 +91,11 @@ export const InvoiceListSidebar = ({
   }
 
   return (
-    <div className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain", isMobile && "px-3 py-2")}>
+    <div className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain", isMobile && "px-4 pb-mobile-dock pt-2")}>
       <ul
         className={cn(
           isMobile
-            ? "glass-grouped divide-y divide-white/30 overflow-hidden rounded-[20px] dark:divide-white/10"
+            ? "glass-grouped divide-y divide-border/50 overflow-hidden rounded-xl"
             : "divide-y",
         )}
       >
@@ -120,7 +120,7 @@ export const InvoiceListSidebar = ({
                   "flex w-full flex-col gap-1.5 px-3 py-3 text-left transition-colors hover:bg-muted/40",
                   isSelected &&
                     (isMobile
-                      ? "bg-white/45 dark:bg-white/10"
+                      ? "bg-muted/50"
                       : "bg-primary/5 ring-1 ring-inset ring-primary/20"),
                 )}
               >

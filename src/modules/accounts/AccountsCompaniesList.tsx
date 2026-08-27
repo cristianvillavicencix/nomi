@@ -5,7 +5,7 @@ import {
   useListFilterContext,
   type Identifier,
 } from "ra-core";
-import { Building2 } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -27,6 +27,8 @@ import {
 import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { IconButton } from "@/components/ui/icon-button";
+import { MobilePageChrome } from "@/components/atomic-crm/layout/MobilePageChrome";
 import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import { buildAccountsCompanyPreviewParams } from "@/modules/accounts/AccountsCompanyPreviewSheet";
 import { buildAccountsPersonPreviewParams } from "@/modules/accounts/AccountsLeadPreviewSheet";
@@ -175,25 +177,56 @@ const AccountsCompaniesListBody = ({
     );
   };
 
+  const searchField = (
+    <ModuleSearchField
+      value={searchDraft}
+      onChange={setSearchDraft}
+      basePlaceholder="Search business name, email, phone, or website"
+      total={total}
+      itemSingular="company"
+      itemPlural="companies"
+    />
+  );
+
   const toolbar = (
     <AccountsModuleToolbar
       {...accountsChrome}
-      leadingExtra={
-        <ModuleSearchField
-          value={searchDraft}
-          onChange={setSearchDraft}
-          basePlaceholder="Search business name, email, phone, or website"
-          total={total}
-          itemSingular="company"
-          itemPlural="companies"
-        />
-      }
+      leadingExtra={searchField}
     />
   );
+
+  const mobileCreate = accountsChrome.onNewCompany ? (
+    <IconButton
+      aria-label="New company"
+      onClick={accountsChrome.onNewCompany}
+    >
+      <Plus className="size-6" />
+    </IconButton>
+  ) : undefined;
 
   if (isPending) return null;
 
   if (!data.length && !String(filterValues?.q ?? "").trim()) {
+    if (isMobile) {
+      return (
+        <MobilePageChrome
+          title="Accounts"
+          action={mobileCreate}
+          search={searchField}
+        >
+          <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+            <Building2 className="size-10 text-muted-foreground" />
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold">No companies yet</h3>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                Add a company to start your Accounts directory. People stay
+                linked under each company preview.
+              </p>
+            </div>
+          </div>
+        </MobilePageChrome>
+      );
+    }
     return (
       <div className="space-y-3">
         {toolbar}
@@ -211,56 +244,70 @@ const AccountsCompaniesListBody = ({
     );
   }
 
+  if (isMobile) {
+    return (
+      <MobilePageChrome
+        title="Accounts"
+        action={mobileCreate}
+        search={searchField}
+      >
+        {!data.length ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">
+            No companies match your search.
+          </p>
+        ) : (
+          <ul className="glass-grouped divide-y divide-border/50 rounded-xl">
+            {data.map((company) => {
+              const contactName = primaryContactName(company);
+              const status = statusLabel(company);
+              const phone = resolveCompanyPhoneRaw(company);
+              return (
+                <li key={String(company.id)}>
+                  <button
+                    type="button"
+                    className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/40 active:bg-muted/50"
+                    onClick={() => openCompany(company.id)}
+                  >
+                    <CompanyAvatar record={company} width={36} />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="truncate font-semibold text-foreground">
+                          {company.name?.trim() || "Untitled company"}
+                        </span>
+                        {status ? (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "shrink-0 text-[10px] font-medium",
+                              statusBadgeClass(company, status),
+                            )}
+                          >
+                            {status}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <div className="truncate text-sm text-muted-foreground">
+                        {contactName || phone || "No primary contact"}
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </MobilePageChrome>
+    );
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-      <div className={cn("shrink-0", isMobile && "glass-header px-3 py-2")}>
-        {toolbar}
-      </div>
+      <div className="shrink-0">{toolbar}</div>
 
       {!data.length ? (
         <div className="py-12 text-center text-sm text-muted-foreground">
           No companies match your search.
         </div>
-      ) : isMobile ? (
-        <ul className="glass-grouped mx-3 min-h-0 flex-1 divide-y divide-white/30 overflow-y-auto overscroll-contain rounded-[20px] dark:divide-white/10">
-          {data.map((company) => {
-            const contactName = primaryContactName(company);
-            const status = statusLabel(company);
-            const phone = resolveCompanyPhoneRaw(company);
-            return (
-              <li key={String(company.id)}>
-                <button
-                  type="button"
-                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/25 active:bg-white/40 dark:hover:bg-white/5"
-                  onClick={() => openCompany(company.id)}
-                >
-                  <CompanyAvatar record={company} width={36} />
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="truncate font-semibold text-foreground">
-                        {company.name?.trim() || "Untitled company"}
-                      </span>
-                      {status ? (
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "shrink-0 text-[10px] font-medium",
-                            statusBadgeClass(company, status),
-                          )}
-                        >
-                          {status}
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <div className="truncate text-sm text-muted-foreground">
-                      {contactName || phone || "No primary contact"}
-                    </div>
-                  </div>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
       ) : (
         <div className="min-h-0 flex-1 overflow-auto rounded-md border">
           <Table>

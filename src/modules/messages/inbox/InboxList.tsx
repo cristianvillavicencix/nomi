@@ -52,7 +52,7 @@ export const InboxList = ({
   const items = virtualizer.getVirtualItems();
 
   return (
-    <div ref={parentRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+    <div ref={parentRef} className="min-h-0 flex-1 overflow-y-auto px-3 pb-mobile-dock py-2">
       <div
         style={{
           height: `${virtualizer.getTotalSize()}px`,

@@ -21,6 +21,7 @@ import {
   ModuleToolbarActions,
 } from "@/components/atomic-crm/layout/ModuleToolbar";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import { MobilePageChrome } from "@/components/atomic-crm/layout/MobilePageChrome";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useMarkTicketNotificationsReadOnVisit } from "@/modules/notifications/useMarkTicketNotificationsReadOnVisit";
@@ -115,7 +116,7 @@ export const TicketsOverview = () => {
       storeKey={`tickets.overview.${isMobile ? "mobile" : view}`}
       queryOptions={{ refetchInterval: 30_000 }}
       className="mt-0 min-h-0 flex-1"
-      actions={<TicketsOverviewActions />}
+      actions={isMobile ? false : <TicketsOverviewActions />}
     >
       <TicketsOverviewBody
         view={isMobile ? "table" : view}
@@ -284,6 +285,48 @@ const TicketsOverviewBody = ({
     });
   }, [allTickets, companyById, contactById, searchQuery]);
 
+  if (isMobile) {
+    return (
+      <MobilePageChrome
+        title="Tickets"
+        action={<CreateTicketButton iconOnly />}
+        search={
+          <ModuleSearchField
+            value={searchQuery}
+            onChange={setSearchQuery}
+            basePlaceholder="Search tickets"
+            total={total}
+            itemSingular="ticket"
+            className="w-full"
+          />
+        }
+      >
+        {filteredTickets.length === 0 ? (
+          <p className="py-10 text-center text-sm text-muted-foreground">
+            No tickets found.
+          </p>
+        ) : (
+          <ul className="glass-grouped divide-y divide-border/50 rounded-xl">
+            {filteredTickets.map((ticket) => (
+              <TicketListItem
+                key={ticket.id}
+                ticket={ticket}
+                selected={false}
+                bulkSelected={false}
+                selectionEnabled={false}
+                canManage={false}
+                company={companyById.get(String(ticket.company_id ?? ""))}
+                contact={contactById.get(String(ticket.contact_id ?? ""))}
+                onSelect={() => onSelectTicket(String(ticket.id))}
+                onToggleBulkSelect={() => undefined}
+              />
+            ))}
+          </ul>
+        )}
+      </MobilePageChrome>
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -300,59 +343,30 @@ const TicketsOverviewBody = ({
           itemSingular="ticket"
         />
         <ModuleToolbarActions>
-          {!isMobile ? (
-            <ToggleGroup
-              type="single"
-              value={view}
-              onValueChange={(value) => {
-                if (value === "table" || value === "kanban") onViewChange(value);
-              }}
-              variant="outline"
-              size="sm"
-              className="w-fit shrink-0"
-            >
-              <ToggleGroupItem value="table" aria-label="List view">
-                <ListIcon className="size-4" />
-                List
-              </ToggleGroupItem>
-              <ToggleGroupItem value="kanban" aria-label="Board view">
-                <KanbanSquare className="size-4" />
-                Board
-              </ToggleGroupItem>
-            </ToggleGroup>
-          ) : null}
+          <ToggleGroup
+            type="single"
+            value={view}
+            onValueChange={(value) => {
+              if (value === "table" || value === "kanban") onViewChange(value);
+            }}
+            variant="outline"
+            size="sm"
+            className="w-fit shrink-0"
+          >
+            <ToggleGroupItem value="table" aria-label="List view">
+              <ListIcon className="size-4" />
+              List
+            </ToggleGroupItem>
+            <ToggleGroupItem value="kanban" aria-label="Board view">
+              <KanbanSquare className="size-4" />
+              Board
+            </ToggleGroupItem>
+          </ToggleGroup>
           <CreateTicketButton alwaysShowLabel />
         </ModuleToolbarActions>
       </ModuleToolbar>
 
-      {isMobile ? (
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-lg border border-border/50 bg-background">
-          {filteredTickets.length === 0 ? (
-            <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-              No tickets found.
-            </div>
-          ) : (
-            <ul>
-              {filteredTickets.map((ticket) => (
-                <TicketListItem
-                  key={ticket.id}
-                  ticket={ticket}
-                  selected={false}
-                  bulkSelected={selectedTicketIds.includes(String(ticket.id))}
-                  selectionEnabled={canManage}
-                  canManage={canManage}
-                  company={companyById.get(String(ticket.company_id ?? ""))}
-                  contact={contactById.get(String(ticket.contact_id ?? ""))}
-                  onSelect={() => onSelectTicket(String(ticket.id))}
-                  onToggleBulkSelect={(checked) =>
-                    toggleTicketSelection(String(ticket.id), checked)
-                  }
-                />
-              ))}
-            </ul>
-          )}
-        </div>
-      ) : view === "table" ? (
+      {view === "table" ? (
         <div className="min-h-0 flex-1 overflow-hidden">
           <TicketsOverviewTable
             selectedTicketId={selectedTicketId}
