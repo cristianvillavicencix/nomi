@@ -13,6 +13,7 @@ import type { ClientInvoice } from "@/modules/types";
 import { Badge } from "@/components/ui/badge";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type InvoiceListSidebarProps = {
   selectedInvoiceId?: string | null;
@@ -26,6 +27,7 @@ export const InvoiceListSidebar = ({
   searchQuery = "",
 }: InvoiceListSidebarProps) => {
   const { data: invoices = [], isPending } = useListContext<ClientInvoice>();
+  const isMobile = useIsMobile();
 
   const companyIds = useMemo(
     () => [
@@ -89,8 +91,14 @@ export const InvoiceListSidebar = ({
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-      <ul className="divide-y">
+    <div className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain", isMobile && "px-3 py-2")}>
+      <ul
+        className={cn(
+          isMobile
+            ? "glass-grouped divide-y divide-white/30 overflow-hidden rounded-[20px] dark:divide-white/10"
+            : "divide-y",
+        )}
+      >
         {visibleInvoices.map((invoice) => {
           const company = invoice.company_id
             ? companyById.get(String(invoice.company_id))
@@ -111,7 +119,9 @@ export const InvoiceListSidebar = ({
                 className={cn(
                   "flex w-full flex-col gap-1.5 px-3 py-3 text-left transition-colors hover:bg-muted/40",
                   isSelected &&
-                    "bg-primary/5 ring-1 ring-inset ring-primary/20",
+                    (isMobile
+                      ? "bg-white/45 dark:bg-white/10"
+                      : "bg-primary/5 ring-1 ring-inset ring-primary/20"),
                 )}
               >
                 <div className="flex items-start justify-between gap-2">

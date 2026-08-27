@@ -11,6 +11,8 @@ import {
 import type { ClientInvoice } from "@/modules/types";
 import { Button } from "@/components/ui/button";
 import { ModuleSearchField } from "@/components/atomic-crm/layout/ModuleToolbar";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +38,7 @@ export const InvoiceListToolbar = ({
   onFromProposal,
   compact = false,
 }: InvoiceListToolbarProps) => {
+  const isMobile = useIsMobile();
   const { data: invoices = [] } = useGetList<ClientInvoice>(
     "client_invoices",
     {
@@ -115,7 +118,12 @@ export const InvoiceListToolbar = ({
 
   if (compact) {
     return (
-      <div className="flex shrink-0 flex-col gap-2 border-b bg-background px-3 py-2">
+      <div
+        className={cn(
+          "flex shrink-0 flex-col gap-2 px-3 py-2",
+          isMobile ? "glass-header" : "border-b bg-background",
+        )}
+      >
         <div className="flex min-w-0 items-center gap-2">{filterAndSearch}</div>
         {newButtonGroup}
       </div>
@@ -123,7 +131,12 @@ export const InvoiceListToolbar = ({
   }
 
   return (
-    <div className="flex shrink-0 items-center gap-2 border-b bg-background px-3 py-2">
+    <div
+      className={cn(
+        "flex shrink-0 items-center gap-2 px-3 py-2",
+        isMobile ? "glass-header" : "border-b bg-background",
+      )}
+    >
       {filterAndSearch}
       {newButtonGroup}
     </div>

@@ -252,10 +252,10 @@ export const MessagesPage = () => {
   return (
     <PageLayout
       className={cn(
-        "flex min-h-0 flex-1 flex-col overflow-hidden bg-background",
+        "flex min-h-0 flex-1 flex-col overflow-hidden",
         isMobile
-          ? "rounded-none border-0 shadow-none"
-          : "h-full rounded-xl border border-border/40 shadow-sm",
+          ? "rounded-none border-0 bg-transparent shadow-none"
+          : "h-full rounded-xl border border-border/40 bg-background shadow-sm",
       )}
     >
       <MessagesWorkspace

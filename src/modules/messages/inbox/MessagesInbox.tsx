@@ -272,7 +272,7 @@ export const MessagesInbox = (props: {
                 }))
               }
               placeholder="Search conversations, clients, or phone…"
-              className="h-9 pl-9"
+              className="h-9 rounded-full border-white/40 bg-white/40 pl-9 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.55)] backdrop-blur-xl md:rounded-md md:border-input md:bg-transparent md:shadow-none md:backdrop-blur-none dark:border-white/15 dark:bg-white/10"
             />
           </div>
           <VoiceDialButton variant="secondary" size="icon" className="shrink-0" />

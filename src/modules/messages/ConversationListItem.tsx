@@ -14,6 +14,7 @@ import {
 } from "@/modules/messages/conversationDisplay";
 import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
 import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 export const ConversationListItem = ({
@@ -38,6 +39,7 @@ export const ConversationListItem = ({
   unreadCount?: number;
 }) => {
   const canViewAmounts = useCanViewAmounts();
+  const isMobile = useIsMobile();
   const display = getConversationDisplay({
     conversation,
     deals,
@@ -54,9 +56,18 @@ export const ConversationListItem = ({
     <button
       type="button"
       className={cn(
-        "flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors",
-        isActive ? "bg-muted/50" : "hover:bg-muted/35",
-        hasUnread && !isActive && "bg-muted/25",
+        "flex w-full items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition-colors",
+        isMobile
+          ? isActive
+            ? "bg-white/45 dark:bg-white/10"
+            : hasUnread
+              ? "bg-white/20 dark:bg-white/[0.07]"
+              : "hover:bg-white/25 dark:hover:bg-white/5"
+          : isActive
+            ? "bg-muted/50"
+            : hasUnread
+              ? "bg-muted/25"
+              : "hover:bg-muted/35",
       )}
       onClick={() => onSelect(conversation)}
     >

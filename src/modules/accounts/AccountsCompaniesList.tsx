@@ -213,14 +213,16 @@ const AccountsCompaniesListBody = ({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-      <div className="shrink-0">{toolbar}</div>
+      <div className={cn("shrink-0", isMobile && "glass-header px-3 py-2")}>
+        {toolbar}
+      </div>
 
       {!data.length ? (
         <div className="py-12 text-center text-sm text-muted-foreground">
           No companies match your search.
         </div>
       ) : isMobile ? (
-        <ul className="min-h-0 flex-1 divide-y divide-border/50 overflow-y-auto overscroll-contain rounded-lg border border-border/50 bg-background">
+        <ul className="glass-grouped mx-3 min-h-0 flex-1 divide-y divide-white/30 overflow-y-auto overscroll-contain rounded-[20px] dark:divide-white/10">
           {data.map((company) => {
             const contactName = primaryContactName(company);
             const status = statusLabel(company);
@@ -229,7 +231,7 @@ const AccountsCompaniesListBody = ({
               <li key={String(company.id)}>
                 <button
                   type="button"
-                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted/60 hover:bg-muted/40"
+                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/25 active:bg-white/40 dark:hover:bg-white/5"
                   onClick={() => openCompany(company.id)}
                 >
                   <CompanyAvatar record={company} width={36} />

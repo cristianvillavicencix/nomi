@@ -3,6 +3,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   TicketListAssigneeControl,
   TicketListStatusControl,
@@ -84,6 +85,7 @@ export const TicketListItem = ({
   );
 
   const contactName = resolveTicketPrimaryContactName(ticket, company, contact);
+  const isMobile = useIsMobile();
 
   const identityParts = [`#${ticket.id}`, companyName, contactName].filter(
     Boolean,
@@ -95,16 +97,27 @@ export const TicketListItem = ({
     <li className="group">
       <div
         className={cn(
-          "flex w-full border-b text-left transition-colors hover:bg-muted/30",
-          selected
-            ? "border-l-[3px] border-l-primary bg-accent dark:bg-accent/80"
-            : bulkSelected
-              ? "border-l-[3px] border-l-primary/50 bg-primary/5 dark:bg-primary/10"
-              : awaitingPayment
-                ? "border-l-[3px] border-l-warning bg-warning/10"
-                : isUnread
-                  ? "border-l-[3px] border-l-info bg-info/10"
-                  : "border-l-[3px] border-l-transparent bg-muted/20 dark:bg-muted/30",
+          "flex w-full text-left transition-colors",
+          isMobile
+            ? cn(
+                "hover:bg-white/25 dark:hover:bg-white/5",
+                selected && "bg-white/45 dark:bg-white/10",
+                !selected && bulkSelected && "bg-primary/10",
+                !selected && !bulkSelected && awaitingPayment && "bg-warning/15",
+                !selected && !bulkSelected && isUnread && "bg-info/10",
+              )
+            : cn(
+                "border-b hover:bg-muted/30",
+                selected
+                  ? "border-l-[3px] border-l-primary bg-accent dark:bg-accent/80"
+                  : bulkSelected
+                    ? "border-l-[3px] border-l-primary/50 bg-primary/5 dark:bg-primary/10"
+                    : awaitingPayment
+                      ? "border-l-[3px] border-l-warning bg-warning/10"
+                      : isUnread
+                        ? "border-l-[3px] border-l-info bg-info/10"
+                        : "border-l-[3px] border-l-transparent bg-muted/20 dark:bg-muted/30",
+              ),
         )}
       >
         <div

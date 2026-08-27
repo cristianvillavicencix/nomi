@@ -140,13 +140,17 @@ export const MessagesWorkspace = ({
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 overflow-hidden bg-background",
+        "flex min-h-0 flex-1 overflow-hidden",
+        isMobile ? "bg-transparent" : "bg-background",
         className,
       )}
     >
       <aside
         className={cn(
-          "flex min-h-0 flex-col border-r border-border/30 bg-muted/5",
+          "flex min-h-0 flex-col",
+          isMobile
+            ? "bg-transparent"
+            : "border-r border-border/30 bg-muted/5",
           compact
             ? "w-[300px] shrink-0"
             : "w-full shrink-0 md:w-[320px] lg:w-[360px] xl:w-[400px]",
@@ -172,7 +176,8 @@ export const MessagesWorkspace = ({
 
       <main
         className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col bg-background",
+          "flex min-h-0 min-w-0 flex-1 flex-col",
+          isMobile ? "bg-transparent" : "bg-background",
           contextOpen && "lg:border-r lg:border-border/30",
           !showChat && "hidden md:flex",
         )}

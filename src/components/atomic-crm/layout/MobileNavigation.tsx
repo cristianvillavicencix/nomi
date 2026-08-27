@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Icon } from "@phosphor-icons/react";
@@ -69,23 +68,13 @@ export const MobileNavigation = () => {
     currentPath = "/billing";
   }
 
-  const isPwa = window.matchMedia("(display-mode: standalone)").matches;
-  const isWebiOS = /iPad|iPod|iPhone/.test(window.navigator.userAgent);
-  const iosInset = isPwa && isWebiOS;
-
   return (
     <nav
       aria-label="CRM navigation"
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-secondary pb-[env(safe-area-inset-bottom,0px)]"
-      style={{
-        // Extra inset for older iOS PWA where env() alone is unreliable
-        paddingBottom: iosInset ? 15 : undefined,
-        minHeight: iosInset
-          ? "calc(3.5rem + 15px)"
-          : "calc(3.5rem + env(safe-area-inset-bottom, 0px))",
-      }}
+      className="pointer-events-none fixed inset-x-3 z-50 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
+      style={{ bottom: 0 }}
     >
-      <div className="flex h-14 w-full items-stretch justify-center">
+      <div className="glass-dock pointer-events-auto mx-auto flex h-14 w-full max-w-lg items-stretch rounded-[22px] px-1">
         <NavigationButton
           href="/messages"
           Icon={ChatCircle}
@@ -136,29 +125,32 @@ const NavigationButton = ({
   isActive: boolean;
   badgeCount?: number;
 }) => (
-  <Button
-    asChild
-    variant="ghost"
+  <Link
+    to={href}
     className={cn(
-      "h-auto min-w-0 flex-1 flex-col gap-0.5 rounded-none px-0.5 py-2",
-      isActive ? null : "text-muted-foreground",
+      "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-muted-foreground transition-transform active:scale-[0.96]",
+      isActive && "text-foreground",
     )}
   >
-    <Link to={href} className="relative flex flex-col items-center gap-0.5">
-      <span className="relative">
-        <Icon className="size-5" weight={sidebarNavIconWeight(isActive)} />
-        {badgeCount > 0 ? (
-          <Badge
-            variant="default"
-            className="absolute -right-2.5 -top-1.5 min-w-4 rounded-sm border-0 px-1 py-0 text-[10px] leading-4"
-          >
-            {formatUnreadBadgeCount(badgeCount)}
-          </Badge>
-        ) : null}
-      </span>
-      <span className="max-w-full truncate text-[0.55rem] font-medium leading-tight">
-        {label}
-      </span>
-    </Link>
-  </Button>
+    <span
+      className={cn(
+        "relative flex size-8 items-center justify-center rounded-2xl transition-colors",
+        isActive &&
+          "bg-white/50 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.7)] dark:bg-white/12",
+      )}
+    >
+      <Icon className="size-5" weight={sidebarNavIconWeight(isActive)} />
+      {badgeCount > 0 ? (
+        <Badge
+          variant="default"
+          className="absolute -right-2 -top-1 min-w-4 rounded-full border-0 px-1 py-0 text-[10px] leading-4"
+        >
+          {formatUnreadBadgeCount(badgeCount)}
+        </Badge>
+      ) : null}
+    </span>
+    <span className="max-w-full truncate text-[0.62rem] font-medium leading-tight tracking-tight">
+      {label}
+    </span>
+  </Link>
 );

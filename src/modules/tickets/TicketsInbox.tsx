@@ -444,12 +444,13 @@ const TicketsInboxLayout = ({
       <div className="grid h-full min-h-0 flex-1 overflow-hidden lg:grid-cols-[420px_minmax(0,1fr)]">
         <div
           className={cn(
-            "flex h-full min-h-0 flex-col overflow-hidden border-r",
+            "flex h-full min-h-0 flex-col overflow-hidden",
+            !isMobile && "border-r",
             !isMobile && selectedId ? "hidden lg:flex" : "flex",
             isMobile && selectedId && "hidden",
           )}
         >
-          <div className="shrink-0 space-y-0 border-b bg-background p-3">
+          <div className={cn("shrink-0 p-3", isMobile ? "glass-header" : "space-y-0 border-b bg-background")}>
             <ModuleToolbar>
               {statusFilter !== "all" ? (
                 <Button
@@ -474,7 +475,7 @@ const TicketsInboxLayout = ({
             </ModuleToolbar>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain", isMobile && "px-3 py-2")}>
             {!visibleTickets.length ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
                 {isSearching
@@ -502,7 +503,7 @@ const TicketsInboxLayout = ({
                     </Label>
                   </div>
                 ) : null}
-                <ul>
+                <ul className={cn(isMobile && "glass-grouped divide-y divide-white/30 rounded-[20px] dark:divide-white/10")}>
                   {visibleTickets.map((ticket) => {
                     const ticketId = String(ticket.id);
                     return (

@@ -49,16 +49,19 @@ export const InvoiceBillingWorkspace = ({
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 overflow-hidden bg-background",
-        hasSelection && !isMobile
-          ? "h-full rounded-none border-0"
-          : "rounded-lg border",
+        "flex min-h-0 flex-1 overflow-hidden",
+        isMobile
+          ? "rounded-none border-0 bg-transparent"
+          : hasSelection
+            ? "h-full rounded-none border-0 bg-background"
+            : "rounded-lg border bg-background",
       )}
     >
       {showSidebar ? (
         <aside
           className={cn(
-            "flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/10",
+            "flex min-h-0 flex-1 flex-col overflow-hidden",
+            isMobile ? "bg-transparent" : "bg-muted/10",
             hasSelection &&
               !isMobile &&
               "w-full max-w-[320px] shrink-0 flex-none border-r",
@@ -74,7 +77,7 @@ export const InvoiceBillingWorkspace = ({
             compact={hasSelection && !isMobile}
           />
           {showSummaryCards && !hasSelection ? (
-            <div className="shrink-0 border-b bg-background px-3 py-2">
+            <div className={cn("shrink-0 px-3 py-2", isMobile ? "glass-header" : "border-b bg-background")}>
               <InvoiceBillingSummaryCards
                 statusFilter={statusFilter}
                 onStatusFilterChange={onStatusFilterChange}
@@ -102,7 +105,7 @@ export const InvoiceBillingWorkspace = ({
       {showDetail && hasSelection ? (
         <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/50">
           {isMobile ? (
-            <div className="flex shrink-0 items-center gap-1 border-b bg-background px-2 py-1.5">
+            <div className={cn("flex shrink-0 items-center gap-1 px-2 py-1.5", isMobile ? "glass-header" : "border-b bg-background")}>
               <Button
                 type="button"
                 variant="ghost"

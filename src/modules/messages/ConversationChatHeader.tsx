@@ -125,7 +125,7 @@ export const ConversationChatHeader = ({
   return (
     <div
       className={cn(
-        "shrink-0 border-b border-border/30 bg-background px-4 md:px-5",
+        "glass-header shrink-0 px-4 md:border-b md:border-border/30 md:bg-background md:px-5 md:[backdrop-filter:none] md:[-webkit-backdrop-filter:none] md:shadow-none",
         compact ? "py-2.5" : "py-3",
       )}
     >

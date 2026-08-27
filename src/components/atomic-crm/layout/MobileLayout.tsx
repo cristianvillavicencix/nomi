@@ -28,7 +28,7 @@ export const MobileLayout = ({ children }: { children: ReactNode }) => {
   return (
     <>
       <NavigationLayoutAccountSync />
-      <div className="flex h-dvh min-h-0 flex-col overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))]">
+      <div className="nomi-mobile-shell flex h-dvh min-h-0 flex-col overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
         <ErrorBoundary FallbackComponent={Error}>
           <Suspense fallback={<Skeleton className="h-12 w-12 rounded-full" />}>
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -39,7 +39,7 @@ export const MobileLayout = ({ children }: { children: ReactNode }) => {
       </div>
       {hideFab ? null : <CrmAssistantButton variant="fab" />}
       <MobileNavigation />
-      <Notification mobileOffset={{ bottom: "72px" }} />
+      <Notification mobileOffset={{ bottom: "88px" }} />
     </>
   );
 };

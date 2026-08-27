@@ -73,7 +73,7 @@ export const MobileDealListContent = () => {
   }
 
   return (
-    <ul className="divide-y divide-border/50 overflow-hidden rounded-lg border border-border/50 bg-background">
+    <ul className="glass-grouped divide-y divide-white/30 overflow-hidden rounded-[20px] dark:divide-white/10">
       {deals.map((deal) => {
         const company = companiesById[deal.company_id];
         const stageColor = getStageColor(
@@ -87,7 +87,7 @@ export const MobileDealListContent = () => {
               to={`/deals/${deal.id}/show`}
               className={cn(
                 "flex flex-col gap-1.5 px-4 py-3 transition-colors",
-                "active:bg-muted/60 hover:bg-muted/40",
+                "hover:bg-white/25 active:bg-white/40 dark:hover:bg-white/5",
               )}
             >
               <div className="flex items-start justify-between gap-2">
@@ -166,7 +166,7 @@ export const MobileDealListLayout = () => {
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <MobileHeader>
         <div className="flex w-full items-center justify-between gap-2">
-          <h1 className="shrink-0 text-xl font-semibold">Projects</h1>
+          <h1 className="shrink-0 text-2xl font-semibold tracking-tight">Projects</h1>
           {canManageSales ? <NewDealCreateButton /> : null}
         </div>
       </MobileHeader>
