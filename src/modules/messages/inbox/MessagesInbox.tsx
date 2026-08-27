@@ -11,6 +11,8 @@ import type {
   OrganizationMember,
 } from "@/modules/types";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobilePageChrome } from "@/components/atomic-crm/layout/MobilePageChrome";
 import { InboxTabs } from "@/modules/messages/inbox/InboxTabs";
 import { InboxList } from "@/modules/messages/inbox/InboxList";
 import { TeamMembersList } from "@/modules/messages/inbox/TeamMembersList";
@@ -121,6 +123,7 @@ export const MessagesInbox = (props: {
   hasMoreConversations?: boolean;
   loadingMoreConversations?: boolean;
 }) => {
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<InboxTab>("all");
   const [filters, setFilters] = useState<InboxFilterState>(
     DEFAULT_INBOX_FILTERS,
@@ -249,35 +252,28 @@ export const MessagesInbox = (props: {
     }
   };
 
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <InboxTabs
-        activeTab={activeTab}
-        onChange={setActiveTab}
-        counts={tabCounts}
-        filters={filters}
-        onFiltersChange={setFilters}
-        members={props.members}
-      />
-      <div className="px-3 py-2">
-        <div className="flex items-center gap-2">
-          <div className="relative min-w-0 flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={filters.query}
-              onChange={(event) =>
-                setFilters((current) => ({
-                  ...current,
-                  query: event.target.value,
-                }))
-              }
-              placeholder="Search conversations, clients, or phone…"
-              className="h-11 rounded-full border-0 bg-black/[0.06] pl-9 shadow-none md:h-9 md:rounded-md md:border md:border-input md:bg-transparent dark:bg-white/10"
-            />
-          </div>
-          <VoiceDialButton variant="secondary" size="icon" className="shrink-0" />
-        </div>
+  const searchRow = (
+    <div className={cn("flex items-center gap-2", !isMobile && "px-3 py-2")}>
+      <div className="relative min-w-0 flex-1">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={filters.query}
+          onChange={(event) =>
+            setFilters((current) => ({
+              ...current,
+              query: event.target.value,
+            }))
+          }
+          placeholder="Search conversations, clients, or phone…"
+          className="h-11 rounded-full border-0 bg-black/[0.06] pl-9 shadow-none md:h-9 md:rounded-md md:border md:border-input md:bg-transparent dark:bg-white/10"
+        />
       </div>
+      <VoiceDialButton variant="secondary" size="icon" className="shrink-0" />
+    </div>
+  );
+
+  const inboxBody = (
+    <>
       {activeTab === "team" ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto mobile-scroll">
           <div className="px-3 pt-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -365,6 +361,46 @@ export const MessagesInbox = (props: {
           ) : null}
         </div>
       ) : null}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <MobilePageChrome
+        title="Messages"
+        scrollBody={false}
+        search={
+          <div className="space-y-2">
+            <InboxTabs
+              activeTab={activeTab}
+              onChange={setActiveTab}
+              counts={tabCounts}
+              filters={filters}
+              onFiltersChange={setFilters}
+              members={props.members}
+              embedded
+            />
+            {searchRow}
+          </div>
+        }
+      >
+        {inboxBody}
+      </MobilePageChrome>
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <InboxTabs
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        counts={tabCounts}
+        filters={filters}
+        onFiltersChange={setFilters}
+        members={props.members}
+      />
+      {searchRow}
+      {inboxBody}
     </div>
   );
 };

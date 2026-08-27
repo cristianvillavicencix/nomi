@@ -139,50 +139,58 @@ export const ListView = <RecordType extends RaRecord = RaRecord>(
   // and the FilterForm is rendered without extra vertical padding so the
   // table can sit directly under the global bar.
   const hidesPageChrome = finalTitle === false && disableBreadcrumb;
+  // Mobile hubs render their own large-title chrome. An empty StickyPageHeader
+  // still paints a sticky bg bar above that title — skip it entirely.
+  const showStickyHeader = !hidesPageChrome || Boolean(actions);
 
   return (
     <PageLayout>
       <FilterContext.Provider value={filters}>
-        <StickyPageHeader className={cn(hidesPageChrome ? "pb-0" : "pb-2")}>
-          {!disableBreadcrumb && (
-            <Breadcrumb>
-              {hasDashboard && (
-                <BreadcrumbItem>
-                  <Link to="/">
-                    <Translate i18nKey="ra.page.dashboard">Home</Translate>
-                  </Link>
-                </BreadcrumbItem>
-              )}
-              <BreadcrumbPage>{resourceLabel}</BreadcrumbPage>
-            </Breadcrumb>
-          )}
-          {hidesPageChrome && !actions ? null : (
-            <div
-              className={cn(
-                "flex min-w-0 w-full flex-wrap items-start justify-between gap-2",
-                hidesPageChrome ? "my-0" : "my-2",
-              )}
-            >
-              {finalTitle !== false ? (
-                <h2 className="text-2xl font-bold tracking-tight mb-2">
-                  {finalTitle}
-                </h2>
-              ) : null}
-              {actions ?? (
-                <div className="flex items-center gap-2">
-                  {filters && filters.length > 0 ? <FilterButton /> : null}
-                  {hasCreate ? <CreateButton /> : null}
-                  {<ExportButton />}
-                </div>
-              )}
-            </div>
-          )}
-          <FilterForm />
-        </StickyPageHeader>
+        {showStickyHeader ? (
+          <StickyPageHeader className={cn(hidesPageChrome ? "pb-0" : "pb-2")}>
+            {!disableBreadcrumb && (
+              <Breadcrumb>
+                {hasDashboard && (
+                  <BreadcrumbItem>
+                    <Link to="/">
+                      <Translate i18nKey="ra.page.dashboard">Home</Translate>
+                    </Link>
+                  </BreadcrumbItem>
+                )}
+                <BreadcrumbPage>{resourceLabel}</BreadcrumbPage>
+              </Breadcrumb>
+            )}
+            {hidesPageChrome && !actions ? null : (
+              <div
+                className={cn(
+                  "flex min-w-0 w-full flex-wrap items-start justify-between gap-2",
+                  hidesPageChrome ? "my-0" : "my-2",
+                )}
+              >
+                {finalTitle !== false ? (
+                  <h2 className="mb-2 text-2xl font-bold tracking-tight">
+                    {finalTitle}
+                  </h2>
+                ) : null}
+                {actions ?? (
+                  <div className="flex items-center gap-2">
+                    {filters && filters.length > 0 ? <FilterButton /> : null}
+                    {hasCreate ? <CreateButton /> : null}
+                    {<ExportButton />}
+                  </div>
+                )}
+              </div>
+            )}
+            <FilterForm />
+          </StickyPageHeader>
+        ) : null}
 
         {contentScrollable ? (
           <ScrollableContentArea
-            className={cn(hidesPageChrome ? "mt-1" : "mt-2", props.className)}
+            className={cn(
+              showStickyHeader ? (hidesPageChrome ? "mt-1" : "mt-2") : "mt-0",
+              props.className,
+            )}
           >
             {children}
             {pagination ? (
@@ -194,7 +202,7 @@ export const ListView = <RecordType extends RaRecord = RaRecord>(
         ) : (
           <div
             className={cn(
-              hidesPageChrome ? "mt-1" : "mt-2",
+              showStickyHeader ? (hidesPageChrome ? "mt-1" : "mt-2") : "mt-0",
               "flex min-h-0 flex-1 flex-col overflow-hidden",
               props.className,
             )}

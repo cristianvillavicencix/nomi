@@ -77,7 +77,7 @@ export const InvoiceBillingWorkspace = ({
             compact={hasSelection && !isMobile}
           />
           {showSummaryCards && !hasSelection ? (
-            <div className={cn("shrink-0 px-3 py-2", isMobile ? "glass-header" : "border-b bg-background")}>
+            <div className={cn("shrink-0 px-3 py-2", isMobile ? "bg-transparent" : "border-b bg-background")}>
               <InvoiceBillingSummaryCards
                 statusFilter={statusFilter}
                 onStatusFilterChange={onStatusFilterChange}

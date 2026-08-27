@@ -121,7 +121,7 @@ export const InvoiceListToolbar = ({
       <div
         className={cn(
           "flex shrink-0 flex-col gap-2 px-3 py-2",
-          isMobile ? "glass-header" : "border-b bg-background",
+          isMobile ? "bg-transparent" : "border-b bg-background",
         )}
       >
         <div className="flex min-w-0 items-center gap-2">{filterAndSearch}</div>
@@ -134,7 +134,7 @@ export const InvoiceListToolbar = ({
     <div
       className={cn(
         "flex shrink-0 items-center gap-2 px-3 py-2",
-        isMobile ? "glass-header" : "border-b bg-background",
+        isMobile ? "bg-transparent" : "border-b bg-background",
       )}
     >
       {filterAndSearch}

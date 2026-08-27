@@ -4,6 +4,7 @@ import {
   PageActions,
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
+import { MobilePageChrome } from "@/components/atomic-crm/layout/MobilePageChrome";
 import { ClientInvoicesTab } from "@/modules/billing/ClientInvoicesTab";
 import { ClientBillingReportsTab } from "@/modules/billing/reports/ClientBillingReportsTab";
 import { isBillingInvoiceWorkspace } from "@/modules/billing/billingWorkspaceMode";
@@ -42,6 +43,41 @@ export const ClientBillingPage = () => {
     setSearchParams(buildBillingTabSearchParams(tab, searchParams));
   };
 
+  const tabContent =
+    activeTab === "subscriptions" ? (
+      <ClientSubscriptionsTab />
+    ) : activeTab === "reports" ? (
+      <ClientBillingReportsTab />
+    ) : (
+      <ClientInvoicesTab />
+    );
+
+  if (isMobile) {
+    return (
+      <MobilePageChrome
+        title="Invoices"
+        scrollBody={false}
+        search={
+          <SettingsSubNav
+            value={activeTab}
+            onValueChange={handleTabChange}
+            items={BILLING_TABS}
+            embedded
+          />
+        }
+      >
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col overflow-hidden",
+            activeTab !== "reports" && "min-h-0",
+          )}
+        >
+          {tabContent}
+        </div>
+      </MobilePageChrome>
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -49,11 +85,9 @@ export const ClientBillingPage = () => {
         fillHeight ? "h-full" : "gap-3",
       )}
     >
-      {isMobile ? null : (
-        <PageActions>
-          <PageTitle label="Billing" />
-        </PageActions>
-      )}
+      <PageActions>
+        <PageTitle label="Billing" />
+      </PageActions>
 
       <SettingsSubNav
         value={activeTab}
@@ -63,19 +97,11 @@ export const ClientBillingPage = () => {
         className={
           fillHeight && activeTab !== "reports" ? "min-h-0 flex-1" : undefined
         }
-        content={
-          activeTab === "subscriptions" ? (
-            <ClientSubscriptionsTab />
-          ) : activeTab === "reports" ? (
-            <ClientBillingReportsTab />
-          ) : (
-            <ClientInvoicesTab />
-          )
-        }
+        content={tabContent}
       />
     </div>
   );
 };
 
 /** @deprecated Use ClientBillingPage */
-export const ClientBillingList = ClientBillingPage;
+export const ClientBillingHubPage = ClientBillingPage;

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * iOS-style mobile hub chrome: left large title, trailing action, search, inset list.
+ * iOS-style mobile hub chrome: left large title, trailing action, search, list.
  * The scroller extends under the floating glass tab bar.
  */
 export const MobilePageChrome = ({
@@ -11,16 +11,19 @@ export const MobilePageChrome = ({
   search,
   children,
   className,
+  /** When false, children own scrolling (e.g. virtualized Messages inbox). */
+  scrollBody = true,
 }: {
   title: string;
   action?: ReactNode;
   search?: ReactNode;
   children: ReactNode;
   className?: string;
+  scrollBody?: boolean;
 }) => (
   <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
     <header className="glass-header sticky top-0 z-20 shrink-0 pt-[env(safe-area-inset-top,0px)]">
-      <div className="flex items-center gap-3 px-4 pt-2 pb-1">
+      <div className="flex items-center gap-3 px-4 pt-1.5 pb-1">
         <h1 className="min-w-0 flex-1 text-[1.75rem] font-bold leading-tight tracking-tight">
           {title}
         </h1>
@@ -28,7 +31,14 @@ export const MobilePageChrome = ({
       </div>
       {search ? <div className="px-4 pt-1 pb-3">{search}</div> : null}
     </header>
-    <div className="min-h-0 flex-1 mobile-scroll px-4 pb-mobile-dock">
+    <div
+      className={cn(
+        "min-h-0 flex-1",
+        scrollBody
+          ? "mobile-scroll px-4 pb-mobile-dock"
+          : "flex flex-col overflow-hidden",
+      )}
+    >
       {children}
     </div>
   </div>
