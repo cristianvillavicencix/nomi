@@ -41,31 +41,37 @@ export type BillingReportSearchState = {
 export const BILLING_REPORT_VIEWS: Array<{
   id: BillingReportViewId;
   label: string;
+  shortLabel: string;
   description: string;
 }> = [
   {
     id: "overview",
     label: "Overview",
+    shortLabel: "Overview",
     description: "Key billing metrics at a glance",
   },
   {
     id: "revenue",
     label: "Revenue",
+    shortLabel: "Revenue",
     description: "Paid invoices and recurring revenue",
   },
   {
     id: "collections",
     label: "Collections",
+    shortLabel: "Collections",
     description: "Collected vs outstanding balances",
   },
   {
     id: "products",
     label: "Products & services",
+    shortLabel: "Products",
     description: "Line items across invoices and subscriptions",
   },
   {
     id: "projections",
     label: "Projections",
+    shortLabel: "Projections",
     description: "Forward-looking sales and billing outlook",
   },
 ];
@@ -73,14 +79,15 @@ export const BILLING_REPORT_VIEWS: Array<{
 export const BILLING_REPORT_PERIODS: Array<{
   id: BillingReportPeriodId;
   label: string;
+  shortLabel: string;
 }> = [
-  { id: "7d", label: "Last 7 days" },
-  { id: "30d", label: "Last 30 days" },
-  { id: "90d", label: "Last 90 days" },
-  { id: "month", label: "This month" },
-  { id: "quarter", label: "This quarter" },
-  { id: "year", label: "This year" },
-  { id: "ytd", label: "Year to date" },
+  { id: "7d", label: "Last 7 days", shortLabel: "7D" },
+  { id: "30d", label: "Last 30 days", shortLabel: "30D" },
+  { id: "90d", label: "Last 90 days", shortLabel: "90D" },
+  { id: "month", label: "This month", shortLabel: "Month" },
+  { id: "quarter", label: "This quarter", shortLabel: "Quarter" },
+  { id: "year", label: "This year", shortLabel: "Year" },
+  { id: "ytd", label: "Year to date", shortLabel: "YTD" },
 ];
 
 const REPORT_VIEW_IDS = new Set<string>(BILLING_REPORT_VIEWS.map((v) => v.id));

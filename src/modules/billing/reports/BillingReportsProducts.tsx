@@ -19,14 +19,11 @@ export const BillingReportsProducts = ({
   isPending: boolean;
 }) => {
   return (
-    <ReportSection
-      title="Products & services"
-      description="Top line items and plans billed through invoices and subscriptions."
-    >
-      <div className="overflow-hidden rounded-lg border bg-background">
+    <ReportSection description="Top line items and plans billed through invoices and subscriptions.">
+      <div className="overflow-hidden rounded-2xl bg-black/[0.025] dark:bg-white/[0.04]">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="border-border/40 hover:bg-transparent">
               <TableHead>Item</TableHead>
               <TableHead>Source</TableHead>
               <TableHead className="text-right">Qty</TableHead>
@@ -36,20 +33,23 @@ export const BillingReportsProducts = ({
           </TableHeader>
           <TableBody>
             {isPending ? (
-              <TableRow>
+              <TableRow className="border-border/40">
                 <TableCell colSpan={5} className="text-muted-foreground">
                   Loading products…
                 </TableCell>
               </TableRow>
             ) : snapshot.products.length === 0 ? (
-              <TableRow>
+              <TableRow className="border-border/40">
                 <TableCell colSpan={5} className="text-muted-foreground">
                   No product or service lines found for this period.
                 </TableCell>
               </TableRow>
             ) : (
               snapshot.products.map((row) => (
-                <TableRow key={`${row.name}-${row.source}`}>
+                <TableRow
+                  key={`${row.name}-${row.source}`}
+                  className="border-border/40"
+                >
                   <TableCell className="font-medium">{row.name}</TableCell>
                   <TableCell>
                     <Badge variant="secondary" className="capitalize">
