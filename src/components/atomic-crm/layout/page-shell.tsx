@@ -8,7 +8,12 @@ export const PageLayout = ({
   children: ReactNode;
   className?: string;
 }) => (
-  <div className={cn("flex h-full min-h-0 w-full flex-col", className)}>
+  <div
+    className={cn(
+      "flex h-full min-h-0 w-full min-w-0 flex-1 flex-col",
+      className,
+    )}
+  >
     {children}
   </div>
 );

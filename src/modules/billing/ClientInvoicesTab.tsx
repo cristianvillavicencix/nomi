@@ -59,7 +59,7 @@ export const ClientInvoicesTab = () => {
     <div
       className={cn(
         "flex min-h-0 flex-1 flex-col overflow-hidden",
-        fillHeight ? "h-full gap-0" : "gap-3",
+        fillHeight ? "min-h-0 flex-1 gap-0" : "gap-3",
       )}
     >
       <List

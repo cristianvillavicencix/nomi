@@ -203,11 +203,11 @@ export const ListView = <RecordType extends RaRecord = RaRecord>(
           <div
             className={cn(
               showStickyHeader ? (hidesPageChrome ? "mt-1" : "mt-2") : "mt-0",
-              "flex min-h-0 flex-1 flex-col overflow-hidden",
+              "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
               props.className,
             )}
           >
-            <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
               {children}
             </div>
             {pagination ? (

@@ -279,8 +279,8 @@ input[type="time"] {
  */
 .nomi-mobile-shell {
   --glass-blur: 72px;
-  /* Neutral gray — avoid blue shell tint */
-  background: oklch(0.96 0 0);
+  /* Pure white so glass chrome blends with the system status area */
+  background: #ffffff;
 }
 
 .dark .nomi-mobile-shell {

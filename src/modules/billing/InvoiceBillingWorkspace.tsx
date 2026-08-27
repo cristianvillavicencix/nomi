@@ -75,6 +75,7 @@ export const InvoiceBillingWorkspace = ({
             onSearchQueryChange={setSearchQuery}
             onFromProposal={onFromProposal}
             compact={hasSelection && !isMobile}
+            hideCreate={isMobile}
           />
           {showSummaryCards && !hasSelection ? (
             <div className={cn("shrink-0 px-3 py-2", isMobile ? "bg-transparent" : "border-b bg-background")}>
@@ -84,7 +85,12 @@ export const InvoiceBillingWorkspace = ({
               />
             </div>
           ) : null}
-          <div className="min-h-0 flex-1 overflow-hidden">
+          <div
+            className={cn(
+              "min-h-0 flex-1",
+              isMobile ? "flex flex-col overflow-hidden" : "overflow-hidden",
+            )}
+          >
             {hasSelection || isMobile ? (
               <InvoiceListSidebar
                 selectedInvoiceId={selectedInvoiceId}

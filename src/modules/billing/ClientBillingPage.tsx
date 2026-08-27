@@ -1,10 +1,12 @@
+import { Plus } from "lucide-react";
+import { Link, useLocation, useSearchParams } from "react-router";
 import { useGetIdentity } from "ra-core";
-import { useLocation, useSearchParams } from "react-router";
 import {
   PageActions,
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
 import { MobilePageChrome } from "@/components/atomic-crm/layout/MobilePageChrome";
+import { IconButton } from "@/components/ui/icon-button";
 import { ClientInvoicesTab } from "@/modules/billing/ClientInvoicesTab";
 import { ClientBillingReportsTab } from "@/modules/billing/reports/ClientBillingReportsTab";
 import { isBillingInvoiceWorkspace } from "@/modules/billing/billingWorkspaceMode";
@@ -36,6 +38,8 @@ export const ClientBillingPage = () => {
   );
   const hasWorkspaceOpen = hasInvoiceOpen || hasSubscriptionOpen;
   const fillHeight = isMobile || hasWorkspaceOpen;
+  const showMobileCreate =
+    activeTab === "invoices" && !hasInvoiceOpen;
 
   if (!identity) return null;
 
@@ -53,10 +57,28 @@ export const ClientBillingPage = () => {
     );
 
   if (isMobile) {
+    // Detail views keep their own chrome; list hubs use the shared large title.
+    if (hasWorkspaceOpen) {
+      return (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-[env(safe-area-inset-top,0px)]">
+          {tabContent}
+        </div>
+      );
+    }
+
     return (
       <MobilePageChrome
         title="Invoices"
         scrollBody={false}
+        action={
+          showMobileCreate ? (
+            <IconButton aria-label="New invoice" asChild>
+              <Link to="/billing/invoices/new">
+                <Plus className="size-6" />
+              </Link>
+            </IconButton>
+          ) : undefined
+        }
         search={
           <SettingsSubNav
             value={activeTab}
@@ -66,12 +88,7 @@ export const ClientBillingPage = () => {
           />
         }
       >
-        <div
-          className={cn(
-            "flex min-h-0 flex-1 flex-col overflow-hidden",
-            activeTab !== "reports" && "min-h-0",
-          )}
-        >
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {tabContent}
         </div>
       </MobilePageChrome>

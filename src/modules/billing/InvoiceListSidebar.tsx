@@ -91,7 +91,12 @@ export const InvoiceListSidebar = ({
   }
 
   return (
-    <div className={cn("min-h-0 flex-1 mobile-scroll", isMobile && "px-4 pb-mobile-dock pt-2")}>
+    <div
+      className={cn(
+        "min-h-0 flex-1",
+        isMobile ? "mobile-scroll px-4 pb-mobile-dock pt-1" : "overflow-y-auto overscroll-contain",
+      )}
+    >
       <ul
         className={cn(
           isMobile
