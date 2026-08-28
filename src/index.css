@@ -577,3 +577,38 @@ html.nomi-form-embed body {
   margin: 0.5em 0;
 }
 
+/* Tickets board ↔ show view transitions */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+::view-transition-old(root) {
+  animation-name: tickets-vt-fade-out;
+}
+
+::view-transition-new(root) {
+  animation-name: tickets-vt-fade-in;
+}
+
+@keyframes tickets-vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes tickets-vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+

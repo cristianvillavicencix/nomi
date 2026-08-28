@@ -814,6 +814,20 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     primary_ticket_id: Number(primaryTicketId),
     merged_ticket_ids: mergeTicketIds.map((id) => Number(id)),
   }),
+
+  moveTicketMessages: async ({
+    sourceTicketId,
+    messageIds,
+    targetTicketId,
+    createNew,
+  }) => ({
+    source_ticket_id: Number(sourceTicketId),
+    target_ticket_id: createNew
+      ? Number(sourceTicketId) + 100000
+      : Number(targetTicketId),
+    moved_message_ids: messageIds.map((id) => Number(id)),
+    created_new: Boolean(createNew),
+  }),
   upsertLbsClient: async (
     input: LbsClientUpsertInput,
   ): Promise<LbsClientUpsertResult> => {

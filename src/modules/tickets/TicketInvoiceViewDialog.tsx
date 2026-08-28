@@ -155,16 +155,14 @@ export const TicketInvoiceViewDialog = ({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {mode === "edit" ? (
-              <div className="flex min-h-[min(70vh,640px)] flex-col">
-                <StandaloneInvoiceEditPage
-                  embedded
-                  invoiceId={id}
-                  initialEditReason={editReason}
-                  onSaved={handleEditSaved}
-                />
-              </div>
+              <StandaloneInvoiceEditPage
+                embedded
+                invoiceId={id}
+                initialEditReason={editReason}
+                onSaved={handleEditSaved}
+              />
             ) : isLoading ? (
               <div className="flex min-h-[240px] items-center justify-center px-6 py-4 text-sm text-muted-foreground">
                 <Loader2 className="mr-2 size-4 animate-spin" />

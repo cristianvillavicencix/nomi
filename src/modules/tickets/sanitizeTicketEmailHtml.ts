@@ -101,7 +101,16 @@ const installEmailSanitizeHooks = () => {
     if (node.tagName === "IMG") {
       const src = node.getAttribute("src")?.trim().toLowerCase() ?? "";
       if (src.startsWith("cid:")) {
-        node.remove();
+        // Never leave live cid: in the DOM (unknown URL scheme). Soft placeholder.
+        node.setAttribute(
+          "src",
+          "data:image/svg+xml," +
+            encodeURIComponent(
+              `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="48"><rect width="100%" height="100%" fill="#f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="11" font-family="sans-serif">Image</text></svg>`,
+            ),
+        );
+        node.setAttribute("alt", "Inline image unavailable");
+        node.setAttribute("data-cid-unresolved", "true");
         return;
       }
       if (preserveLayoutInHook) {

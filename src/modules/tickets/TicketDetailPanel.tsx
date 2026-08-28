@@ -31,11 +31,12 @@ import { Button } from "@/components/ui/button";
 
 export const TicketDetailPanel = ({
   ticketId,
-  layout = "default",
+  layout: _layout = "default",
   previewMode = false,
   onContextExpandedChange,
 }: {
   ticketId: string;
+  /** @deprecated Overlay mode removed; context always pushes the thread. */
   layout?: "default" | "inbox-split";
   /** Keeps thread width fixed; preview sheet grows when context opens. */
   previewMode?: boolean;
@@ -47,7 +48,6 @@ export const TicketDetailPanel = ({
   // Desktop (including inbox split): collapsible icon rail.
   // Mobile: sheet trigger in the header.
   const useContextSheet = isMobile;
-  const overlayContext = layout === "inbox-split";
   const queryClient = useQueryClient();
   const refreshInbox = useCallback(() => {
     refreshTicketInboxLists(queryClient);
@@ -63,6 +63,10 @@ export const TicketDetailPanel = ({
   const [readCutoff, setReadCutoff] = useState<string | null | undefined>(
     undefined,
   );
+  /** Snapshot of last_read_at before markRead — drives expand-vs-collapse on open. */
+  const [threadReadBaseline, setThreadReadBaseline] = useState<
+    string | null | undefined
+  >(undefined);
   const [quoteMessage, setQuoteMessage] = useState<TicketMessage | null>(null);
   const markedTicketRef = useRef<string | null>(null);
   const openedStatusRef = useRef<string | null>(null);
@@ -94,7 +98,7 @@ export const TicketDetailPanel = ({
     messages,
     isPending: messagesPending,
     threadEndRef,
-    scrollToBottom,
+    scrollToLatest,
   } = useTicketThreadMessages(ticket?.id);
 
   const handleQuote = useCallback((message: TicketMessage) => {
@@ -102,8 +106,15 @@ export const TicketDetailPanel = ({
   }, []);
 
   useEffect(() => {
+    setThreadReadBaseline(undefined);
+  }, [ticketId]);
+
+  useEffect(() => {
     if (isReadLoading) return;
     setReadCutoff(lastReadAt ?? "1970-01-01T00:00:00.000Z");
+    setThreadReadBaseline((current) =>
+      current === undefined ? (lastReadAt ?? null) : current,
+    );
   }, [ticketId, lastReadAt, isReadLoading]);
 
   useEffect(() => {
@@ -178,18 +189,15 @@ export const TicketDetailPanel = ({
       <div
         className={cn(
           "relative flex h-full min-h-0 overflow-hidden bg-background",
-          previewMode && !overlayContext && "flex-nowrap",
+          previewMode && "flex-nowrap",
         )}
       >
         <div
           className={cn(
             "flex min-h-0 flex-col overflow-hidden",
-            previewMode && !overlayContext
-              ? TICKET_PREVIEW_THREAD_CLASS
-              : "min-w-0 flex-1",
-            !overlayContext &&
-              !previewMode &&
-              "transition-[flex-grow,width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
+            previewMode ? TICKET_PREVIEW_THREAD_CLASS : "min-w-0 flex-1",
+            !previewMode &&
+              "transition-[flex-grow,width,min-width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
           )}
         >
           <TicketCompactHeader
@@ -206,6 +214,7 @@ export const TicketDetailPanel = ({
                 status && isTicketStatusFilterId(status) && status !== "all"
                   ? `/tickets?status=${status}`
                   : "/tickets",
+                { viewTransition: true },
               );
             }}
             composeActions={
@@ -229,26 +238,35 @@ export const TicketDetailPanel = ({
 
           <TicketRetryDeliveryBanner ticket={ticket} />
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background px-4 py-2 md:px-5">
-            <TicketReadCutoffContext.Provider value={readCutoff}>
-              <TicketThread
-                messages={messages}
-                isPending={messagesPending}
-                threadEndRef={threadEndRef}
-              />
-            </TicketReadCutoffContext.Provider>
-          </div>
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            <div className="h-full min-h-0 overflow-y-auto overscroll-contain bg-muted/20 px-4 py-3 md:px-5">
+              <TicketReadCutoffContext.Provider value={readCutoff}>
+                <TicketThread
+                  key={ticket.id}
+                  messages={messages}
+                  isPending={messagesPending}
+                  threadEndRef={threadEndRef}
+                  company={company}
+                  readBaseline={threadReadBaseline}
+                  ticket={ticket}
+                />
+              </TicketReadCutoffContext.Provider>
+            </div>
 
-          <div className="shrink-0 bg-background">
-            <TicketReplyForm
-              key={`reply-${ticket.id}`}
-              ref={replyFormRef}
-              ticket={ticket}
-              placement="bottom"
-              quoteMessage={quoteMessage}
-              onQuoteApplied={() => setQuoteMessage(null)}
-              onSent={() => scrollToBottom()}
-            />
+            {/* Gmail-style compose dock — only visible while composing */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-end p-3 sm:p-4">
+              <div className="pointer-events-auto">
+                <TicketReplyForm
+                  key={`reply-${ticket.id}`}
+                  ref={replyFormRef}
+                  ticket={ticket}
+                  placement="dock"
+                  quoteMessage={quoteMessage}
+                  onQuoteApplied={() => setQuoteMessage(null)}
+                  onSent={() => scrollToLatest()}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -257,12 +275,10 @@ export const TicketDetailPanel = ({
             ticket={ticket}
             company={company}
             contact={contact}
-            overlay={overlayContext}
-            animateResize={!overlayContext}
+            overlay={false}
+            animateResize
             onExpandedChange={
-              previewMode && !overlayContext
-                ? onContextExpandedChange
-                : undefined
+              previewMode ? onContextExpandedChange : undefined
             }
           />
         ) : null}

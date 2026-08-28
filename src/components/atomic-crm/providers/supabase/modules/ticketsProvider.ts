@@ -89,6 +89,55 @@ export const ticketsProvider = {
     return data;
   },
 
+  async moveTicketMessages({
+    sourceTicketId,
+    messageIds,
+    targetTicketId,
+    createNew,
+    subject,
+    status,
+  }: {
+    sourceTicketId: Identifier;
+    messageIds: Identifier[];
+    targetTicketId?: Identifier;
+    createNew?: boolean;
+    subject?: string;
+    status?: string;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      source_ticket_id: number;
+      target_ticket_id: number;
+      moved_message_ids: number[];
+      created_new: boolean;
+    }>("move_ticket_messages", {
+      method: "POST",
+      body: {
+        source_ticket_id: Number(sourceTicketId),
+        message_ids: messageIds.map((id) => Number(id)),
+        ...(createNew
+          ? {
+              create_new: true,
+              ...(subject?.trim() ? { subject: subject.trim() } : {}),
+              ...(status?.trim() ? { status: status.trim() } : {}),
+            }
+          : { target_ticket_id: Number(targetTicketId) }),
+      },
+    });
+
+    if (error || !data?.target_ticket_id) {
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Failed to move ticket messages",
+            )
+          : "Failed to move ticket messages",
+      );
+    }
+
+    return data;
+  },
+
   async createTicketInvoice({
     ticketId,
     baseUrl,

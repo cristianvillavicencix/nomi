@@ -66,7 +66,6 @@ import {
   hasReplyContentHtml,
   htmlToPlainText,
   insertAboveSignatureHtml,
-  insertBelowSignatureHtml,
   stripReplyComposerMetaHtml,
 } from "@/modules/tickets/ticketReplyRichText";
 import { buildQuotedReplyEditorHtml } from "@/modules/tickets/ticketReplyQuotedThread";
@@ -130,7 +129,7 @@ const TicketComposerModeTabs = ({
   mode: ComposerVisibilityMode;
   onChange: (mode: ComposerVisibilityMode) => void;
 }) => (
-  <div className="flex items-center border-b px-4 md:px-5">
+  <div className="flex items-center border-b px-3 md:px-4">
     <button
       type="button"
       onClick={() => onChange("public")}
@@ -170,7 +169,7 @@ export const TicketReplyForm = forwardRef<
   TicketReplyFormHandle,
   {
     ticket: Ticket;
-    placement?: "top" | "bottom";
+    placement?: "top" | "bottom" | "dock";
     quoteMessage?: TicketMessage | null;
     onQuoteApplied?: () => void;
     onSent?: () => void;
@@ -179,6 +178,7 @@ export const TicketReplyForm = forwardRef<
   { ticket, placement = "bottom", quoteMessage, onQuoteApplied, onSent },
   ref,
 ) {
+  const isDock = placement === "dock";
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [composeMode, setComposeMode] = useState<ComposeMode>("reply");
@@ -360,8 +360,20 @@ export const TicketReplyForm = forwardRef<
     recentMessages.find((message) => message.direction === "inbound") ??
     recentMessages[0];
 
-  const replyMinHeight = composeMode === "forward" ? 80 : 140;
-  const replyMaxHeight = composeMode === "forward" ? 240 : 480;
+  const replyMinHeight = isDock
+    ? composeMode === "forward"
+      ? 120
+      : 240
+    : composeMode === "forward"
+      ? 80
+      : 140;
+  const replyMaxHeight = isDock
+    ? composeMode === "forward"
+      ? 320
+      : 520
+    : composeMode === "forward"
+      ? 240
+      : 480;
 
   const fromAddress =
     ticket.inbox_address?.trim() || DEFAULT_TICKET_INBOX_EMAIL;
@@ -465,6 +477,8 @@ export const TicketReplyForm = forwardRef<
     setIsExpanded(false);
     setIsMinimized(false);
     setShowCc(false);
+    setComposeMode("reply");
+    setForwardContext(null);
     resetDraft();
   };
 
@@ -550,18 +564,23 @@ export const TicketReplyForm = forwardRef<
     setComposeMode("reply");
     setReplySendIntent("reply");
     resetDraft();
-  }, [ticket.id, defaultRecipientEmail, defaultReplyHtml]);
+    // placement kept in deps so HMR never changes array length (top ↔ dock).
+  }, [ticket.id, defaultRecipientEmail, defaultReplyHtml, placement]);
 
   useEffect(() => {
     if (!quoteMessage) return;
-    const quotedHtml = buildQuotedReplyEditorHtml(quoteMessage);
+    const fromEmail = quoteMessage.from_email?.trim().toLowerCase();
     setComposeMode("reply");
+    setReplySendIntent("reply");
     setIsExpanded(true);
     setIsMinimized(false);
-    setBodyHtml((current) => insertBelowSignatureHtml(current, quotedHtml));
+    setShowInvoiceNote(false);
+    // Reply to this message only: To = sender, quote = that email.
+    if (fromEmail) setToRecipients(fromEmail);
+    setBodyHtml(buildReplyHtmlWithQuote(quoteMessage));
     onQuoteApplied?.();
     requestAnimationFrame(() => editorRef.current?.focus());
-  }, [quoteMessage, onQuoteApplied]);
+  }, [quoteMessage, onQuoteApplied, buildReplyHtmlWithQuote]);
 
   const uploadPendingFile = useCallback(async (id: string, file: File) => {
     const upload =
@@ -957,8 +976,9 @@ export const TicketReplyForm = forwardRef<
 
   const isPending = submitMutation.isPending;
   const edgeBorderClass = placement === "bottom" ? "border-t" : "border-b";
-  const slideAnimationClass =
-    placement === "bottom"
+  const slideAnimationClass = isDock
+    ? "animate-in slide-in-from-bottom-3 fade-in duration-200"
+    : placement === "bottom"
       ? "animate-in slide-in-from-bottom-2 duration-200"
       : "animate-in slide-in-from-top-2 duration-200";
 
@@ -969,11 +989,7 @@ export const TicketReplyForm = forwardRef<
       aria-label="Minimize"
       onClick={minimizeComposer}
     >
-      {placement === "top" ? (
-        <ChevronUp className="size-4" />
-      ) : (
-        <ChevronDown className="size-4" />
-      )}
+      <ChevronDown className="size-4" />
     </IconButton>
   );
 
@@ -981,13 +997,36 @@ export const TicketReplyForm = forwardRef<
     toRecipients.trim() || defaultRecipientEmail || "Add recipient";
   const replyPlaceholder = `Reply to ${defaultRecipientLabel.includes("@") ? defaultRecipientLabel : defaultRecipientLabel || "client"}`;
 
+  const composerShellClass = cn(
+    isDock &&
+      "overflow-hidden rounded-xl border border-border bg-background shadow-2xl",
+    isDock && !isMinimized && "w-[min(100vw-1.5rem,40rem)]",
+    isDock && isMinimized && "w-[min(100vw-1.5rem,17rem)]",
+    placement === "top" &&
+      "overflow-hidden rounded-lg border border-border/80 bg-background shadow-sm",
+  );
+
+  const showModeTabs = placement === "top";
+  const modeTabs = showModeTabs ? (
+    <TicketComposerModeTabs
+      mode={composeMode === "internal" ? "private" : "public"}
+      onChange={(next) =>
+        openComposer(next === "private" ? "internal" : "reply")
+      }
+    />
+  ) : null;
+
+  // Dock: hidden until Reply / Internal / Forward — Gmail-style floating compose.
   if (!isExpanded) {
+    if (isDock) {
+      return <>{sendProgress.dock}</>;
+    }
     return (
       <>
         {sendProgress.dock}
         <div
           className={cn(
-            "flex justify-start border-t bg-background px-4 py-2.5 md:px-5",
+            "flex justify-start bg-background px-4 py-2.5 md:px-5",
             edgeBorderClass,
           )}
         >
@@ -1012,18 +1051,20 @@ export const TicketReplyForm = forwardRef<
         {sendProgress.dock}
         <div
           className={cn(
-            "flex justify-end border-t bg-background px-4 py-2 md:px-5",
-            edgeBorderClass,
+            isDock || placement === "top"
+              ? composerShellClass
+              : "bg-background",
+            !isDock && placement !== "top" && edgeBorderClass,
           )}
         >
-          <div className="flex w-full max-w-xs items-stretch overflow-hidden rounded-lg border border-border/80 bg-muted/35 shadow-sm sm:w-auto sm:min-w-[16rem]">
+          <div className="flex w-full items-stretch overflow-hidden">
             <button
               type="button"
-              className="flex min-w-0 flex-1 items-start gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/55"
+              className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/40"
               onClick={expandComposer}
             >
-              <ChevronUp className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-              <div className="min-w-0">
+              <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium leading-snug text-foreground">
                   {composerTabSummary.title}
                   <span className="font-normal text-muted-foreground">
@@ -1031,7 +1072,7 @@ export const TicketReplyForm = forwardRef<
                     · {composerTabSummary.context}
                   </span>
                 </p>
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                <p className="truncate text-xs text-muted-foreground">
                   {composerTabSummary.preview}
                 </p>
               </div>
@@ -1056,20 +1097,22 @@ export const TicketReplyForm = forwardRef<
     return (
       <>
         {sendProgress.dock}
-        <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
+        <div
+          className={cn(
+            isDock || placement === "top"
+              ? composerShellClass
+              : "shrink-0 bg-background",
+            !isDock && placement !== "top" && edgeBorderClass,
+          )}
+        >
           <div
             className={cn(
               "overflow-hidden bg-amber-50/50 dark:bg-amber-950/20",
               slideAnimationClass,
             )}
           >
-            <TicketComposerModeTabs
-              mode="private"
-              onChange={(next) =>
-                openComposer(next === "private" ? "internal" : "reply")
-              }
-            />
-            <div className="flex items-center justify-between gap-2 px-4 py-2 md:px-5">
+            {modeTabs}
+            <div className="flex items-center justify-between gap-2 px-3 py-2 md:px-4">
               <p className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-800 dark:text-amber-200">
                 <Lock className="size-3.5 shrink-0" />
                 Private comment
@@ -1077,7 +1120,19 @@ export const TicketReplyForm = forwardRef<
                   · team only
                 </span>
               </p>
-              {minimizeButton}
+              <div className="flex items-center gap-0.5">
+                {minimizeButton}
+                {isDock ? (
+                  <IconButton
+                    className="shrink-0 text-muted-foreground"
+                    disabled={isPending}
+                    aria-label="Close"
+                    onClick={collapseComposer}
+                  >
+                    <X className="size-4" />
+                  </IconButton>
+                ) : null}
+              </div>
             </div>
 
             <input
@@ -1113,7 +1168,7 @@ export const TicketReplyForm = forwardRef<
             />
 
             {pendingFiles.length > 0 ? (
-              <div className="flex flex-col gap-1.5 border-t border-amber-500/20 bg-background px-4 py-2 md:px-5">
+              <div className="flex flex-col gap-1.5 px-3 py-2 md:px-4">
                 {pendingFiles.map((pending) => (
                   <TicketPendingAttachmentItem
                     key={pending.id}
@@ -1177,26 +1232,51 @@ export const TicketReplyForm = forwardRef<
   return (
     <>
       {sendProgress.dock}
-      <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
+      <div
+        className={cn(
+          isDock || placement === "top"
+            ? composerShellClass
+            : "shrink-0 bg-background",
+          !isDock && placement !== "top" && edgeBorderClass,
+        )}
+      >
         <div
           className={cn(
-            "flex max-h-[min(75vh,52rem)] flex-col overflow-hidden bg-background",
+            "flex max-h-[min(78vh,42rem)] flex-col overflow-hidden bg-background",
+            isDock && "min-h-[28rem]",
             slideAnimationClass,
           )}
         >
-          <TicketComposerModeTabs
-            mode="public"
-            onChange={(next) =>
-              openComposer(next === "private" ? "internal" : "reply")
-            }
-          />
-          <div className="shrink-0 border-b px-4 py-2 md:px-5">
-            <div className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 text-sm">
-              <span className="text-xs text-muted-foreground">From</span>
-              <span className="min-w-0 truncate text-sm text-foreground">
-                {fromAddress}
-              </span>
-              {minimizeButton}
+          {modeTabs}
+          {isDock ? (
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
+              <p className="truncate text-sm font-medium">
+                {composeMode === "forward" ? "Forward" : "Reply"}
+              </p>
+              <div className="flex items-center gap-0.5">
+                {minimizeButton}
+                <IconButton
+                  className="shrink-0 text-muted-foreground"
+                  disabled={isPending}
+                  aria-label="Close"
+                  onClick={collapseComposer}
+                >
+                  <X className="size-4" />
+                </IconButton>
+              </div>
+            </div>
+          ) : null}
+          <div className="shrink-0 border-b px-3 py-1.5 md:px-4">
+            <div className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 text-sm">
+              {!isDock && placement !== "top" ? (
+                <>
+                  <span className="text-xs text-muted-foreground">From</span>
+                  <span className="min-w-0 truncate text-sm text-foreground">
+                    {fromAddress}
+                  </span>
+                  {minimizeButton}
+                </>
+              ) : null}
 
               <label
                 htmlFor={`ticket-reply-to-${ticket.id}`}
@@ -1210,6 +1290,7 @@ export const TicketReplyForm = forwardRef<
                 onChange={setToRecipients}
                 placeholder="Add recipient"
                 disabled={isPending}
+                variant={isDock ? "plain" : "boxed"}
                 className="min-w-0 w-full shadow-none"
               />
               {!showCc ? (
@@ -1241,6 +1322,7 @@ export const TicketReplyForm = forwardRef<
                     onChange={setCcRecipients}
                     placeholder="Add Cc"
                     disabled={isPending}
+                    variant={isDock ? "plain" : "boxed"}
                     className="min-w-0 w-full shadow-none"
                   />
                   <span />
@@ -1268,24 +1350,6 @@ export const TicketReplyForm = forwardRef<
               <p className="border-b border-warning/30 bg-warning/10 px-5 py-2 text-xs text-foreground">
                 {TICKET_AWAITING_PAYMENT_ATTACHMENT_HINT}
               </p>
-            ) : null}
-
-            {pendingFiles.length > 0 ? (
-              <div className="flex flex-col gap-1.5 border-b px-4 py-2 md:px-5">
-                {pendingFiles.map((pending) => (
-                  <TicketPendingAttachmentItem
-                    key={pending.id}
-                    pending={pending}
-                    disabled={isPending}
-                    onRemove={() => removePendingFile(pending.id)}
-                    onRetry={() => retryPendingFile(pending.id)}
-                    sendAsDownloadLink={shouldSendTicketReplyAttachmentAsLink(
-                      pending.file.size,
-                      replyAttachmentLimitBytes,
-                    )}
-                  />
-                ))}
-              </div>
             ) : null}
 
             <input
@@ -1332,7 +1396,108 @@ export const TicketReplyForm = forwardRef<
 
             {!isInvoiceReply || showInvoiceNote ? (
               <>
+                {!isDock ? (
+                  <TicketComposerToolbar
+                    editorRef={editorRef}
+                    onEditorChange={(userHtml) => {
+                      setBodyHtml((current) => {
+                        const { signatureHtml, quotedReplyHtml } =
+                          extractReplyComposerParts(current);
+                        return assembleReplyComposerHtml({
+                          userNoteHtml: userHtml,
+                          signatureHtml,
+                          quotedReplyHtml,
+                        });
+                      });
+                    }}
+                    disabled={isPending}
+                    ticket={ticket}
+                    inbox={activeInbox}
+                    contact={contact}
+                    company={company}
+                    onInsertTemplate={handleInsertTemplate}
+                    attachLabel="Attach"
+                    showLargeFileTransfer={false}
+                    onAttachClick={() => fileInputRef.current?.click()}
+                  />
+                ) : null}
+
+                <TicketReplyRichComposer
+                  editorRef={editorRef}
+                  value={bodyHtml}
+                  onChange={setBodyHtml}
+                  onPaste={handlePaste}
+                  placeholder={
+                    composeMode === "forward"
+                      ? "Add a note above the forwarded message..."
+                      : isInvoiceReply
+                        ? "Add an optional note for the client..."
+                        : "Write your reply..."
+                  }
+                  disabled={isPending}
+                  minHeight={replyMinHeight}
+                  maxHeight={replyMaxHeight}
+                  resizeTrigger={isExpanded}
+                  collapseQuotedByDefault={isDock || composeMode === "reply"}
+                  className={
+                    composeMode === "forward"
+                      ? "min-h-20"
+                      : isDock
+                        ? "min-h-[14rem]"
+                        : "min-h-[7rem]"
+                  }
+                  attachments={
+                    pendingFiles.length > 0
+                      ? pendingFiles.map((pending) => (
+                          <TicketPendingAttachmentItem
+                            key={pending.id}
+                            pending={pending}
+                            disabled={isPending}
+                            onRemove={() => removePendingFile(pending.id)}
+                            onRetry={() => retryPendingFile(pending.id)}
+                            sendAsDownloadLink={shouldSendTicketReplyAttachmentAsLink(
+                              pending.file.size,
+                              replyAttachmentLimitBytes,
+                            )}
+                          />
+                        ))
+                      : undefined
+                  }
+                />
+              </>
+            ) : null}
+
+            {composeMode === "forward" && forwardContext ? (
+              <div className="border-t bg-muted/10 px-4 py-3 md:px-5">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">
+                  Forwarded message
+                </p>
+                <div className="max-h-[min(40vh,320px)] overflow-y-auto rounded-md border bg-background p-4 text-sm">
+                  <TicketMessageBody
+                    body={forwardContext.message.body}
+                    htmlBody={forwardContext.message.html_body}
+                  />
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <TicketReplyComposerActions
+            className="shrink-0"
+            composeMode={composeMode}
+            currentStatus={replyKeepStatus}
+            statusTransitions={replyStatusTransitions}
+            disabled={isPending || attachmentsUploading}
+            hasContent={hasContent}
+            submittingAs={submittingAs}
+            showReplyAndCharge={canReplyAndCharge}
+            invoiceComposerMode={isInvoiceReply}
+            canCreateInvoice={canCreateInvoice}
+            preferReplyAndCharge={replySendIntent === "reply_and_invoice"}
+            leading={
+              isDock && (!isInvoiceReply || showInvoiceNote) ? (
                 <TicketComposerToolbar
+                  variant="inline"
                   editorRef={editorRef}
                   onEditorChange={(userHtml) => {
                     setBodyHtml((current) => {
@@ -1355,57 +1520,8 @@ export const TicketReplyForm = forwardRef<
                   showLargeFileTransfer={false}
                   onAttachClick={() => fileInputRef.current?.click()}
                 />
-
-                <TicketReplyRichComposer
-                  editorRef={editorRef}
-                  value={bodyHtml}
-                  onChange={setBodyHtml}
-                  onPaste={handlePaste}
-                  placeholder={
-                    composeMode === "forward"
-                      ? "Add a note above the forwarded message..."
-                      : isInvoiceReply
-                        ? "Add an optional note for the client..."
-                        : "Write your reply..."
-                  }
-                  disabled={isPending}
-                  minHeight={replyMinHeight}
-                  maxHeight={replyMaxHeight}
-                  resizeTrigger={isExpanded}
-                  className={
-                    composeMode === "forward" ? "min-h-20" : "min-h-[9rem]"
-                  }
-                />
-              </>
-            ) : null}
-
-            {composeMode === "forward" && forwardContext ? (
-              <div className="border-t bg-muted/10 px-4 py-3 md:px-5">
-                <p className="mb-2 text-xs font-medium text-muted-foreground">
-                  Forwarded message
-                </p>
-                <div className="max-h-[min(40vh,320px)] overflow-y-auto rounded-md border bg-background p-4 text-sm">
-                  <TicketMessageBody
-                    body={forwardContext.message.body}
-                    htmlBody={forwardContext.message.html_body}
-                  />
-                </div>
-              </div>
-            ) : null}
-          </div>
-
-          <TicketReplyComposerActions
-            className="shrink-0 shadow-[0_-6px_16px_-12px_rgba(0,0,0,0.35)]"
-            composeMode={composeMode}
-            currentStatus={replyKeepStatus}
-            statusTransitions={replyStatusTransitions}
-            disabled={isPending || attachmentsUploading}
-            hasContent={hasContent}
-            submittingAs={submittingAs}
-            showReplyAndCharge={canReplyAndCharge}
-            invoiceComposerMode={isInvoiceReply}
-            canCreateInvoice={canCreateInvoice}
-            preferReplyAndCharge={replySendIntent === "reply_and_invoice"}
+              ) : undefined
+            }
             onCancel={collapseComposer}
             onSendReply={(nextStatus) =>
               handleSend({ isInternalNote: false, nextStatus })

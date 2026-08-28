@@ -3,13 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useGetIdentity, useGetList, useListContext } from "ra-core";
 import { useNavigate, useSearchParams } from "react-router";
 import { List } from "@/components/admin/list";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   PageActions,
@@ -37,12 +30,6 @@ import {
   type TicketsOverviewView,
 } from "@/modules/tickets/ticketOverviewConfig";
 import { TicketInboxBulkBar } from "@/modules/tickets/TicketInboxBulkBar";
-import { TicketOverviewPreview } from "@/modules/tickets/TicketOverviewPreview";
-import {
-  TICKET_PREVIEW_SHEET_CLASS,
-  TICKET_PREVIEW_SHEET_EXPANDED_CLASS,
-  ticketPreviewSheetTransition,
-} from "@/modules/tickets/ticketContextLayout";
 import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
 import { TicketListItem } from "@/modules/tickets/TicketListItem";
 import { TicketsKanban } from "@/modules/tickets/TicketsKanban";
@@ -62,10 +49,6 @@ export const TicketsOverview = () => {
     readPersistedTicketsOverviewView(),
   );
 
-  const ticketParam = searchParams.get("ticket");
-  const selectedTicketId =
-    ticketParam && /^\d+$/.test(ticketParam) ? ticketParam : null;
-
   useTicketsInboxRealtime(Boolean(identity));
   useMarkTicketNotificationsReadOnVisit();
 
@@ -73,6 +56,13 @@ export const TicketsOverview = () => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(TICKETS_OVERVIEW_VIEW_KEY, view);
   }, [view]);
+
+  // Legacy ?ticket= preview → open inbox split.
+  useEffect(() => {
+    const ticketParam = searchParams.get("ticket");
+    if (!ticketParam || !/^\d+$/.test(ticketParam)) return;
+    navigate(ticketShowPath(ticketParam), { replace: true });
+  }, [navigate, searchParams]);
 
   // Drop legacy status filter query params on overview.
   useEffect(() => {
@@ -82,20 +72,8 @@ export const TicketsOverview = () => {
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  const setSelectedTicketId = (ticketId: string | null) => {
-    const next = new URLSearchParams(searchParams);
-    next.delete("status");
-    if (ticketId) next.set("ticket", ticketId);
-    else next.delete("ticket");
-    setSearchParams(next, { replace: true });
-  };
-
   const handleSelectTicket = (ticketId: string) => {
-    if (isMobile) {
-      navigate(ticketShowPath(ticketId));
-      return;
-    }
-    setSelectedTicketId(ticketId);
+    navigate(ticketShowPath(ticketId), { viewTransition: true });
   };
 
   if (!identity) return null;
@@ -119,9 +97,7 @@ export const TicketsOverview = () => {
       <TicketsOverviewBody
         view={view}
         onViewChange={setView}
-        selectedTicketId={selectedTicketId}
         onSelectTicket={handleSelectTicket}
-        onClearSelection={() => setSelectedTicketId(null)}
         isMobile={isMobile}
       />
     </List>
@@ -140,16 +116,12 @@ const TicketsOverviewActions = () => {
 const TicketsOverviewBody = ({
   view,
   onViewChange,
-  selectedTicketId,
   onSelectTicket,
-  onClearSelection,
   isMobile,
 }: {
   view: TicketsOverviewView;
   onViewChange: (view: TicketsOverviewView) => void;
-  selectedTicketId: string | null;
   onSelectTicket: (ticketId: string) => void;
-  onClearSelection: () => void;
   isMobile: boolean;
 }) => {
   const { total, data: tickets = [] } = useListContext<Ticket>();
@@ -157,16 +129,11 @@ const TicketsOverviewBody = ({
   const [statusFilter, setStatusFilter] =
     useState<TicketStatusFilterId>("all");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
-  const [previewContextExpanded, setPreviewContextExpanded] = useState(false);
   const canManage = useMemberCapability("support.tickets.manage");
 
   useEffect(() => {
     setSelectedTicketIds([]);
   }, [view]);
-
-  useEffect(() => {
-    setPreviewContextExpanded(false);
-  }, [selectedTicketId]);
 
   const allTickets = useMemo(
     () =>
@@ -443,7 +410,6 @@ const TicketsOverviewBody = ({
       {view === "table" ? (
         <div className="min-h-0 flex-1 overflow-hidden">
           <TicketsOverviewTable
-            selectedTicketId={selectedTicketId}
             onSelectTicket={onSelectTicket}
             searchQuery={searchQuery}
             selectedTicketIds={selectedTicketIds}
@@ -455,7 +421,6 @@ const TicketsOverviewBody = ({
       ) : (
         <div className="min-h-0 flex-1 overflow-hidden">
           <TicketsKanban
-            selectedTicketId={selectedTicketId}
             onSelectTicket={onSelectTicket}
             searchQuery={searchQuery}
             selectedTicketIds={selectedTicketIds}
@@ -473,40 +438,6 @@ const TicketsOverviewBody = ({
           onMerged={() => clearBulkSelection()}
         />
       ) : null}
-      <Sheet
-        open={Boolean(selectedTicketId) && !isMobile}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPreviewContextExpanded(false);
-            onClearSelection();
-          }
-        }}
-      >
-        <SheetContent
-          side="right"
-          className={cn(
-            "gap-0 p-0 sm:max-w-none [&>button]:hidden",
-            ticketPreviewSheetTransition,
-            previewContextExpanded
-              ? TICKET_PREVIEW_SHEET_EXPANDED_CLASS
-              : TICKET_PREVIEW_SHEET_CLASS,
-          )}
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Ticket preview</SheetTitle>
-            <SheetDescription>
-              Preview of the selected ticket details.
-            </SheetDescription>
-          </SheetHeader>
-          {selectedTicketId ? (
-            <TicketOverviewPreview
-              ticketId={selectedTicketId}
-              onClose={onClearSelection}
-              onContextExpandedChange={setPreviewContextExpanded}
-            />
-          ) : null}
-        </SheetContent>
-      </Sheet>
     </div>
   );
 };

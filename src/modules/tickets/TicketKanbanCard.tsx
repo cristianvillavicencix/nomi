@@ -1,4 +1,5 @@
 import type { MouseEvent, ReactNode } from "react";
+import { useViewTransitionState } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,7 @@ import {
   getTicketWaitingDurationLabel,
   ticketWaitingSlaClassName,
 } from "@/modules/tickets/ticketSlaUtils";
-
+import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
 const railClassName: Record<
   ReturnType<typeof resolveTicketCardRailTone>,
   string
@@ -90,6 +91,8 @@ export const TicketKanbanCard = ({
     ticket.status,
     ticket.updated_at,
   );
+  const showHref = ticketShowPath(ticket.id);
+  const isTransitioning = useViewTransitionState(showHref);
 
   const badgeSlots: ReactNode[] = [];
   if (elevated && priorityLabel) {
@@ -178,7 +181,14 @@ export const TicketKanbanCard = ({
         </div>
       ) : null}
       <div className="px-3 py-2.5 pl-3.5">
-        <p className="line-clamp-2 text-sm font-semibold leading-snug">
+        <p
+          className="line-clamp-2 text-sm font-semibold leading-snug"
+          style={
+            isTransitioning
+              ? { viewTransitionName: `ticket-subject-${ticket.id}` }
+              : undefined
+          }
+        >
           {formatTicketCardSubject(ticket.subject)}
         </p>
         <p className="mt-1 truncate text-xs text-muted-foreground">

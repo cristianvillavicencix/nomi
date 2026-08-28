@@ -1,10 +1,12 @@
-import { ChevronDown, FileText, Loader2, Send } from "lucide-react";
+import { ChevronDown, FileText, Loader2, Send, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
 import type { TicketWorkflowStatus } from "@/modules/tickets/ticketStatusWorkflow";
 import {
   ticketReplyStatusDotClass,
   type TicketReplyStatusTransition,
 } from "@/modules/tickets/ticketReplyStatusActions";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +38,8 @@ type TicketReplyComposerActionsProps = {
   /** When true, primary button becomes Reply & Invoice (chosen before composing). */
   preferReplyAndCharge?: boolean;
   className?: string;
+  /** Formatting / attach icons rendered before Send (Gmail-style). */
+  leading?: ReactNode;
   onCancel: () => void;
   onSendReply: (nextStatus: TicketWorkflowStatus) => void;
   onCreateInvoice?: () => void;
@@ -56,6 +60,7 @@ export const TicketReplyComposerActions = ({
   canCreateInvoice = false,
   preferReplyAndCharge = false,
   className,
+  leading,
   onCancel,
   onSendReply,
   onCreateInvoice,
@@ -80,129 +85,142 @@ export const TicketReplyComposerActions = ({
     ? disabled || !canCreateInvoice || isChargeSubmitting
     : sendDisabled || isChargeSubmitting;
 
-  return (
-    <div
-      className={cn(
-        "flex flex-wrap items-center justify-end gap-2 border-t bg-background px-4 py-2.5 md:px-5",
-        className,
-      )}
-    >
-      {composeMode === "forward" ? (
+  const sendControl =
+    composeMode === "forward" ? (
+      <Button
+        type="button"
+        size="sm"
+        disabled={sendDisabled}
+        className="h-9 shrink-0 gap-2"
+        onClick={onSendForward}
+      >
+        {submittingAs === "forward" ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Send className="size-4" />
+        )}
+        Send
+      </Button>
+    ) : (
+      <div className="inline-flex shrink-0 items-stretch rounded-md shadow-xs">
         <Button
           type="button"
           size="sm"
-          disabled={sendDisabled}
-          className="h-9 gap-2"
-          onClick={onSendForward}
+          disabled={primaryDisabled}
+          className={cn(
+            "h-9 pr-3 pl-3",
+            showStatusMenu &&
+              "rounded-r-none border-r border-primary-foreground/15",
+          )}
+          onClick={() => {
+            if (primaryIsInvoice) {
+              onCreateInvoice?.();
+              return;
+            }
+            onSendReply(currentStatus);
+          }}
         >
-          {submittingAs === "forward" ? (
+          {primaryIsInvoice ? (
+            isChargeSubmitting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <FileText className="size-4" />
+            )
+          ) : isReplySubmitting && submittingAs === currentStatus ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
             <Send className="size-4" />
           )}
-          Send forward
+          {primaryIsInvoice ? "Create invoice & request payment" : "Send"}
         </Button>
-      ) : (
-        <div className="inline-flex items-stretch rounded-md shadow-xs">
-          <Button
-            type="button"
-            size="sm"
-            disabled={primaryDisabled}
-            className={cn(
-              "h-9 pr-3 pl-3",
-              showStatusMenu &&
-                "rounded-r-none border-r border-primary-foreground/15",
-            )}
-            onClick={() => {
-              if (primaryIsInvoice) {
-                onCreateInvoice?.();
-                return;
-              }
-              onSendReply(currentStatus);
-            }}
-          >
-            {primaryIsInvoice ? (
-              isChargeSubmitting ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <FileText className="size-4" />
-              )
-            ) : isReplySubmitting && submittingAs === currentStatus ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Send className="size-4" />
-            )}
-            {primaryIsInvoice
-              ? "Create invoice & request payment"
-              : "Send"}
-          </Button>
 
-          {showStatusMenu ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={sendDisabled}
-                  className="h-9 rounded-l-none px-2"
-                  aria-label="More send options"
-                >
-                  <ChevronDown className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {statusTransitions.length > 0 ? (
-                  <>
-                    <DropdownMenuLabel className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                      Send and update status
-                    </DropdownMenuLabel>
-                    {statusTransitions.map((transition) => (
-                      <DropdownMenuItem
-                        key={transition.status}
-                        onClick={() => onSendReply(transition.status)}
-                      >
-                        <span
-                          className={cn(
-                            "size-2 shrink-0 rounded-full",
-                            ticketReplyStatusDotClass(transition.status),
-                          )}
-                          aria-hidden
-                        />
-                        {transition.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </>
-                ) : null}
-                {replyAndChargeEnabled ? (
-                  <>
-                    {statusTransitions.length > 0 ? (
-                      <DropdownMenuSeparator />
-                    ) : null}
-                    <DropdownMenuLabel className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                      Billing
-                    </DropdownMenuLabel>
-                    <DropdownMenuItem onClick={onStartReplyAndInvoice}>
-                      <FileText className="size-4" />
-                      Reply & Invoice
+        {showStatusMenu ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                size="sm"
+                disabled={sendDisabled}
+                className="h-9 rounded-l-none px-2"
+                aria-label="More send options"
+              >
+                <ChevronDown className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {statusTransitions.length > 0 ? (
+                <>
+                  <DropdownMenuLabel className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                    Send and update status
+                  </DropdownMenuLabel>
+                  {statusTransitions.map((transition) => (
+                    <DropdownMenuItem
+                      key={transition.status}
+                      onClick={() => onSendReply(transition.status)}
+                    >
+                      <span
+                        className={cn(
+                          "size-2 shrink-0 rounded-full",
+                          ticketReplyStatusDotClass(transition.status),
+                        )}
+                        aria-hidden
+                      />
+                      {transition.label}
                     </DropdownMenuItem>
-                  </>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-        </div>
-      )}
+                  ))}
+                </>
+              ) : null}
+              {replyAndChargeEnabled ? (
+                <>
+                  {statusTransitions.length > 0 ? (
+                    <DropdownMenuSeparator />
+                  ) : null}
+                  <DropdownMenuLabel className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                    Billing
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem onClick={onStartReplyAndInvoice}>
+                    <FileText className="size-4" />
+                    Reply & Invoice
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+      </div>
+    );
 
-      <Button
-        type="button"
-        variant="secondary"
-        size="sm"
-        className="h-9"
-        disabled={disabled}
-        onClick={onCancel}
-      >
-        Cancel
-      </Button>
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-1.5 border-t bg-background px-2 py-2 md:px-3",
+        className,
+      )}
+    >
+      {leading}
+      {sendControl}
+      {leading ? (
+        <IconButton
+          className="ml-auto size-8 shrink-0 text-muted-foreground"
+          disabled={disabled}
+          aria-label="Discard draft"
+          title="Discard"
+          onClick={onCancel}
+        >
+          <Trash2 className="size-4" />
+        </IconButton>
+      ) : (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="h-9"
+          disabled={disabled}
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
+      )}
     </div>
   );
 };

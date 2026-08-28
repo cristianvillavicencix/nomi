@@ -1,6 +1,7 @@
 import type { FileAttachment } from "@/lib/fileAttachments";
 import { resolvePrivateStorageSignedUrl } from "@/lib/supabase/privateStorageFile";
 import {
+  extractCidReferencesFromHtml,
   normalizeContentId,
   rewriteCidReferencesInHtml,
 } from "@/modules/mail/mailInlineImages";
@@ -13,6 +14,11 @@ const TICKET_ATTACHMENTS_BUCKET = "attachments";
 
 const attachmentStorageKey = (file: FileAttachment) =>
   file.path?.trim() || file.src?.trim() || "";
+
+const fileNameKey = (value: string) => {
+  const base = value.split(/[/\\]/).pop() ?? value;
+  return normalizeContentId(base);
+};
 
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -79,11 +85,44 @@ export async function resolveTicketDisplayHtml(
 
   const cidToUrl = new Map<string, string>();
   for (const file of attachments) {
-    const contentId = file.contentId?.trim();
     const signed = signedUrls.get(file);
-    if (!contentId || !signed) continue;
-    cidToUrl.set(contentId, signed);
-    cidToUrl.set(normalizeContentId(contentId), signed);
+    if (!signed) continue;
+    const contentId = file.contentId?.trim();
+    if (contentId) {
+      cidToUrl.set(contentId, signed);
+      cidToUrl.set(normalizeContentId(contentId), signed);
+    }
+    const title = file.title?.trim();
+    if (title) cidToUrl.set(fileNameKey(title), signed);
+    const path = attachmentStorageKey(file);
+    if (path) cidToUrl.set(fileNameKey(path), signed);
+  }
+
+  if (sourceHtml) {
+    const cidRefs = extractCidReferencesFromHtml(sourceHtml);
+    const imageFiles = attachments.filter((file) => {
+      const type = file.type?.toLowerCase() ?? "";
+      const name = file.title?.toLowerCase() ?? "";
+      return (
+        type.startsWith("image/") ||
+        /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(name)
+      );
+    });
+    for (const cid of cidRefs) {
+      if (cidToUrl.has(cid)) continue;
+      const match = imageFiles.find((file) => {
+        const title = file.title ? fileNameKey(file.title) : "";
+        const path = attachmentStorageKey(file)
+          ? fileNameKey(attachmentStorageKey(file))
+          : "";
+        const contentId = file.contentId
+          ? normalizeContentId(file.contentId)
+          : "";
+        return cid === title || cid === path || cid === contentId;
+      });
+      const signed = match ? signedUrls.get(match) : undefined;
+      if (signed) cidToUrl.set(cid, signed);
+    }
   }
 
   let result = sourceHtml;

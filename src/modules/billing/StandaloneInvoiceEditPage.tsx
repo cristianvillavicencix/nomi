@@ -705,11 +705,16 @@ export const StandaloneInvoiceEditPage = ({
         : invoiceStatusLabel(invoice.status, invoice.due_date);
 
   const shellClass = embedded
-    ? "flex min-h-0 flex-1 flex-col"
+    ? "flex flex-col"
     : "flex min-h-0 flex-1 flex-col bg-muted/50";
 
   const showSentEditGate = isSentInvoice && editable && !editUnlocked;
   const showReadOnlyDocument = isPaidInvoice || showSentEditGate;
+
+  // Embedded: parent workspace/dialog owns scroll (avoid nested overflow trap).
+  const bodyClass = embedded
+    ? "px-3 py-4 md:px-4"
+    : "min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 md:px-6";
 
   if (embedded && !canViewClientInvoiceDetail(invoice)) {
     return (
@@ -727,7 +732,7 @@ export const StandaloneInvoiceEditPage = ({
             </Badge>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 md:px-4">
+        <div className={bodyClass}>
           <InvoiceDocumentPreview
             organizationName={organizationName}
             organizationWebsite={companyWebsite}
@@ -803,13 +808,7 @@ export const StandaloneInvoiceEditPage = ({
         }}
       />
 
-      <div
-        className={
-          embedded
-            ? "min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 md:px-4"
-            : "min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 md:px-6"
-        }
-      >
+      <div className={bodyClass}>
         {showReadOnlyDocument ? (
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
             {paymentsReceivedPanel}

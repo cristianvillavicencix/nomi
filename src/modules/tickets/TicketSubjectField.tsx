@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useNotify, useUpdate } from "ra-core";
 import { useQueryClient } from "@tanstack/react-query";
+import { useViewTransitionState } from "react-router";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { Ticket } from "@/modules/types";
 import { patchTicketInQueryCache } from "@/modules/tickets/ticketsRealtimeCache";
-
+import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
 type TicketSubjectFieldProps = {
   ticket: Ticket;
   editable?: boolean;
@@ -29,6 +30,11 @@ export const TicketSubjectField = ({
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const resolvedSubject = displaySubject ?? ticket.subject ?? "";
+  const showHref = ticketShowPath(ticket.id);
+  const isTransitioning = useViewTransitionState(showHref);
+  const subjectTransitionStyle = isTransitioning
+    ? ({ viewTransitionName: `ticket-subject-${ticket.id}` } as const)
+    : undefined;
 
   useEffect(() => {
     setValue(resolvedSubject);
@@ -99,6 +105,7 @@ export const TicketSubjectField = ({
           "text-sm font-normal leading-snug text-foreground",
           className,
         )}
+        style={subjectTransitionStyle}
       >
         {resolvedSubject || "Untitled ticket"}
       </span>
@@ -129,6 +136,7 @@ export const TicketSubjectField = ({
           "inline h-auto min-w-[12rem] border-primary/40 bg-background px-1 py-0 text-sm font-normal leading-snug shadow-none",
           inputClassName,
         )}
+        style={subjectTransitionStyle}
       />
     );
   }
@@ -145,6 +153,7 @@ export const TicketSubjectField = ({
         "inline max-w-full truncate text-left text-lg font-semibold leading-snug tracking-tight text-foreground hover:underline",
         className,
       )}
+      style={subjectTransitionStyle}
     >
       {resolvedSubject || "Untitled ticket"}
     </button>

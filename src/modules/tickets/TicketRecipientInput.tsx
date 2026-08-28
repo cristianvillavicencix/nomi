@@ -39,6 +39,8 @@ type TicketRecipientInputProps = {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  /** Flat Gmail-style row without input chrome. */
+  variant?: "boxed" | "plain";
 };
 
 export const TicketRecipientInput = ({
@@ -48,6 +50,7 @@ export const TicketRecipientInput = ({
   placeholder,
   disabled = false,
   className,
+  variant = "boxed",
 }: TicketRecipientInputProps) => {
   const emails = useMemo(() => parseEmailList(value), [value]);
   const [draft, setDraft] = useState("");
@@ -156,7 +159,10 @@ export const TicketRecipientInput = ({
       <PopoverAnchor asChild>
         <div
           className={cn(
-            "flex min-h-8 min-w-0 flex-wrap items-center gap-1 rounded-md border border-input bg-background px-1.5 py-1",
+            "flex min-w-0 flex-wrap items-center gap-1",
+            variant === "boxed" &&
+              "min-h-8 rounded-md border border-input bg-background px-1.5 py-1",
+            variant === "plain" && "min-h-7 bg-transparent px-0 py-0.5",
             disabled && "pointer-events-none opacity-60",
             className,
           )}

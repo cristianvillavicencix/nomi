@@ -9,7 +9,7 @@ export const useTicketThreadMessages = (
   ticketId: Identifier | null | undefined,
 ) => {
   const queryClient = useQueryClient();
-  const threadEndRef = useRef<HTMLDivElement | null>(null);
+  const threadTopRef = useRef<HTMLDivElement | null>(null);
 
   const {
     data: messages = [],
@@ -26,7 +26,7 @@ export const useTicketThreadMessages = (
   );
 
   const scrollToLatest = useCallback((behavior: ScrollBehavior = "smooth") => {
-    threadEndRef.current?.scrollIntoView({ behavior, block: "end" });
+    threadTopRef.current?.scrollIntoView({ behavior, block: "start" });
   }, []);
 
   const prevTicketIdRef = useRef<typeof ticketId>(null);
@@ -35,10 +35,10 @@ export const useTicketThreadMessages = (
     if (!ticketId || isPending) return;
     const ticketChanged = prevTicketIdRef.current !== ticketId;
     prevTicketIdRef.current = ticketId;
-    if (ticketChanged || messages.length > 0) {
+    if (ticketChanged) {
       scrollToLatest("auto");
     }
-  }, [ticketId, isPending, messages.length, scrollToLatest]);
+  }, [ticketId, isPending, scrollToLatest]);
 
   useEffect(() => {
     if (ticketId == null) return;
@@ -90,7 +90,7 @@ export const useTicketThreadMessages = (
     messages: sortedMessages,
     isPending: ticketId != null && isPending,
     refetch,
-    threadEndRef,
+    threadEndRef: threadTopRef,
     scrollToBottom: scrollToLatest,
     scrollToLatest,
   };

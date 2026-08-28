@@ -1,17 +1,23 @@
 /** Normalize MIME Content-ID / cid: values for matching. */
 export function normalizeContentId(raw: string): string {
-  return raw
-    .trim()
-    .replace(/^<|>$/g, "")
-    .replace(/^cid:/i, "")
-    .toLowerCase();
+  let value = raw.trim().replace(/^<|>$/g, "").replace(/^cid:/i, "");
+  try {
+    value = decodeURIComponent(value);
+  } catch {
+    // keep raw when not URI-encoded
+  }
+  return value.toLowerCase();
 }
 
 function contentIdsMatch(stored: string, reference: string): boolean {
   const a = normalizeContentId(stored);
   const b = normalizeContentId(reference);
   if (!a || !b) return false;
-  return a === b || b.startsWith(a) || a.startsWith(b);
+  if (a === b) return true;
+  // Outlook-style cid:ii_xxx vs stored ii_xxx@domain
+  if (a.includes("@") && a.split("@")[0] === b) return true;
+  if (b.includes("@") && b.split("@")[0] === a) return true;
+  return b.startsWith(a) || a.startsWith(b);
 }
 
 /** Replace cid: image references with resolved HTTPS URLs. */
@@ -56,4 +62,20 @@ export function rewriteCidReferencesInHtml(
   }
 
   return result;
+}
+
+/** Collect bare cid: tokens from HTML for fallback attachment matching. */
+export function extractCidReferencesFromHtml(html: string): string[] {
+  const found = new Set<string>();
+  const patterns = [
+    /src=(["']?)cid:([^"'\s>]+)\1/gi,
+    /url\((["']?)cid:([^"')]+)\1\)/gi,
+  ];
+  for (const pattern of patterns) {
+    for (const match of html.matchAll(pattern)) {
+      const cid = match[2]?.trim();
+      if (cid) found.add(normalizeContentId(cid));
+    }
+  }
+  return [...found];
 }

@@ -18,6 +18,7 @@ import {
   sanitizeComposerHtml,
 } from "@/modules/tickets/ticketReplyRichText";
 import { IconButton } from "@/components/ui/icon-button";
+import { cn } from "@/lib/utils";
 
 type TicketComposerToolbarProps = {
   editorRef: React.RefObject<HTMLDivElement | null>;
@@ -32,6 +33,9 @@ type TicketComposerToolbarProps = {
   attachLabel?: string;
   showLargeFileTransfer?: boolean;
   onLargeFileTransferClick?: () => void;
+  /** "bar" = own row; "inline" = icons only for Gmail-style action row */
+  variant?: "bar" | "inline";
+  className?: string;
 };
 
 export const TicketComposerToolbar = ({
@@ -47,6 +51,8 @@ export const TicketComposerToolbar = ({
   attachLabel = "Attach files",
   showLargeFileTransfer = true,
   onLargeFileTransferClick,
+  variant = "bar",
+  className,
 }: TicketComposerToolbarProps) => {
   const syncEditor = () => {
     const html = sanitizeComposerHtml(editorRef.current?.innerHTML ?? "");
@@ -64,7 +70,7 @@ export const TicketComposerToolbar = ({
     onClick: () => void,
   ) => (
     <IconButton
-      className="text-muted-foreground"
+      className="size-8 shrink-0 text-muted-foreground"
       disabled={disabled}
       title={label}
       aria-label={label}
@@ -74,8 +80,8 @@ export const TicketComposerToolbar = ({
     </IconButton>
   );
 
-  return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/10 px-2 py-1.5">
+  const tools = (
+    <>
       {toolButton("Bold", <Bold className="size-4" />, () =>
         runCommand("bold"),
       )}
@@ -93,7 +99,7 @@ export const TicketComposerToolbar = ({
         runCommand("insertOrderedList"),
       )}
 
-      <div className="mx-1 hidden h-5 w-px bg-border sm:block" aria-hidden />
+      <div className="mx-0.5 hidden h-5 w-px shrink-0 bg-border sm:block" aria-hidden />
 
       {toolButton(attachLabel, <Paperclip className="size-4" />, onAttachClick)}
       {showLargeFileTransfer && onLargeFileTransferClick
@@ -121,6 +127,25 @@ export const TicketComposerToolbar = ({
         disabled={disabled}
         onInsert={onInsertTemplate}
       />
+    </>
+  );
+
+  if (variant === "inline") {
+    return (
+      <div className={cn("flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto", className)}>
+        {tools}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-0.5 border-b bg-muted/10 px-2 py-1.5",
+        className,
+      )}
+    >
+      {tools}
     </div>
   );
 };

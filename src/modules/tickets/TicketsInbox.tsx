@@ -136,6 +136,16 @@ export const TicketsInbox = () => {
       queryOptions={{ refetchInterval: 30_000 }}
       actions={
         <PageActions>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5"
+            onClick={() => navigate("/tickets", { viewTransition: true })}
+          >
+            <ArrowLeft className="size-3.5" />
+            Board / List
+          </Button>
           <PageTitle label="Inbox" />
         </PageActions>
       }
@@ -452,19 +462,6 @@ const TicketsInboxLayout = ({
         >
           <div className={cn("shrink-0 p-3", isMobile ? "glass-header" : "space-y-0 border-b bg-background")}>
             <ModuleToolbar>
-              {statusFilter !== "all" ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="-ml-1 h-8 shrink-0 gap-1.5 px-2"
-                  onClick={() => navigate("/tickets")}
-                  aria-label="All tickets"
-                >
-                  <ArrowLeft className="size-3.5" />
-                  All tickets
-                </Button>
-              ) : null}
               <ModuleSearchField
                 value={searchQuery}
                 onChange={handleSearch}

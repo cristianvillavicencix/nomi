@@ -11,6 +11,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -28,18 +29,7 @@ export const TicketComposeActionBar = ({
   ) => void;
   className?: string;
 }) => (
-  <div className={className ?? "flex flex-wrap items-center justify-end gap-2"}>
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
-      onClick={() => onOpen("internal")}
-    >
-      <Lock className="size-4" />
-      <span className="hidden sm:inline">Internal</span>
-    </Button>
-
+  <div className={className ?? "flex items-center justify-end"}>
     <div className="inline-flex items-stretch rounded-md shadow-xs">
       <Button
         type="button"
@@ -56,7 +46,7 @@ export const TicketComposeActionBar = ({
             type="button"
             size="sm"
             className="h-9 rounded-l-none px-2"
-            aria-label="More reply options"
+            aria-label="More compose options"
           >
             <ChevronDown className="size-4" />
           </Button>
@@ -64,7 +54,7 @@ export const TicketComposeActionBar = ({
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem onClick={() => onOpen("reply")}>
             <MessageSquare className="size-4" />
-            Reply only
+            Reply
           </DropdownMenuItem>
           {canReplyAndCharge ? (
             <DropdownMenuItem
@@ -76,19 +66,17 @@ export const TicketComposeActionBar = ({
               Reply & Invoice
             </DropdownMenuItem>
           ) : null}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => onOpen("forward")}>
+            <Forward className="size-4" />
+            Forward
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onOpen("internal")}>
+            <Lock className="size-4" />
+            Internal note
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
-
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      className="h-9 gap-1.5"
-      onClick={() => onOpen("forward")}
-    >
-      <Forward className="size-4" />
-      <span className="hidden sm:inline">Forward</span>
-    </Button>
   </div>
 );

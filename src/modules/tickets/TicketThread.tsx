@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import {
   ChevronDown,
+  FolderInput,
   Lock,
   MoreHorizontal,
   Paperclip,
@@ -9,11 +10,15 @@ import {
 } from "lucide-react";
 import type { FileAttachment } from "@/lib/fileAttachments";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
-import type { TicketMessage } from "@/modules/types";
+import type { Ticket, TicketMessage } from "@/modules/types";
 import { EmailDeliveryBadge } from "@/modules/tickets/EmailDeliveryBadge";
 import { TicketInternalNoteEditor } from "@/modules/tickets/TicketInternalNoteEditor";
 import { TicketInvoiceSentNoteCard } from "@/modules/tickets/TicketInvoiceSentNoteCard";
+import { TicketMessageAvatar } from "@/modules/tickets/TicketMessageAvatar";
 import { TicketMessageContent } from "@/modules/tickets/TicketMessageContent";
+import { TicketMoveMessagesDialog } from "@/modules/tickets/TicketMoveMessagesDialog";
+import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
+import type { Company } from "@/components/atomic-crm/types";
 import {
   isInvoiceSentInternalNote,
   previewInvoiceSentInternalNote,
@@ -23,6 +28,7 @@ import { useTicketThreadQuote } from "@/modules/tickets/TicketThreadQuoteContext
 import { isInboundMessageUnread } from "@/modules/tickets/ticketReadState";
 import { formatTicketMessageTime } from "@/modules/tickets/ticketInboxUi";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
@@ -34,6 +40,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { htmlToPlainText } from "@/modules/tickets/ticketReplyRichText";
+import { useNavigate } from "react-router";
+import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
+import type { Identifier } from "ra-core";
 
 const PREVIEW_MAX_LENGTH = 140;
 
@@ -73,40 +82,9 @@ const formatRecipientList = (emails?: string[] | null) => {
   return list.join(", ");
 };
 
-type ThreadTreeTone =
-  | "default"
-  | "inbound"
-  | "outbound"
-  | "internal"
-  | "unread";
-
-const ThreadTreeGuide = ({
-  tone = "default",
-}: {
-  isFirst: boolean;
-  isLast: boolean;
-  tone?: ThreadTreeTone;
-}) => (
-  <div className="flex w-6 shrink-0 justify-center pt-3" aria-hidden>
-    <span
-      className={cn(
-        "size-2.5 rounded-full border-2 bg-background",
-        tone === "internal" &&
-          "border-amber-500 bg-amber-100 dark:bg-amber-950",
-        tone === "unread" && "border-blue-500 bg-blue-100 dark:bg-blue-950",
-        tone === "inbound" && "border-slate-400",
-        tone === "outbound" && "border-sky-500",
-        tone === "default" && "border-muted-foreground/50",
-      )}
-    />
-  </div>
-);
-
 const MessageOverflowMenu = ({
   collapsed,
   onToggle,
-  onQuote,
-  canQuote,
   toLine,
   ccLine,
   showDetails,
@@ -116,8 +94,6 @@ const MessageOverflowMenu = ({
 }: {
   collapsed: boolean;
   onToggle: () => void;
-  onQuote?: () => void;
-  canQuote?: boolean;
   toLine: string | null;
   ccLine: string | null;
   showDetails: boolean;
@@ -131,7 +107,7 @@ const MessageOverflowMenu = ({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <IconButton
-          className="size-7 shrink-0 text-muted-foreground opacity-70 transition-opacity hover:opacity-100 group-hover/message:opacity-100 data-[state=open]:opacity-100"
+          className="size-7 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/message:opacity-100 data-[state=open]:opacity-100"
           aria-label="Message actions"
           onClick={(event) => event.stopPropagation()}
         >
@@ -148,12 +124,6 @@ const MessageOverflowMenu = ({
           <ChevronDown className="size-3.5" />
           {collapsed ? "Expand message" : "Collapse message"}
         </DropdownMenuItem>
-        {canQuote && onQuote ? (
-          <DropdownMenuItem onSelect={onQuote}>
-            <Reply className="size-3.5" />
-            Quote reply
-          </DropdownMenuItem>
-        ) : null}
         {editSlot}
         {hasRecipients || deliverySlot ? <DropdownMenuSeparator /> : null}
         {hasRecipients ? (
@@ -203,15 +173,21 @@ const TicketThreadMessage = ({
   collapsed,
   onToggle,
   isLatest,
-  isFirst,
-  isLast,
+  company,
+  orgWebsite,
+  selectable = false,
+  selected = false,
+  onSelectedChange,
 }: {
   message: TicketMessage;
   collapsed: boolean;
   onToggle: () => void;
   isLatest: boolean;
-  isFirst: boolean;
-  isLast: boolean;
+  company?: Company | null;
+  orgWebsite?: string | null;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectedChange?: (selected: boolean) => void;
 }) => {
   const readCutoff = useTicketReadCutoff();
   const quoteContext = useTicketThreadQuote();
@@ -244,15 +220,44 @@ const TicketThreadMessage = ({
     setShowDetails(false);
   }, [message.id]);
 
-  const treeTone: ThreadTreeTone = isInternal
-    ? "internal"
-    : unreadInbound
-      ? "unread"
-      : inbound
-        ? "inbound"
-        : outbound
-          ? "outbound"
-          : "default";
+  const avatarWithSelect = (
+    display: string,
+    direction: "inbound" | "outbound" | "internal",
+  ) => (
+    <div className="group/avatar relative mt-0.5 shrink-0">
+      {selectable && direction !== "internal" ? (
+        <div
+          className={cn(
+            "absolute -left-0.5 -top-0.5 z-10 transition-opacity",
+            selected
+              ? "opacity-100"
+              : "opacity-0 group-hover/avatar:opacity-100 focus-within:opacity-100",
+          )}
+        >
+          <Checkbox
+            checked={selected}
+            className="size-4 border-background bg-background shadow-sm"
+            aria-label="Select message"
+            onCheckedChange={(value) => onSelectedChange?.(value === true)}
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      ) : null}
+      <TicketMessageAvatar
+        direction={direction}
+        displayName={display}
+        email={senderEmail}
+        company={company}
+        orgWebsite={orgWebsite}
+        className={cn(
+          selectable &&
+            direction !== "internal" &&
+            !selected &&
+            "transition-opacity group-hover/avatar:opacity-40",
+        )}
+      />
+    </div>
+  );
 
   if (isInternal) {
     const author = senderName || "Team";
@@ -260,12 +265,13 @@ const TicketThreadMessage = ({
     const invoiceSentNote = isInvoiceSentInternalNote(message.body);
 
     return (
-      <article className="group/message flex w-full text-sm">
-        <ThreadTreeGuide isFirst={isFirst} isLast={isLast} tone={treeTone} />
+      <article className="group/message flex w-full gap-2.5 text-sm">
+        {avatarWithSelect(author, "internal")}
         <div
           className={cn(
-            "min-w-0 flex-1 rounded-lg border border-amber-200/60 bg-amber-50/50 py-3 pr-1 pl-3 dark:border-amber-900/40 dark:bg-amber-950/20",
+            "min-w-0 flex-1 rounded-lg border border-amber-200/70 bg-card py-3 pr-1 pl-3 shadow-sm dark:border-amber-900/50",
             isEditingInternal && "bg-amber-50/80 dark:bg-amber-950/30",
+            !isEditingInternal && "bg-amber-50/40 dark:bg-amber-950/20",
           )}
         >
           <div className="flex items-start gap-2">
@@ -368,19 +374,16 @@ const TicketThreadMessage = ({
   const canQuote = Boolean(inbound && quoteContext);
 
   return (
-    <article
-      className={cn(
-        "group/message flex w-full text-sm transition-colors",
-        unreadInbound && "bg-blue-50/30 dark:bg-blue-950/10",
-      )}
-    >
-      <ThreadTreeGuide isFirst={isFirst} isLast={isLast} tone={treeTone} />
+    <article className="group/message flex w-full gap-2.5 text-sm">
+      {avatarWithSelect(displayName, inbound ? "inbound" : "outbound")}
       <div
         className={cn(
-          "min-w-0 flex-1 rounded-lg border py-3 pr-1 pl-3",
+          "min-w-0 flex-1 rounded-lg border bg-card py-3 pr-1 pl-3 shadow-sm",
+          unreadInbound && "ring-1 ring-blue-400/40",
+          selected && "ring-1 ring-primary/40",
           inbound
-            ? "border-slate-200 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-900/30"
-            : "border-blue-200 bg-blue-50/40 dark:border-blue-900/40 dark:bg-blue-950/20",
+            ? "border-slate-200 dark:border-slate-700"
+            : "border-blue-200/80 dark:border-blue-900/50",
         )}
       >
         <div className="flex items-start gap-2">
@@ -422,19 +425,32 @@ const TicketThreadMessage = ({
               </p>
             ) : null}
           </button>
-          <MessageOverflowMenu
-            collapsed={collapsed}
-            onToggle={onToggle}
-            onQuote={handleQuote}
-            canQuote={canQuote}
-            toLine={toLine}
-            ccLine={ccLine}
-            showDetails={showDetails}
-            onToggleDetails={() => setShowDetails((current) => !current)}
-            deliverySlot={
-              outbound ? <EmailDeliveryBadge message={message} /> : null
-            }
-          />
+          <div className="flex shrink-0 items-center gap-0.5 self-start">
+            {canQuote ? (
+              <IconButton
+                className="size-7 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/message:opacity-100"
+                aria-label="Reply to this message"
+                title="Reply to this message"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleQuote();
+                }}
+              >
+                <Reply className="size-4" />
+              </IconButton>
+            ) : null}
+            <MessageOverflowMenu
+              collapsed={collapsed}
+              onToggle={onToggle}
+              toLine={toLine}
+              ccLine={ccLine}
+              showDetails={showDetails}
+              onToggleDetails={() => setShowDetails((current) => !current)}
+              deliverySlot={
+                outbound ? <EmailDeliveryBadge message={message} /> : null
+              }
+            />
+          </div>
         </div>
 
         {!collapsed ? (
@@ -474,49 +490,113 @@ const TicketThreadMessage = ({
   );
 };
 
-const VISIBLE_TAIL_COUNT = 4;
-
 export const TicketThread = ({
   messages,
   isPending = false,
   threadEndRef,
+  company,
+  readBaseline,
+  ticket,
 }: {
   messages: TicketMessage[];
   isPending?: boolean;
   threadEndRef?: RefObject<HTMLDivElement | null>;
+  company?: Company | null;
+  /**
+   * last_read_at when the ticket was opened (before mark-as-read).
+   * undefined = still loading. null = never read.
+   * Newest message stays expanded only if newer than this baseline.
+   */
+  readBaseline?: string | null;
+  ticket?: Ticket | null;
 }) => {
+  const navigate = useNavigate();
+  const orgWebsite = getInvoiceOrganizationBranding().website;
+  const canMove = useMemberCapability("support.tickets.manage");
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(
     () => new Set(),
   );
-  const [showAllEarlier, setShowAllEarlier] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(
+    () => new Set(),
+  );
+  const [moveMode, setMoveMode] = useState<"new" | "existing" | null>(null);
 
   const messageIds = useMemo(
     () => messages.map((message) => Number(message.id)).filter(Number.isFinite),
     [messages],
   );
 
+  const movableIds = useMemo(
+    () =>
+      messages
+        .filter((message) => message.direction !== "internal")
+        .map((message) => Number(message.id))
+        .filter(Number.isFinite),
+    [messages],
+  );
+
   const messageIdsKey = messageIds.join(",");
   const prevMessageIdsRef = useRef<number[]>([]);
-  const prevMessageCountRef = useRef(0);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (messageIds.length <= 1) {
+    setSelectedIds(new Set());
+    setMoveMode(null);
+  }, [ticket?.id]);
+
+  useEffect(() => {
+    setSelectedIds((current) => {
+      const next = new Set<number>();
+      for (const id of current) {
+        if (movableIds.includes(id)) next.add(id);
+      }
+      return next.size === current.size ? current : next;
+    });
+  }, [movableIds]);
+
+  useEffect(() => {
+    if (messageIds.length === 0) {
       setCollapsedIds(new Set());
+      prevMessageIdsRef.current = [];
+      initializedRef.current = false;
+      return;
+    }
+
+    // Wait until we know whether this open is a first look or a revisit.
+    if (readBaseline === undefined) return;
+
+    const prevIds = prevMessageIdsRef.current;
+    const prevSet = new Set(prevIds);
+    const latestId = messageIds[messageIds.length - 1];
+
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      // Expand the newest inbound only when it arrived after the last open.
+      const latestInbound = [...messages]
+        .reverse()
+        .find((message) => message.direction === "inbound");
+      const inboundId = latestInbound ? Number(latestInbound.id) : NaN;
+      const inboundUnread =
+        Number.isFinite(inboundId) &&
+        (readBaseline == null ||
+          (Boolean(latestInbound?.created_at) &&
+            latestInbound!.created_at > readBaseline));
+      setCollapsedIds(
+        inboundUnread
+          ? new Set(messageIds.filter((id) => id !== inboundId))
+          : new Set(messageIds),
+      );
       prevMessageIdsRef.current = messageIds;
       return;
     }
 
-    const prevIds = prevMessageIdsRef.current;
-    const prevSet = new Set(prevIds);
-
-    if (prevIds.length === 0) {
-      // Keep only the latest message expanded by default.
-      setCollapsedIds(new Set(messageIds.slice(0, -1)));
-    } else if (messageIdsKey !== prevIds.join(",")) {
+    if (messageIdsKey !== prevIds.join(",")) {
       setCollapsedIds((current) => {
         const next = new Set(current);
-        for (const id of messageIds.slice(0, -1)) {
-          if (!prevSet.has(id)) {
+        for (const id of messageIds) {
+          if (id === latestId) {
+            next.delete(id);
+          } else if (!prevSet.has(id)) {
             next.add(id);
           }
         }
@@ -525,19 +605,19 @@ export const TicketThread = ({
             next.delete(id);
           }
         }
+        // When a new latest arrives while viewing, expand it.
+        if (latestId != null && !prevSet.has(latestId)) {
+          for (const id of messageIds) {
+            if (id !== latestId) next.add(id);
+          }
+          next.delete(latestId);
+        }
         return next;
       });
     }
 
     prevMessageIdsRef.current = messageIds;
-  }, [messageIdsKey, messageIds]);
-
-  useEffect(() => {
-    if (messageIds.length > prevMessageCountRef.current) {
-      setShowAllEarlier(false);
-    }
-    prevMessageCountRef.current = messageIds.length;
-  }, [messageIds.length]);
+  }, [messageIdsKey, messageIds, messages, readBaseline]);
 
   const toggleMessage = (messageId: number) => {
     setCollapsedIds((current) => {
@@ -550,6 +630,24 @@ export const TicketThread = ({
       return next;
     });
   };
+
+  const toggleSelected = (messageId: number, selected: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (selected) next.add(messageId);
+      else next.delete(messageId);
+      return next;
+    });
+  };
+
+  // Messages arrive oldest-first; show newest at the top (email-style).
+  const latestId = messageIds[messageIds.length - 1];
+  const newestFirst = useMemo(() => [...messages].reverse(), [messages]);
+  const selectedList = useMemo(
+    () => [...selectedIds] as Identifier[],
+    [selectedIds],
+  );
+  const showMoveUi = Boolean(canMove && ticket);
 
   if (isPending) {
     return (
@@ -567,19 +665,46 @@ export const TicketThread = ({
     );
   }
 
-  // Messages arrive oldest-first; keep the latest visible at the bottom.
-  const latestId = messageIds[messageIds.length - 1];
-  const hiddenCount =
-    !showAllEarlier && messages.length > VISIBLE_TAIL_COUNT
-      ? messages.length - VISIBLE_TAIL_COUNT
-      : 0;
-  const visibleMessages =
-    hiddenCount > 0 ? messages.slice(-VISIBLE_TAIL_COUNT) : messages;
-
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-col">
-        {visibleMessages.map((message, index) => {
+      {showMoveUi && selectedIds.size > 0 ? (
+        <div className="sticky top-0 z-10 mb-3 flex flex-wrap items-center gap-2 rounded-lg border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
+          <FolderInput className="size-4 text-muted-foreground" />
+          <span className="text-sm font-medium">
+            {selectedIds.size} selected
+          </span>
+          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setMoveMode("new")}
+            >
+              Move to new ticket
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setMoveMode("existing")}
+            >
+              Move to existing
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      <div ref={threadEndRef} className="h-px shrink-0" aria-hidden />
+      <div className="flex flex-col gap-3">
+        {newestFirst.map((message) => {
           const messageId = Number(message.id);
           return (
             <TicketThreadMessage
@@ -588,26 +713,35 @@ export const TicketThread = ({
               collapsed={collapsedIds.has(messageId)}
               onToggle={() => toggleMessage(messageId)}
               isLatest={messageId === latestId}
-              isFirst={index === 0}
-              isLast={index === visibleMessages.length - 1}
+              company={company}
+              orgWebsite={orgWebsite}
+              selectable={showMoveUi}
+              selected={selectedIds.has(messageId)}
+              onSelectedChange={(selected) =>
+                toggleSelected(messageId, selected)
+              }
             />
           );
         })}
       </div>
-      <div ref={threadEndRef} className="h-px shrink-0" aria-hidden />
-      {hiddenCount > 0 ? (
-        <div className="flex justify-center border-t border-border/60 py-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 text-xs font-medium text-muted-foreground hover:text-foreground"
-            onClick={() => setShowAllEarlier(true)}
-          >
-            Show {hiddenCount} earlier message
-            {hiddenCount === 1 ? "" : "s"}
-          </Button>
-        </div>
+
+      {ticket && moveMode ? (
+        <TicketMoveMessagesDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setMoveMode(null);
+          }}
+          mode={moveMode}
+          sourceTicket={ticket}
+          messageIds={selectedList}
+          onMoved={(targetTicketId, createdNew) => {
+            setSelectedIds(new Set());
+            setMoveMode(null);
+            if (createdNew || String(targetTicketId) !== String(ticket.id)) {
+              navigate(ticketShowPath(targetTicketId));
+            }
+          }}
+        />
       ) : null}
     </div>
   );

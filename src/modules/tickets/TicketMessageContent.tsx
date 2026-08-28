@@ -34,9 +34,11 @@ export const TicketMessageContent = ({
     fileAttachments,
   );
 
+  // Never paint unresolved cid: HTML (browser ERR_UNKNOWN_URL_SCHEME).
   const displayHtmlBody = isResolving
     ? null
-    : (resolvedHtmlBody ?? htmlBody);
+    : (resolvedHtmlBody ??
+      (htmlBody && /cid:/i.test(htmlBody) ? null : htmlBody));
 
   const downloadableAssets = useMemo(
     () =>
