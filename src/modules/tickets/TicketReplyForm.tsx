@@ -931,51 +931,77 @@ export const TicketReplyForm = forwardRef<
     </IconButton>
   );
 
+  const defaultRecipientLabel =
+    toRecipients.trim() || defaultRecipientEmail || "Add recipient";
+  const replyPlaceholder = `Reply to ${defaultRecipientLabel.includes("@") ? defaultRecipientLabel : defaultRecipientLabel || "client"}`;
+
   if (!isExpanded) {
-    return <>{sendProgress.dock}</>;
+    return (
+      <>
+        {sendProgress.dock}
+        <div
+          className={cn(
+            "flex justify-start border-t bg-background px-4 py-2.5 md:px-5",
+            edgeBorderClass,
+          )}
+        >
+          <button
+            type="button"
+            className="flex w-full max-w-md items-center gap-2.5 rounded-lg border border-border/80 bg-muted/35 px-3 py-2.5 text-left shadow-sm transition-colors hover:bg-muted/55 sm:w-auto sm:min-w-[17rem]"
+            onClick={() => openComposer("reply")}
+          >
+            <Reply className="size-4 shrink-0 text-muted-foreground" />
+            <span className="truncate text-sm text-muted-foreground">
+              {replyPlaceholder}
+            </span>
+          </button>
+        </div>
+      </>
+    );
   }
 
   if (isMinimized) {
     return (
       <>
-      {sendProgress.dock}
-      <div
-        className={cn(
-          "flex justify-end border-t bg-background px-4 py-2.5 md:px-5",
-          edgeBorderClass,
-        )}
-      >
-        <div className="flex w-full max-w-sm items-stretch overflow-hidden rounded-lg border border-border/80 bg-muted/35 shadow-sm sm:w-auto sm:min-w-[17rem]">
-          <button
-            type="button"
-            className="flex min-w-0 flex-1 items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-muted/55"
-            onClick={expandComposer}
-          >
-            <ChevronUp className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium leading-snug text-foreground">
-                {composerTabSummary.title}
-                <span className="font-normal text-muted-foreground">
-                  {" "}· {composerTabSummary.context}
-                </span>
-              </p>
-              <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                {composerTabSummary.preview}
-              </p>
-            </div>
-          </button>
-          <IconButton
-            className="size-auto w-9 shrink-0 rounded-none border-l border-border/60 hover:bg-muted/70"
-            aria-label="Close draft"
-            onClick={(event) => {
-              event.stopPropagation();
-              collapseComposer();
-            }}
-          >
-            <X className="size-4" />
-          </IconButton>
+        {sendProgress.dock}
+        <div
+          className={cn(
+            "flex justify-end border-t bg-background px-4 py-2 md:px-5",
+            edgeBorderClass,
+          )}
+        >
+          <div className="flex w-full max-w-xs items-stretch overflow-hidden rounded-lg border border-border/80 bg-muted/35 shadow-sm sm:w-auto sm:min-w-[16rem]">
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 items-start gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/55"
+              onClick={expandComposer}
+            >
+              <ChevronUp className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium leading-snug text-foreground">
+                  {composerTabSummary.title}
+                  <span className="font-normal text-muted-foreground">
+                    {" "}
+                    · {composerTabSummary.context}
+                  </span>
+                </p>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {composerTabSummary.preview}
+                </p>
+              </div>
+            </button>
+            <IconButton
+              className="size-auto w-9 shrink-0 rounded-none border-l border-border/60 hover:bg-muted/70"
+              aria-label="Close draft"
+              onClick={(event) => {
+                event.stopPropagation();
+                collapseComposer();
+              }}
+            >
+              <X className="size-4" />
+            </IconButton>
+          </div>
         </div>
-      </div>
       </>
     );
   }
@@ -983,355 +1009,355 @@ export const TicketReplyForm = forwardRef<
   if (composeMode === "internal") {
     return (
       <>
-      {sendProgress.dock}
-      <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
-        <div
-          className={cn(
-            "overflow-hidden bg-amber-50/50 dark:bg-amber-950/20",
-            slideAnimationClass,
-          )}
-        >
-          <div className="flex items-center justify-between gap-2 px-4 py-2 md:px-5">
-            <p className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-800 dark:text-amber-200">
-              <Lock className="size-3.5 shrink-0" />
-              Internal note
-              <span className="font-normal text-muted-foreground">
-                · team only
-              </span>
-            </p>
-            {minimizeButton}
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            multiple
-            onChange={(event) => {
-              const files = event.target.files;
-              if (!files) return;
-              Array.from(files).forEach(addPendingFile);
-              event.target.value = "";
-            }}
-          />
-
-          <Textarea
-            value={internalNoteText}
-            onChange={(event) => setInternalNoteText(event.target.value)}
-            placeholder="Add a note…"
-            rows={3}
-            disabled={isPending}
-            className="min-h-[4.5rem] resize-y rounded-none border-0 border-t border-amber-500/20 bg-background px-4 py-2.5 text-sm shadow-none focus-visible:ring-0 md:px-5"
-            autoFocus
-            onDragOver={(event) => {
-              event.preventDefault();
-              event.dataTransfer.dropEffect = "copy";
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              const files = Array.from(event.dataTransfer.files ?? []);
-              files.forEach(addPendingFile);
-            }}
-          />
-
-          {pendingFiles.length > 0 ? (
-            <div className="flex flex-col gap-1.5 border-t border-amber-500/20 bg-background px-4 py-2 md:px-5">
-              {pendingFiles.map((pending) => (
-                <TicketPendingAttachmentItem
-                  key={pending.id}
-                  pending={pending}
-                  disabled={isPending}
-                  onRemove={() => removePendingFile(pending.id)}
-                  onRetry={() => retryPendingFile(pending.id)}
-                />
-              ))}
+        {sendProgress.dock}
+        <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
+          <div
+            className={cn(
+              "overflow-hidden bg-amber-50/50 dark:bg-amber-950/20",
+              slideAnimationClass,
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 px-4 py-2 md:px-5">
+              <p className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-800 dark:text-amber-200">
+                <Lock className="size-3.5 shrink-0" />
+                Internal note
+                <span className="font-normal text-muted-foreground">
+                  · team only
+                </span>
+              </p>
+              {minimizeButton}
             </div>
-          ) : null}
 
-          <div className="flex items-center justify-between gap-2 border-t border-amber-500/20 bg-background px-4 py-2 md:px-5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1.5 text-muted-foreground"
-              disabled={isPending || attachmentsUploading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Paperclip className="size-3.5" />
-              Attach
-              {pendingFiles.length > 0 ? (
-                <span className="tabular-nums">({pendingFiles.length})</span>
-              ) : null}
-            </Button>
-            <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              multiple
+              onChange={(event) => {
+                const files = event.target.files;
+                if (!files) return;
+                Array.from(files).forEach(addPendingFile);
+                event.target.value = "";
+              }}
+            />
+
+            <Textarea
+              value={internalNoteText}
+              onChange={(event) => setInternalNoteText(event.target.value)}
+              placeholder="Add a note…"
+              rows={3}
+              disabled={isPending}
+              className="min-h-[4.5rem] resize-y rounded-none border-0 border-t border-amber-500/20 bg-background px-4 py-2.5 text-sm shadow-none focus-visible:ring-0 md:px-5"
+              autoFocus
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "copy";
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                const files = Array.from(event.dataTransfer.files ?? []);
+                files.forEach(addPendingFile);
+              }}
+            />
+
+            {pendingFiles.length > 0 ? (
+              <div className="flex flex-col gap-1.5 border-t border-amber-500/20 bg-background px-4 py-2 md:px-5">
+                {pendingFiles.map((pending) => (
+                  <TicketPendingAttachmentItem
+                    key={pending.id}
+                    pending={pending}
+                    disabled={isPending}
+                    onRemove={() => removePendingFile(pending.id)}
+                    onRetry={() => retryPendingFile(pending.id)}
+                  />
+                ))}
+              </div>
+            ) : null}
+
+            <div className="flex items-center justify-between gap-2 border-t border-amber-500/20 bg-background px-4 py-2 md:px-5">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-8"
-                disabled={isPending}
-                onClick={collapseComposer}
+                className="h-8 gap-1.5 text-muted-foreground"
+                disabled={isPending || attachmentsUploading}
+                onClick={() => fileInputRef.current?.click()}
               >
-                Cancel
+                <Paperclip className="size-3.5" />
+                Attach
+                {pendingFiles.length > 0 ? (
+                  <span className="tabular-nums">({pendingFiles.length})</span>
+                ) : null}
               </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 gap-1.5"
-                disabled={isPending || attachmentsUploading || !hasContent}
-                onClick={() => handleSend({ isInternalNote: true })}
-              >
-                {submittingAs === "internal" ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Save className="size-3.5" />
-                )}
-                Save
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8"
+                  disabled={isPending}
+                  onClick={collapseComposer}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  disabled={isPending || attachmentsUploading || !hasContent}
+                  onClick={() => handleSend({ isInternalNote: true })}
+                >
+                  {submittingAs === "internal" ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Save className="size-3.5" />
+                  )}
+                  Save
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </>
     );
   }
 
   return (
     <>
-    {sendProgress.dock}
-    <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
-      <div
-        className={cn(
-          "flex max-h-[min(75vh,52rem)] flex-col overflow-hidden bg-background",
-          slideAnimationClass,
-        )}
-      >
-        <div className="shrink-0 border-b px-4 py-2 md:px-5">
-          <div className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 text-sm">
-            <span className="text-xs text-muted-foreground">From</span>
-            <span className="min-w-0 truncate text-sm text-foreground">
-              {fromAddress}
-            </span>
-            {minimizeButton}
+      {sendProgress.dock}
+      <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
+        <div
+          className={cn(
+            "flex max-h-[min(75vh,52rem)] flex-col overflow-hidden bg-background",
+            slideAnimationClass,
+          )}
+        >
+          <div className="shrink-0 border-b px-4 py-2 md:px-5">
+            <div className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 text-sm">
+              <span className="text-xs text-muted-foreground">From</span>
+              <span className="min-w-0 truncate text-sm text-foreground">
+                {fromAddress}
+              </span>
+              {minimizeButton}
 
-            <label
-              htmlFor={`ticket-reply-to-${ticket.id}`}
-              className="self-center text-xs text-muted-foreground"
-            >
-              To
-            </label>
-            <TicketRecipientInput
-              id={`ticket-reply-to-${ticket.id}`}
-              value={toRecipients}
-              onChange={setToRecipients}
-              placeholder="Add recipient"
-              disabled={isPending}
-              className="min-w-0 w-full shadow-none"
-            />
-            {!showCc ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="justify-self-end h-auto px-1 text-xs font-medium text-muted-foreground hover:bg-transparent hover:text-foreground"
-                disabled={isPending}
-                onClick={() => setShowCc(true)}
+              <label
+                htmlFor={`ticket-reply-to-${ticket.id}`}
+                className="self-center text-xs text-muted-foreground"
               >
-                Cc
-              </Button>
-            ) : (
-              <span />
-            )}
-
-            {showCc ? (
-              <>
-                <label
-                  htmlFor={`ticket-reply-cc-${ticket.id}`}
-                  className="self-center text-xs text-muted-foreground"
-                >
-                  Cc
-                </label>
-                <TicketRecipientInput
-                  id={`ticket-reply-cc-${ticket.id}`}
-                  value={ccRecipients}
-                  onChange={setCcRecipients}
-                  placeholder="Add Cc"
-                  disabled={isPending}
-                  className="min-w-0 w-full shadow-none"
-                />
-                <span />
-              </>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          {isInvoiceReply ? (
-            <TicketReplyInvoiceSection
-              ref={invoiceSectionRef}
-              ticket={ticket}
-              invoice={invoice}
-              company={company}
-              contact={contact}
-              deliverables={deliverables}
-              unbilledDeliverables={unbilledDeliverables}
-              deliverablesReadyForInvoice={deliverablesReadyForInvoice}
-              onInvoiceSent={handleInvoiceSent}
-            />
-          ) : null}
-
-          {awaitingPaidDelivery ? (
-            <p className="border-b border-warning/30 bg-warning/10 px-5 py-2 text-xs text-foreground">
-              {TICKET_AWAITING_PAYMENT_ATTACHMENT_HINT}
-            </p>
-          ) : null}
-
-          {pendingFiles.length > 0 ? (
-            <div className="flex flex-col gap-1.5 border-b px-4 py-2 md:px-5">
-              {pendingFiles.map((pending) => (
-                <TicketPendingAttachmentItem
-                  key={pending.id}
-                  pending={pending}
-                  disabled={isPending}
-                  onRemove={() => removePendingFile(pending.id)}
-                  onRetry={() => retryPendingFile(pending.id)}
-                  sendAsDownloadLink={shouldSendTicketReplyAttachmentAsLink(
-                    pending.file.size,
-                    replyAttachmentLimitBytes,
-                  )}
-                />
-              ))}
-            </div>
-          ) : null}
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            multiple
-            onChange={(event) => {
-              const files = event.target.files;
-              if (!files) return;
-              Array.from(files).forEach(addPendingFile);
-              event.target.value = "";
-            }}
-          />
-
-          {isInvoiceReply ? (
-            <div className="flex items-center border-b px-4 py-2 md:px-5">
-              {showInvoiceNote ? (
+                To
+              </label>
+              <TicketRecipientInput
+                id={`ticket-reply-to-${ticket.id}`}
+                value={toRecipients}
+                onChange={setToRecipients}
+                placeholder="Add recipient"
+                disabled={isPending}
+                className="min-w-0 w-full shadow-none"
+              />
+              {!showCc ? (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-xs text-muted-foreground"
-                  onClick={() => setShowInvoiceNote(false)}
+                  className="justify-self-end h-auto px-1 text-xs font-medium text-muted-foreground hover:bg-transparent hover:text-foreground"
+                  disabled={isPending}
+                  onClick={() => setShowCc(true)}
                 >
-                  Hide note
+                  Cc
                 </Button>
               ) : (
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  className="h-auto px-0 text-muted-foreground"
-                  onClick={() => {
-                    setShowInvoiceNote(true);
-                    requestAnimationFrame(() => editorRef.current?.focus());
-                  }}
-                >
-                  Add a personal note (optional)
-                </Button>
+                <span />
               )}
-            </div>
-          ) : null}
 
-          {!isInvoiceReply || showInvoiceNote ? (
-            <>
-              <TicketComposerToolbar
-                editorRef={editorRef}
-                onEditorChange={(userHtml) => {
-                  setBodyHtml((current) => {
-                    const { signatureHtml, quotedReplyHtml } =
-                      extractReplyComposerParts(current);
-                    return assembleReplyComposerHtml({
-                      userNoteHtml: userHtml,
-                      signatureHtml,
-                      quotedReplyHtml,
-                    });
-                  });
-                }}
-                disabled={isPending}
+              {showCc ? (
+                <>
+                  <label
+                    htmlFor={`ticket-reply-cc-${ticket.id}`}
+                    className="self-center text-xs text-muted-foreground"
+                  >
+                    Cc
+                  </label>
+                  <TicketRecipientInput
+                    id={`ticket-reply-cc-${ticket.id}`}
+                    value={ccRecipients}
+                    onChange={setCcRecipients}
+                    placeholder="Add Cc"
+                    disabled={isPending}
+                    className="min-w-0 w-full shadow-none"
+                  />
+                  <span />
+                </>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            {isInvoiceReply ? (
+              <TicketReplyInvoiceSection
+                ref={invoiceSectionRef}
                 ticket={ticket}
-                inbox={activeInbox}
-                contact={contact}
+                invoice={invoice}
                 company={company}
-                onInsertTemplate={handleInsertTemplate}
-                attachLabel="Attach"
-                showLargeFileTransfer={false}
-                onAttachClick={() => fileInputRef.current?.click()}
+                contact={contact}
+                deliverables={deliverables}
+                unbilledDeliverables={unbilledDeliverables}
+                deliverablesReadyForInvoice={deliverablesReadyForInvoice}
+                onInvoiceSent={handleInvoiceSent}
               />
+            ) : null}
 
-              <TicketReplyRichComposer
-                editorRef={editorRef}
-                value={bodyHtml}
-                onChange={setBodyHtml}
-                onPaste={handlePaste}
-                placeholder={
-                  composeMode === "forward"
-                    ? "Add a note above the forwarded message..."
-                    : isInvoiceReply
-                      ? "Add an optional note for the client..."
-                      : "Write your reply..."
-                }
-                disabled={isPending}
-                minHeight={replyMinHeight}
-                maxHeight={replyMaxHeight}
-                resizeTrigger={isExpanded}
-                className={
-                  composeMode === "forward" ? "min-h-20" : "min-h-[9rem]"
-                }
-              />
-            </>
-          ) : null}
-
-          {composeMode === "forward" && forwardContext ? (
-            <div className="border-t bg-muted/10 px-4 py-3 md:px-5">
-              <p className="mb-2 text-xs font-medium text-muted-foreground">
-                Forwarded message
+            {awaitingPaidDelivery ? (
+              <p className="border-b border-warning/30 bg-warning/10 px-5 py-2 text-xs text-foreground">
+                {TICKET_AWAITING_PAYMENT_ATTACHMENT_HINT}
               </p>
-              <div className="max-h-[min(40vh,320px)] overflow-y-auto rounded-md border bg-background p-4 text-sm">
-                <TicketMessageBody
-                  body={forwardContext.message.body}
-                  htmlBody={forwardContext.message.html_body}
-                />
-              </div>
-            </div>
-          ) : null}
-        </div>
+            ) : null}
 
-        <TicketReplyComposerActions
-          className="shrink-0 shadow-[0_-6px_16px_-12px_rgba(0,0,0,0.35)]"
-          composeMode={composeMode}
-          currentStatus={replyKeepStatus}
-          statusTransitions={replyStatusTransitions}
-          disabled={isPending || attachmentsUploading}
-          hasContent={hasContent}
-          submittingAs={submittingAs}
-          showReplyAndCharge={canReplyAndCharge}
-          invoiceComposerMode={isInvoiceReply}
-          canCreateInvoice={canCreateInvoice}
-          preferReplyAndCharge={replySendIntent === "reply_and_invoice"}
-          onCancel={collapseComposer}
-          onSendReply={(nextStatus) =>
-            handleSend({ isInternalNote: false, nextStatus })
-          }
-          onCreateInvoice={handleCreateInvoice}
-          onStartReplyAndInvoice={startReplyAndInvoice}
-          onSendForward={() => handleSend({ isInternalNote: false })}
-        />
+            {pendingFiles.length > 0 ? (
+              <div className="flex flex-col gap-1.5 border-b px-4 py-2 md:px-5">
+                {pendingFiles.map((pending) => (
+                  <TicketPendingAttachmentItem
+                    key={pending.id}
+                    pending={pending}
+                    disabled={isPending}
+                    onRemove={() => removePendingFile(pending.id)}
+                    onRetry={() => retryPendingFile(pending.id)}
+                    sendAsDownloadLink={shouldSendTicketReplyAttachmentAsLink(
+                      pending.file.size,
+                      replyAttachmentLimitBytes,
+                    )}
+                  />
+                ))}
+              </div>
+            ) : null}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              multiple
+              onChange={(event) => {
+                const files = event.target.files;
+                if (!files) return;
+                Array.from(files).forEach(addPendingFile);
+                event.target.value = "";
+              }}
+            />
+
+            {isInvoiceReply ? (
+              <div className="flex items-center border-b px-4 py-2 md:px-5">
+                {showInvoiceNote ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-muted-foreground"
+                    onClick={() => setShowInvoiceNote(false)}
+                  >
+                    Hide note
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto px-0 text-muted-foreground"
+                    onClick={() => {
+                      setShowInvoiceNote(true);
+                      requestAnimationFrame(() => editorRef.current?.focus());
+                    }}
+                  >
+                    Add a personal note (optional)
+                  </Button>
+                )}
+              </div>
+            ) : null}
+
+            {!isInvoiceReply || showInvoiceNote ? (
+              <>
+                <TicketComposerToolbar
+                  editorRef={editorRef}
+                  onEditorChange={(userHtml) => {
+                    setBodyHtml((current) => {
+                      const { signatureHtml, quotedReplyHtml } =
+                        extractReplyComposerParts(current);
+                      return assembleReplyComposerHtml({
+                        userNoteHtml: userHtml,
+                        signatureHtml,
+                        quotedReplyHtml,
+                      });
+                    });
+                  }}
+                  disabled={isPending}
+                  ticket={ticket}
+                  inbox={activeInbox}
+                  contact={contact}
+                  company={company}
+                  onInsertTemplate={handleInsertTemplate}
+                  attachLabel="Attach"
+                  showLargeFileTransfer={false}
+                  onAttachClick={() => fileInputRef.current?.click()}
+                />
+
+                <TicketReplyRichComposer
+                  editorRef={editorRef}
+                  value={bodyHtml}
+                  onChange={setBodyHtml}
+                  onPaste={handlePaste}
+                  placeholder={
+                    composeMode === "forward"
+                      ? "Add a note above the forwarded message..."
+                      : isInvoiceReply
+                        ? "Add an optional note for the client..."
+                        : "Write your reply..."
+                  }
+                  disabled={isPending}
+                  minHeight={replyMinHeight}
+                  maxHeight={replyMaxHeight}
+                  resizeTrigger={isExpanded}
+                  className={
+                    composeMode === "forward" ? "min-h-20" : "min-h-[9rem]"
+                  }
+                />
+              </>
+            ) : null}
+
+            {composeMode === "forward" && forwardContext ? (
+              <div className="border-t bg-muted/10 px-4 py-3 md:px-5">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">
+                  Forwarded message
+                </p>
+                <div className="max-h-[min(40vh,320px)] overflow-y-auto rounded-md border bg-background p-4 text-sm">
+                  <TicketMessageBody
+                    body={forwardContext.message.body}
+                    htmlBody={forwardContext.message.html_body}
+                  />
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <TicketReplyComposerActions
+            className="shrink-0 shadow-[0_-6px_16px_-12px_rgba(0,0,0,0.35)]"
+            composeMode={composeMode}
+            currentStatus={replyKeepStatus}
+            statusTransitions={replyStatusTransitions}
+            disabled={isPending || attachmentsUploading}
+            hasContent={hasContent}
+            submittingAs={submittingAs}
+            showReplyAndCharge={canReplyAndCharge}
+            invoiceComposerMode={isInvoiceReply}
+            canCreateInvoice={canCreateInvoice}
+            preferReplyAndCharge={replySendIntent === "reply_and_invoice"}
+            onCancel={collapseComposer}
+            onSendReply={(nextStatus) =>
+              handleSend({ isInternalNote: false, nextStatus })
+            }
+            onCreateInvoice={handleCreateInvoice}
+            onStartReplyAndInvoice={startReplyAndInvoice}
+            onSendForward={() => handleSend({ isInternalNote: false })}
+          />
+        </div>
       </div>
-    </div>
     </>
   );
 });
