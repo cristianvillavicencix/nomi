@@ -91,11 +91,16 @@ export const InvoiceListSidebar = ({
   }
 
   return (
-    <div className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain", isMobile && "px-4 pb-mobile-dock pt-2")}>
+    <div
+      className={cn(
+        "min-h-0 flex-1",
+        isMobile ? "mobile-scroll px-4 pb-mobile-dock pt-1" : "overflow-y-auto overscroll-contain",
+      )}
+    >
       <ul
         className={cn(
           isMobile
-            ? "glass-grouped divide-y divide-border/50 overflow-hidden rounded-xl"
+            ? "glass-grouped"
             : "divide-y",
         )}
       >
@@ -117,10 +122,10 @@ export const InvoiceListSidebar = ({
                 type="button"
                 onClick={() => onSelectInvoice(String(invoice.id))}
                 className={cn(
-                  "flex w-full flex-col gap-1.5 px-3 py-3 text-left transition-colors hover:bg-muted/40",
+                  "flex w-full flex-col gap-1.5 px-1 py-3 text-left transition-colors hover:bg-black/[0.03] active:bg-black/[0.05] dark:hover:bg-white/[0.04]",
                   isSelected &&
                     (isMobile
-                      ? "bg-muted/50"
+                      ? "bg-black/[0.04] dark:bg-white/[0.08]"
                       : "bg-primary/5 ring-1 ring-inset ring-primary/20"),
                 )}
               >

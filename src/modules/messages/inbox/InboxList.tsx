@@ -52,7 +52,7 @@ export const InboxList = ({
   const items = virtualizer.getVirtualItems();
 
   return (
-    <div ref={parentRef} className="min-h-0 flex-1 overflow-y-auto px-3 pb-mobile-dock py-2">
+    <div ref={parentRef} className="min-h-0 flex-1 mobile-scroll px-2 pb-mobile-dock py-1">
       <div
         style={{
           height: `${virtualizer.getTotalSize()}px`,
@@ -68,7 +68,7 @@ export const InboxList = ({
               key={String(conversation.id)}
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
-              className="absolute left-0 top-0 w-full"
+              className="absolute left-0 top-0 w-full border-0"
               style={{ transform: `translateY(${virtualRow.start}px)` }}
             >
               <ConversationListItem

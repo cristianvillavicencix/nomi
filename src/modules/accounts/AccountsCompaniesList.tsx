@@ -256,7 +256,7 @@ const AccountsCompaniesListBody = ({
             No companies match your search.
           </p>
         ) : (
-          <ul className="glass-grouped divide-y divide-border/50 rounded-xl">
+          <ul className="glass-grouped">
             {data.map((company) => {
               const contactName = primaryContactName(company);
               const status = statusLabel(company);
@@ -265,7 +265,7 @@ const AccountsCompaniesListBody = ({
                 <li key={String(company.id)}>
                   <button
                     type="button"
-                    className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/40 active:bg-muted/50"
+                    className="flex w-full items-start gap-3 px-1 py-3.5 text-left transition-colors hover:bg-black/[0.03] active:bg-black/[0.05] dark:hover:bg-white/[0.04]"
                     onClick={() => openCompany(company.id)}
                   >
                     <CompanyAvatar record={company} width={36} />

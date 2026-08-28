@@ -10,6 +10,7 @@ import {
 import type { ClientSubscription } from "@/modules/types";
 import { Button } from "@/components/ui/button";
 import { ModuleSearchField } from "@/components/atomic-crm/layout/ModuleToolbar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type SubscriptionListToolbarProps = {
   statusFilter: SubscriptionStatusFilter;
@@ -19,6 +20,8 @@ type SubscriptionListToolbarProps = {
   onCreate: () => void;
   /** Sidebar with detail open: New stacks below search. Full list: New on the same row. */
   compact?: boolean;
+  /** Hide create when mobile page chrome already shows +. */
+  hideCreate?: boolean;
 };
 
 export const SubscriptionListToolbar = ({
@@ -28,7 +31,9 @@ export const SubscriptionListToolbar = ({
   onSearchQueryChange,
   onCreate,
   compact = false,
+  hideCreate = false,
 }: SubscriptionListToolbarProps) => {
+  const isMobile = useIsMobile();
   const { data: subscriptions = [] } = useGetList<ClientSubscription>(
     "client_subscriptions",
     {
@@ -44,6 +49,17 @@ export const SubscriptionListToolbar = ({
     [subscriptions],
   );
 
+  const searchField = (
+    <ModuleSearchField
+      value={searchQuery}
+      onChange={onSearchQueryChange}
+      basePlaceholder="Search by client, plan, status"
+      total={counts.all}
+      itemSingular="subscription"
+      className="w-full min-w-0 flex-1 [&>div]:max-w-none"
+    />
+  );
+
   const newButton = (
     <Button
       type="button"
@@ -57,6 +73,21 @@ export const SubscriptionListToolbar = ({
     </Button>
   );
 
+  if (isMobile) {
+    return (
+      <div className="flex w-full min-w-0 items-center gap-2 px-4 pb-1">
+        <BillingStatusFilterMenu
+          value={statusFilter}
+          onChange={onStatusFilterChange}
+          options={SUBSCRIPTION_FILTER_OPTIONS}
+          counts={counts}
+          ariaLabel="Filter subscriptions"
+        />
+        {searchField}
+      </div>
+    );
+  }
+
   if (compact) {
     return (
       <div className="flex shrink-0 flex-col gap-2 border-b bg-background px-3 py-2">
@@ -68,16 +99,9 @@ export const SubscriptionListToolbar = ({
             counts={counts}
             ariaLabel="Filter subscriptions"
           />
-          <ModuleSearchField
-            value={searchQuery}
-            onChange={onSearchQueryChange}
-            basePlaceholder="Search by client, plan, status"
-            total={counts.all}
-            itemSingular="subscription"
-            className="min-w-0 flex-1 [&>div]:max-w-none"
-          />
+          {searchField}
         </div>
-        {newButton}
+        {hideCreate ? null : newButton}
       </div>
     );
   }
@@ -91,15 +115,8 @@ export const SubscriptionListToolbar = ({
         counts={counts}
         ariaLabel="Filter subscriptions"
       />
-      <ModuleSearchField
-        value={searchQuery}
-        onChange={onSearchQueryChange}
-        basePlaceholder="Search by client, plan, status"
-        total={counts.all}
-        itemSingular="subscription"
-        className="min-w-0 flex-1 [&>div]:max-w-none"
-      />
-      {newButton}
+      {searchField}
+      {hideCreate ? null : newButton}
     </div>
   );
 };

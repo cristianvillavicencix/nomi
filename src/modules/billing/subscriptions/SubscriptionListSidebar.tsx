@@ -14,6 +14,7 @@ import {
 import type { ClientSubscription } from "@/modules/types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type SubscriptionListSidebarProps = {
   selectedSubscriptionId?: string | null;
@@ -28,6 +29,7 @@ export const SubscriptionListSidebar = ({
   searchQuery = "",
   statusFilter = "all",
 }: SubscriptionListSidebarProps) => {
+  const isMobile = useIsMobile();
   const { data: subscriptions = [], isPending } =
     useListContext<ClientSubscription>();
 
@@ -124,8 +126,15 @@ export const SubscriptionListSidebar = ({
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-      <ul className="divide-y">
+    <div
+      className={cn(
+        "min-h-0 flex-1",
+        isMobile
+          ? "mobile-scroll px-4 pb-mobile-dock pt-1"
+          : "overflow-y-auto overscroll-contain",
+      )}
+    >
+      <ul className={cn(isMobile ? "glass-grouped" : "divide-y")}>
         {visibleRows.map((row) => {
           const company = row.company_id
             ? companyById.get(String(row.company_id))
@@ -146,9 +155,14 @@ export const SubscriptionListSidebar = ({
                 type="button"
                 onClick={() => onSelectSubscription(String(row.id))}
                 className={cn(
-                  "flex w-full flex-col gap-1.5 px-3 py-3 text-left transition-colors hover:bg-muted/40",
+                  "flex w-full flex-col gap-1.5 text-left transition-colors",
+                  isMobile
+                    ? "px-1 py-3 hover:bg-black/[0.03] active:bg-black/[0.05]"
+                    : "px-3 py-3 hover:bg-muted/40",
                   isSelected &&
-                    "bg-primary/5 ring-1 ring-inset ring-primary/20",
+                    (isMobile
+                      ? "bg-black/[0.04]"
+                      : "bg-primary/5 ring-1 ring-inset ring-primary/20"),
                 )}
               >
                 <div className="flex items-start justify-between gap-2">

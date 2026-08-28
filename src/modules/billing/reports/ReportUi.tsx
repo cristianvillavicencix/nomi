@@ -1,18 +1,11 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import type { BillingReportMetric } from "@/modules/billing/reports/billingReportsAggregation";
-import { formatReportRangeDocumentLabel } from "@/modules/billing/reports/reportPeriodUtils";
-import type { ReportDateRange } from "@/modules/billing/reports/reportPeriodUtils";
 import { cn } from "@/lib/utils";
 
-const ComparisonBadge = ({
-  metric,
-}: {
-  metric: BillingReportMetric;
-}) => {
+const ComparisonBadge = ({ metric }: { metric: BillingReportMetric }) => {
   if (!metric.comparison) return null;
 
   const { percentChange, direction, label } = metric.comparison;
@@ -26,14 +19,16 @@ const ComparisonBadge = ({
   return (
     <div
       className={cn(
-        "mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-        direction === "up" && "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-        direction === "down" && "bg-red-500/10 text-red-700 dark:text-red-400",
-        direction === "flat" && "bg-muted text-muted-foreground",
+        "mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium",
+        direction === "up" && "text-emerald-700 dark:text-emerald-400",
+        direction === "down" && "text-red-700 dark:text-red-400",
+        direction === "flat" && "text-muted-foreground",
       )}
     >
       <Icon className="size-3" />
-      {percentChange == null ? "New" : `${percentChange > 0 ? "+" : ""}${percentChange}%`}
+      {percentChange == null
+        ? "New"
+        : `${percentChange > 0 ? "+" : ""}${percentChange}%`}
       <span className="font-normal text-muted-foreground">vs {label}</span>
     </div>
   );
@@ -48,11 +43,13 @@ export const ReportMetricCard = ({
 }) => {
   const content = (
     <>
-      <div className="text-sm text-muted-foreground">{metric.label}</div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums">
+      <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {metric.label}
+      </div>
+      <div className="mt-1 text-xl font-semibold tabular-nums tracking-tight">
         <MoneyText value={metric.amount} />
       </div>
-      <div className="mt-1 text-xs text-muted-foreground">
+      <div className="mt-0.5 text-xs text-muted-foreground">
         {metric.count} {metric.count === 1 ? "record" : "records"}
         {metric.hint ? ` · ${metric.hint}` : ""}
       </div>
@@ -60,43 +57,67 @@ export const ReportMetricCard = ({
     </>
   );
 
-  return (
-    <Card className={href ? "transition-colors hover:border-primary/30" : undefined}>
-      <CardContent className="pt-6">
-        {href ? (
-          <Link to={href} className="block rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            {content}
-          </Link>
-        ) : (
-          content
-        )}
-      </CardContent>
-    </Card>
+  const className = cn(
+    "block rounded-2xl bg-black/[0.035] px-3.5 py-3 dark:bg-white/[0.05]",
+    href &&
+      "transition-colors hover:bg-black/[0.055] active:bg-black/[0.07] dark:hover:bg-white/[0.08]",
   );
+
+  if (href) {
+    return (
+      <Link
+        to={href}
+        className={cn(
+          className,
+          "outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        )}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
 };
 
+export const ReportMetricsGrid = ({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) => (
+  <div
+    className={cn(
+      "grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4",
+      className,
+    )}
+  >
+    {children}
+  </div>
+);
+
+/** @deprecated Prefer flat chrome; kept for any leftover imports. */
 export const ReportDocumentHeader = ({
   orgLabel,
   reportTitle,
-  range,
+  rangeLabel,
 }: {
   orgLabel: string;
   reportTitle: string;
-  range: ReportDateRange;
+  rangeLabel: string;
 }) => (
-  <div className="rounded-lg border bg-muted/10 px-6 py-5 text-center">
-    <div className="text-sm font-medium text-muted-foreground">{orgLabel}</div>
-    <h2 className="mt-1 text-lg font-semibold">{reportTitle}</h2>
-    <p className="mt-1 text-sm text-muted-foreground">
-      {formatReportRangeDocumentLabel(range)}
-    </p>
+  <div className="space-y-0.5">
+    <p className="text-xs text-muted-foreground">{orgLabel}</p>
+    <h2 className="text-base font-semibold">{reportTitle}</h2>
+    <p className="text-xs text-muted-foreground">{rangeLabel}</p>
   </div>
 );
 
 export const ReportDataCapBanner = () => (
-  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-muted-foreground">
-    Showing the latest 1,000 invoices and subscriptions. Totals may be incomplete
-    for larger accounts.
+  <div className="mx-4 rounded-xl bg-amber-500/10 px-3.5 py-2.5 text-sm text-muted-foreground md:mx-0">
+    Showing the latest 1,000 invoices and subscriptions. Totals may be
+    incomplete for larger accounts.
   </div>
 );
 
@@ -105,17 +126,22 @@ export const ReportSection = ({
   description,
   children,
 }: {
-  title: string;
+  /** Optional section heading — prefer omitting when it duplicates the active tab. */
+  title?: string;
   description?: string;
   children: ReactNode;
 }) => (
   <section className="space-y-4">
-    <div>
-      <h2 className="text-lg font-semibold">{title}</h2>
-      {description ? (
-        <p className="text-sm text-muted-foreground">{description}</p>
-      ) : null}
-    </div>
+    {title || description ? (
+      <div className="space-y-0.5">
+        {title ? (
+          <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
+        ) : null}
+        {description ? (
+          <p className="text-sm text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+    ) : null}
     {children}
   </section>
 );
@@ -129,12 +155,14 @@ export const ReportChartCard = ({
   children: ReactNode;
   emptyMessage?: string;
 }) => (
-  <Card>
-    <CardContent className="space-y-4 pt-6">
-      <h3 className="text-sm font-semibold">{title}</h3>
+  <section className="space-y-3">
+    <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+    <div className="rounded-2xl bg-black/[0.025] p-3 dark:bg-white/[0.04] sm:p-4">
       {children ?? (
-        <p className="py-8 text-sm text-muted-foreground">{emptyMessage}</p>
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          {emptyMessage}
+        </p>
       )}
-    </CardContent>
-  </Card>
+    </div>
+  </section>
 );

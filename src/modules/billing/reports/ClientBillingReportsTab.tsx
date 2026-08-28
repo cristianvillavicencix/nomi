@@ -1,22 +1,15 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router";
-import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { BillingReportsCollections } from "@/modules/billing/reports/BillingReportsCollections";
 import { BillingReportsOverview } from "@/modules/billing/reports/BillingReportsOverview";
 import { BillingReportsProducts } from "@/modules/billing/reports/BillingReportsProducts";
 import { BillingReportsProjections } from "@/modules/billing/reports/BillingReportsProjections";
 import { BillingReportsRevenue } from "@/modules/billing/reports/BillingReportsRevenue";
 import { BillingReportsToolbar } from "@/modules/billing/reports/BillingReportsToolbar";
-import {
-  parseBillingReportCustomerParam,
-} from "@/modules/billing/reports/billingReportFilters";
-import {
-  ReportDataCapBanner,
-  ReportDocumentHeader,
-} from "@/modules/billing/reports/ReportUi";
+import { parseBillingReportCustomerParam } from "@/modules/billing/reports/billingReportFilters";
+import { ReportDataCapBanner } from "@/modules/billing/reports/ReportUi";
 import {
   buildBillingReportsSearchParams,
-  BILLING_REPORT_VIEWS,
   resolveBillingReportCompare,
   resolveBillingReportFilters,
   resolveBillingReportPeriod,
@@ -30,23 +23,19 @@ import { defaultScenarioAssumptions } from "@/modules/billing/reports/billingRep
 import { useBillingReportsData } from "@/modules/billing/reports/useBillingReportsData";
 
 const ReportsFilteredEmptyState = () => (
-  <div className="rounded-lg border border-dashed px-6 py-10 text-center text-sm text-muted-foreground">
+  <div className="rounded-2xl bg-black/[0.03] px-6 py-12 text-center text-sm text-muted-foreground dark:bg-white/[0.05]">
     No billing data matches these filters for this period.
   </div>
 );
 
 export const ClientBillingReportsTab = () => {
-  const { title, companyLegalName } = useConfigurationContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeView = resolveBillingReportView(searchParams);
   const activePeriod = resolveBillingReportPeriod(searchParams);
   const compare = resolveBillingReportCompare(searchParams);
   const filters = resolveBillingReportFilters(searchParams);
 
-  const scenarioDefaults = useMemo(
-    () => defaultScenarioAssumptions([]),
-    [],
-  );
+  const scenarioDefaults = useMemo(() => defaultScenarioAssumptions([]), []);
   const scenario = resolveBillingReportScenario(searchParams, scenarioDefaults);
 
   const {
@@ -61,11 +50,6 @@ export const ClientBillingReportsTab = () => {
     invoices,
     subscriptions,
   } = useBillingReportsData(activePeriod, filters, scenario, compare);
-
-  const reportTitle =
-    BILLING_REPORT_VIEWS.find((view) => view.id === activeView)?.label ??
-    "Report";
-  const orgLabel = companyLegalName?.trim() || title || "Organization";
 
   const updateSearchParams = (
     view: BillingReportViewId,
@@ -106,14 +90,21 @@ export const ClientBillingReportsTab = () => {
   };
 
   const handleCompareChange = (nextCompare: BillingReportCompareId) => {
-    updateSearchParams(activeView, activePeriod, filters, scenario, nextCompare);
+    updateSearchParams(
+      activeView,
+      activePeriod,
+      filters,
+      scenario,
+      nextCompare,
+    );
   };
 
   const hasFilteredRecords = invoices.length > 0 || subscriptions.length > 0;
-  const showFilteredEmpty = hasActiveFilters && !isPending && !hasFilteredRecords;
+  const showFilteredEmpty =
+    hasActiveFilters && !isPending && !hasFilteredRecords;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pt-1">
       <BillingReportsToolbar
         activeView={activeView}
         activePeriod={activePeriod}
@@ -136,36 +127,28 @@ export const ClientBillingReportsTab = () => {
 
       {dataCapReached ? <ReportDataCapBanner /> : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
-        <div className="space-y-6">
-          <ReportDocumentHeader
-            orgLabel={orgLabel}
-            reportTitle={reportTitle}
-            range={snapshot.range}
+      <div className="min-h-0 flex-1 mobile-scroll px-4 pb-mobile-dock md:px-0 md:pb-6">
+        {showFilteredEmpty ? (
+          <ReportsFilteredEmptyState />
+        ) : activeView === "revenue" ? (
+          <BillingReportsRevenue snapshot={snapshot} isPending={isPending} />
+        ) : activeView === "collections" ? (
+          <BillingReportsCollections
+            snapshot={snapshot}
+            isPending={isPending}
           />
-
-          {showFilteredEmpty ? (
-            <ReportsFilteredEmptyState />
-          ) : activeView === "revenue" ? (
-            <BillingReportsRevenue snapshot={snapshot} isPending={isPending} />
-          ) : activeView === "collections" ? (
-            <BillingReportsCollections
-              snapshot={snapshot}
-              isPending={isPending}
-            />
-          ) : activeView === "products" ? (
-            <BillingReportsProducts snapshot={snapshot} isPending={isPending} />
-          ) : activeView === "projections" ? (
-            <BillingReportsProjections
-              snapshot={snapshot}
-              isPending={isPending}
-              scenario={scenario}
-              onScenarioChange={handleScenarioChange}
-            />
-          ) : (
-            <BillingReportsOverview snapshot={snapshot} isPending={isPending} />
-          )}
-        </div>
+        ) : activeView === "products" ? (
+          <BillingReportsProducts snapshot={snapshot} isPending={isPending} />
+        ) : activeView === "projections" ? (
+          <BillingReportsProjections
+            snapshot={snapshot}
+            isPending={isPending}
+            scenario={scenario}
+            onScenarioChange={handleScenarioChange}
+          />
+        ) : (
+          <BillingReportsOverview snapshot={snapshot} isPending={isPending} />
+        )}
       </div>
     </div>
   );

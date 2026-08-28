@@ -12,7 +12,6 @@ import type { ClientInvoice } from "@/modules/types";
 import { Button } from "@/components/ui/button";
 import { ModuleSearchField } from "@/components/atomic-crm/layout/ModuleToolbar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +27,8 @@ type InvoiceListToolbarProps = {
   onFromProposal: () => void;
   /** Sidebar with detail open: New stacks below search. Full list: New on the same row. */
   compact?: boolean;
+  /** Hide create controls when the mobile page chrome already shows +. */
+  hideCreate?: boolean;
 };
 
 export const InvoiceListToolbar = ({
@@ -37,6 +38,7 @@ export const InvoiceListToolbar = ({
   onSearchQueryChange,
   onFromProposal,
   compact = false,
+  hideCreate = false,
 }: InvoiceListToolbarProps) => {
   const isMobile = useIsMobile();
   const { data: invoices = [] } = useGetList<ClientInvoice>(
@@ -54,24 +56,15 @@ export const InvoiceListToolbar = ({
     [invoices],
   );
 
-  const filterAndSearch = (
-    <>
-      <BillingStatusFilterMenu
-        value={statusFilter}
-        onChange={onStatusFilterChange}
-        options={INVOICE_FILTER_OPTIONS}
-        counts={counts}
-        ariaLabel="Filter invoices"
-      />
-      <ModuleSearchField
-        value={searchQuery}
-        onChange={onSearchQueryChange}
-        basePlaceholder="Search by client, number, amount"
-        total={counts.all}
-        itemSingular="invoice"
-        className="min-w-0 flex-1 [&>div]:max-w-none"
-      />
-    </>
+  const searchField = (
+    <ModuleSearchField
+      value={searchQuery}
+      onChange={onSearchQueryChange}
+      basePlaceholder="Search by client, number, amount"
+      total={counts.all}
+      itemSingular="invoice"
+      className="w-full min-w-0 flex-1 [&>div]:max-w-none"
+    />
   );
 
   const newButtonGroup = (
@@ -116,29 +109,52 @@ export const InvoiceListToolbar = ({
     </div>
   );
 
+  // Mobile hub: full-width search like Projects / Tickets / Accounts.
+  // Create lives in MobilePageChrome as a + icon.
+  if (isMobile) {
+    return (
+      <div className="flex w-full min-w-0 items-center gap-2 px-4 pb-1">
+        <BillingStatusFilterMenu
+          value={statusFilter}
+          onChange={onStatusFilterChange}
+          options={INVOICE_FILTER_OPTIONS}
+          counts={counts}
+          ariaLabel="Filter invoices"
+        />
+        {searchField}
+      </div>
+    );
+  }
+
   if (compact) {
     return (
-      <div
-        className={cn(
-          "flex shrink-0 flex-col gap-2 px-3 py-2",
-          isMobile ? "glass-header" : "border-b bg-background",
-        )}
-      >
-        <div className="flex min-w-0 items-center gap-2">{filterAndSearch}</div>
-        {newButtonGroup}
+      <div className="flex shrink-0 flex-col gap-2 border-b bg-background px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <BillingStatusFilterMenu
+            value={statusFilter}
+            onChange={onStatusFilterChange}
+            options={INVOICE_FILTER_OPTIONS}
+            counts={counts}
+            ariaLabel="Filter invoices"
+          />
+          {searchField}
+        </div>
+        {hideCreate ? null : newButtonGroup}
       </div>
     );
   }
 
   return (
-    <div
-      className={cn(
-        "flex shrink-0 items-center gap-2 px-3 py-2",
-        isMobile ? "glass-header" : "border-b bg-background",
-      )}
-    >
-      {filterAndSearch}
-      {newButtonGroup}
+    <div className="flex shrink-0 items-center gap-2 border-b bg-background px-3 py-2">
+      <BillingStatusFilterMenu
+        value={statusFilter}
+        onChange={onStatusFilterChange}
+        options={INVOICE_FILTER_OPTIONS}
+        counts={counts}
+        ariaLabel="Filter invoices"
+      />
+      {searchField}
+      {hideCreate ? null : newButtonGroup}
     </div>
   );
 };

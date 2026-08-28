@@ -149,11 +149,13 @@ export const MessagesWorkspace = ({
         className={cn(
           "flex min-h-0 flex-col",
           isMobile
-            ? "bg-transparent"
+            ? "min-h-0 flex-1 overflow-hidden bg-transparent"
             : "border-r border-border/30 bg-muted/5",
           compact
             ? "w-[300px] shrink-0"
-            : "w-full shrink-0 md:w-[320px] lg:w-[360px] xl:w-[400px]",
+            : isMobile
+              ? "w-full"
+              : "w-full shrink-0 md:w-[320px] lg:w-[360px] xl:w-[400px]",
           !showInbox && "hidden md:flex",
         )}
       >

@@ -56,11 +56,8 @@ export const BillingReportsProjections = ({
 
   return (
     <div className="space-y-6">
-      <ReportSection
-        title="Projections"
-        description="Forward-looking outlook based on active subscriptions. Adjust assumptions to compare scenarios."
-      >
-        <div className="grid gap-4 rounded-lg border bg-muted/10 p-4 md:grid-cols-3">
+      <ReportSection description="Forward-looking outlook from active subscriptions. Adjust assumptions to compare scenarios.">
+        <div className="grid gap-4 rounded-2xl bg-black/[0.03] p-4 dark:bg-white/[0.05] md:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="report-churn-rate">Monthly churn rate (%)</Label>
             <Input
@@ -73,6 +70,7 @@ export const BillingReportsProjections = ({
               onChange={(event) =>
                 updateScenario("churnRatePercent", event.target.value)
               }
+              className="border-0 bg-background/80 shadow-none"
             />
           </div>
           <div className="space-y-2">
@@ -86,6 +84,7 @@ export const BillingReportsProjections = ({
               onChange={(event) =>
                 updateScenario("newSubsPerMonth", event.target.value)
               }
+              className="border-0 bg-background/80 shadow-none"
             />
           </div>
           <div className="space-y-2">
@@ -99,41 +98,55 @@ export const BillingReportsProjections = ({
               onChange={(event) =>
                 updateScenario("avgNewMrr", event.target.value)
               }
+              className="border-0 bg-background/80 shadow-none"
             />
           </div>
         </div>
+      </ReportSection>
 
-        <ReportChartCard title="Next 6 months">
-          {isPending ? (
-            <p className="py-8 text-sm text-muted-foreground">Loading chart…</p>
-          ) : (
-            <div className="h-[320px] min-h-[220px]">
-              <ResponsiveBar
-                data={chartData}
-                keys={["Baseline", "Conservative", "Growth"]}
-                indexBy="label"
-                groupMode="grouped"
-                colors={["#2563eb", "#f59e0b", "#16a34a"]}
-                {...billingReportBarChartDefaults}
-              />
-            </div>
-          )}
-        </ReportChartCard>
+      <ReportChartCard title="Next 6 months">
+        {isPending ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Loading chart…
+          </p>
+        ) : (
+          <div className="h-[280px] min-h-[200px] sm:h-[320px]">
+            <ResponsiveBar
+              data={chartData}
+              keys={["Baseline", "Conservative", "Growth"]}
+              indexBy="label"
+              groupMode="grouped"
+              colors={["#2563eb", "#f59e0b", "#16a34a"]}
+              {...billingReportBarChartDefaults}
+            />
+          </div>
+        )}
+      </ReportChartCard>
 
-        <div className="overflow-hidden rounded-lg border bg-background">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Month</TableHead>
-                <TableHead className="text-right">Active subs</TableHead>
-                <TableHead className="text-right">Baseline MRR</TableHead>
-                <TableHead className="text-right">Conservative MRR</TableHead>
-                <TableHead className="text-right">Growth MRR</TableHead>
+      <div className="overflow-hidden rounded-2xl bg-black/[0.025] dark:bg-white/[0.04]">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-border/40 hover:bg-transparent">
+              <TableHead>Month</TableHead>
+              <TableHead className="text-right">Active subs</TableHead>
+              <TableHead className="text-right">Baseline MRR</TableHead>
+              <TableHead className="text-right">Conservative MRR</TableHead>
+              <TableHead className="text-right">Growth MRR</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableRow className="border-border/40">
+                <TableCell
+                  colSpan={5}
+                  className="py-8 text-center text-muted-foreground"
+                >
+                  No projection rows for this scenario.
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.monthKey}>
+            ) : (
+              rows.map((row) => (
+                <TableRow key={row.monthKey} className="border-border/40">
                   <TableCell className="font-medium">{row.label}</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {row.activeSubscriptions}
@@ -148,11 +161,11 @@ export const BillingReportsProjections = ({
                     <MoneyText value={row.growthMrr} />
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </ReportSection>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };

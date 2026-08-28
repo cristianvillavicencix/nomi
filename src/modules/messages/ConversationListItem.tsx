@@ -56,13 +56,11 @@ export const ConversationListItem = ({
     <button
       type="button"
       className={cn(
-        "flex w-full items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition-colors",
+        "flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition-colors",
         isMobile
           ? isActive
-            ? "bg-muted/50"
-            : hasUnread
-              ? "bg-muted/25"
-              : "hover:bg-muted/35"
+            ? "bg-black/[0.04] dark:bg-white/[0.08]"
+            : "hover:bg-black/[0.03] active:bg-black/[0.05] dark:hover:bg-white/[0.05]"
           : isActive
             ? "bg-muted/50"
             : hasUnread

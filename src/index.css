@@ -274,70 +274,109 @@ input[type="time"] {
 }
 
 /*
- * Mobile glass chrome — web approximation of Apple materials.
- * Not official Apple CSS. Used only on the mobile CRM shell.
- * Glass is for floating chrome (header / tab bar). Lists are opaque grouped cards.
+ * Mobile glass chrome — floating dock/header only.
+ * Lists stay flat (no bordered cards / tinted boxes) so content scrolls cleanly.
+ *
+ * Dock material targets Apple Liquid Glass / iOS tab bar:
+ * floats above content, frosted blur, enough fill opacity that icons stay
+ * readable over both black lists and white invoice paper.
  */
 .nomi-mobile-shell {
-  --glass-blur: 40px;
-  background: oklch(0.955 0.008 250);
+  --glass-blur: 48px;
+  background: #ffffff;
 }
 
 .dark .nomi-mobile-shell {
-  background: oklch(0.17 0.01 250);
+  /* True black canvas like WhatsApp / iOS Mail so frosted chrome reads clearly */
+  background: #000000;
 }
 
 @utility glass-header {
-  isolation: isolate;
-  background: rgb(255 255 255 / 0.62);
-  backdrop-filter: blur(var(--glass-blur, 40px)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--glass-blur, 40px)) saturate(180%);
-  border-bottom: 0.5px solid rgb(0 0 0 / 0.08);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7);
-}
-
-.dark .glass-header {
-  background: rgb(22 22 24 / 0.72);
-  border-bottom-color: rgb(255 255 255 / 0.08);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
-}
-
-@utility glass-dock {
-  isolation: isolate;
-  overflow: hidden;
-  background: rgb(255 255 255 / 0.72);
-  backdrop-filter: blur(var(--glass-blur, 40px)) saturate(190%);
-  -webkit-backdrop-filter: blur(var(--glass-blur, 40px)) saturate(190%);
-  border: 0.5px solid rgb(255 255 255 / 0.7);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.85),
-    0 8px 32px rgb(0 0 0 / 0.16);
-}
-
-.dark .glass-dock {
-  background: rgb(28 28 30 / 0.78);
-  border-color: rgb(255 255 255 / 0.14);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.16),
-    0 8px 32px rgb(0 0 0 / 0.45);
-}
-
-@utility glass-grouped {
-  isolation: isolate;
-  overflow: hidden;
-  background: var(--card);
-  border: 0.5px solid rgb(0 0 0 / 0.06);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
-}
-
-.dark .glass-grouped {
-  background: oklch(0.22 0.01 250);
-  border-color: rgb(255 255 255 / 0.08);
+  background: transparent;
+  backdrop-filter: blur(var(--glass-blur, 48px)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 48px)) saturate(180%);
+  border: none;
   box-shadow: none;
 }
 
+.dark .glass-header {
+  background: transparent;
+  box-shadow: none;
+}
+
+@utility glass-dock {
+  position: relative;
+  isolation: isolate;
+  /* Light: frosted white capsule — stays visible over dark and light content */
+  background: rgb(255 255 255 / 0.78);
+  backdrop-filter: blur(var(--glass-blur, 48px)) saturate(190%);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 48px)) saturate(190%);
+  border: 0.5px solid rgb(255 255 255 / 0.72);
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.06),
+    0 2px 8px rgb(0 0 0 / 0.06),
+    0 10px 28px rgb(0 0 0 / 0.12),
+    inset 0 1px 0 rgb(255 255 255 / 0.95);
+}
+
+.glass-dock::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    165deg,
+    rgb(255 255 255 / 0.55) 0%,
+    rgb(255 255 255 / 0.08) 42%,
+    transparent 68%
+  );
+}
+
+.dark .glass-dock {
+  /* Dark: denser frosted material so white invoice paper cannot wash out icons */
+  background: rgb(38 38 40 / 0.82);
+  border-color: rgb(255 255 255 / 0.2);
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.55),
+    0 2px 8px rgb(0 0 0 / 0.35),
+    0 12px 32px rgb(0 0 0 / 0.5),
+    inset 0 1px 0 rgb(255 255 255 / 0.2);
+}
+
+.dark .glass-dock::before {
+  background: linear-gradient(
+    165deg,
+    rgb(255 255 255 / 0.16) 0%,
+    rgb(255 255 255 / 0.04) 40%,
+    transparent 65%
+  );
+}
+
+/* Flat list wrapper — no card border / fill / outline */
+@utility glass-grouped {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.dark .glass-grouped {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+@utility mobile-scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
+}
+
+/* Dock h-[3.75rem] + ~0.5rem float + breathing room above capsule */
 @utility pb-mobile-dock {
-  padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -346,12 +385,17 @@ input[type="time"] {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
-  .glass-header,
-  .glass-grouped {
-    background: var(--background);
+  .glass-header {
+    background: transparent;
   }
   .glass-dock {
-    background: var(--secondary);
+    background: rgb(242 242 247);
+  }
+  .dark .glass-dock {
+    background: rgb(44 44 46);
+  }
+  .glass-dock::before {
+    display: none;
   }
 }
 

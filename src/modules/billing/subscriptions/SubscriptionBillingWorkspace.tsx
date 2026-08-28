@@ -7,9 +7,7 @@ import { StandaloneSubscriptionEditPage } from "@/modules/billing/subscriptions/
 import { SubscriptionListSidebar } from "@/modules/billing/subscriptions/SubscriptionListSidebar";
 import { SubscriptionListTable } from "@/modules/billing/subscriptions/SubscriptionListTable";
 import { SubscriptionListToolbar } from "@/modules/billing/subscriptions/SubscriptionListToolbar";
-import {
-  type SubscriptionStatusFilter,
-} from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
+import { type SubscriptionStatusFilter } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -49,19 +47,22 @@ export const SubscriptionBillingWorkspace = ({
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 overflow-hidden bg-background",
-        hasSelection && !isMobile
-          ? "h-full rounded-none border-0"
-          : "rounded-lg border",
+        "flex min-h-0 flex-1 overflow-hidden",
+        isMobile
+          ? "rounded-none border-0 bg-transparent"
+          : hasSelection
+            ? "h-full rounded-none border-0 bg-background"
+            : "rounded-lg border bg-background",
       )}
     >
       {showSidebar ? (
         <aside
           className={cn(
-            "flex min-h-0 flex-col bg-muted/10",
+            "flex min-h-0 flex-1 flex-col overflow-hidden",
+            isMobile ? "bg-transparent" : "bg-muted/10",
             hasSelection &&
               !isMobile &&
-              "w-full max-w-[320px] shrink-0 border-r",
+              "w-full max-w-[320px] shrink-0 flex-none border-r",
             (!hasSelection || isMobile) && "w-full",
           )}
         >
@@ -72,8 +73,9 @@ export const SubscriptionBillingWorkspace = ({
             onSearchQueryChange={setSearchQuery}
             onCreate={onCreate}
             compact={hasSelection && !isMobile}
+            hideCreate={isMobile}
           />
-          {showSummaryCards && !hasSelection ? (
+          {showSummaryCards && !hasSelection && !isMobile ? (
             <div className="shrink-0 border-b bg-background px-3 py-2">
               <SubscriptionBillingSummaryCards
                 statusFilter={statusFilter}
@@ -81,42 +83,52 @@ export const SubscriptionBillingWorkspace = ({
               />
             </div>
           ) : null}
-          {hasSelection || isMobile ? (
-            <SubscriptionListSidebar
-              selectedSubscriptionId={selectedSubscriptionId}
-              onSelectSubscription={handleSelectSubscription}
-              searchQuery={searchQuery}
-              statusFilter={statusFilter}
-            />
-          ) : (
-            <SubscriptionListTable
-              selectedSubscriptionId={selectedSubscriptionId}
-              onSelectSubscription={handleSelectSubscription}
-              searchQuery={searchQuery}
-              statusFilter={statusFilter}
-            />
-          )}
+          <div
+            className={cn(
+              "min-h-0 flex-1",
+              isMobile ? "flex flex-col overflow-hidden" : "overflow-hidden",
+            )}
+          >
+            {hasSelection || isMobile ? (
+              <SubscriptionListSidebar
+                selectedSubscriptionId={selectedSubscriptionId}
+                onSelectSubscription={handleSelectSubscription}
+                searchQuery={searchQuery}
+                statusFilter={statusFilter}
+              />
+            ) : (
+              <SubscriptionListTable
+                selectedSubscriptionId={selectedSubscriptionId}
+                onSelectSubscription={handleSelectSubscription}
+                searchQuery={searchQuery}
+                statusFilter={statusFilter}
+              />
+            )}
+          </div>
         </aside>
       ) : null}
 
       {showDetail && hasSelection ? (
         <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/50">
           {isMobile ? (
-            <div className="border-b bg-background px-3 py-2">
+            <div className="flex shrink-0 items-center gap-1 px-2 py-1.5">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
+                className="gap-1 px-2"
                 onClick={handleBackToList}
               >
                 ← All subscriptions
               </Button>
             </div>
           ) : null}
-          <StandaloneSubscriptionEditPage
-            embedded
-            subscriptionId={selectedSubscriptionId ?? ""}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <StandaloneSubscriptionEditPage
+              embedded
+              subscriptionId={selectedSubscriptionId ?? ""}
+            />
+          </div>
         </section>
       ) : !showSidebar ? (
         <section className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center text-muted-foreground">
