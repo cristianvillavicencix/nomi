@@ -127,15 +127,16 @@ const NavigationButton = ({
 }) => (
   <Link
     to={href}
+    aria-current={isActive ? "page" : undefined}
     className={cn(
-      "relative z-10 flex min-w-0 flex-1 items-stretch justify-center px-0.5 py-1 text-muted-foreground transition-transform active:scale-[0.96]",
-      isActive && "text-foreground",
+      "relative z-10 flex min-w-0 flex-1 items-stretch justify-center px-0.5 py-1 transition-transform active:scale-[0.96]",
+      isActive ? "text-foreground" : "text-muted-foreground",
     )}
   >
     <span
       className={cn(
-        "relative flex w-full max-w-[4.75rem] flex-col items-center justify-center gap-0.5 rounded-[14px] px-1 py-1 transition-colors",
-        isActive && "bg-black/[0.08] dark:bg-white/14",
+        "relative flex w-full max-w-[4.75rem] flex-col items-center justify-center gap-0.5 rounded-[13px] px-1 py-1 transition-colors",
+        isActive && "bg-black/[0.07] dark:bg-white/[0.12]",
       )}
     >
       <span className="relative flex size-6 items-center justify-center">
@@ -149,7 +150,12 @@ const NavigationButton = ({
           </Badge>
         ) : null}
       </span>
-      <span className="max-w-full truncate text-[10px] font-medium leading-none tracking-tight">
+      <span
+        className={cn(
+          "max-w-full truncate text-[10px] leading-none tracking-tight",
+          isActive ? "font-semibold" : "font-medium",
+        )}
+      >
         {label}
       </span>
     </span>

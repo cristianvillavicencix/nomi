@@ -109,9 +109,14 @@ export const InvoiceBillingWorkspace = ({
       ) : null}
 
       {showDetail && hasSelection ? (
-        <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/50">
+        <section
+          className={cn(
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+            isMobile ? "bg-black/[0.04] dark:bg-black" : "bg-muted/50",
+          )}
+        >
           {isMobile ? (
-            <div className={cn("flex shrink-0 items-center gap-1 px-2 py-1.5", isMobile ? "glass-header" : "border-b bg-background")}>
+            <div className="glass-header flex shrink-0 items-center gap-1 px-2 py-1.5">
               <Button
                 type="button"
                 variant="ghost"
@@ -124,7 +129,12 @@ export const InvoiceBillingWorkspace = ({
               </Button>
             </div>
           ) : null}
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div
+            className={cn(
+              "min-h-0 flex-1 overflow-y-auto overscroll-contain",
+              isMobile && "mobile-scroll px-3 pb-mobile-dock pt-2",
+            )}
+          >
             <StandaloneInvoiceEditPage
               embedded
               invoiceId={selectedInvoiceId ?? undefined}
