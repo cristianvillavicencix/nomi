@@ -291,7 +291,7 @@ const TicketThreadMessage = ({
 
     return (
       <article className="group/message flex w-full justify-center text-sm">
-        <div className="flex w-full max-w-[min(100%,42rem)] gap-2.5">
+        <div className="flex w-full max-w-[min(100%,56rem)] gap-2.5">
           {avatarWithSelect(author, "internal")}
           <div
             className={cn(
@@ -416,7 +416,7 @@ const TicketThreadMessage = ({
       {avatarWithSelect(displayName, inbound ? "inbound" : "outbound", outbound)}
       <div
         className={cn(
-          "min-w-0 w-full max-w-[min(100%,min(42rem,90%))] rounded-2xl border py-3 pr-1 pl-3 shadow-sm",
+          "min-w-0 w-full max-w-[min(100%,min(56rem,98%))] rounded-2xl border py-3 pr-1 pl-3 shadow-sm",
           unreadInbound && "ring-1 ring-blue-400/40",
           selected && "ring-1 ring-primary/40",
           inbound
