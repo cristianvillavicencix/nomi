@@ -9,7 +9,7 @@ export const useTicketThreadMessages = (
   ticketId: Identifier | null | undefined,
 ) => {
   const queryClient = useQueryClient();
-  const threadTopRef = useRef<HTMLDivElement | null>(null);
+  const threadEndRef = useRef<HTMLDivElement | null>(null);
 
   const {
     data: messages = [],
@@ -20,13 +20,13 @@ export const useTicketThreadMessages = (
     {
       filter: ticketId ? { "ticket_id@eq": ticketId } : {},
       pagination: { page: 1, perPage: 500 },
-      sort: { field: "created_at", order: "DESC" },
+      sort: { field: "created_at", order: "ASC" },
     },
     { enabled: ticketId != null, staleTime: 30_000 },
   );
 
   const scrollToLatest = useCallback((behavior: ScrollBehavior = "smooth") => {
-    threadTopRef.current?.scrollIntoView({ behavior, block: "start" });
+    threadEndRef.current?.scrollIntoView({ behavior, block: "end" });
   }, []);
 
   const prevTicketIdRef = useRef<typeof ticketId>(null);
@@ -90,9 +90,7 @@ export const useTicketThreadMessages = (
     messages: sortedMessages,
     isPending: ticketId != null && isPending,
     refetch,
-    /** @deprecated Use threadTopRef — kept for callers that still name it threadEndRef. */
-    threadEndRef: threadTopRef,
-    threadTopRef,
+    threadEndRef,
     scrollToBottom: scrollToLatest,
     scrollToLatest,
   };

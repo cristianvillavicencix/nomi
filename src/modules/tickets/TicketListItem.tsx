@@ -226,10 +226,8 @@ export const TicketListItem = ({
             <div className="flex items-center gap-2">
               <p
                 className={cn(
-                  "min-w-0 flex-1 truncate text-xs",
-                  messagePreview
-                    ? "text-foreground/80"
-                    : "text-muted-foreground",
+                  "min-w-0 flex-1 truncate text-xs leading-relaxed",
+                  messagePreview ? "text-foreground" : "text-muted-foreground",
                 )}
               >
                 {messagePreview ? (

@@ -86,13 +86,15 @@ const TicketContextTabs = ({
             <TooltipTrigger asChild>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === tab.id}
                 onClick={() => onChange(tab.id)}
                 aria-label={tab.label}
                 className={cn(
                   "inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-md px-1.5 text-[11px] font-medium transition-colors sm:gap-1.5 sm:px-2 sm:text-xs",
                   activeTab === tab.id
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                 )}
               >
                 <Icon className="size-3.5 shrink-0" />

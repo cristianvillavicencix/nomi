@@ -229,18 +229,6 @@ export const TicketDetailPanel = ({
 
           <TicketRetryDeliveryBanner ticket={ticket} />
 
-          <div className="shrink-0 bg-background">
-            <TicketReplyForm
-              key={`reply-${ticket.id}`}
-              ref={replyFormRef}
-              ticket={ticket}
-              placement="top"
-              quoteMessage={quoteMessage}
-              onQuoteApplied={() => setQuoteMessage(null)}
-              onSent={() => scrollToBottom()}
-            />
-          </div>
-
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background px-4 py-2 md:px-5">
             <TicketReadCutoffContext.Provider value={readCutoff}>
               <TicketThread
@@ -249,6 +237,18 @@ export const TicketDetailPanel = ({
                 threadEndRef={threadEndRef}
               />
             </TicketReadCutoffContext.Provider>
+          </div>
+
+          <div className="shrink-0 bg-background">
+            <TicketReplyForm
+              key={`reply-${ticket.id}`}
+              ref={replyFormRef}
+              ticket={ticket}
+              placement="bottom"
+              quoteMessage={quoteMessage}
+              onQuoteApplied={() => setQuoteMessage(null)}
+              onSent={() => scrollToBottom()}
+            />
           </div>
         </div>
 

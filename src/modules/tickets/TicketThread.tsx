@@ -81,28 +81,16 @@ type ThreadTreeTone =
   | "unread";
 
 const ThreadTreeGuide = ({
-  isFirst,
-  isLast,
   tone = "default",
 }: {
   isFirst: boolean;
   isLast: boolean;
   tone?: ThreadTreeTone;
 }) => (
-  <div className="relative w-5 shrink-0 self-stretch" aria-hidden>
-    {/* Vertical stem above the node (├ / └) */}
-    {!isFirst ? (
-      <span className="absolute top-0 left-1/2 h-4 w-px -translate-x-1/2 bg-border" />
-    ) : null}
-    {/* Vertical stem below the node (continues the tree) */}
-    {!isLast ? (
-      <span className="absolute top-4 bottom-0 left-1/2 w-px -translate-x-1/2 bg-border" />
-    ) : null}
-    {/* Horizontal bracket into the message */}
-    <span className="absolute top-4 left-1/2 h-px w-2.5 bg-border" />
+  <div className="flex w-6 shrink-0 justify-center pt-3" aria-hidden>
     <span
       className={cn(
-        "absolute top-3 left-1/2 size-2 -translate-x-1/2 rounded-full border-2 bg-background",
+        "size-2.5 rounded-full border-2 bg-background",
         tone === "internal" &&
           "border-amber-500 bg-amber-100 dark:bg-amber-950",
         tone === "unread" && "border-blue-500 bg-blue-100 dark:bg-blue-950",
@@ -184,15 +172,13 @@ const MessageOverflowMenu = ({
             <DropdownMenuLabel className="space-y-1 font-normal text-muted-foreground">
               {toLine ? (
                 <p className="truncate text-xs">
-                  <span className="font-medium text-foreground/80">To:</span>
-                  {" "}
+                  <span className="font-medium text-foreground/80">To:</span>{" "}
                   {toLine}
                 </p>
               ) : null}
               {ccLine ? (
                 <p className="truncate text-xs">
-                  <span className="font-medium text-foreground/80">Cc:</span>
-                  {" "}
+                  <span className="font-medium text-foreground/80">Cc:</span>{" "}
                   {ccLine}
                 </p>
               ) : null}
@@ -278,7 +264,7 @@ const TicketThreadMessage = ({
         <ThreadTreeGuide isFirst={isFirst} isLast={isLast} tone={treeTone} />
         <div
           className={cn(
-            "min-w-0 flex-1 rounded-r-md bg-amber-50/50 py-3 pr-1 pl-2 dark:bg-amber-950/20",
+            "min-w-0 flex-1 rounded-lg border border-amber-200/60 bg-amber-50/50 py-3 pr-1 pl-3 dark:border-amber-900/40 dark:bg-amber-950/20",
             isEditingInternal && "bg-amber-50/80 dark:bg-amber-950/30",
           )}
         >
@@ -348,8 +334,7 @@ const TicketThreadMessage = ({
                     <p>
                       <span className="font-medium text-foreground/80">
                         To:
-                      </span>
-                      {" "}
+                      </span>{" "}
                       {toLine}
                     </p>
                   ) : null}
@@ -357,8 +342,7 @@ const TicketThreadMessage = ({
                     <p>
                       <span className="font-medium text-foreground/80">
                         Cc:
-                      </span>
-                      {" "}
+                      </span>{" "}
                       {ccLine}
                     </p>
                   ) : null}
@@ -391,7 +375,14 @@ const TicketThreadMessage = ({
       )}
     >
       <ThreadTreeGuide isFirst={isFirst} isLast={isLast} tone={treeTone} />
-      <div className="min-w-0 flex-1 py-3 pr-1 pl-2">
+      <div
+        className={cn(
+          "min-w-0 flex-1 rounded-lg border py-3 pr-1 pl-3",
+          inbound
+            ? "border-slate-200 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-900/30"
+            : "border-blue-200 bg-blue-50/40 dark:border-blue-900/40 dark:bg-blue-950/20",
+        )}
+      >
         <div className="flex items-start gap-2">
           <button
             type="button"
@@ -452,15 +443,13 @@ const TicketThreadMessage = ({
               <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                 {toLine ? (
                   <p>
-                    <span className="font-medium text-foreground/80">To:</span>
-                    {" "}
+                    <span className="font-medium text-foreground/80">To:</span>{" "}
                     {toLine}
                   </p>
                 ) : null}
                 {ccLine ? (
                   <p>
-                    <span className="font-medium text-foreground/80">Cc:</span>
-                    {" "}
+                    <span className="font-medium text-foreground/80">Cc:</span>{" "}
                     {ccLine}
                   </p>
                 ) : null}
@@ -521,11 +510,12 @@ export const TicketThread = ({
     const prevSet = new Set(prevIds);
 
     if (prevIds.length === 0) {
-      setCollapsedIds(new Set(messageIds.slice(1)));
+      // Keep only the latest message expanded by default.
+      setCollapsedIds(new Set(messageIds.slice(0, -1)));
     } else if (messageIdsKey !== prevIds.join(",")) {
       setCollapsedIds((current) => {
         const next = new Set(current);
-        for (const id of messageIds.slice(1)) {
+        for (const id of messageIds.slice(0, -1)) {
           if (!prevSet.has(id)) {
             next.add(id);
           }
@@ -577,18 +567,17 @@ export const TicketThread = ({
     );
   }
 
-  // Messages arrive newest-first; keep the latest visible at the top.
-  const latestId = messageIds[0];
+  // Messages arrive oldest-first; keep the latest visible at the bottom.
+  const latestId = messageIds[messageIds.length - 1];
   const hiddenCount =
     !showAllEarlier && messages.length > VISIBLE_TAIL_COUNT
       ? messages.length - VISIBLE_TAIL_COUNT
       : 0;
   const visibleMessages =
-    hiddenCount > 0 ? messages.slice(0, VISIBLE_TAIL_COUNT) : messages;
+    hiddenCount > 0 ? messages.slice(-VISIBLE_TAIL_COUNT) : messages;
 
   return (
-    <div>
-      <div ref={threadEndRef} className="h-px shrink-0" aria-hidden />
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-col">
         {visibleMessages.map((message, index) => {
           const messageId = Number(message.id);
@@ -605,6 +594,7 @@ export const TicketThread = ({
           );
         })}
       </div>
+      <div ref={threadEndRef} className="h-px shrink-0" aria-hidden />
       {hiddenCount > 0 ? (
         <div className="flex justify-center border-t border-border/60 py-3">
           <Button
