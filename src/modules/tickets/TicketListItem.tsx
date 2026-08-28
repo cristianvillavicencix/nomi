@@ -96,7 +96,7 @@ export const TicketListItem = ({
           "flex w-full text-left transition-colors",
           isMobile
             ? cn(
-                "px-1 py-3.5 hover:bg-black/[0.03] active:bg-black/[0.05] dark:hover:bg-white/[0.04] dark:active:bg-white/[0.06]",
+                "px-1 py-2.5 hover:bg-black/[0.03] active:bg-black/[0.05] dark:hover:bg-white/[0.04] dark:active:bg-white/[0.06]",
               )
             : cn(
                 "border-b hover:bg-muted/30",
@@ -114,7 +114,7 @@ export const TicketListItem = ({
       >
         {selectionEnabled ? (
           <div
-            className="flex items-start px-2 pt-3.5"
+            className="flex items-start px-2 pt-2.5"
             onClick={(event) => event.stopPropagation()}
           >
             <Checkbox
@@ -137,28 +137,28 @@ export const TicketListItem = ({
           }}
           className={cn(
             "min-w-0 flex-1 cursor-pointer",
-            isMobile ? "pr-1" : "py-3 pr-3",
+            isMobile ? "pr-1" : "py-2 pr-3",
           )}
         >
-          <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex min-w-0 flex-col gap-0.5">
             {/* Row 1: title */}
-            <div className="flex items-start gap-1.5">
+            <div className="flex items-center gap-1.5">
               {isUnread ? (
                 <span
-                  className="mt-1.5 size-2 shrink-0 rounded-full bg-info"
+                  className="size-1.5 shrink-0 rounded-full bg-info"
                   aria-label="Unread"
                 />
               ) : null}
               <TicketSubjectField
                 ticket={ticket}
                 editable={false}
-                className="min-w-0 flex-1 text-sm font-semibold leading-snug"
+                className="min-w-0 flex-1 text-sm font-semibold leading-tight"
               />
             </div>
 
             {/* Row 2: #ticket | company | contact */}
             {identityParts.length > 0 ? (
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="truncate text-[11px] leading-tight text-muted-foreground">
                 {identityParts.map((part, index) => (
                   <span key={`${part}-${index}`}>
                     {index > 0 ? <TicketMetaSep /> : null}
@@ -175,13 +175,13 @@ export const TicketListItem = ({
             ) : null}
 
             {/* Row 3: badges + attachment + time */}
-            <div className="flex min-w-0 items-center gap-1.5">
-              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+            <div className="flex min-w-0 items-center gap-1">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
                 {priorityLabel && isElevatedTicketPriority(ticket) ? (
                   <Badge
                     variant="outline"
                     className={cn(
-                      "h-5 shrink-0 px-1.5 text-[10px] font-medium",
+                      "h-4 shrink-0 px-1 text-[10px] font-medium",
                       ticketPriorityClassName(ticket.priority),
                     )}
                   >
@@ -192,7 +192,7 @@ export const TicketListItem = ({
                   <Badge
                     variant="outline"
                     className={cn(
-                      "h-5 shrink-0 px-1.5 text-[10px] font-medium",
+                      "h-4 shrink-0 px-1 text-[10px] font-medium",
                       ticketWaitingSlaClassName(
                         ticket.status,
                         ticket.updated_at,
@@ -205,13 +205,13 @@ export const TicketListItem = ({
                 <TicketListInvoiceBadges ticket={ticket} invoices={invoices} />
                 {hasAttachments ? (
                   <Paperclip
-                    className="size-3.5 shrink-0 text-muted-foreground"
+                    className="size-3 shrink-0 text-muted-foreground"
                     aria-label="Has attachments"
                   />
                 ) : null}
               </div>
 
-              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+              <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
                 {formatTicketListTime(ticket.updated_at)}
               </span>
 
@@ -236,7 +236,7 @@ export const TicketListItem = ({
                 />
                 {canManage && onEdit ? (
                   <IconButton
-                    className="size-7 text-muted-foreground hover:text-foreground"
+                    className="size-6 text-muted-foreground hover:text-foreground"
                     aria-label={`Edit ticket #${ticket.id}`}
                     onClick={() => onEdit(ticket)}
                   >
@@ -245,7 +245,7 @@ export const TicketListItem = ({
                 ) : null}
                 {canManage && onDelete ? (
                   <IconButton
-                    className="size-7 text-muted-foreground hover:text-destructive"
+                    className="size-6 text-muted-foreground hover:text-destructive"
                     aria-label={`Delete ticket #${ticket.id}`}
                     onClick={() => onDelete(ticket)}
                   >
