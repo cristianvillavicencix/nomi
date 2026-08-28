@@ -16,6 +16,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ticketStatusLabel } from "@/modules/tickets/ticketInboxConfig";
+import { formatStatusChangeInternalNoteBody } from "@/modules/tickets/parseStatusChangeInternalNote";
 
 export type TicketStatusChangeRequest = {
   ticket: Ticket;
@@ -72,7 +73,11 @@ export const TicketStatusChangeDialog = ({
       if (trimmed) {
         await dataProvider.replyTicket({
           ticketId: request.ticket.id,
-          body: `**Status:** ${fromStatus} → ${toStatus}\n\n${trimmed}`,
+          body: formatStatusChangeInternalNoteBody(
+            fromStatus,
+            toStatus,
+            trimmed,
+          ),
           isInternalNote: true,
         });
       }

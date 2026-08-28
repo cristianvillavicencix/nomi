@@ -110,7 +110,7 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
             node:
               record.company_id && companyName ? (
                 <Link
-                  to={getClientShowPath(record.company_id)}
+                  to={`${getClientShowPath(record.company_id)}?tab=deals`}
                   className="link-action truncate"
                 >
                   {companyName}

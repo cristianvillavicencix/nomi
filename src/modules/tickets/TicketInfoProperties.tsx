@@ -11,8 +11,8 @@ import {
   ticketPriorityLabel,
 } from "@/modules/tickets/ticketPriorityUi";
 import {
-  getTicketWaitingDurationLabel,
-  ticketWaitingSlaClassName,
+  getTicketStatusDurationLabel,
+  ticketStatusDurationClassName,
 } from "@/modules/tickets/ticketSlaUtils";
 import { memberDisplayName } from "@/modules/tickets/ticketInboxUi";
 import { cn } from "@/lib/utils";
@@ -38,11 +38,11 @@ export const TicketInfoProperties = ({ ticket }: { ticket: Ticket }) => {
     { enabled: assigneeId != null },
   );
 
-  const waitingLabel = getTicketWaitingDurationLabel(
+  const statusDurationLabel = getTicketStatusDurationLabel(
     ticket.status,
     ticket.updated_at,
   );
-  const waitingClass = ticketWaitingSlaClassName(
+  const statusDurationClass = ticketStatusDurationClassName(
     ticket.status,
     ticket.updated_at,
   );
@@ -62,6 +62,18 @@ export const TicketInfoProperties = ({ ticket }: { ticket: Ticket }) => {
             {ticketStatusLabel(ticket.status)}
           </Badge>
         </PropertyRow>
+        {statusDurationLabel ? (
+          <PropertyRow label="In status">
+            <span
+              className={cn(
+                "inline-flex rounded-md border px-1.5 py-0.5 text-xs font-medium",
+                statusDurationClass,
+              )}
+            >
+              {statusDurationLabel}
+            </span>
+          </PropertyRow>
+        ) : null}
         <PropertyRow label="Priority">
           <span
             className={cn(
@@ -78,18 +90,6 @@ export const TicketInfoProperties = ({ ticket }: { ticket: Ticket }) => {
             {assignee ? memberDisplayName(assignee) : "Unassigned"}
           </span>
         </PropertyRow>
-        {waitingLabel ? (
-          <PropertyRow label="SLA">
-            <span
-              className={cn(
-                "inline-flex rounded-md border px-1.5 py-0.5 text-xs font-medium",
-                waitingClass,
-              )}
-            >
-              {waitingLabel}
-            </span>
-          </PropertyRow>
-        ) : null}
       </dl>
     </section>
   );

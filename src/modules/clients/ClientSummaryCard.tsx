@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from "react";
+import { Globe } from "lucide-react";
 import { useGetOne } from "ra-core";
 import { Badge } from "@/components/ui/badge";
 
@@ -23,10 +24,12 @@ import {
   collectBusinessSocialLinks,
   collectPrimaryContactSocialLinks,
   getPrimaryContactFullName,
-  getPrimaryContactPhoneRaw,
   type CompanyWithPrimaryContact,
 } from "@/modules/clients/clientProfile";
-import { CrmPhoneDisplay } from "@/modules/voice/CrmPhoneDisplay";
+import {
+  resolveCompanyEmailForDisplay,
+  resolveCompanyPhoneRaw,
+} from "@/modules/clients/companyChannelResolvers";
 import { ClientQuickActions } from "@/modules/clients/ClientQuickActions";
 import {
   getSocialLinkLabel,
@@ -38,10 +41,11 @@ import {
   CLIENT_SERVICE_TYPE_LABELS,
   type ClientServiceType,
 } from "@/modules/clients/clientServiceType";
+import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
+import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import {
   EntityIdentityHeader,
   EntityMetaItem,
-  EntityMetaRow,
   formatCompanyLocation,
 } from "@/modules/shared/profile";
 
@@ -75,7 +79,12 @@ const ProfileIconLink = ({
 }) => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <IconButton aria-label={label} asChild variant="secondary" className="shrink-0 rounded-full">
+      <IconButton
+        aria-label={label}
+        asChild
+        variant="secondary"
+        className="shrink-0 rounded-full"
+      >
         <a
           href={href}
           target="_blank"
@@ -129,7 +138,7 @@ export const ClientSummaryCard = ({
   );
 
   const sectorLabel = useMemo(() => {
-    if (!record.sector) return "—";
+    if (!record.sector) return null;
     return (
       companySectors.find((entry) => entry.value === record.sector)?.label ??
       record.sector
@@ -158,6 +167,8 @@ export const ClientSummaryCard = ({
     onOpenPrimaryContact && record.primary_contact_id,
   );
   const locationLabel = formatCompanyLocation(record);
+  const phone = resolveCompanyPhoneRaw(record);
+  const email = resolveCompanyEmailForDisplay(record);
 
   const serviceTypeLabels = useMemo(
     () => getServiceTypeBadgeLabels(serviceType),
@@ -202,58 +213,86 @@ export const ClientSummaryCard = ({
             href={websiteHref}
             target="_blank"
             rel="noreferrer"
-            className="link-action inline-block max-w-full truncate"
+            className="inline-flex max-w-full items-center gap-1.5 link-action"
           >
-            {website}
+            <Globe className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="truncate">{website}</span>
           </a>
         ) : (
           <span>No website</span>
         )
       }
-      actions={
+    >
+      <div className="space-y-3 border-t border-border/60 px-5 py-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <EntityMetaItem label="Primary contact">
+            {canOpenPrimary ? (
+              <button
+                type="button"
+                className="link-action truncate text-left"
+                onClick={onOpenPrimaryContact}
+              >
+                {primaryName}
+                {contactTitle ? (
+                  <span className="font-normal text-muted-foreground">
+                    {" · "}
+                    {contactTitle}
+                  </span>
+                ) : null}
+              </button>
+            ) : (
+              primaryName
+            )}
+          </EntityMetaItem>
+          <EntityMetaItem label="Phone">
+            {phone ? (
+              <CrmPhoneLink
+                phone={phone}
+                contactId={record.primary_contact_id}
+                className="link-action"
+              />
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </EntityMetaItem>
+          <EntityMetaItem label="Email">
+            {email && email !== "—" ? (
+              <OpenMailComposeLink
+                to={email}
+                companyId={record.id}
+                contactId={record.primary_contact_id ?? undefined}
+                className="link-action truncate"
+              >
+                {email}
+              </OpenMailComposeLink>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </EntityMetaItem>
+          {locationLabel && locationLabel !== "—" ? (
+            <EntityMetaItem
+              label="Location"
+              valueClassName="whitespace-normal break-words"
+            >
+              <span className="line-clamp-2 font-normal text-muted-foreground">
+                {locationLabel}
+              </span>
+            </EntityMetaItem>
+          ) : null}
+          {sectorLabel ? (
+            <EntityMetaItem label="Sector">{sectorLabel}</EntityMetaItem>
+          ) : null}
+          <EntityMetaItem label="Owner">
+            {owner ? <OrganizationMemberName member={owner} /> : "—"}
+          </EntityMetaItem>
+        </div>
+
         <ClientQuickActions
           record={record}
           primaryContactId={record.primary_contact_id}
+          presentation="strip"
         />
-      }
-    >
-      <EntityMetaRow columnsClassName="sm:grid-cols-2 lg:grid-cols-[minmax(7rem,1.1fr)_minmax(4.5rem,0.65fr)_minmax(12rem,2.4fr)_minmax(7rem,0.95fr)_minmax(5rem,0.8fr)]">
-        <EntityMetaItem label="Primary contact">
-          {canOpenPrimary ? (
-            <button
-              type="button"
-              className="link-action truncate text-left"
-              onClick={onOpenPrimaryContact}
-            >
-              {primaryName}
-              {contactTitle ? (
-                <span className="font-normal text-muted-foreground">
-                  {" · "}
-                  {contactTitle}
-                </span>
-              ) : null}
-            </button>
-          ) : (
-            primaryName
-          )}
-        </EntityMetaItem>
-        <EntityMetaItem label="Owner">
-          {owner ? <OrganizationMemberName member={owner} /> : "—"}
-        </EntityMetaItem>
-        <EntityMetaItem
-          label="Location"
-          valueClassName="whitespace-normal break-words"
-        >
-          {locationLabel}
-        </EntityMetaItem>
-        <EntityMetaItem label="Phone">
-          <CrmPhoneDisplay
-            phone={getPrimaryContactPhoneRaw(record)}
-            contactId={record.primary_contact_id}
-          />
-        </EntityMetaItem>
-        <EntityMetaItem label="Sector">{sectorLabel}</EntityMetaItem>
-      </EntityMetaRow>
+      </div>
 
       {socialOnlyLinks.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2 border-t border-border/60 px-5 py-3">

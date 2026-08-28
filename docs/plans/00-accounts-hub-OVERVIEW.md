@@ -82,6 +82,29 @@ The data model already matches the journey correctly (`companies` = bill-to, `co
 
 **Dependencies:** Phase 2 and 3 both depend on Phase 1 shell (view toggle + routing). Phase 2 and 3 can proceed in parallel after Phase 1. Phase 4 depends on 2 + 3 being usable.
 
+## Account record motor (2026-08)
+
+Status: **shipped in product UI** (no schema change). The company show at `/companies/:id` is the HubSpot-style Account center of gravity:
+
+| Surface | Behavior |
+|---------|----------|
+| Account Full | Center tabs: Activity, **People**, Deals, Financial, Tickets. Related sidebar collapsed into People. |
+| Contact / Lead show | **Open Account** banner when `company_id` set; Tickets center tab; meta label **Account**. |
+| Tickets / Deals headers | Company → Account Full (`?tab=deals` from deals). |
+| Accounts List preview | Primary CTA **Open Account**. |
+| Chrome | Back → Accounts (when hub flag on); New deal / New ticket scoped to `company_id`. |
+
+Still **Option A**: Account = `companies`, people = `contacts`. Do not delete `/clients` or `/leads` aliases.
+
+### Manual QA (Account motor)
+
+- [ ] Open Account Full → People / Deals / Financial / Tickets tabs; Add contact / New deal / New ticket keep `company_id`.
+- [ ] Open Contact with company → Account banner + Open Account; Tickets tab lists person tickets.
+- [ ] Open Lead with company → same banner; Tickets tab present.
+- [ ] From ticket header → Account Full; from deal header → Account `?tab=deals`.
+- [ ] Accounts List preview → **Open Account** goes to `/companies/:id`.
+- [ ] Convert lead still drops board card; billing still `company_id`.
+
 ## Risk register
 
 | ID | Risk | Likelihood | Impact | Mitigation |

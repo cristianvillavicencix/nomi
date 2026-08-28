@@ -156,7 +156,7 @@ export const ContactSummaryCard = (props: ContactSummaryCardProps) => {
         <EntityMetaItem label="Owner">
           {owner ? <OrganizationMemberName member={owner} /> : "—"}
         </EntityMetaItem>
-        <EntityMetaItem label="Company">
+        <EntityMetaItem label="Account">
           {record.company_id && companyName ? (
             <Link
               to={getClientShowPath(record.company_id)}

@@ -99,5 +99,9 @@ export function useResolvedMailHtml(
 }
 
 export function isDownloadableMailAttachment(file: MailAttachment): boolean {
-  return !file.content_id;
+  // Inline images use content_id for cid: embedding; hide those from the bar.
+  // Real files (xls, pdf, …) must stay visible even if the MIME stamped a Content-ID.
+  if (!file.content_id) return true;
+  const mime = (file.mime_type ?? "").toLowerCase();
+  return !mime.startsWith("image/");
 }

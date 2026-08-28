@@ -3,14 +3,17 @@ import type { Identifier } from "ra-core";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import { ClientTasksTab } from "@/modules/clients/ClientTabPanels";
+import {
+  ClientTasksTab,
+  ClientTicketsTab,
+} from "@/modules/clients/ClientTabPanels";
 import { ClientTabContentCard } from "@/modules/clients/ClientTabSectionCard";
 import { formatTabCount } from "@/modules/clients/clientShowUtils";
 import { LeadActivityPanel } from "@/modules/leads/LeadActivityPanel";
 import { LeadNotesTab } from "@/modules/leads/LeadNotesTab";
 import { LeadPipelinePanel } from "@/modules/leads/LeadPipelinePanel";
 
-type LeadCenterTab = "pipeline" | "activity" | "notes" | "tasks";
+type LeadCenterTab = "pipeline" | "activity" | "notes" | "tasks" | "tickets";
 
 type LeadCenterContentProps = {
   lead: Contact;
@@ -19,6 +22,7 @@ type LeadCenterContentProps = {
   counts: {
     notes: number;
     tasks: number;
+    tickets: number;
   };
 };
 
@@ -53,6 +57,9 @@ export const LeadCenterContent = ({
             <TabsTrigger value="tasks" className="shrink-0">
               {tabLabel("Tasks", counts.tasks)}
             </TabsTrigger>
+            <TabsTrigger value="tickets" className="shrink-0">
+              {tabLabel("Tickets", counts.tickets)}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pipeline" className="mt-0">
@@ -75,6 +82,16 @@ export const LeadCenterContent = ({
                 companyId={companyId}
                 contactIds={contactIds}
                 primaryContactId={lead.id}
+              />
+            </ClientTabContentCard>
+          </TabsContent>
+
+          <TabsContent value="tickets" className="mt-0">
+            <ClientTabContentCard flush>
+              <ClientTicketsTab
+                contactId={lead.id}
+                companyId={companyId}
+                scope="contact"
               />
             </ClientTabContentCard>
           </TabsContent>

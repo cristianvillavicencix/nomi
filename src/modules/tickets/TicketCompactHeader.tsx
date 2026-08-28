@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { IconButton } from "@/components/ui/icon-button";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Deal, Ticket } from "@/modules/types";
-import { getClientShowPath } from "@/app/routing";
+import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import { TicketMetaSep } from "@/modules/tickets/TicketMetaSep";
 import { resolveTicketRequesterName } from "@/modules/tickets/ticketRequester";
 import { TicketSubjectField } from "@/modules/tickets/TicketSubjectField";
@@ -17,8 +17,8 @@ import {
   ticketPriorityLabel,
 } from "@/modules/tickets/ticketPriorityUi";
 import {
-  getTicketWaitingDurationLabel,
-  ticketWaitingSlaClassName,
+  getTicketStatusDurationLabel,
+  ticketStatusDurationClassName,
 } from "@/modules/tickets/ticketSlaUtils";
 import {
   ticketStatusLabel,
@@ -63,10 +63,18 @@ export const TicketCompactHeader = ({
     : null;
   const website = meta.website;
   const priorityLabel = ticketPriorityLabel(ticket.priority);
-  const waitingLabel = getTicketWaitingDurationLabel(
+  const statusDurationLabel = getTicketStatusDurationLabel(
     ticket.status,
     ticket.updated_at,
   );
+  const accountPath =
+    ticket.company_id != null ? getClientShowPath(ticket.company_id) : null;
+  const personPath =
+    contact?.id != null
+      ? getPersonShowPath(contact)
+      : ticket.contact_id != null
+        ? getPersonShowPath({ id: ticket.contact_id, status: contact?.status })
+        : null;
 
   return (
     <div className="shrink-0 border-b bg-background px-4 py-3 md:px-5">
@@ -109,29 +117,38 @@ export const TicketCompactHeader = ({
                 {priorityLabel}
               </Badge>
             ) : null}
-            {waitingLabel ? (
+            {statusDurationLabel ? (
               <Badge
                 variant="outline"
-                className={ticketWaitingSlaClassName(
+                className={ticketStatusDurationClassName(
                   ticket.status,
                   ticket.updated_at,
                 )}
               >
-                {waitingLabel}
+                {statusDurationLabel}
               </Badge>
             ) : null}
           </div>
 
           <p className="flex min-w-0 flex-wrap items-baseline gap-y-0.5 text-sm text-muted-foreground">
-            {contactName ? <span>{contactName}</span> : null}
-            {companyName && ticket.company_id ? (
+            {contactName && personPath ? (
+              <Link
+                to={personPath}
+                className="transition-colors hover:text-foreground hover:underline"
+              >
+                {contactName}
+              </Link>
+            ) : contactName ? (
+              <span>{contactName}</span>
+            ) : null}
+            {accountPath ? (
               <>
                 {contactName ? <TicketMetaSep tone="soft" /> : null}
                 <Link
-                  to={getClientShowPath(ticket.company_id)}
+                  to={accountPath}
                   className="transition-colors hover:text-foreground hover:underline"
                 >
-                  {companyName}
+                  {companyName || "Account"}
                 </Link>
               </>
             ) : null}

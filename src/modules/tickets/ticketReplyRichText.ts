@@ -23,12 +23,24 @@ const collapsePlainTextWhitespace = (text: string) =>
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
+/**
+ * Strip cid: (and other non-fetchable) image sources before assigning
+ * innerHTML — browsers eagerly request img src and log ERR_UNKNOWN_URL_SCHEME.
+ */
+const stripUnresolvedInlineImageTags = (html: string) =>
+  html.replace(
+    /<img\b[^>]*\bsrc\s*=\s*(["']?)cid:[^"'>\s]*\1[^>]*>/gi,
+    "",
+  );
+
 export const htmlToPlainText = (html: string) => {
   if (!html.trim()) return "";
 
-  const normalizedHtml = html
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(BLOCK_BREAK_TAG, "\n");
+  const normalizedHtml = stripUnresolvedInlineImageTags(
+    html
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(BLOCK_BREAK_TAG, "\n"),
+  );
 
   if (typeof document === "undefined") {
     return collapsePlainTextWhitespace(
@@ -299,7 +311,8 @@ export const sanitizeComposerHtml = (html: string) => {
   if (typeof document === "undefined") return html;
 
   const container = document.createElement("div");
-  container.innerHTML = html;
+  // Remove cid: imgs as text first — innerHTML would otherwise trigger fetches.
+  container.innerHTML = stripUnresolvedInlineImageTags(html);
 
   container
     .querySelectorAll("script,style,iframe,object,embed")

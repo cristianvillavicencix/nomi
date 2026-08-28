@@ -168,7 +168,7 @@ export const LeadSummaryCard = ({ record }: { record: Contact }) => {
             value={record.lead_source?.trim() || "—"}
           />
           <ProfileInfoRow
-            label="Company"
+            label="Account"
             value={
               record.company_id && companyName ? (
                 <Link

@@ -1,10 +1,17 @@
 import { useMemo } from "react";
 import type { FileAttachment } from "@/lib/fileAttachments";
 import { TicketEmailAttachmentBar } from "@/modules/tickets/TicketEmailAttachmentBar";
+import { TicketMessageAttachments } from "@/modules/tickets/TicketMessageAttachments";
 import { TicketMessageBody } from "@/modules/tickets/TicketMessageBody";
+import { SkippedAttachmentsNotice } from "@/modules/tickets/SkippedAttachmentsNotice";
+import {
+  parseSkippedAttachmentsNote,
+  stripSkippedAttachmentsNote,
+} from "@/modules/tickets/parseSkippedAttachmentsNote";
 import {
   extractMessageAssets,
   filterDownloadableMessageAssets,
+  partitionMessageAssets,
 } from "@/modules/tickets/ticketMessageAssets";
 import { useTicketInlineHtml } from "@/modules/tickets/useTicketInlineHtml";
 import { cn } from "@/lib/utils";
@@ -24,13 +31,27 @@ export const TicketMessageContent = ({
 }) => {
   const fileAttachments = Array.isArray(attachments) ? attachments : [];
 
+  const skippedNote = useMemo(
+    () => parseSkippedAttachmentsNote(body) ?? parseSkippedAttachmentsNote(htmlBody),
+    [body, htmlBody],
+  );
+
+  const cleanBody = useMemo(
+    () => (body ? stripSkippedAttachmentsNote(body) : body),
+    [body],
+  );
+  const cleanHtmlBody = useMemo(
+    () => (htmlBody ? stripSkippedAttachmentsNote(htmlBody) : htmlBody),
+    [htmlBody],
+  );
+
   const assets = useMemo(
     () => extractMessageAssets({ fileAttachments }),
     [fileAttachments],
   );
 
   const { html: resolvedHtmlBody, isResolving } = useTicketInlineHtml(
-    htmlBody,
+    cleanHtmlBody,
     fileAttachments,
   );
 
@@ -38,7 +59,7 @@ export const TicketMessageContent = ({
   const displayHtmlBody = isResolving
     ? null
     : (resolvedHtmlBody ??
-      (htmlBody && /cid:/i.test(htmlBody) ? null : htmlBody));
+      (cleanHtmlBody && /cid:/i.test(cleanHtmlBody) ? null : cleanHtmlBody));
 
   const downloadableAssets = useMemo(
     () =>
@@ -46,42 +67,56 @@ export const TicketMessageContent = ({
         ? []
         : filterDownloadableMessageAssets(
             assets,
-            htmlBody,
-            resolvedHtmlBody ?? htmlBody,
+            cleanHtmlBody,
+            resolvedHtmlBody ?? cleanHtmlBody,
           ),
-    [assets, htmlBody, resolvedHtmlBody, isResolving],
+    [assets, cleanHtmlBody, resolvedHtmlBody, isResolving],
+  );
+
+  const { documents, videos, photos } = useMemo(
+    () => partitionMessageAssets(downloadableAssets),
+    [downloadableAssets],
   );
 
   const attachmentSrcs = useMemo(
-    () =>
-      downloadableAssets
-        .map((asset) => asset.href)
-        .filter(Boolean),
+    () => downloadableAssets.map((asset) => asset.href).filter(Boolean),
     [downloadableAssets],
   );
 
   const attachmentTitles = useMemo(
-    () =>
-      downloadableAssets
-        .map((asset) => asset.label)
-        .filter(Boolean),
+    () => downloadableAssets.map((asset) => asset.label).filter(Boolean),
     [downloadableAssets],
+  );
+
+  const fileBarAssets = useMemo(
+    () => [...documents, ...videos],
+    [documents, videos],
   );
 
   return (
     <div className={cn(className)}>
-      <TicketEmailAttachmentBar assets={downloadableAssets} />
-      {isResolving && htmlBody?.trim() ? (
+      <TicketEmailAttachmentBar assets={fileBarAssets} />
+      {isResolving && cleanHtmlBody?.trim() ? (
         <p className="py-2 text-sm text-muted-foreground">Loading message…</p>
       ) : (
         <TicketMessageBody
-          body={body}
+          body={cleanBody}
           htmlBody={displayHtmlBody}
           attachmentSrcs={attachmentSrcs}
           attachmentTitles={attachmentTitles}
           emailVariant={emailVariant}
         />
       )}
+      {photos.length > 0 ? (
+        <TicketMessageAttachments
+          documents={[]}
+          videos={[]}
+          photos={photos}
+          className="mt-3 border-t border-border/60 pt-3"
+          showSectionDownloadAll={photos.length > 1}
+        />
+      ) : null}
+      {skippedNote ? <SkippedAttachmentsNotice note={skippedNote} /> : null}
     </div>
   );
 };

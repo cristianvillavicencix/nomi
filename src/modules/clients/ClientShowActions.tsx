@@ -1,7 +1,12 @@
 import { useState } from "react";
-import { ChevronLeft, MoreHorizontal, Pencil, Trash } from "lucide-react";
-import { useLocation, useNavigate } from "react-router";
-import { RecordContextProvider, useDelete, useNotify } from "ra-core";
+import { ChevronLeft, MoreHorizontal, Pencil, Plus, Trash } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router";
+import {
+  RecordContextProvider,
+  useDelete,
+  useGetIdentity,
+  useNotify,
+} from "ra-core";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Confirm } from "@/components/admin/confirm";
@@ -15,8 +20,10 @@ import {
   PageActions,
   PageActionsTrailing,
 } from "@/components/atomic-crm/layout/PageActions";
+import { canAccess } from "@/components/atomic-crm/providers/commons/canAccess";
 import type { CompanyWithPrimaryContact } from "@/modules/clients/clientProfile";
-import { getCompaniesListPath } from "@/app/routing";
+import { getClientDealCreatePath, getCompaniesListPath } from "@/app/routing";
+import { isAccountsHubEnabled } from "@/lib/featureFlags";
 
 type ClientShowActionsProps = {
   record: CompanyWithPrimaryContact;
@@ -30,10 +37,18 @@ export const ClientShowActions = ({
   const navigate = useNavigate();
   const location = useLocation();
   const notify = useNotify();
+  const { data: identity } = useGetIdentity();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteOne, { isPending: isDeleting }] = useDelete();
 
   const listPath = location.state?.from ?? getCompaniesListPath();
+  const canCreateDeal = canAccess(identity, {
+    resource: "deals",
+    action: "create",
+  });
+  const newDealPath = canCreateDeal
+    ? getClientDealCreatePath(record.id)
+    : undefined;
 
   const handleDelete = () => {
     deleteOne(
@@ -63,11 +78,21 @@ export const ClientShowActions = ({
           onClick={() => navigate(listPath)}
         >
           <ChevronLeft className="size-4" />
-          <span className="text-sm font-semibold">Companies</span>
+          <span className="text-sm font-semibold">
+            {isAccountsHubEnabled() ? "Accounts" : "Companies"}
+          </span>
         </Button>
       </PageActions>
 
       <PageActionsTrailing>
+        {newDealPath ? (
+          <Button variant="secondary" size="sm" className="h-8 gap-1.5" asChild>
+            <Link to={newDealPath}>
+              <Plus className="size-3.5" />
+              New Deal
+            </Link>
+          </Button>
+        ) : null}
         <RecordContextProvider value={record}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

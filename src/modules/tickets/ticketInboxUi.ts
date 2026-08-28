@@ -13,6 +13,49 @@ export const formatTicketListTime = (value?: string | null) => {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 };
 
+import type { TicketMessage } from "@/modules/types";
+
+export const formatDurationShort = (ms: number) => {
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  const minutes = Math.floor(ms / (1000 * 60));
+  if (minutes < 1) return "< 1m";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remMin = minutes % 60;
+  if (hours < 24) {
+    return remMin > 0 ? `${hours}h ${remMin}m` : `${hours}h`;
+  }
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours > 0 ? `${days}d ${remHours}h` : `${days}d`;
+};
+
+/** Time from the latest prior inbound message to this outbound reply. */
+export const getReplyDurationLabel = (
+  outbound: TicketMessage,
+  messages: TicketMessage[],
+) => {
+  if (outbound.direction !== "outbound") return null;
+  const outboundTime = outbound.created_at
+    ? new Date(outbound.created_at).getTime()
+    : NaN;
+  if (!Number.isFinite(outboundTime)) return null;
+
+  let priorInboundTime = -Infinity;
+  for (const message of messages) {
+    if (message.direction !== "inbound") continue;
+    const inboundTime = message.created_at
+      ? new Date(message.created_at).getTime()
+      : NaN;
+    if (!Number.isFinite(inboundTime) || inboundTime >= outboundTime) continue;
+    if (inboundTime > priorInboundTime) priorInboundTime = inboundTime;
+  }
+  if (!Number.isFinite(priorInboundTime) || priorInboundTime <= 0) return null;
+
+  const duration = formatDurationShort(outboundTime - priorInboundTime);
+  return duration ? `Replied in ${duration}` : null;
+};
+
 export const formatTicketMessageTime = (value?: string | null) => {
   if (!value) return "—";
   const date = new Date(value);

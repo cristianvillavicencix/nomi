@@ -1,11 +1,9 @@
 import { useMemo, useState } from "react";
 import { useGetIdentity, useGetList, useGetOne } from "ra-core";
 import {
-  ArrowRight,
   Building2,
   Globe,
   Mail,
-  PanelRightClose,
   Phone,
   Plus,
 } from "lucide-react";
@@ -25,7 +23,6 @@ import type { Company, Contact, Deal } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/ui/icon-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MoneyText } from "@/lib/permissions/MoneyText";
@@ -52,6 +49,7 @@ import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import {
   EntityMetaItem,
   formatCompanyLocation,
+  ProfilePreviewChrome,
 } from "@/modules/shared/profile";
 
 const PREVIEW_TABS = ["activity", "deals", "tickets", "contacts"] as const;
@@ -144,12 +142,20 @@ export const AccountsCompanyOverviewPreview = ({
   if (isPending || !company) {
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-        <PreviewChrome
-          title="Company Preview"
+        <ProfilePreviewChrome
+          title="Account Preview"
           onClose={onClose}
           fullViewPath={getClientShowPath(companyId)}
-          newDealPath={
-            canCreateDeal ? getClientDealCreatePath(companyId) : undefined
+          fullViewLabel="Open Account"
+          trailing={
+            canCreateDeal ? (
+              <Button variant="secondary" size="sm" className="h-8 gap-1.5" asChild>
+                <Link to={getClientDealCreatePath(companyId)}>
+                  <Plus className="size-3.5" />
+                  New Deal
+                </Link>
+              </Button>
+            ) : undefined
           }
         />
         <div className="space-y-3 p-4">
@@ -178,11 +184,21 @@ export const AccountsCompanyOverviewPreview = ({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-      <PreviewChrome
-        title="Company Preview"
+      <ProfilePreviewChrome
+        title="Account Preview"
         onClose={onClose}
         fullViewPath={fullViewPath}
-        newDealPath={newDealPath}
+        fullViewLabel="Open Account"
+        trailing={
+          newDealPath ? (
+            <Button variant="secondary" size="sm" className="h-8 gap-1.5" asChild>
+              <Link to={newDealPath}>
+                <Plus className="size-3.5" />
+                New Deal
+              </Link>
+            </Button>
+          ) : undefined
+        }
       />
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -413,52 +429,6 @@ const PreviewTabTrigger = ({
     {label}
     {count != null && count > 0 ? ` (${count})` : ""}
   </TabsTrigger>
-);
-
-const PreviewChrome = ({
-  title,
-  onClose,
-  fullViewPath,
-  newDealPath,
-}: {
-  title: string;
-  onClose: () => void;
-  fullViewPath: string;
-  newDealPath?: string;
-}) => (
-  <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3">
-    <div className="flex min-w-0 items-center gap-1.5">
-      <IconButton
-        className="shrink-0"
-        onClick={onClose}
-        aria-label="Close preview"
-      >
-        <PanelRightClose className="size-4" />
-      </IconButton>
-      <p className="truncate text-base font-semibold">{title}</p>
-    </div>
-    <div className="flex shrink-0 items-center gap-1.5">
-      {newDealPath ? (
-        <Button variant="secondary" size="sm" className="h-8 gap-1.5" asChild>
-          <Link to={newDealPath}>
-            <Plus className="size-3.5" />
-            New Deal
-          </Link>
-        </Button>
-      ) : null}
-      <Button
-        variant="primary"
-        size="sm"
-        className="h-8 shrink-0 gap-1.5"
-        asChild
-      >
-        <Link to={fullViewPath}>
-          View full
-          <ArrowRight className="size-3.5" />
-        </Link>
-      </Button>
-    </div>
-  </div>
 );
 
 const EmptyBlock = ({

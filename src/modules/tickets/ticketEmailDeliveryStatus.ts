@@ -1,4 +1,34 @@
 import type { TicketMessage } from "@/modules/types";
+import { formatTicketMessageTime } from "@/modules/tickets/ticketInboxUi";
+
+export type TicketEmailDeliveryContext = {
+  replyDurationLabel?: string | null;
+};
+
+const formatRecipientList = (emails?: string[] | null) => {
+  const list = (emails ?? []).map((email) => email.trim()).filter(Boolean);
+  if (!list.length) return null;
+  return list.join(", ");
+};
+
+const buildDeliveryDetail = (
+  message: TicketMessage,
+  context?: TicketEmailDeliveryContext,
+  extra?: string,
+) => {
+  const parts = [
+    message.created_at
+      ? `Sent ${formatTicketMessageTime(message.created_at)}`
+      : null,
+    (() => {
+      const to = formatRecipientList(message.to_emails);
+      return to ? `To: ${to}` : null;
+    })(),
+    context?.replyDurationLabel,
+    extra,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : undefined;
+};
 
 export type TicketEmailDeliveryStatus =
   | "queued"
@@ -40,6 +70,7 @@ const normalizeStatus = (
 
 export const getTicketEmailDeliveryDisplay = (
   message: TicketMessage,
+  context?: TicketEmailDeliveryContext,
 ): TicketEmailDeliveryDisplay | null => {
   if (message.direction === "internal" || message.direction === "inbound") {
     return null;
@@ -49,7 +80,11 @@ export const getTicketEmailDeliveryDisplay = (
   const status = normalizeStatus(message.email_delivery_status);
   if (!status) {
     return message.external_message_id
-      ? { label: "Sent", tone: "pending" }
+      ? {
+          label: "Sent",
+          tone: "pending",
+          detail: buildDeliveryDetail(message, context),
+        }
       : null;
   }
 
@@ -58,27 +93,55 @@ export const getTicketEmailDeliveryDisplay = (
 
   switch (status) {
     case "delivered":
-      return { label: "Delivered", tone: "success" };
+      return {
+        label: "Delivered",
+        tone: "success",
+        detail: buildDeliveryDetail(message, context),
+      };
     case "queued":
-      return { label: "Sending…", tone: "pending" };
+      return {
+        label: "Sending…",
+        tone: "pending",
+        detail: buildDeliveryDetail(message, context),
+      };
     case "sent":
-      return { label: "Sent", tone: "pending" };
+      return {
+        label: "Sent",
+        tone: "pending",
+        detail: buildDeliveryDetail(message, context),
+      };
     case "skipped":
-      return { label: "Not emailed", tone: "muted" };
+      return {
+        label: "Not emailed",
+        tone: "muted",
+        detail: buildDeliveryDetail(message, context),
+      };
     case "undelivered":
       return {
         label: "Not delivered",
         tone: "error",
-        detail: errorHint ?? (errorCode ? `Error ${errorCode}` : undefined),
+        detail: buildDeliveryDetail(
+          message,
+          context,
+          errorHint ?? (errorCode ? `Error ${errorCode}` : undefined),
+        ),
       };
     case "failed":
       return {
         label: "Failed",
         tone: "error",
-        detail: errorHint ?? (errorCode ? `Error ${errorCode}` : undefined),
+        detail: buildDeliveryDetail(
+          message,
+          context,
+          errorHint ?? (errorCode ? `Error ${errorCode}` : undefined),
+        ),
       };
     default:
-      return { label: "Sent", tone: "pending" };
+      return {
+        label: "Sent",
+        tone: "pending",
+        detail: buildDeliveryDetail(message, context),
+      };
   }
 };
 

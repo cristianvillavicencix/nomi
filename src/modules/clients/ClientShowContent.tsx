@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useShowContext, type Identifier } from "ra-core";
+import { useShowContext } from "ra-core";
 import { useSearchParams } from "react-router";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,8 +9,7 @@ import { ClientActivityTab } from "@/modules/clients/ClientActivityTab";
 import { ClientAddContactDialog } from "@/modules/clients/ClientAddContactDialog";
 import { ClientEditDialog } from "@/modules/clients/ClientEditDialog";
 import { ClientFinancialTab } from "@/modules/clients/ClientFinancialTab";
-import { ClientCollapsibleRelatedSidebar } from "@/modules/clients/ClientCollapsibleRelatedSidebar";
-import { ClientRelatedSidebar } from "@/modules/clients/ClientRelatedSidebar";
+import { ClientPeopleTab } from "@/modules/clients/ClientPeopleTab";
 import { ClientShowActions } from "@/modules/clients/ClientShowActions";
 import { ClientSummaryCard } from "@/modules/clients/ClientSummaryCard";
 import { ClientProjectsTab, ClientTicketsTab } from "@/modules/clients/ClientTabPanels";
@@ -35,9 +34,6 @@ export const ClientShowContent = () => {
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [primarySheetOpen, setPrimarySheetOpen] = useState(false);
-  const [sidebarContactId, setSidebarContactId] = useState<Identifier | null>(
-    null,
-  );
 
   const counts = useClientTabCounts(record?.id ?? "");
 
@@ -106,38 +102,33 @@ export const ClientShowContent = () => {
   const financialCount =
     counts.invoices + counts.proposals + counts.contracts + counts.payments;
   const activityCount = counts.notes + counts.tasks;
+  const peopleCount = counts.contacts + counts.leads + counts.referrals;
 
   const openPrimaryContact = record.primary_contact_id
     ? () => setPrimarySheetOpen(true)
     : undefined;
+
+  const tabTriggerClassName =
+    "shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none";
 
   const centerTabs = (
     <Card className="gap-0 border-0 py-0 shadow-none">
       <CardContent className="px-4 py-4">
         <Tabs value={currentTab} onValueChange={handleTabChange}>
           <TabsList className="mb-4 h-auto w-full justify-start gap-0 overflow-x-auto rounded-none border-b border-border bg-transparent p-0">
-            <TabsTrigger
-              value="activity"
-              className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-            >
+            <TabsTrigger value="activity" className={tabTriggerClassName}>
               {tabLabel("activity", "Activity", activityCount)}
             </TabsTrigger>
-            <TabsTrigger
-              value="deals"
-              className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-            >
+            <TabsTrigger value="people" className={tabTriggerClassName}>
+              {tabLabel("people", "People", peopleCount)}
+            </TabsTrigger>
+            <TabsTrigger value="deals" className={tabTriggerClassName}>
               {tabLabel("deals", "Deals", counts.projects)}
             </TabsTrigger>
-            <TabsTrigger
-              value="financial"
-              className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-            >
+            <TabsTrigger value="financial" className={tabTriggerClassName}>
               {tabLabel("financial", "Financial", financialCount)}
             </TabsTrigger>
-            <TabsTrigger
-              value="tickets"
-              className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-            >
+            <TabsTrigger value="tickets" className={tabTriggerClassName}>
               {tabLabel("tickets", "Tickets", counts.tickets)}
             </TabsTrigger>
           </TabsList>
@@ -151,6 +142,18 @@ export const ClientShowContent = () => {
                 notes: counts.notes,
                 tasks: counts.tasks,
               }}
+            />
+          </TabsContent>
+          <TabsContent value="people" className="mt-0">
+            <ClientPeopleTab
+              companyId={record.id}
+              primaryContactId={record.primary_contact_id}
+              counts={{
+                contacts: counts.contacts,
+                leads: counts.leads,
+                referrals: counts.referrals,
+              }}
+              onAddContact={() => setAddContactOpen(true)}
             />
           </TabsContent>
           <TabsContent value="deals" className="mt-0">
@@ -183,27 +186,6 @@ export const ClientShowContent = () => {
     </Card>
   );
 
-  const sidebarProps = {
-    companyId: record.id,
-    primaryContactId: record.primary_contact_id,
-    counts: {
-      contacts: counts.contacts,
-      leads: counts.leads,
-      referrals: counts.referrals,
-    },
-    onAddContact: () => setAddContactOpen(true),
-    onOpenContact: (contactId: Identifier) => {
-      setSidebarContactId(contactId);
-      setPrimarySheetOpen(true);
-    },
-  };
-
-  const sidebar = isMobile ? (
-    <ClientRelatedSidebar {...sidebarProps} />
-  ) : (
-    <ClientCollapsibleRelatedSidebar {...sidebarProps} />
-  );
-
   return (
     <div className="mt-2 pb-4">
       <ClientShowActions record={record} onEdit={() => setEditOpen(true)} />
@@ -217,7 +199,6 @@ export const ClientShowContent = () => {
           />
         }
         main={centerTabs}
-        sidebar={sidebar}
         stacked={isMobile}
       />
 
@@ -232,12 +213,9 @@ export const ClientShowContent = () => {
         onOpenChange={setAddContactOpen}
       />
       <ContactShowSheet
-        contactId={sidebarContactId ?? record.primary_contact_id ?? null}
+        contactId={record.primary_contact_id ?? null}
         open={primarySheetOpen}
-        onOpenChange={(open) => {
-          setPrimarySheetOpen(open);
-          if (!open) setSidebarContactId(null);
-        }}
+        onOpenChange={setPrimarySheetOpen}
       />
     </div>
   );

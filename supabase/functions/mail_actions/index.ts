@@ -14,6 +14,7 @@ import {
   graphMessageFetch,
   handleMicrosoftGraphResponse,
   isBenignMicrosoftMailError,
+  isMicrosoftThrottleError,
   resolveMicrosoftThreadMessageIds,
   resolveMicrosoftWellKnownFolderId,
 } from "../_shared/microsoftGraphMail.ts";
@@ -296,51 +297,75 @@ async function applyMicrosoftAction(
   };
 
   let hardError: string | null = null;
-  for (const messageId of ids) {
-    try {
-      switch (action) {
-        case "delete_forever":
-          await deleteMessage(messageId);
-          break;
-        case "trash":
-          await moveMessage(messageId, "deleteditems");
-          break;
-        case "untrash":
-          await moveMessage(messageId, "inbox");
-          break;
-        case "archive":
-          await moveMessage(messageId, "archive");
-          break;
-        case "unarchive":
-          await moveMessage(messageId, "inbox");
-          break;
-        case "star":
-          await patchMessage(messageId, { flag: { flagStatus: "flagged" } });
-          break;
-        case "unstar":
-          await patchMessage(messageId, { flag: { flagStatus: "notFlagged" } });
-          break;
-        case "mark_read":
-          await patchMessage(messageId, { isRead: true });
-          break;
-        case "mark_unread":
-          await patchMessage(messageId, { isRead: false });
-          break;
-        case "spam":
-          await moveMessage(messageId, "junkemail");
-          break;
-        case "not_spam":
-          await moveMessage(messageId, "inbox");
-          break;
-        default:
-          throw new Error(`Unsupported Graph action: ${action}`);
-      }
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (isBenignMicrosoftMailError(msg)) continue;
-      hardError = msg;
-      break;
+  for (let index = 0; index < ids.length; index += 1) {
+    const messageId = ids[index];
+    if (index > 0) {
+      // Stay under Outlook MailboxConcurrency (often ~4 parallel / rapid serial).
+      await new Promise((resolve) => setTimeout(resolve, 150));
     }
+    let attempts = 0;
+    while (attempts < 2) {
+      attempts += 1;
+      try {
+        switch (action) {
+          case "delete_forever":
+            await deleteMessage(messageId);
+            break;
+          case "trash":
+            await moveMessage(messageId, "deleteditems");
+            break;
+          case "untrash":
+            await moveMessage(messageId, "inbox");
+            break;
+          case "archive":
+            await moveMessage(messageId, "archive");
+            break;
+          case "unarchive":
+            await moveMessage(messageId, "inbox");
+            break;
+          case "star":
+            await patchMessage(messageId, { flag: { flagStatus: "flagged" } });
+            break;
+          case "unstar":
+            await patchMessage(messageId, {
+              flag: { flagStatus: "notFlagged" },
+            });
+            break;
+          case "mark_read":
+            await patchMessage(messageId, { isRead: true });
+            break;
+          case "mark_unread":
+            await patchMessage(messageId, { isRead: false });
+            break;
+          case "spam":
+            await moveMessage(messageId, "junkemail");
+            break;
+          case "not_spam":
+            await moveMessage(messageId, "inbox");
+            break;
+          default:
+            throw new Error(`Unsupported Graph action: ${action}`);
+        }
+        hardError = null;
+        break;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        if (isBenignMicrosoftMailError(msg)) {
+          hardError = null;
+          break;
+        }
+        if (
+          isMicrosoftThrottleError(msg) &&
+          attempts < 2
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          continue;
+        }
+        hardError = msg;
+        break;
+      }
+    }
+    if (hardError) break;
   }
 
   if (hardError) throw new Error(hardError);

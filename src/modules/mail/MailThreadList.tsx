@@ -36,6 +36,7 @@ export function MailThreadList({
   threads,
   selectedId,
   selectedIds,
+  pendingIds,
   onToggleSelect,
   onSelect,
   accounts = [],
@@ -44,6 +45,7 @@ export function MailThreadList({
   threads: MailThread[];
   selectedId: number | null;
   selectedIds?: Set<number>;
+  pendingIds?: Set<number>;
   onToggleSelect?: (id: number, on: boolean) => void;
   onSelect: (thread: MailThread) => void;
   accounts?: MailAccount[];
@@ -70,6 +72,7 @@ export function MailThreadList({
       {threads.map((thread) => {
         const active = thread.id === selectedId;
         const checked = selectedIds?.has(thread.id) ?? false;
+        const pending = pendingIds?.has(thread.id) ?? false;
         const mailboxAccount = accountById.get(thread.account_id);
         const unread = thread.is_unread && !active;
         const recentUnread = unread && isRecentThread(thread.last_message_at);
@@ -83,12 +86,14 @@ export function MailThreadList({
         return (
           <li
             key={thread.id}
+            aria-busy={pending || undefined}
             className={cn(
               "relative flex items-stretch border-b border-border/40 transition-colors duration-150",
               active && "bg-primary/10 shadow-[inset_0_0_0_1px] shadow-primary/10",
               recentUnread && "bg-primary/10",
               unread && !recentUnread && "bg-primary/8",
               !active && "hover:bg-muted/45",
+              pending && "pointer-events-none opacity-50",
             )}
           >
             {active ? (

@@ -98,6 +98,16 @@ body.mail-reader-shell .mobile_only {
 }
 `;
 
+/** Post-sender image guard — sender CSS often sets fixed height and breaks logos. */
+const READER_IMG_GUARD = `
+body.mail-reader-shell .mail-body-root img,
+body.mail-reader-shell .mail-nested-body img {
+  max-width: 100% !important;
+  height: auto !important;
+  object-fit: contain;
+}
+`;
+
 const EMBEDDED_SHELL = `
   html.mail-reader-html, body.mail-reader-shell {
     margin: 0;
@@ -113,7 +123,9 @@ const EMBEDDED_SHELL = `
   }
   body.mail-reader-shell .mail-body-root img,
   body.mail-reader-shell .mail-nested-body img {
-    max-width: 100%;
+    max-width: 100% !important;
+    height: auto !important;
+    object-fit: contain;
   }
 `;
 
@@ -144,7 +156,7 @@ export function buildMailIframeSrcDoc(
     : "";
   const readerUnlockCss =
     variant === "reader"
-      ? `<style>${escapeStyleText(READER_LAYOUT_UNLOCK)}</style><style>${escapeStyleText(READER_TYPOGRAPHY)}</style>`
+      ? `<style>${escapeStyleText(READER_LAYOUT_UNLOCK)}</style><style>${escapeStyleText(READER_TYPOGRAPHY)}</style><style>${escapeStyleText(READER_IMG_GUARD)}</style>`
       : "";
   const viewportMeta =
     variant === "reader"

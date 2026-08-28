@@ -23,4 +23,11 @@ describe("htmlToPlainText", () => {
 
     expect(htmlToPlainText(html)).toBe("Primera línea.\nSegunda línea.");
   });
+
+  it("strips cid images without attempting to load them", () => {
+    const html =
+      '<p>Hello</p><img src="cid:0.8833583561166709.jpeg" alt="inline" /><p>World</p>';
+
+    expect(htmlToPlainText(html)).toBe("Hello\n\nWorld");
+  });
 });

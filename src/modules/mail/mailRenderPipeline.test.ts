@@ -76,6 +76,13 @@ describe("mail render pipeline", () => {
     expect(senderMarker).toBeGreaterThan(shellIdx);
   });
 
+  it("forces responsive image rules after sender CSS", () => {
+    const srcdoc = buildMailIframeSrcDoc(MAIL_RENDER_FIXTURES.googleNewsletter);
+    const senderMarker = srcdoc.indexOf(".cta-button");
+    const imgGuard = srcdoc.indexOf("height: auto !important");
+    expect(imgGuard).toBeGreaterThan(senderMarker);
+  });
+
   it("embeds Hostinger logo SVG for transactional emails", () => {
     const srcdoc = buildMailIframeSrcDoc(
       MAIL_RENDER_FIXTURES.hostingerTransactional,

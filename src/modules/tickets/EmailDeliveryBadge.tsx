@@ -14,12 +14,14 @@ export const EmailDeliveryBadge = ({
   message,
   compact = false,
   className,
+  replyDurationLabel,
 }: {
   message: TicketMessage;
   compact?: boolean;
   className?: string;
+  replyDurationLabel?: string | null;
 }) => {
-  const display = getTicketEmailDeliveryDisplay(message);
+  const display = getTicketEmailDeliveryDisplay(message, { replyDurationLabel });
   if (!display) return null;
 
   const label = (

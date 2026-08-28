@@ -14,6 +14,11 @@ import type { Ticket, TicketMessage } from "@/modules/types";
 import { EmailDeliveryBadge } from "@/modules/tickets/EmailDeliveryBadge";
 import { TicketInternalNoteEditor } from "@/modules/tickets/TicketInternalNoteEditor";
 import { TicketInvoiceSentNoteCard } from "@/modules/tickets/TicketInvoiceSentNoteCard";
+import { TicketStatusChangeNoteCard } from "@/modules/tickets/TicketStatusChangeNoteCard";
+import {
+  InternalNotePlainBody,
+  stripInternalNoteMarkdown,
+} from "@/modules/tickets/InternalNotePlainBody";
 import { TicketMessageAvatar } from "@/modules/tickets/TicketMessageAvatar";
 import { TicketMessageContent } from "@/modules/tickets/TicketMessageContent";
 import { TicketMoveMessagesDialog } from "@/modules/tickets/TicketMoveMessagesDialog";
@@ -23,10 +28,14 @@ import {
   isInvoiceSentInternalNote,
   previewInvoiceSentInternalNote,
 } from "@/modules/tickets/parseInvoiceSentInternalNote";
+import {
+  isStatusChangeInternalNote,
+  previewStatusChangeInternalNote,
+} from "@/modules/tickets/parseStatusChangeInternalNote";
 import { useTicketReadCutoff } from "@/modules/tickets/TicketReadCutoffContext";
 import { useTicketThreadQuote } from "@/modules/tickets/TicketThreadQuoteContext";
 import { isInboundMessageUnread } from "@/modules/tickets/ticketReadState";
-import { formatTicketMessageTime } from "@/modules/tickets/ticketInboxUi";
+import { formatTicketMessageTime, getReplyDurationLabel } from "@/modules/tickets/ticketInboxUi";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { IconButton } from "@/components/ui/icon-button";
@@ -63,6 +72,8 @@ const compactMergeAuditNote = (body?: string | null) => {
 const getMessageBodyText = (message: TicketMessage) => {
   const invoicePreview = previewInvoiceSentInternalNote(message.body);
   if (invoicePreview) return invoicePreview;
+  const statusPreview = previewStatusChangeInternalNote(message.body);
+  if (statusPreview) return statusPreview;
   const compact = compactMergeAuditNote(message.body);
   if (compact) return compact;
   return message.body?.trim() || message.html_body || "";
@@ -70,7 +81,9 @@ const getMessageBodyText = (message: TicketMessage) => {
 
 const getMessagePreview = (message: TicketMessage) => {
   const source = getMessageBodyText(message);
-  const text = htmlToPlainText(source).replace(/\s+/g, " ").trim();
+  const text = stripInternalNoteMarkdown(
+    htmlToPlainText(source).replace(/\s+/g, " ").trim(),
+  );
   if (!text) return "No message content";
   if (text.length <= PREVIEW_MAX_LENGTH) return text;
   return `${text.slice(0, PREVIEW_MAX_LENGTH).trimEnd()}…`;
@@ -170,9 +183,9 @@ const MessageOverflowMenu = ({
 
 const TicketThreadMessage = ({
   message,
+  allMessages,
   collapsed,
   onToggle,
-  isLatest,
   company,
   orgWebsite,
   selectable = false,
@@ -180,9 +193,9 @@ const TicketThreadMessage = ({
   onSelectedChange,
 }: {
   message: TicketMessage;
+  allMessages: TicketMessage[];
   collapsed: boolean;
   onToggle: () => void;
-  isLatest: boolean;
   company?: Company | null;
   orgWebsite?: string | null;
   selectable?: boolean;
@@ -208,6 +221,9 @@ const TicketThreadMessage = ({
   const preview = useMemo(() => getMessagePreview(message), [message]);
   const toLine = formatRecipientList(message.to_emails);
   const ccLine = formatRecipientList(message.cc_emails);
+  const replyDurationLabel = outbound
+    ? getReplyDurationLabel(message, allMessages)
+    : null;
   const attachmentCount = attachments.length;
   const unreadInbound = inbound && isInboundMessageUnread(message, readCutoff);
 
@@ -223,12 +239,14 @@ const TicketThreadMessage = ({
   const avatarWithSelect = (
     display: string,
     direction: "inbound" | "outbound" | "internal",
+    alignEnd = false,
   ) => (
     <div className="group/avatar relative mt-0.5 shrink-0">
       {selectable && direction !== "internal" ? (
         <div
           className={cn(
-            "absolute -left-0.5 -top-0.5 z-10 transition-opacity",
+            "absolute -top-0.5 z-10 transition-opacity",
+            alignEnd ? "-right-0.5" : "-left-0.5",
             selected
               ? "opacity-100"
               : "opacity-0 group-hover/avatar:opacity-100 focus-within:opacity-100",
@@ -263,17 +281,25 @@ const TicketThreadMessage = ({
     const author = senderName || "Team";
     const compactAuditBody = compactMergeAuditNote(message.body);
     const invoiceSentNote = isInvoiceSentInternalNote(message.body);
+    const statusChangeNote = isStatusChangeInternalNote(message.body);
+    const plainInternalBody = compactAuditBody ?? message.body;
+    const usePlainMarkdownBody =
+      !invoiceSentNote &&
+      !statusChangeNote &&
+      Boolean(plainInternalBody?.trim()) &&
+      !message.html_body?.trim();
 
     return (
-      <article className="group/message flex w-full gap-2.5 text-sm">
-        {avatarWithSelect(author, "internal")}
-        <div
-          className={cn(
-            "min-w-0 flex-1 rounded-lg border border-amber-200/70 bg-card py-3 pr-1 pl-3 shadow-sm dark:border-amber-900/50",
-            isEditingInternal && "bg-amber-50/80 dark:bg-amber-950/30",
-            !isEditingInternal && "bg-amber-50/40 dark:bg-amber-950/20",
-          )}
-        >
+      <article className="group/message flex w-full justify-center text-sm">
+        <div className="flex w-full max-w-[min(100%,42rem)] gap-2.5">
+          {avatarWithSelect(author, "internal")}
+          <div
+            className={cn(
+              "min-w-0 flex-1 rounded-2xl border border-amber-200/70 py-3 pr-1 pl-3 shadow-sm dark:border-amber-900/50",
+              isEditingInternal && "bg-amber-50/80 dark:bg-amber-950/30",
+              !isEditingInternal && "bg-amber-50/50 dark:bg-amber-950/25",
+            )}
+          >
           <div className="flex items-start gap-2">
             <button
               type="button"
@@ -356,6 +382,12 @@ const TicketThreadMessage = ({
               ) : null}
               {invoiceSentNote ? (
                 <TicketInvoiceSentNoteCard body={message.body} />
+              ) : statusChangeNote ? (
+                <TicketStatusChangeNoteCard body={message.body} />
+              ) : usePlainMarkdownBody ? (
+                <div className="mt-3">
+                  <InternalNotePlainBody text={plainInternalBody ?? ""} />
+                </div>
               ) : (
                 <TicketMessageContent
                   body={compactAuditBody ?? message.body}
@@ -366,6 +398,7 @@ const TicketThreadMessage = ({
               )}
             </>
           ) : null}
+          </div>
         </div>
       </article>
     );
@@ -374,16 +407,21 @@ const TicketThreadMessage = ({
   const canQuote = Boolean(inbound && quoteContext);
 
   return (
-    <article className="group/message flex w-full gap-2.5 text-sm">
-      {avatarWithSelect(displayName, inbound ? "inbound" : "outbound")}
+    <article
+      className={cn(
+        "group/message flex w-full gap-2.5 text-sm",
+        outbound ? "flex-row-reverse justify-start" : "justify-start",
+      )}
+    >
+      {avatarWithSelect(displayName, inbound ? "inbound" : "outbound", outbound)}
       <div
         className={cn(
-          "min-w-0 flex-1 rounded-lg border bg-card py-3 pr-1 pl-3 shadow-sm",
+          "min-w-0 w-full max-w-[min(100%,min(42rem,90%))] rounded-2xl border py-3 pr-1 pl-3 shadow-sm",
           unreadInbound && "ring-1 ring-blue-400/40",
           selected && "ring-1 ring-primary/40",
           inbound
-            ? "border-slate-200 dark:border-slate-700"
-            : "border-blue-200/80 dark:border-blue-900/50",
+            ? "border-slate-200 bg-card dark:border-slate-700"
+            : "border-blue-200/80 bg-blue-50/45 dark:border-blue-900/50 dark:bg-blue-950/25",
         )}
       >
         <div className="flex items-start gap-2">
@@ -402,17 +440,36 @@ const TicketThreadMessage = ({
                     {senderEmail}
                   </span>
                 ) : null}
-                <span className="text-[11px] text-muted-foreground">
-                  {inbound ? "Received" : "Sent"}
-                </span>
+                {inbound ? (
+                  <span className="text-[11px] text-muted-foreground">
+                    Received
+                  </span>
+                ) : null}
+                {outbound && toLine ? (
+                  <span
+                    className="max-w-[12rem] truncate text-[11px] text-muted-foreground"
+                    title={`To: ${toLine}`}
+                  >
+                    To: {toLine}
+                  </span>
+                ) : null}
+                {outbound ? (
+                  <EmailDeliveryBadge
+                    message={message}
+                    compact
+                    replyDurationLabel={replyDurationLabel}
+                  />
+                ) : null}
+                {outbound && replyDurationLabel ? (
+                  <span className="text-[11px] text-muted-foreground">
+                    {replyDurationLabel}
+                  </span>
+                ) : null}
                 {attachmentCount > 0 && collapsed ? (
                   <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
                     <Paperclip className="size-3" />
                     {attachmentCount}
                   </span>
-                ) : null}
-                {outbound && !collapsed ? (
-                  <EmailDeliveryBadge message={message} compact />
                 ) : null}
               </div>
               <span className="shrink-0 text-xs text-muted-foreground">
@@ -447,7 +504,12 @@ const TicketThreadMessage = ({
               showDetails={showDetails}
               onToggleDetails={() => setShowDetails((current) => !current)}
               deliverySlot={
-                outbound ? <EmailDeliveryBadge message={message} /> : null
+                outbound ? (
+                  <EmailDeliveryBadge
+                    message={message}
+                    replyDurationLabel={replyDurationLabel}
+                  />
+                ) : null
               }
             />
           </div>
@@ -478,11 +540,6 @@ const TicketThreadMessage = ({
               className="mt-3 text-foreground"
               emailVariant={inbound ? "inbound" : "outbound"}
             />
-            {isLatest && outbound ? (
-              <div className="mt-2">
-                <EmailDeliveryBadge message={message} />
-              </div>
-            ) : null}
           </>
         ) : null}
       </div>
@@ -703,16 +760,16 @@ export const TicketThread = ({
       ) : null}
 
       <div ref={threadEndRef} className="h-px shrink-0" aria-hidden />
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4 px-0.5">
         {newestFirst.map((message) => {
           const messageId = Number(message.id);
           return (
             <TicketThreadMessage
               key={message.id}
               message={message}
+              allMessages={messages}
               collapsed={collapsedIds.has(messageId)}
               onToggle={() => toggleMessage(messageId)}
-              isLatest={messageId === latestId}
               company={company}
               orgWebsite={orgWebsite}
               selectable={showMoveUi}

@@ -174,6 +174,7 @@ export const LeadCompactPreview = () => {
         counts={{
           notes: counts.notes,
           tasks: counts.tasks,
+          tickets: counts.tickets,
         }}
       />
     </div>

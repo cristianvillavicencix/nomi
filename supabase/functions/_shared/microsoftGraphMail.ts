@@ -37,6 +37,20 @@ export function isBenignMicrosoftMailError(message: string): boolean {
   );
 }
 
+export function isMicrosoftThrottleError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("applicationthrottled") ||
+    lower.includes("mailboxconcurrency") ||
+    lower.includes("too many requests") ||
+    lower.includes("throttl")
+  );
+}
+
+async function sleep(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 const wellKnownFolderIdCache = new Map<string, string>();
 
 export async function resolveMicrosoftWellKnownFolderId(
@@ -51,6 +65,20 @@ export async function resolveMicrosoftWellKnownFolderId(
     `https://graph.microsoft.com/v1.0/me/mailFolders/${encodeURIComponent(wellKnownName)}`,
     { headers: microsoftGraphHeaders(accessToken) },
   );
+  if (res.status === 429 || res.status === 503) {
+    await sleep(1500);
+    const retry = await fetch(
+      `https://graph.microsoft.com/v1.0/me/mailFolders/${encodeURIComponent(wellKnownName)}`,
+      { headers: microsoftGraphHeaders(accessToken) },
+    );
+    if (!retry.ok) {
+      throw new Error(await readMicrosoftGraphError(retry));
+    }
+    const json = (await retry.json()) as { id?: string };
+    const id = String(json.id || wellKnownName);
+    wellKnownFolderIdCache.set(cacheKey, id);
+    return id;
+  }
   if (!res.ok) {
     throw new Error(await readMicrosoftGraphError(res));
   }
@@ -143,6 +171,23 @@ export async function graphMessageFetch(
       ...(init.headers ?? {}),
     },
   });
+
+  // MailboxConcurrency / ApplicationThrottled — brief backoff then retry once.
+  if (res.status === 429 || res.status === 503) {
+    const retryAfterRaw = res.headers.get("Retry-After");
+    const retryAfterSec = Number.parseInt(retryAfterRaw ?? "", 10);
+    const waitMs = Number.isFinite(retryAfterSec)
+      ? Math.min(Math.max(retryAfterSec, 1), 10) * 1000
+      : 1500;
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    res = await fetch(fullUrl, {
+      ...init,
+      headers: {
+        ...microsoftGraphHeaders(accessToken),
+        ...(init.headers ?? {}),
+      },
+    });
+  }
 
   if (res.ok) return res;
   if (res.status !== 404 && res.status !== 400 && res.status !== 409) {

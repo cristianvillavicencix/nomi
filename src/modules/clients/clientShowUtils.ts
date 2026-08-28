@@ -7,6 +7,7 @@ import {
 
 export const CLIENT_TABS = [
   "activity",
+  "people",
   "deals",
   "financial",
   "tickets",
@@ -36,8 +37,9 @@ const LEGACY_TAB_MAP: Record<
 > = {
   overview: { tab: "activity" },
   informacion: { tab: "activity" },
-  referrals: { tab: "activity" },
-  contacts: { tab: "activity" },
+  referrals: { tab: "people" },
+  contacts: { tab: "people" },
+  people: { tab: "people" },
   projects: { tab: "deals" },
   proposals: { tab: "financial", section: "proposals" },
   contracts: { tab: "financial", section: "contracts" },

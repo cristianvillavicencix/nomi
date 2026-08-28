@@ -209,8 +209,13 @@ const installMailSanitizeHooks = () => {
         node.remove();
         return;
       }
-      if (!node.getAttribute("style")?.includes("max-width")) {
-        node.style.setProperty("max-width", "100%");
+      // Prevent newsletter logos from stretching when senders set fixed height.
+      node.style.setProperty("max-width", "100%", "important");
+      node.style.setProperty("height", "auto", "important");
+      node.style.setProperty("object-fit", "contain");
+      const widthAttr = Number.parseInt(node.getAttribute("width") ?? "", 10);
+      if (Number.isFinite(widthAttr) && widthAttr > 680) {
+        node.setAttribute("width", "680");
       }
     }
 

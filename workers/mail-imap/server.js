@@ -107,6 +107,27 @@ function sanitizeAttachmentFilename(name) {
   );
 }
 
+function filenameFromMimeType(mime, index) {
+  const type = String(mime || "").toLowerCase().split(";")[0].trim();
+  const map = {
+    "application/vnd.ms-excel": "xls",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "application/msword": "doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      "docx",
+    "application/pdf": "pdf",
+    "application/zip": "zip",
+    "application/octet-stream": "bin",
+    "text/csv": "csv",
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/gif": "gif",
+    "image/webp": "webp",
+  };
+  const ext = map[type] || (type.includes("/") ? type.split("/")[1] : "bin");
+  return `attachment-${index}.${ext.replace(/[^a-z0-9.+-]/gi, "") || "bin"}`;
+}
+
 function normalizeRfcMessageId(value) {
   return String(value || "").replace(/^<|>$/g, "").trim();
 }
@@ -132,12 +153,21 @@ async function syncImapMessageAttachments(sb, account, messageId, attachments) {
     if (totalBytes + content.length > MAX_MAIL_TOTAL_BYTES) break;
 
     const rawContentId = att.contentId || att.cid || null;
-    const contentId = rawContentId
-      ? String(rawContentId).replace(/^<|>$/g, "").replace(/^cid:/i, "").toLowerCase()
-      : null;
+    // Only keep Content-ID for real inline images. AOL/forwards often stamp
+    // Content-ID on file attachments too, which would hide them in the UI.
+    const isInlineImage = isInlineImageAttachment(att);
+    const contentId =
+      isInlineImage && rawContentId
+        ? String(rawContentId)
+            .replace(/^<|>$/g, "")
+            .replace(/^cid:/i, "")
+            .toLowerCase()
+        : null;
     const filename = sanitizeAttachmentFilename(
       att.filename ||
-        (contentId ? `inline-${contentId.slice(0, 48)}` : `attachment-${count + 1}`),
+        (contentId
+          ? `inline-${contentId.slice(0, 48)}`
+          : filenameFromMimeType(att.contentType, count + 1)),
     );
     const providerId = String(
       rawContentId || att.checksum || att.contentId || att.cid || `imap-${count}`,
@@ -202,8 +232,42 @@ function isInlineImageAttachment(att) {
 }
 
 function isFileAttachment(att) {
-  if (!att.content?.length || !att.filename) return false;
-  return !isInlineImageAttachment(att);
+  if (!att.content?.length || isInlineImageAttachment(att)) return false;
+  if (att.filename?.trim()) return true;
+  const disposition = String(att.contentDisposition || "").toLowerCase();
+  if (disposition === "attachment") return true;
+  const mime = String(att.contentType || "").toLowerCase();
+  return (
+    Boolean(mime) &&
+    !mime.startsWith("text/") &&
+    !mime.startsWith("multipart/") &&
+    !mime.startsWith("message/")
+  );
+}
+
+/** AOL/Outlook forwards often embed the original message as message/rfc822. */
+async function collectAttachmentsRecursive(attachments, out = []) {
+  if (!attachments?.length) return out;
+  for (const att of attachments) {
+    const mime = String(att.contentType || "").toLowerCase();
+    if (
+      (mime === "message/rfc822" || mime === "message/rfc822-eml") &&
+      att.content?.length
+    ) {
+      try {
+        const nested = await simpleParser(att.content);
+        await collectAttachmentsRecursive(nested.attachments || [], out);
+      } catch (error) {
+        console.error(
+          "imap_nested_message_parse_failed",
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+      continue;
+    }
+    out.push(att);
+  }
+  return out;
 }
 
 async function findExistingMessage(sb, accountId, providerMessageId) {
@@ -356,7 +420,7 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX", ima
     });
   }
 
-  const allAttachments = parsed.attachments || [];
+  const allAttachments = await collectAttachmentsRecursive(parsed.attachments || []);
   const inlineAttachments = allAttachments.filter(isInlineImageAttachment);
   const fileAttachments = allAttachments.filter(isFileAttachment);
   const syncAttachments = [...fileAttachments, ...inlineAttachments];

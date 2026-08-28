@@ -1,4 +1,4 @@
-import { Mail, Paperclip, Pencil, Trash2 } from "lucide-react";
+import { Paperclip, Pencil, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 import { IconButton } from "@/components/ui/icon-button";
@@ -8,7 +8,6 @@ import {
   TicketListAssigneeControl,
   TicketListStatusControl,
 } from "@/modules/tickets/TicketListCardControls";
-import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
 import { TicketMetaSep } from "@/modules/tickets/TicketMetaSep";
 import { formatTicketListTime } from "@/modules/tickets/ticketInboxUi";
 import { TicketSubjectField } from "@/modules/tickets/TicketSubjectField";
@@ -66,7 +65,7 @@ export const TicketListItem = ({
   members = [],
   hasAttachments = false,
   invoices = [],
-  messagePreview,
+  messagePreview: _messagePreview,
   onSelect,
   onToggleBulkSelect,
   onDelete,
@@ -75,7 +74,6 @@ export const TicketListItem = ({
   lastReadAt,
 }: TicketListItemProps) => {
   const companyName = company?.name?.trim() || null;
-  const meta = getTicketListMeta(ticket, company, contact);
   const isUnread = !selected && isTicketUnread(ticket, lastReadAt);
   const awaitingPayment = ticketHasUnpaidInvoice(ticket, invoices);
   const priorityLabel = ticketPriorityLabel(ticket.priority);
@@ -90,8 +88,6 @@ export const TicketListItem = ({
   const identityParts = [`#${ticket.id}`, companyName, contactName].filter(
     Boolean,
   );
-
-  const emailPreview = meta.email ?? meta.phone ?? meta.website ?? null;
 
   return (
     <li className="group">
@@ -134,7 +130,7 @@ export const TicketListItem = ({
           tabIndex={0}
           onClick={onSelect}
           onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === "") {
+            if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
               onSelect();
             }
@@ -145,61 +141,19 @@ export const TicketListItem = ({
           )}
         >
           <div className="flex min-w-0 flex-col gap-1">
-            {/* Row 1: subject + time */}
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start gap-1.5">
-                  {isUnread ? (
-                    <span
-                      className="mt-1.5 size-2 shrink-0 rounded-full bg-info"
-                      aria-label="Unread"
-                    />
-                  ) : null}
-                  <TicketSubjectField
-                    ticket={ticket}
-                    editable={false}
-                    className="min-w-0 flex-1 text-sm font-semibold leading-snug"
-                  />
-                  {priorityLabel && isElevatedTicketPriority(ticket) ? (
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "mt-0.5 h-5 shrink-0 px-1.5 text-[10px] font-medium",
-                        ticketPriorityClassName(ticket.priority),
-                      )}
-                    >
-                      {priorityLabel}
-                    </Badge>
-                  ) : null}
-                  {waitingLabel ? (
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "mt-0.5 h-5 shrink-0 px-1.5 text-[10px] font-medium",
-                        ticketWaitingSlaClassName(
-                          ticket.status,
-                          ticket.updated_at,
-                        ),
-                      )}
-                    >
-                      {waitingLabel}
-                    </Badge>
-                  ) : null}
-                  <TicketListInvoiceBadges
-                    ticket={ticket}
-                    invoices={invoices}
-                  />
-                  {hasAttachments ? (
-                    <Paperclip
-                      className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
-                      aria-label="Has attachments"
-                    />
-                  ) : null}
-                </div>
-              </div>
-              <span className="shrink-0 pt-0.5 text-xs tabular-nums text-muted-foreground">
-                {formatTicketListTime(ticket.updated_at)}
-              </span>
+            {/* Row 1: title */}
+            <div className="flex items-start gap-1.5">
+              {isUnread ? (
+                <span
+                  className="mt-1.5 size-2 shrink-0 rounded-full bg-info"
+                  aria-label="Unread"
+                />
+              ) : null}
+              <TicketSubjectField
+                ticket={ticket}
+                editable={false}
+                className="min-w-0 flex-1 text-sm font-semibold leading-snug"
+              />
             </div>
 
             {/* Row 2: #ticket | company | contact */}
@@ -220,25 +174,46 @@ export const TicketListItem = ({
               </p>
             ) : null}
 
-            {/* Row 3: message preview or contact channel */}
-            <div className="flex items-center gap-2">
-              <p
-                className={cn(
-                  "min-w-0 flex-1 truncate text-xs leading-relaxed",
-                  messagePreview ? "text-foreground" : "text-muted-foreground",
-                )}
-              >
-                {messagePreview ? (
-                  <span className="truncate">{messagePreview}</span>
-                ) : emailPreview ? (
-                  <span className="inline-flex max-w-full items-center gap-1">
-                    <Mail className="size-3 shrink-0 opacity-70" />
-                    <span className="truncate">{emailPreview}</span>
-                  </span>
-                ) : (
-                  <span className="italic opacity-70">No messages yet</span>
-                )}
-              </p>
+            {/* Row 3: badges + attachment + time */}
+            <div className="flex min-w-0 items-center gap-1.5">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                {priorityLabel && isElevatedTicketPriority(ticket) ? (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "h-5 shrink-0 px-1.5 text-[10px] font-medium",
+                      ticketPriorityClassName(ticket.priority),
+                    )}
+                  >
+                    {priorityLabel}
+                  </Badge>
+                ) : null}
+                {waitingLabel ? (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "h-5 shrink-0 px-1.5 text-[10px] font-medium",
+                      ticketWaitingSlaClassName(
+                        ticket.status,
+                        ticket.updated_at,
+                      ),
+                    )}
+                  >
+                    {waitingLabel}
+                  </Badge>
+                ) : null}
+                <TicketListInvoiceBadges ticket={ticket} invoices={invoices} />
+                {hasAttachments ? (
+                  <Paperclip
+                    className="size-3.5 shrink-0 text-muted-foreground"
+                    aria-label="Has attachments"
+                  />
+                ) : null}
+              </div>
+
+              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                {formatTicketListTime(ticket.updated_at)}
+              </span>
 
               <div
                 className={cn(
