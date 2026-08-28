@@ -5,6 +5,7 @@ import {
   Loader2,
   Lock,
   Paperclip,
+  Reply,
   Save,
   X,
 } from "lucide-react";
@@ -119,6 +120,51 @@ export type TicketReplyFormHandle = {
     options?: { replyIntent?: ReplySendIntent },
   ) => void;
 };
+
+type ComposerVisibilityMode = "public" | "private";
+
+const TicketComposerModeTabs = ({
+  mode,
+  onChange,
+}: {
+  mode: ComposerVisibilityMode;
+  onChange: (mode: ComposerVisibilityMode) => void;
+}) => (
+  <div className="flex items-center border-b px-4 md:px-5">
+    <button
+      type="button"
+      onClick={() => onChange("public")}
+      className={cn(
+        "relative inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors",
+        mode === "public"
+          ? "text-foreground"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <Reply className="size-3.5" />
+      Public Reply
+      {mode === "public" ? (
+        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+      ) : null}
+    </button>
+    <button
+      type="button"
+      onClick={() => onChange("private")}
+      className={cn(
+        "relative inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors",
+        mode === "private"
+          ? "text-foreground"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <Lock className="size-3.5" />
+      Private Comment
+      {mode === "private" ? (
+        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+      ) : null}
+    </button>
+  </div>
+);
 
 export const TicketReplyForm = forwardRef<
   TicketReplyFormHandle,
@@ -1017,10 +1063,16 @@ export const TicketReplyForm = forwardRef<
               slideAnimationClass,
             )}
           >
+            <TicketComposerModeTabs
+              mode="private"
+              onChange={(next) =>
+                openComposer(next === "private" ? "internal" : "reply")
+              }
+            />
             <div className="flex items-center justify-between gap-2 px-4 py-2 md:px-5">
               <p className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-800 dark:text-amber-200">
                 <Lock className="size-3.5 shrink-0" />
-                Internal note
+                Private comment
                 <span className="font-normal text-muted-foreground">
                   · team only
                 </span>
@@ -1132,6 +1184,12 @@ export const TicketReplyForm = forwardRef<
             slideAnimationClass,
           )}
         >
+          <TicketComposerModeTabs
+            mode="public"
+            onChange={(next) =>
+              openComposer(next === "private" ? "internal" : "reply")
+            }
+          />
           <div className="shrink-0 border-b px-4 py-2 md:px-5">
             <div className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 text-sm">
               <span className="text-xs text-muted-foreground">From</span>
