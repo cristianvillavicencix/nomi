@@ -53,6 +53,9 @@ export const EmailInput = (props: EmailInputProps) => {
 
   const { id, field, isRequired } = useInput({
     ...props,
+    // Keep custom handlers on the DOM input only — RHF field.onBlur() has no event.
+    onBlur: undefined,
+    onChange: undefined,
     validate: validators,
   });
   const [inputValue, setInputValue] = useState("");

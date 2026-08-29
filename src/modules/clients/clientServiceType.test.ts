@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { deriveClientServiceType } from "./clientServiceType";
+import {
+  deriveClientServiceType,
+  deriveContactServiceType,
+  formatInterestedServicesLabel,
+  parseInterestedServiceType,
+} from "./clientServiceType";
 
 describe("deriveClientServiceType", () => {
   it("returns website when the company has deals only", () => {
@@ -70,5 +75,55 @@ describe("deriveClientServiceType", () => {
         invoiceCount: 0,
       }),
     ).toBeNull();
+  });
+});
+
+describe("parseInterestedServiceType", () => {
+  it("maps Sitio web to website", () => {
+    expect(parseInterestedServiceType("Sitio web")).toBe("website");
+  });
+
+  it("maps Xactimate to xactimate", () => {
+    expect(parseInterestedServiceType("Xactimate")).toBe("xactimate");
+  });
+
+  it("maps mixed interest to both", () => {
+    expect(parseInterestedServiceType("Sitio web, Xactimate")).toBe("both");
+  });
+
+  it("returns null for unrelated services", () => {
+    expect(parseInterestedServiceType("Otro")).toBeNull();
+  });
+});
+
+describe("deriveContactServiceType", () => {
+  it("uses declared interest when there is no activity yet", () => {
+    expect(
+      deriveContactServiceType({
+        interestedService: "Xactimate",
+        dealCount: 0,
+        ticketCount: 0,
+        invoiceCount: 0,
+      }),
+    ).toBe("xactimate");
+  });
+
+  it("merges interest and activity into both", () => {
+    expect(
+      deriveContactServiceType({
+        interestedService: "Sitio web",
+        dealCount: 0,
+        ticketCount: 2,
+        invoiceCount: 0,
+      }),
+    ).toBe("both");
+  });
+});
+
+describe("formatInterestedServicesLabel", () => {
+  it("localizes legacy Spanish labels for display", () => {
+    expect(formatInterestedServicesLabel("Sitio web, Redes sociales")).toBe(
+      "Website, Social media",
+    );
   });
 });

@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { zipSync } from "fflate";
-import { Download, FileIcon, Search } from "lucide-react";
+import { Download, FileIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ClearableSearchInput } from "@/components/ui/clearable-search-input";
 import {
   Accordion,
   AccordionContent,
@@ -131,15 +131,11 @@ export const ClientFilesSection = ({
         </div>
       </div>
 
-      <div className="relative">
-        <Search className="pointer-events-none absolute top-2.5 left-3 size-4 text-muted-foreground" />
-        <Input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={copy.filesSearchPlaceholder}
-          className="pl-9"
-        />
-      </div>
+      <ClearableSearchInput
+        value={query}
+        onChange={setQuery}
+        placeholder={copy.filesSearchPlaceholder}
+      />
 
       <Accordion type="multiple" className="space-y-2">
         {folders.map((folder) => (

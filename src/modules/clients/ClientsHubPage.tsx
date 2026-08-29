@@ -22,7 +22,7 @@ import {
 } from "@/modules/clients/clientsHubTabs";
 
 const TAB_LABELS: Record<ClientsHubTab, string> = {
-  companies: "Companies",
+  companies: "Accounts",
   people: "People",
 };
 
@@ -80,7 +80,7 @@ export const ClientsHubPage = () => {
   return (
     <div className="w-full space-y-3">
       <PageActions>
-        <PageTitle label="Clients" />
+        <PageTitle label="Accounts" />
       </PageActions>
 
       <Tabs

@@ -103,7 +103,7 @@ Manual QA matrix for consolidating Leads + Clients into the Accounts hub (Option
 | F2 | Create ticket linked to company/contact | |
 | F3 | Ticket show resolves requester company | |
 | F4 | Company show tickets tab/count | |
-| F5 | Ticket header / client card `getClientShowPath` → `/companies/:id` | |
+| F5 | Ticket header / Account card `getClientShowPath` → `/companies/:id`; labels say **Account** | |
 
 ---
 
@@ -112,7 +112,7 @@ Manual QA matrix for consolidating Leads + Clients into the Accounts hub (Option
 | # | Check | Any phase |
 |---|-------|-----------|
 | M1 | Messages list loads | |
-| M2 | Context panel person link (`getPersonShowPath`) opens lead or contact show | |
+| M2 | Context panel person link (`getPersonShowPath`) opens `/contacts/:id/show` | |
 | M3 | Save SMS → contact still creates/links person | |
 
 ---
@@ -125,7 +125,24 @@ Manual QA matrix for consolidating Leads + Clients into the Accounts hub (Option
 | G2 | Create deal with `company_id` | |
 | G3 | Company show deals/projects sidebar | |
 | G4 | Lead → convert with deal option (if used) | |
-| G5 | Deal header company link (`getClientShowPath`) works | |
+| G5 | Deal header Account link (`getClientShowPath`) works; person via `getPersonShowPath` | |
+
+---
+
+## N. CRM core glossary (Account → Person → Deal)
+
+See [crm-core-glossary-and-surfaces.md](./crm-core-glossary-and-surfaces.md).
+
+| # | Check | |
+|---|-------|---|
+| N1 | Sidebar shows only **Accounts** (not Pipeline + Clients) | |
+| N2 | Staff chrome uses **Account** (not Company/Clients as module) on tickets create/edit, deal header fallbacks, related sidebars | |
+| N3 | **Client** appears only as badge / customer-role language | |
+| N4 | `/leads/:id/show` redirects to `/contacts/:id/show` | |
+| N5 | Lead Person Full shows Pipeline tab + Convert; non-lead does not | |
+| N6 | Convert success lands on Account Full (`/companies/:id`) | |
+| N7 | Spotlight single **Accounts** group | |
+| N8 | Back from Person / Account Full → Accounts | |
 
 ---
 

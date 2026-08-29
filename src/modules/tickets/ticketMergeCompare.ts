@@ -148,7 +148,7 @@ export const buildTicketMergeRows = (
   },
   {
     key: "company_id",
-    label: "Company",
+    label: "Account",
     left: left.companyName,
     right: right.companyName,
   },

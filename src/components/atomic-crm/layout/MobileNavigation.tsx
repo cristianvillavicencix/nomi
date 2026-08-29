@@ -11,7 +11,6 @@ import {
 import { Link, matchPath, useLocation } from "react-router";
 import { sidebarNavIconWeight } from "@/app/SidebarNavIcon";
 import { getAccountsHubPath } from "@/app/routing";
-import { isAccountsHubEnabled } from "@/lib/featureFlags";
 import { useMessagesUnreadCounts } from "@/modules/messages/useMessagesUnreadCounts";
 import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
 import { useNotificationUnreadCounts } from "@/modules/notifications/useNotificationUnreadCounts";
@@ -27,8 +26,7 @@ export const MobileNavigation = () => {
   const location = useLocation();
   const { totalUnread } = useMessagesUnreadCounts();
   const { tickets: ticketsUnread } = useNotificationUnreadCounts();
-  const accountsHub = isAccountsHubEnabled();
-  const contactsHref = accountsHub ? getAccountsHubPath("list") : "/contacts";
+  const contactsHref = getAccountsHubPath("list");
 
   let currentPath: MobileTab | false = false;
   if (
@@ -47,18 +45,13 @@ export const MobileNavigation = () => {
   ) {
     currentPath = "/tickets";
   } else if (
-    accountsHub &&
-    (matchPath("/accounts", location.pathname) ||
-      matchPath("/accounts/*", location.pathname) ||
-      matchPath("/contacts/*", location.pathname) ||
-      matchPath("/companies/*", location.pathname) ||
-      matchPath("/clients/*", location.pathname) ||
-      matchPath("/leads/*", location.pathname))
-  ) {
-    currentPath = "/contacts";
-  } else if (
-    matchPath("/contacts", location.pathname) ||
-    matchPath("/contacts/*", location.pathname)
+    matchPath("/accounts", location.pathname) ||
+    matchPath("/accounts/*", location.pathname) ||
+    matchPath("/contacts/*", location.pathname) ||
+    matchPath("/companies/*", location.pathname) ||
+    matchPath("/clients/*", location.pathname) ||
+    matchPath("/leads/*", location.pathname) ||
+    matchPath("/contacts", location.pathname)
   ) {
     currentPath = "/contacts";
   } else if (
@@ -98,7 +91,7 @@ export const MobileNavigation = () => {
         <NavigationButton
           href={contactsHref}
           Icon={Users}
-          label={accountsHub ? "Accounts" : "Contacts"}
+          label="Accounts"
           isActive={currentPath === "/contacts"}
         />
         <NavigationButton

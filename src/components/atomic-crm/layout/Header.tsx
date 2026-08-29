@@ -16,25 +16,20 @@ import { cn } from "@/lib/utils";
 import {
   filterAccessibleNavItems,
   isAccountsNavActive,
-  isClientsNavActive,
   matchesNavPattern,
 } from "@/app/lbsNavAccess";
 import {
   filterLbsNavGroups,
   LBS_ACCOUNTS_NAV_ITEM,
-  LBS_CLIENTS_NAV_ITEM,
   LBS_MORE_NAV_COLLAPSIBLE,
   LBS_NAV_AFTER_CLIENTS,
   LBS_NAV_GROUPS,
-  LBS_NAV_STANDALONE,
   LBS_NAV_STANDALONE_WITH_ACCOUNTS_HUB,
   splitLbsNavGroups,
   type LbsNavItem,
 } from "@/app/navigation";
 import { SidebarNavIcon } from "@/app/SidebarNavIcon";
-import { getAccessibleClientsHubTabs } from "@/modules/clients/clientsHubAccess";
 import { canAccessAccountsHub } from "@/modules/accounts/accountsHubAccess";
-import { isAccountsHubEnabled } from "@/lib/featureFlags";
 import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
 import { useMessagesUnreadCounts } from "@/modules/messages/useMessagesUnreadCounts";
 import { useMailUnreadCount } from "@/modules/mail/useMailUnreadCount";
@@ -100,26 +95,18 @@ const Header = () => {
     [location.pathname],
   );
 
-  const accountsHub = isAccountsHubEnabled();
-
   const primaryItems = useMemo(() => {
     const standalone = filterAccessibleNavItems(
       identity,
-      accountsHub ? LBS_NAV_STANDALONE_WITH_ACCOUNTS_HUB : LBS_NAV_STANDALONE,
+      LBS_NAV_STANDALONE_WITH_ACCOUNTS_HUB,
     );
     const hub =
-      identity == null
-        ? null
-        : accountsHub
-          ? canAccessAccountsHub(identity)
-            ? LBS_ACCOUNTS_NAV_ITEM
-            : null
-          : getAccessibleClientsHubTabs(identity).length > 0
-            ? LBS_CLIENTS_NAV_ITEM
-            : null;
+      identity != null && canAccessAccountsHub(identity)
+        ? LBS_ACCOUNTS_NAV_ITEM
+        : null;
     const after = filterAccessibleNavItems(identity, LBS_NAV_AFTER_CLIENTS);
     return [...standalone, ...(hub ? [hub] : []), ...after];
-  }, [accountsHub, identity]);
+  }, [identity]);
 
   const secondaryNavGroups = useMemo(() => {
     const groups = filterLbsNavGroups(LBS_NAV_GROUPS, {
@@ -140,7 +127,6 @@ const Header = () => {
 
   const hubActive = (item: LbsNavItem) => {
     if (item.to === "/accounts") return isAccountsNavActive(location.pathname);
-    if (item.to === "/clients") return isClientsNavActive(location.pathname);
     return isActive(item.activePattern);
   };
 

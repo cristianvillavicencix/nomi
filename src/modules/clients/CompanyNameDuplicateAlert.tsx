@@ -36,7 +36,7 @@ export const CompanyNameDuplicateAlert = ({
       rel="noopener noreferrer"
       className="text-destructive underline hover:opacity-80"
     >
-      View company
+      View account
     </Link>
   </p>
 );

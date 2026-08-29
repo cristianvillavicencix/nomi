@@ -80,14 +80,14 @@ export const ContactHeader = ({
                 {record.company_id != null && " at "}
                 {record.company_id != null ? (
                   embedded ? (
-                    <span>{record.company_name ?? "Client"}</span>
+                    <span>{record.company_name ?? "Account"}</span>
                   ) : (
                     <Link
                       to={getClientShowPath(record.company_id)}
                       state={{ from: `${location.pathname}${locationSearch}` }}
                       className="link-action"
                     >
-                      {record.company_name ?? "Client"}
+                      {record.company_name ?? "Account"}
                     </Link>
                   )
                 ) : null}

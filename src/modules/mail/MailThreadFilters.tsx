@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ClearableSearchInput } from "@/components/ui/clearable-search-input";
 import { cn } from "@/lib/utils";
 import type { MailFolderId } from "./MailFolderRail";
 import type { MailListFilter } from "./mailListFilters";
@@ -25,11 +25,12 @@ export function MailThreadFilters({
 }) {
   const searchField = (
     <div className="flex shrink-0 items-center gap-1 px-2 pb-2 pt-1">
-      <Input
+      <ClearableSearchInput
+        hideSearchIcon
         className="h-8 min-w-0 flex-1 border-0 bg-muted/50 shadow-none focus-visible:ring-1"
         placeholder="Search mail…"
         value={searchQuery}
-        onChange={(e) => onSearchQueryChange(e.target.value)}
+        onChange={onSearchQueryChange}
         aria-label="Search mail"
       />
       {syncToolbar ? <MailSyncActionIcons {...syncToolbar} /> : null}

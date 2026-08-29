@@ -107,12 +107,12 @@ export const DashboardLeadsCard = () => {
     <>
       <DashboardModuleCard
         icon={UserCheck}
-        title="Open pipeline"
+        title="Open leads"
         badges={badges}
         isPending={isPending}
-        emptyMessage="No active leads in the pipeline."
+        emptyMessage="No active leads on the board."
         viewAllHref={getLeadsListPath()}
-        viewAllLabel="View pipeline"
+        viewAllLabel="View Accounts board"
         addAction={
           <TooltipProvider>
             <Tooltip>
@@ -134,7 +134,7 @@ export const DashboardLeadsCard = () => {
       >
         {preview.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No active leads in the pipeline.
+            No active leads on the board.
           </p>
         ) : (
           <ul className="space-y-2">

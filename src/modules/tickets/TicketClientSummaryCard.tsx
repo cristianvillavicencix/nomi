@@ -134,12 +134,12 @@ export const TicketClientSummaryCard = ({
           stacked ? "text-[11px]" : "text-xs",
         )}
       >
-        Client details
+        Account details
       </p>
 
       <dl className={cn("mt-3", stacked ? "space-y-3.5" : "space-y-2.5")}>
         {companyName ? (
-          <SummaryRow label="Company" stacked={stacked}>
+          <SummaryRow label="Account" stacked={stacked}>
             {company?.id != null ? (
               <Link
                 to={getClientShowPath(company.id)}

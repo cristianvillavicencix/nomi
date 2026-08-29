@@ -1,4 +1,11 @@
 import { LeadsListPage } from "@/modules/leads/LeadsListPage";
+import { LeadShowToPersonRedirect } from "@/modules/leads/LeadShowToPersonRedirect";
 
-/** Same shell as the leads list — enables Kanban split view on desktop. */
-export const LeadShowPage = () => <LeadsListPage />;
+/**
+ * @deprecated Prefer {@link LeadShowToPersonRedirect} for `/leads/:id/show`.
+ * Kept for any residual imports of the page name.
+ */
+export const LeadShowPage = () => <LeadShowToPersonRedirect />;
+
+/** @deprecated list shell — Accounts Board embeds LeadsBoardPanel instead. */
+export const LeadShowPageLegacyListShell = () => <LeadsListPage />;

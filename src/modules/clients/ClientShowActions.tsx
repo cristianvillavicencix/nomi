@@ -23,7 +23,6 @@ import {
 import { canAccess } from "@/components/atomic-crm/providers/commons/canAccess";
 import type { CompanyWithPrimaryContact } from "@/modules/clients/clientProfile";
 import { getClientDealCreatePath, getCompaniesListPath } from "@/app/routing";
-import { isAccountsHubEnabled } from "@/lib/featureFlags";
 
 type ClientShowActionsProps = {
   record: CompanyWithPrimaryContact;
@@ -79,7 +78,7 @@ export const ClientShowActions = ({
         >
           <ChevronLeft className="size-4" />
           <span className="text-sm font-semibold">
-            {isAccountsHubEnabled() ? "Accounts" : "Companies"}
+            Accounts
           </span>
         </Button>
       </PageActions>

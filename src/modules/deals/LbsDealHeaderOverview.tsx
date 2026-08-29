@@ -15,7 +15,7 @@ import {
 import { DealClientSmsButton } from "@/modules/deals/DealClientSmsButton";
 import { ProjectPortalLinkButton } from "@/modules/portal/ProjectPortalLinkButton";
 import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
-import { getClientShowPath } from "@/app/routing";
+import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import type { LbsDeal } from "@/modules/types";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 
@@ -66,7 +66,7 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
   const rawPhone = mainContact ? getContactPhoneRaw(mainContact) : null;
   const companyName =
     record.company_name ??
-    (record.company_id ? `Company #${record.company_id}` : null);
+    (record.company_id ? `Account #${record.company_id}` : null);
   const githubUrl = getGithubRepoUrl(record.github_repo);
   const githubLabel = getGithubRepoLabel(record.github_repo);
 
@@ -124,7 +124,10 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
                 <>
                   <User className="size-3.5 shrink-0 opacity-70" aria-hidden />
                   <Link
-                    to={`/contacts/${mainContactId}/show`}
+                    to={getPersonShowPath({
+                      id: mainContactId,
+                      status: mainContact?.status,
+                    })}
                     className="link-action truncate"
                   >
                     {contactName}

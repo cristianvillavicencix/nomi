@@ -132,14 +132,14 @@ const DirectorySalesFields = () => (
     />
     <AutocompleteArrayInput
       source="interested_services"
-      label="Interested service"
+      label="Services"
       choices={LBS_INTERESTED_SERVICE_CHOICES.map((entry) => ({
         id: entry.id,
         name: entry.name,
       }))}
       validate={required()}
       helperText={false}
-      placeholder="Select services"
+      placeholder="Website, Xactimate, …"
     />
     <LeadReferrerInputs />
   </CreateFormFieldRow>
@@ -161,14 +161,14 @@ const PipelineSalesFields = () => (
       />
       <AutocompleteArrayInput
         source="interested_services"
-        label="Interested service"
+        label="Services"
         choices={LBS_INTERESTED_SERVICE_CHOICES.map((entry) => ({
           id: entry.id,
           name: entry.name,
         }))}
         validate={required()}
         helperText={false}
-        placeholder="Select services"
+        placeholder="Website, Xactimate, …"
       />
       <SelectInput
         source="lead_stage"

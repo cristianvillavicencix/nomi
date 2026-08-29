@@ -5,6 +5,8 @@ import { useGetIdentity } from "ra-core";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { useNotificationPrefsContext } from "@/modules/notifications/NotificationPrefsContext";
 
+import { getContactShowPath } from "@/app/routing";
+
 type PublicBookingRow = {
   id: number;
   guest_name: string;
@@ -24,7 +26,7 @@ const buildWhenLabel = (eventDate: string, eventTime: string) => {
 
 const buildContactHref = (contactId: number | null) => {
   if (contactId == null) return undefined;
-  return `/leads/${contactId}/show`;
+  return getContactShowPath(contactId);
 };
 
 export const useBookingsNotifications = () => {

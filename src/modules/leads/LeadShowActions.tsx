@@ -29,7 +29,7 @@ export const LeadShowActions = ({
     kanbanStage != null
       ? getLeadsListPath()
       : (location.state?.from ?? getLeadsListPath());
-  const backLabel = kanbanStage != null ? "Board" : "Leads";
+  const backLabel = kanbanStage != null ? "Board" : "Accounts";
 
   return (
     <>

@@ -57,7 +57,7 @@ export const TICKET_REPLY_VARIABLES: TicketReplyVariable[] = [
   },
   {
     id: "companyName",
-    label: "Company name",
+    label: "Account name",
     token: "{{companyName}}",
     description: "Linked company",
   },

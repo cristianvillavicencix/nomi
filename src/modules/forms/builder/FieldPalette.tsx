@@ -1,6 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
 import { useMemo, useState } from "react";
-import { Input } from "@/components/ui/input";
+import { ClearableSearchInput } from "@/components/ui/clearable-search-input";
 import {
   FIELD_PALETTE,
   PALETTE_CATEGORIES,
@@ -46,9 +46,10 @@ export const FieldPalette = () => {
 
   return (
     <div className="space-y-4">
-      <Input
+      <ClearableSearchInput
+        hideSearchIcon
         value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        onChange={setQuery}
         placeholder="Search field types…"
       />
       {PALETTE_CATEGORIES.map((category) => {

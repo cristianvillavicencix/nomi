@@ -7,7 +7,6 @@ import {
   ChevronRight,
   ExternalLink,
   Globe,
-  Search,
   Settings2,
 } from "lucide-react";
 import { Link } from "react-router";
@@ -17,7 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
-import { Input } from "@/components/ui/input";
+import { ClearableSearchInput } from "@/components/ui/clearable-search-input";
 import {
   Select,
   SelectContent,
@@ -262,12 +261,11 @@ export const HostingerDomainsTab = () => {
 
       <div className="space-y-2 rounded-lg border bg-muted/20 p-2">
         <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
+          <ClearableSearchInput
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={setSearch}
             placeholder="Search domain or client…"
-            className="h-9 border-0 bg-background pl-8 shadow-none"
+            className="h-9 border-0 bg-background shadow-none"
           />
         </div>
 

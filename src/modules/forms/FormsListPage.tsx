@@ -27,7 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import { ClearableSearchInput } from "@/components/ui/clearable-search-input";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -200,9 +200,10 @@ export const FormsListPage = ({ embedded = false }: { embedded?: boolean }) => {
         </div>
       )}
 
-      <Input
+      <ClearableSearchInput
+        hideSearchIcon
         value={search}
-        onChange={(event) => setSearch(event.target.value)}
+        onChange={setSearch}
         placeholder="Search forms…"
         className="max-w-sm"
       />

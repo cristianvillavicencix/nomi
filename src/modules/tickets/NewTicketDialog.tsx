@@ -388,7 +388,7 @@ const NewTicketDialogBody = ({
             <ReferenceInput source="company_id" reference="companies">
               <AutocompleteInput
                 optionText="name"
-                label="Company"
+                label="Account"
                 helperText={false}
               />
             </ReferenceInput>

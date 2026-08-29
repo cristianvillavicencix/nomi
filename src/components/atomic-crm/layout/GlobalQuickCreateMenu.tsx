@@ -63,7 +63,7 @@ export const GlobalQuickCreateMenu = () => {
     if (canAccess(identity, { resource: "companies", action: "create" })) {
       items.push({
         id: "company",
-        label: "New company",
+        label: "New account",
         icon: Building2,
         section: "create",
         onSelect: () => navigate(getClientCreatePath()),

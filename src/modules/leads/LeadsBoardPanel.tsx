@@ -23,7 +23,6 @@ import type { Contact } from "@/components/atomic-crm/types";
 import { LBS_LEAD_STATUSES_FOR_FILTER } from "@/app/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getLeadShowPath } from "@/app/routing";
-import { isAccountsHubEnabled } from "@/lib/featureFlags";
 import {
   AccountsModuleToolbar,
   type AccountsHubChrome,
@@ -60,7 +59,7 @@ export const LeadsBoardPanel = ({
   const [searchParams, setSearchParams] = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const hubOwnsPreview = embedded && isAccountsHubEnabled();
+  const hubOwnsPreview = embedded;
   const leadParam = searchParams.get("lead");
   const stageParam = parseKanbanStageParam(searchParams.get("stage"));
   const selectedLeadId = leadParam && stageParam ? leadParam : null;
@@ -85,10 +84,7 @@ export const LeadsBoardPanel = ({
   useEffect(() => {
     if (hubOwnsPreview) return;
     if (isMobile && selectedLeadId && stageParam) {
-      navigate(
-        `${getLeadShowPath(selectedLeadId)}?stage=${encodeURIComponent(stageParam)}`,
-        { replace: true },
-      );
+      navigate(getLeadShowPath(selectedLeadId), { replace: true });
     }
   }, [hubOwnsPreview, isMobile, navigate, selectedLeadId, stageParam]);
 

@@ -64,9 +64,13 @@ The data model already matches the journey correctly (`companies` = bill-to, `co
 
 ## Success criteria
 
-- One primary sidebar entry for the Accounts journey; Pipeline + Clients are no longer two competing top-level doors (legacy URLs still work).
-- List: **people-only** flat contacts; company Sheet preview on Company click; person Sheet on person click; **No company** filter; **Client** badge when `is_client`; **New Deal** from company preview.
+Staff mental model and chrome: [crm-core-glossary-and-surfaces.md](./crm-core-glossary-and-surfaces.md) (Account → Person → Deal; **Client** = badge only).
+
+- One primary sidebar entry for the Accounts journey; Pipeline + Clients are no longer two competing top-level doors (legacy URLs still work as redirects).
+- List: **company-first** Accounts; Account Sheet preview; Person via primary contact / Contacts tab; **Client** badge when `is_client`; **New Deal** from Account preview.
 - Board: active lead pipeline only (no Client column); convert-to-client drops cards; Anti-Olvido for client follow-up.
+- **One Person Full** at `/contacts/:id/show`; `/leads/:id/show` redirects there; Account Full stays `/companies/:id`.
+- Tickets and deals staff chrome use **Account** / **Person** labels and shared routing helpers.
 - Invoices, tickets, portal, deals continue to resolve by `company_id`; new work for existing clients uses **Deals**.
 - Capability matrix unchanged in meaning: users who can list companies and/or contacts still can; hub hides inaccessible modes.
 - Manual QA checklist (`05-…`) passes; rollback (`06-…`) does not require data undo.

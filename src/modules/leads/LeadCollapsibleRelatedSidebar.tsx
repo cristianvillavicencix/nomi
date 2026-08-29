@@ -24,7 +24,7 @@ export const LeadCollapsibleRelatedSidebar = (
           key: "company",
           icon: <Building2 className="size-4" />,
           count: lead.company_id ? 1 : 0,
-          label: "Company",
+          label: "Account",
         },
         {
           key: "referrer",

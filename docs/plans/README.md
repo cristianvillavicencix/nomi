@@ -23,6 +23,7 @@ Implementation plans for product migrations. Documents are English; chat with th
 
 | Doc | Phase | Summary |
 |-----|-------|---------|
+| [crm-core-glossary-and-surfaces.md](./crm-core-glossary-and-surfaces.md) | — | Account → Person → Deal glossary, surfaces, PR rule |
 | [00-accounts-hub-OVERVIEW.md](./00-accounts-hub-OVERVIEW.md) | — | Problem, locked decisions, roadmap, risks |
 | [accounts-hub-UX-ANALYSIS.md](./accounts-hub-UX-ANALYSIS.md) | — | Why company-first List confused users |
 | [accounts-hub-DESIGN-DECISION.md](./accounts-hub-DESIGN-DECISION.md) | — | People-only List + company preview; Board; commercial model (`is_client`, Deals) |

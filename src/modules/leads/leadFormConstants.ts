@@ -13,12 +13,14 @@ export const LBS_LEAD_SOURCE_REFERRAL = "Referido";
 export const LBS_LEAD_SOURCE_OTHER = "Otro";
 
 export const LBS_INTERESTED_SERVICE_CHOICES = [
-  { id: "Sitio web", name: "Sitio web" },
+  // Keep legacy Spanish ids so existing contact rows keep matching choices.
+  { id: "Sitio web", name: "Website" },
+  { id: "Xactimate", name: "Xactimate" },
   { id: "Google Ads", name: "Google Ads" },
   { id: "SEO", name: "SEO" },
-  { id: "Redes sociales", name: "Redes sociales" },
+  { id: "Redes sociales", name: "Social media" },
   { id: "Branding", name: "Branding" },
-  { id: "Otro", name: "Otro" },
+  { id: "Otro", name: "Other" },
 ] as const;
 
 export const LBS_COMPANY_INDUSTRY_CHOICES = [

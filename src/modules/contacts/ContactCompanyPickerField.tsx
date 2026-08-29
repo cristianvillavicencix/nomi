@@ -198,25 +198,25 @@ export const ContactCompanyPickerField = ({
           onSearchQueryChange={setSearchQuery}
           searchOpen={searchOpen}
           onSearchOpenChange={setSearchOpen}
-          searchPlaceholder="Search existing company…"
-          addButtonLabel="Add company"
+          searchPlaceholder="Search existing account…"
+          addButtonLabel="Add account"
           addButtonIcon={<Plus className="size-4" />}
           onAddClick={() => openCompanyCreateDialog()}
           isFetching={isFetching}
-          emptyMessage="Type to search companies."
-          emptySearchMessage="No companies match your search."
-          groupHeading="Companies"
+          emptyMessage="Type to search accounts."
+          emptySearchMessage="No accounts match your search."
+          groupHeading="Accounts"
         >
           {!isFetching && trimmedSearch.length > 0 ? (
             companies.length === 0 ? (
-              <EntitySearchGroup heading="Companies">
+              <EntitySearchGroup heading="Accounts">
                 <EntitySearchOption
-                  label={`Create "${trimmedSearch}" as new company`}
+                  label={`Create "${trimmedSearch}" as new account`}
                   onSelect={() => openCompanyCreateDialog(trimmedSearch)}
                 />
               </EntitySearchGroup>
             ) : (
-              <EntitySearchGroup heading="Companies">
+              <EntitySearchGroup heading="Accounts">
                 {companies.map((company) => {
                   const isSelected =
                     hasSelectedCompany &&

@@ -75,7 +75,7 @@ export const PersonCompanySection = ({
   if (variant === "hidden") return null;
 
   return (
-    <PersonFormSection title="Company">
+    <PersonFormSection title="Account">
       {variant === "picker" ? <ContactCompanyPickerField /> : null}
       {variant === "inline_draft" ? <PersonCompanyInlineDraft /> : null}
     </PersonFormSection>

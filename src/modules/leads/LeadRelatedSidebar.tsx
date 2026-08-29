@@ -43,11 +43,11 @@ export const LeadRelatedSidebar = ({ lead }: LeadRelatedSidebarProps) => {
   return (
     <div className="space-y-6">
       <RelatedSection
-        title="Company"
+        title="Account"
         count={lead.company_id ? 1 : lead.company_name?.trim() ? 1 : 0}
         forceShow={!!lead.company_name?.trim()}
         empty={
-          <RelatedEmptyState message="No company linked yet. One can be created when you convert this lead." />
+          <RelatedEmptyState message="No account linked yet. One can be created when you convert this lead." />
         }
       >
         {lead.company_id && company && !companyPending ? (
@@ -61,7 +61,7 @@ export const LeadRelatedSidebar = ({ lead }: LeadRelatedSidebarProps) => {
                 <p className="truncate font-medium">
                   {company.name?.trim() || "—"}
                 </p>
-                <p className="text-sm text-muted-foreground">Linked company</p>
+                <p className="text-sm text-muted-foreground">Linked account</p>
               </div>
             </div>
           </Link>

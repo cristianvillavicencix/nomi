@@ -48,7 +48,7 @@ const AccountsCreateSplitButton = ({
 
   const primary = showCompany
     ? {
-        label: "New company",
+        label: "New account",
         onClick: onNewCompany!,
       }
     : showLead
@@ -66,8 +66,8 @@ const AccountsCreateSplitButton = ({
   if (!primary) return null;
 
   const menuItems = [
-    showCompany && primary.label !== "New company"
-      ? { label: "New company", onSelect: onNewCompany! }
+    showCompany && primary.label !== "New account"
+      ? { label: "New account", onSelect: onNewCompany! }
       : null,
     showLead && primary.label !== "New lead"
       ? { label: "New lead", onSelect: onNewLead! }

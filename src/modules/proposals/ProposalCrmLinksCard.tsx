@@ -184,7 +184,7 @@ export const ProposalCrmLinksCard = () => {
                   ) : (
                     <>
                       {companies.length > 0 ? (
-                        <EntitySearchGroup heading="Clients">
+                        <EntitySearchGroup heading="Accounts">
                           {companies.map((row) => (
                             <EntitySearchOption
                               key={`company-${row.id}`}

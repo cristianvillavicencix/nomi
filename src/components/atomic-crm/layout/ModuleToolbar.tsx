@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -58,6 +58,7 @@ export const formatModuleItemCount = (
 
 /**
  * Standard module search field: h-8, icon, optional “· N items” in placeholder.
+ * Shows a clear (X) control once the field has text.
  * Use as the leading child of ModuleToolbar (replaces ModuleToolbarSpacer).
  *
  * Outer shell is `flex-1` so actions pin right; the input itself stays
@@ -96,6 +97,7 @@ export const ModuleSearchField = ({
   const ariaLabel = countLabel
     ? `Search among ${countLabel}`
     : basePlaceholder;
+  const hasValue = value.length > 0;
 
   return (
     <div className={cn("min-w-0 flex-1", fillHeight && "flex h-full", className)}>
@@ -114,11 +116,22 @@ export const ModuleSearchField = ({
           className={cn(
             fillHeight ? "h-full min-h-[44px]" : isMobile ? "h-11" : "h-8",
             "pl-9",
+            hasValue && "pr-9",
             isMobile &&
               "rounded-full border-0 bg-black/[0.06] shadow-none dark:bg-white/10",
             inputClassName,
           )}
         />
+        {hasValue ? (
+          <button
+            type="button"
+            className="absolute top-1/2 right-2 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Clear search"
+            onClick={() => onChange("")}
+          >
+            <X className="size-3.5" />
+          </button>
+        ) : null}
       </div>
     </div>
   );

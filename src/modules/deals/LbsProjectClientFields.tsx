@@ -255,7 +255,7 @@ export const LbsProjectClientFields = ({
       {!isCreateVariant ? (
         <ReferenceInput source="company_id" reference="companies">
           <AutocompleteInput
-            label="Company"
+            label="Account"
             optionText="name"
             helperText={false}
             placeholder="Search company"

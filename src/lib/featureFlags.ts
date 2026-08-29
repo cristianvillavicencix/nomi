@@ -1,6 +1,6 @@
 /**
  * Frontend feature flags. Values come from Vite `import.meta.env`.
- * See docs/plans/06-accounts-hub-ROLLBACK.md for Accounts hub rollback.
+ * See docs/plans/06-accounts-hub-ROLLBACK.md for Accounts hub historical rollback.
  */
 
 const isTruthyEnv = (raw: unknown): boolean => {
@@ -11,11 +11,10 @@ const isTruthyEnv = (raw: unknown): boolean => {
 
 /**
  * Accounts hub (Option A): single nav door for companies + pipeline.
- * Enabled when `VITE_ACCOUNTS_HUB` is truthy (`1` / `true` / `yes` / `on`).
- * Unset or falsy keeps legacy Pipeline + Clients nav (rollback-safe).
+ * Frozen on — legacy Pipeline + Clients dual doors are retired.
+ * `VITE_ACCOUNTS_HUB` is ignored; kept in env docs for historical rollback notes.
  */
-export const isAccountsHubEnabled = (): boolean =>
-  isTruthyEnv(import.meta.env.VITE_ACCOUNTS_HUB);
+export const isAccountsHubEnabled = (): boolean => true;
 
 /**
  * Ask Sigma assistant build flag. Prefer `useCrmAssistantAvailable` for UI —

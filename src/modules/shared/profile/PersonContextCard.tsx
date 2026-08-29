@@ -138,7 +138,7 @@ export const CompanyContextCard = ({
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             <p className="truncate text-sm font-semibold">
-              {name.trim() || "Company"}
+              {name.trim() || "Account"}
             </p>
             {isClient ? (
               <Badge variant="default" className="text-[10px] font-normal">
@@ -162,7 +162,7 @@ export const CompanyContextCard = ({
       </div>
       <Button variant="secondary" size="sm" className="h-8 w-full gap-1.5" asChild>
         <Link to={viewProfileHref}>
-          View company
+          View account
           <ArrowRight className="size-3.5" />
         </Link>
       </Button>

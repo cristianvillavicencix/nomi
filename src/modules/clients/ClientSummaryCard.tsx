@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { Globe } from "lucide-react";
+import { Link } from "react-router";
 import { useGetOne } from "ra-core";
 import { Badge } from "@/components/ui/badge";
 
@@ -16,6 +17,7 @@ import { FaviconAvatarImage } from "@/components/ui/FaviconAvatarImage";
 import { AvatarFallback, Avatar as UiAvatar } from "@/components/ui/avatar";
 import { OrganizationMemberName } from "@/components/atomic-crm/organizationMembers/OrganizationMemberName";
 import type {
+  Company,
   Contact,
   OrganizationMember,
 } from "@/components/atomic-crm/types";
@@ -38,11 +40,13 @@ import {
   type ClientSocialLinkValue,
 } from "@/modules/clients/clientSocialLinks";
 import {
-  CLIENT_SERVICE_TYPE_LABELS,
+  getServiceTypeBadgeLabels,
   type ClientServiceType,
 } from "@/modules/clients/clientServiceType";
+import { getContactFullName } from "@/modules/clients/clientShowUtils";
 import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
+import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import {
   EntityIdentityHeader,
   EntityMetaItem,
@@ -53,19 +57,6 @@ type ClientSummaryCardProps = {
   record: CompanyWithPrimaryContact;
   serviceType?: ClientServiceType | null;
   onOpenPrimaryContact?: () => void;
-};
-
-const getServiceTypeBadgeLabels = (
-  serviceType: ClientServiceType | null | undefined,
-): string[] => {
-  if (!serviceType) return [];
-  if (serviceType === "both") {
-    return [
-      CLIENT_SERVICE_TYPE_LABELS.website,
-      CLIENT_SERVICE_TYPE_LABELS.xactimate,
-    ];
-  }
-  return [CLIENT_SERVICE_TYPE_LABELS[serviceType]];
 };
 
 const ProfileIconLink = ({
@@ -131,6 +122,22 @@ export const ClientSummaryCard = ({
     { enabled: !!record.primary_contact_id },
   );
 
+  const { data: referrerContact } = useGetOne<Contact>(
+    "contacts",
+    { id: primaryContact?.referred_by_contact_id! },
+    { enabled: primaryContact?.referred_by_contact_id != null },
+  );
+
+  const { data: referrerCompany } = useGetOne<Company>(
+    "companies",
+    { id: primaryContact?.referred_by_company_id! },
+    {
+      enabled:
+        primaryContact?.referred_by_company_id != null &&
+        primaryContact?.referred_by_contact_id == null,
+    },
+  );
+
   const { data: owner } = useGetOne<OrganizationMember>(
     "organization_members",
     { id: record.organization_member_id! },
@@ -175,6 +182,36 @@ export const ClientSummaryCard = ({
     [serviceType],
   );
 
+  const referredByNode = (() => {
+    if (referrerContact) {
+      return (
+        <span>
+          Referred by{" "}
+          <Link
+            to={getPersonShowPath(referrerContact)}
+            className="link-action font-medium text-foreground"
+          >
+            {getContactFullName(referrerContact)}
+          </Link>
+        </span>
+      );
+    }
+    if (referrerCompany) {
+      return (
+        <span>
+          Referred by{" "}
+          <Link
+            to={getClientShowPath(referrerCompany.id)}
+            className="link-action font-medium text-foreground"
+          >
+            {referrerCompany.name?.trim() || "Account"}
+          </Link>
+        </span>
+      );
+    }
+    return null;
+  })();
+
   return (
     <EntityIdentityHeader
       tone="sky"
@@ -208,19 +245,29 @@ export const ClientSummaryCard = ({
         </>
       }
       subtitle={
-        websiteHref ? (
-          <a
-            href={websiteHref}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex max-w-full items-center gap-1.5 link-action"
-          >
-            <Globe className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="truncate">{website}</span>
-          </a>
-        ) : (
-          <span>No website</span>
-        )
+        <div className="space-y-1">
+          {websiteHref ? (
+            <a
+              href={websiteHref}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex max-w-full items-center gap-1.5 link-action"
+            >
+              <Globe className="size-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate">{website}</span>
+            </a>
+          ) : (
+            <span>No website</span>
+          )}
+          {referredByNode}
+        </div>
+      }
+      actions={
+        <ClientQuickActions
+          record={record}
+          primaryContactId={record.primary_contact_id}
+          presentation="strip"
+        />
       }
     >
       <div className="space-y-3 border-t border-border/60 px-5 py-4">
@@ -286,12 +333,6 @@ export const ClientSummaryCard = ({
             {owner ? <OrganizationMemberName member={owner} /> : "—"}
           </EntityMetaItem>
         </div>
-
-        <ClientQuickActions
-          record={record}
-          primaryContactId={record.primary_contact_id}
-          presentation="strip"
-        />
       </div>
 
       {socialOnlyLinks.length > 0 ? (

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { MessageSquare, Search, UserPlus } from "lucide-react";
+import { MessageSquare, UserPlus } from "lucide-react";
 import { useGetList, useNotify, useRefresh } from "ra-core";
 import type { Identifier } from "ra-core";
-import { Input } from "@/components/ui/input";
+import { ClearableSearchInput } from "@/components/ui/clearable-search-input";
 import type {
   Contact,
   Conversation,
@@ -254,20 +254,17 @@ export const MessagesInbox = (props: {
 
   const searchRow = (
     <div className={cn("flex items-center gap-2", !isMobile && "px-3 py-2")}>
-      <div className="relative min-w-0 flex-1">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={filters.query}
-          onChange={(event) =>
-            setFilters((current) => ({
-              ...current,
-              query: event.target.value,
-            }))
-          }
-          placeholder="Search conversations, clients, or phone…"
-          className="h-11 rounded-full border-0 bg-black/[0.06] pl-9 shadow-none md:h-9 md:rounded-md md:border md:border-input md:bg-transparent dark:bg-white/10"
-        />
-      </div>
+      <ClearableSearchInput
+        value={filters.query}
+        onChange={(query) =>
+          setFilters((current) => ({
+            ...current,
+            query,
+          }))
+        }
+        placeholder="Search conversations, clients, or phone…"
+        className="h-11 rounded-full border-0 bg-black/[0.06] shadow-none md:h-9 md:rounded-md md:border md:border-input md:bg-transparent dark:bg-white/10"
+      />
       <VoiceDialButton variant="secondary" size="icon" className="shrink-0" />
     </div>
   );

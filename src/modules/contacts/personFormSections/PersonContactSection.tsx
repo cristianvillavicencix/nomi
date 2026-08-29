@@ -42,9 +42,9 @@ export const PersonContactSection = () => {
   };
 
   const handleEmailBlur = (
-    e: FocusEvent<HTMLTextAreaElement | HTMLInputElement>,
+    e?: FocusEvent<HTMLTextAreaElement | HTMLInputElement>,
   ) => {
-    handleEmailChange(e.target.value);
+    handleEmailChange(e?.target?.value ?? "");
   };
 
   return (

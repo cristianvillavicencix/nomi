@@ -134,6 +134,7 @@ export const useContactTabCounts = (contact: Contact | null | undefined) => {
     notes,
     referrals,
     tickets,
+    contactDeals,
     contactIds: enabled ? ([contactId] as Identifier[]) : ([] as Identifier[]),
     companyId,
     hasCompany: companyEnabled,

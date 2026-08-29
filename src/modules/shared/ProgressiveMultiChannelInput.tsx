@@ -34,7 +34,7 @@ export type ProgressiveMultiChannelInputProps<T extends FieldValues> = {
   typeChoices: readonly ProgressiveChannelTypeChoice[];
   addLabel: string;
   onFirstEmailBlur?: (
-    event: FocusEvent<HTMLTextAreaElement | HTMLInputElement>,
+    event?: FocusEvent<HTMLTextAreaElement | HTMLInputElement>,
   ) => void;
   onFirstEmailPaste?: ClipboardEventHandler<
     HTMLTextAreaElement | HTMLInputElement

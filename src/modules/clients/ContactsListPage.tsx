@@ -245,7 +245,7 @@ const ContactsLayout = ({
         />
         <DataTable.Col
           source="company_name"
-          label="Company"
+          label="Account"
           render={(record: Contact) => {
             const name = record.company_name?.trim() || "—";
             const companyId = record.company_id;

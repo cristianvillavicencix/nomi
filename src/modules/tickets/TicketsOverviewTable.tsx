@@ -205,7 +205,7 @@ export const TicketsOverviewTable = ({
             ) : null}
             <th className="px-3 py-2.5 font-medium">Ticket</th>
             <th className="px-3 py-2.5 font-medium">Subject</th>
-            <th className="px-3 py-2.5 font-medium">Client</th>
+            <th className="px-3 py-2.5 font-medium">Account</th>
             <th className="px-3 py-2.5 font-medium">Status</th>
             <th className="px-3 py-2.5 font-medium">Assignee</th>
             <th className="px-3 py-2.5 font-medium">Updated</th>

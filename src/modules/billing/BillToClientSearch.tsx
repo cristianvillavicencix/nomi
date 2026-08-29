@@ -162,7 +162,7 @@ export const BillToClientSearch = ({
           <CommandList>
             <CommandEmpty>No clients found.</CommandEmpty>
             {companies.length > 0 ? (
-              <CommandGroup heading="Companies">
+              <CommandGroup heading="Accounts">
                 {companies.map((company) => {
                   const selected = companySelected(value, Number(company.id));
                   const phone = getCompanyPrimaryContactPhone(company);

@@ -300,6 +300,7 @@ const CONTACT_FORM_META_FIELDS = [
   // UI-only person / lead form fields (DB uses interested_service text)
   "interested_services",
   "person_kind",
+  "lead_type",
   "add_primary_contact",
   "use_company_contact_info",
 ] as const;

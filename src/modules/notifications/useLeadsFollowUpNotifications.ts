@@ -72,7 +72,7 @@ export const useLeadsFollowUpNotifications = () => {
               title: "Lead follow-up due",
               body: getLeadDisplayName(lead),
               tag: `lead-followup-${lead.id}-${todayKey()}`,
-              href: `/leads/${lead.id}/show`,
+              href: `/contacts/${lead.id}/show`,
               desktop: true,
             });
             continue;
@@ -90,7 +90,7 @@ export const useLeadsFollowUpNotifications = () => {
               title: "Lead needs attention",
               body: `${getLeadDisplayName(lead)} — no activity in ${STALE_DAYS}+ days`,
               tag: `lead-stale-${lead.id}-${todayKey()}`,
-              href: `/leads/${lead.id}/show`,
+              href: `/contacts/${lead.id}/show`,
               desktop: true,
             });
           }

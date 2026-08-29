@@ -28,17 +28,14 @@ import { cn } from "@/lib/utils";
 import {
   filterAccessibleNavItems,
   isAccountsNavActive,
-  isClientsNavActive,
   matchesNavPattern,
 } from "@/app/lbsNavAccess";
 import {
   filterLbsNavGroups,
   LBS_ACCOUNTS_NAV_ITEM,
-  LBS_CLIENTS_NAV_ITEM,
   LBS_MORE_NAV_COLLAPSIBLE,
   LBS_NAV_AFTER_CLIENTS,
   LBS_NAV_GROUPS,
-  LBS_NAV_STANDALONE,
   LBS_NAV_STANDALONE_WITH_ACCOUNTS_HUB,
   splitLbsNavGroups,
   type LbsNavCollapsibleSection,
@@ -46,9 +43,7 @@ import {
   type LbsNavItem,
 } from "@/app/navigation";
 import { SidebarNavIcon } from "@/app/SidebarNavIcon";
-import { getAccessibleClientsHubTabs } from "@/modules/clients/clientsHubAccess";
 import { canAccessAccountsHub } from "@/modules/accounts/accountsHubAccess";
-import { isAccountsHubEnabled } from "@/lib/featureFlags";
 import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
 
 import {
@@ -92,15 +87,10 @@ export const LbsSidebarNav = ({
     [location.pathname],
   );
 
-  const accountsHub = isAccountsHubEnabled();
-
   const standaloneItems = useMemo(
     () =>
-      filterAccessibleNavItems(
-        identity,
-        accountsHub ? LBS_NAV_STANDALONE_WITH_ACCOUNTS_HUB : LBS_NAV_STANDALONE,
-      ),
-    [accountsHub, identity],
+      filterAccessibleNavItems(identity, LBS_NAV_STANDALONE_WITH_ACCOUNTS_HUB),
+    [identity],
   );
 
   const afterClientsItems = useMemo(
@@ -110,13 +100,8 @@ export const LbsSidebarNav = ({
 
   const hubNavItem = useMemo(() => {
     if (!identity) return null;
-    if (accountsHub) {
-      return canAccessAccountsHub(identity) ? LBS_ACCOUNTS_NAV_ITEM : null;
-    }
-    return getAccessibleClientsHubTabs(identity).length > 0
-      ? LBS_CLIENTS_NAV_ITEM
-      : null;
-  }, [accountsHub, identity]);
+    return canAccessAccountsHub(identity) ? LBS_ACCOUNTS_NAV_ITEM : null;
+  }, [identity]);
 
   const navGroups = useMemo(() => {
     const groups = filterLbsNavGroups(LBS_NAV_GROUPS, {
@@ -165,11 +150,7 @@ export const LbsSidebarNav = ({
             <SidebarNavLink
               key={hubNavItem.to}
               item={hubNavItem}
-              active={
-                accountsHub
-                  ? isAccountsNavActive(location.pathname)
-                  : isClientsNavActive(location.pathname)
-              }
+              active={isAccountsNavActive(location.pathname)}
               collapsed={sidebarState === "collapsed"}
             />
           ) : null}

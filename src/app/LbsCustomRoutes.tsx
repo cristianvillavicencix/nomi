@@ -1,9 +1,6 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { Route, Navigate } from "react-router";
-import { LeadsListPage } from "@/modules/leads/LeadsListPage";
 import { ClientShowPage } from "@/modules/clients/ClientShowPage";
-import { ClientsHubPage } from "@/modules/clients/ClientsHubPage";
-import { ClientsHubRoute } from "@/modules/clients/ClientsHubRoute";
 import { AccountsHubPage } from "@/modules/accounts/AccountsHubPage";
 import { AccountsHubRoute } from "@/modules/accounts/AccountsHubRoute";
 import {
@@ -17,12 +14,10 @@ import {
   LegacyClientShowRedirect,
 } from "@/modules/clients/ClientRouteRedirects";
 import { FindDuplicatesPage } from "@/modules/clients/FindDuplicatesPage";
-import { LeadCreatePage } from "@/modules/leads/LeadCreatePage";
-import { LeadShowPage } from "@/modules/leads/LeadShowPage";
+import { LeadShowToPersonRedirect } from "@/modules/leads/LeadShowToPersonRedirect";
 import { LbsContactShowPage } from "@/modules/contacts/ContactShowPage";
 import { PublicShareLayout } from "@/app/PublicShareLayout";
 import { LazyRouteFallback } from "@/app/LazyRouteFallback";
-import { isAccountsHubEnabled } from "@/lib/featureFlags";
 import {
   LegacyCompanyCreateRedirect,
   LegacyCompanyEditRedirect,
@@ -256,19 +251,11 @@ type ProtectedRouteProps = {
   children: JSX.Element;
 };
 
-const ClientsHubList = () => (
-  <ClientsHubRoute>
-    <ClientsHubPage />
-  </ClientsHubRoute>
-);
-
 const AccountsHubList = () => (
   <AccountsHubRoute>
     <AccountsHubPage />
   </AccountsHubRoute>
 );
-
-const accountsHub = isAccountsHubEnabled();
 
 export const renderLbsPublicPortalRoutes = () => (
   <Route element={<PublicShareLayout />}>
@@ -419,33 +406,16 @@ export const renderLbsCustomRoutes = ({
 }) => {
   return (
     <>
-      {accountsHub ? (
-        <Route path="/accounts" element={<AccountsHubList />} />
-      ) : null}
+      <Route path="/accounts" element={<AccountsHubList />} />
       <Route
         path="/contacts/create"
         element={
-          <Navigate
-            to={
-              accountsHub
-                ? "/accounts?create=contact"
-                : "/contacts?create=contact"
-            }
-            replace
-          />
+          <Navigate to="/accounts?create=contact" replace />
         }
       />
       <Route
         path="/contacts"
-        element={
-          accountsHub ? (
-            <ListAliasToAccountsRedirect />
-          ) : (
-            <ProtectedRoute resource="contacts" action="list">
-              <ClientsHubList />
-            </ProtectedRoute>
-          )
-        }
+        element={<ListAliasToAccountsRedirect />}
       />
       <Route
         path="/companies/create"
@@ -481,15 +451,7 @@ export const renderLbsCustomRoutes = ({
       />
       <Route
         path="/companies"
-        element={
-          accountsHub ? (
-            <ListAliasToAccountsRedirect />
-          ) : (
-            <ProtectedRoute resource="companies" action="list">
-              <ClientsHubList />
-            </ProtectedRoute>
-          )
-        }
+        element={<ListAliasToAccountsRedirect />}
       />
       <Route
         path="/calendar"
@@ -543,33 +505,17 @@ export const renderLbsCustomRoutes = ({
       />
       <Route
         path="/leads/create"
-        element={
-          accountsHub ? (
-            <Navigate to="/accounts?view=board&create=lead" replace />
-          ) : (
-            <ProtectedRoute resource="contacts" action="create">
-              <LeadCreatePage />
-            </ProtectedRoute>
-          )
-        }
+        element={<Navigate to="/accounts?view=board&create=lead" replace />}
       />
       <Route
         path="/leads"
-        element={
-          accountsHub ? (
-            <LeadsListToAccountsRedirect />
-          ) : (
-            <ProtectedRoute resource="contacts" action="list">
-              <LeadsListPage />
-            </ProtectedRoute>
-          )
-        }
+        element={<LeadsListToAccountsRedirect />}
       />
       <Route
         path="/leads/:id/show"
         element={
           <ProtectedRoute resource="contacts" action="list">
-            <LeadShowPage />
+            <LeadShowToPersonRedirect />
           </ProtectedRoute>
         }
       />
@@ -604,25 +550,12 @@ export const renderLbsCustomRoutes = ({
       <Route
         path="/clients/create"
         element={
-          <Navigate
-            to={
-              accountsHub
-                ? "/accounts?create=company"
-                : "/clients?create=company"
-            }
-            replace
-          />
+          <Navigate to="/accounts?create=company" replace />
         }
       />
       <Route
         path="/clients"
-        element={
-          accountsHub ? (
-            <ClientsHubToAccountsRedirect />
-          ) : (
-            <ClientsHubList />
-          )
-        }
+        element={<ClientsHubToAccountsRedirect />}
       />
       <Route
         path="/clients/find-duplicates"

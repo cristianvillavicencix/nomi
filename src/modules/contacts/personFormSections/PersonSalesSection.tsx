@@ -32,14 +32,14 @@ export const PersonSalesSection = ({
 
     <AutocompleteArrayInput
       source="interested_services"
-      label="Service interested in"
+      label="Services"
       choices={LBS_INTERESTED_SERVICE_CHOICES.map((entry) => ({
         id: entry.id,
         name: entry.name,
       }))}
       validate={required()}
       helperText={false}
-      placeholder="Select one or more services"
+      placeholder="Website, Xactimate, …"
     />
 
     {showLeadStageBadge ? (

@@ -167,10 +167,23 @@ export const EntitySearchToolbar = ({
               onFocus={() => onSearchOpenChange(true)}
               onPointerDown={scheduleSuppressClose}
               placeholder={searchPlaceholder}
-              className="pl-9"
+              className={cn("pl-9", searchQuery.length > 0 && "pr-9")}
               aria-expanded={searchOpen}
               aria-autocomplete="list"
             />
+            {searchQuery.length > 0 ? (
+              <button
+                type="button"
+                className="absolute top-1/2 right-2 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Clear search"
+                onClick={() => {
+                  onSearchQueryChange("");
+                  onSearchOpenChange(true);
+                }}
+              >
+                <X className="size-3.5" />
+              </button>
+            ) : null}
           </div>
         </PopoverAnchor>
         <PopoverContent

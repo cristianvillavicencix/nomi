@@ -15,8 +15,11 @@ import {
   PageActionsTrailing,
 } from "@/components/atomic-crm/layout/PageActions";
 import type { Contact } from "@/components/atomic-crm/types";
+import { getClientsListPath } from "@/app/routing";
+import { isLeadLifecycleStatus } from "@/modules/constants/contactStatus";
 import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
-import { getContactsListPath } from "@/app/routing";
+import { ConvertLeadButton } from "@/modules/leads/ConvertLeadButton";
+import { CreateProposalButton } from "@/modules/proposals/CreateProposalButton";
 
 type ContactShowActionsProps = {
   record: Contact;
@@ -30,7 +33,8 @@ export const ContactShowActions = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [editOpen, setEditOpen] = useState(false);
-  const listPath = location.state?.from ?? getContactsListPath();
+  const listPath = location.state?.from ?? getClientsListPath();
+  const isLead = isLeadLifecycleStatus(record.status);
 
   return (
     <>
@@ -50,11 +54,17 @@ export const ContactShowActions = ({
           onClick={() => navigate(listPath)}
         >
           <ChevronLeft className="size-4" />
-          <span className="text-sm font-semibold">Contacts</span>
+          <span className="text-sm font-semibold">Accounts</span>
         </Button>
       </PageActions>
 
       <PageActionsTrailing>
+        <CreateProposalButton
+          contactId={record.id}
+          companyId={record.company_id}
+          variant="secondary"
+        />
+        {isLead ? <ConvertLeadButton record={record} /> : null}
         <RecordContextProvider value={record}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

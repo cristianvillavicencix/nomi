@@ -1,5 +1,4 @@
 import { LBS_LEAD_STATUSES } from "@/app/navigation";
-import { isAccountsHubEnabled } from "@/lib/featureFlags";
 
 export type ClientsHubListTab = "companies" | "people";
 export type AccountsHubView = "list" | "board";
@@ -16,25 +15,16 @@ export const getAccountsHubPath = (
   return query ? `/accounts?${query}` : "/accounts";
 };
 
-/** Canonical Clients hub entry (`/clients` or Accounts List when hub enabled). */
-export const getClientsHubPath = (tab: ClientsHubListTab = "companies") => {
-  if (isAccountsHubEnabled()) {
-    return getAccountsHubPath("list", tab === "people" ? "people" : undefined);
-  }
-  if (tab === "people") return "/clients?tab=people";
-  return "/clients";
-};
+/** Accounts List (legacy name kept for callers). */
+export const getClientsHubPath = (tab: ClientsHubListTab = "companies") =>
+  getAccountsHubPath("list", tab === "people" ? "people" : undefined);
 
-/** Bookmark-friendly list aliases — still mount the hub without redirecting. */
-export const getCompaniesListPath = () =>
-  isAccountsHubEnabled() ? getAccountsHubPath("list") : "/companies";
+/** Bookmark-friendly list aliases — redirect to Accounts List. */
+export const getCompaniesListPath = () => getAccountsHubPath("list");
 
-export const getContactsListPath = () =>
-  isAccountsHubEnabled()
-    ? getAccountsHubPath("list", "people")
-    : "/contacts";
+export const getContactsListPath = () => getAccountsHubPath("list", "people");
 
-/** Preferred navigation target for the unified Clients / Accounts list. */
+/** Preferred navigation target for the unified Accounts list. */
 export const getClientsListPath = () => getClientsHubPath();
 
 export const getClientShowPath = (companyId: string | number) =>
@@ -43,60 +33,45 @@ export const getClientShowPath = (companyId: string | number) =>
 export const getClientEditPath = (companyId: string | number) =>
   `/companies/${companyId}?edit=1`;
 
-export const getClientCreatePath = () =>
-  isAccountsHubEnabled()
-    ? "/accounts?create=company"
-    : "/clients?create=company";
+export const getClientCreatePath = () => "/accounts?create=company";
 
-export const getContactCreatePath = () =>
-  isAccountsHubEnabled()
-    ? "/accounts?create=contact"
-    : "/clients?tab=people&create=contact";
+export const getContactCreatePath = () => "/accounts?create=contact";
 
 export const getFindDuplicatesPath = () => "/companies/find-duplicates";
 
-export const getLeadsListPath = () =>
-  isAccountsHubEnabled() ? getAccountsHubPath("board") : "/leads";
+export const getLeadsListPath = () => getAccountsHubPath("board");
 
 /**
- * Board card click target. When the Accounts hub is enabled, stays on
- * `/accounts?view=board` and opens the lead as a Sheet preview instead of
- * navigating to the standalone show page.
+ * Board card click target — stays on Accounts Board with Sheet preview.
  */
 export const getLeadKanbanShowPath = (
   contactId: string | number,
   stage: string,
 ) => {
-  if (isAccountsHubEnabled()) {
-    const params = new URLSearchParams({
-      view: "board",
-      lead: String(contactId),
-      contact: String(contactId),
-      stage,
-    });
-    return `/accounts?${params.toString()}`;
-  }
-  return `/leads/${contactId}/show?stage=${encodeURIComponent(stage)}`;
+  const params = new URLSearchParams({
+    view: "board",
+    lead: String(contactId),
+    contact: String(contactId),
+    stage,
+  });
+  return `/accounts?${params.toString()}`;
 };
 
 export const getLeadCreatePath = (params?: Record<string, string>) => {
-  const search = new URLSearchParams({ create: "lead" });
+  const search = new URLSearchParams({ create: "lead", view: "board" });
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value) search.set(key, value);
     }
   }
-  if (isAccountsHubEnabled()) {
-    search.set("view", "board");
-    return `/accounts?${search.toString()}`;
-  }
-  return `/leads?${search.toString()}`;
+  return `/accounts?${search.toString()}`;
 };
 
 export const getDealsListPath = () => "/deals";
 
+/** @deprecated Alias of {@link getContactShowPath} — Person Full is unified. */
 export const getLeadShowPath = (contactId: string | number) =>
-  `/leads/${contactId}/show`;
+  getContactShowPath(contactId);
 
 export const getContactShowPath = (contactId: string | number) =>
   `/contacts/${contactId}/show`;
@@ -151,10 +126,8 @@ export const getClientDealCreatePath = (
 export const getPersonListPath = (status?: string | null) =>
   isLeadStatus(status) ? getLeadsListPath() : getContactsListPath();
 
+/** Canonical Person Full — always `/contacts/:id/show` (lead vs client is status, not URL). */
 export const getPersonShowPath = (contact: {
   id: string | number;
   status?: string | null;
-}) =>
-  isLeadStatus(contact.status)
-    ? getLeadShowPath(contact.id)
-    : getContactShowPath(contact.id);
+}) => getContactShowPath(contact.id);

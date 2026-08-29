@@ -9,7 +9,7 @@ import {
 export const getDealCompanyLabel = (deal: Deal) => {
   const name = deal.company_name?.trim();
   if (name) return name;
-  if (deal.company_id != null) return `Company #${deal.company_id}`;
+  if (deal.company_id != null) return `Account #${deal.company_id}`;
   return "No company";
 };
 

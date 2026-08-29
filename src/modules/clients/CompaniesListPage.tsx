@@ -92,7 +92,7 @@ export const CompaniesListPage = ({
             false
           ) : (
             <PageActions>
-              <PageTitle label="Companies" />
+              <PageTitle label="Accounts" />
             </PageActions>
           )
         }
@@ -166,10 +166,10 @@ const CompaniesLayout = ({
           variant="secondary"
           size="sm"
           onClick={onNewCompany}
-          aria-label="New company"
+          aria-label="New account"
         >
           <Plus className="size-4" />
-          New company
+          New account
         </Button>
       </ModuleToolbarActions>
     </ModuleToolbar>
@@ -226,7 +226,7 @@ const CompaniesLayout = ({
         />
         <DataTable.Col
           source="name"
-          label="Company"
+          label="Account"
           render={(record: CompanyWithPrimaryContact) => (
             <span className="font-medium">{record.name?.trim() || "—"}</span>
           )}

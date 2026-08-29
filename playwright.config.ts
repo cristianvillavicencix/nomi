@@ -51,8 +51,7 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       ...process.env,
-      // Keep E2E on the dedicated /leads module routes (not Accounts hub redirect).
-      VITE_ACCOUNTS_HUB: "0",
+      VITE_ACCOUNTS_HUB: "1",
     },
   },
 });

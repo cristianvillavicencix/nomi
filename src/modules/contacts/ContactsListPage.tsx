@@ -124,7 +124,7 @@ const ContactsListLayout = () => {
             `${record.first_name ?? ""} ${record.last_name ?? ""}`.trim() || "—"
           }
         />
-        <DataTable.Col source="company_name" label="Company" />
+        <DataTable.Col source="company_name" label="Account" />
         <DataTable.Col source="title" label="Role / Title" />
         <DataTable.Col
           source="phone_jsonb"

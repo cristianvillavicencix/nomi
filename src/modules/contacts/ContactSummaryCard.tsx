@@ -28,9 +28,14 @@ import {
   getContactFullName,
   getContactPhoneRaw,
 } from "@/modules/clients/clientShowUtils";
+import {
+  formatInterestedServicesLabel,
+  getServiceTypeBadgeLabels,
+  type ClientServiceType,
+} from "@/modules/clients/clientServiceType";
 import { CrmPhoneDisplay } from "@/modules/voice/CrmPhoneDisplay";
 import { ContactQuickActions } from "@/modules/contacts/ContactQuickActions";
-import { getClientShowPath } from "@/app/routing";
+import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import {
   EntityIdentityHeader,
   EntityMetaItem,
@@ -40,6 +45,7 @@ import {
 type ContactSummaryCardProps = {
   record: Contact;
   hideCompanyLink?: boolean;
+  serviceType?: ClientServiceType | null;
 };
 
 const statusLabel = (status?: string | null) => {
@@ -75,11 +81,18 @@ const ProfileIconLink = ({
 );
 
 export const ContactSummaryCard = (props: ContactSummaryCardProps) => {
-  const { record, hideCompanyLink = false } = props;
+  const { record, hideCompanyLink = false, serviceType = null } = props;
   const fullName = getContactFullName(record);
   const socialLinks = useMemo(
     () => collectContactSocialLinks(record),
     [record],
+  );
+  const serviceTypeLabels = useMemo(
+    () => getServiceTypeBadgeLabels(serviceType),
+    [serviceType],
+  );
+  const interestedLabel = formatInterestedServicesLabel(
+    record.interested_service,
   );
 
   const { data: company } = useGetOne(
@@ -94,7 +107,55 @@ export const ContactSummaryCard = (props: ContactSummaryCardProps) => {
     { enabled: record.organization_member_id != null },
   );
 
+  const { data: referrerContact } = useGetOne<Contact>(
+    "contacts",
+    { id: record.referred_by_contact_id! },
+    { enabled: record.referred_by_contact_id != null },
+  );
+
+  const { data: referrerCompany } = useGetOne(
+    "companies",
+    { id: record.referred_by_company_id! },
+    {
+      enabled:
+        record.referred_by_company_id != null &&
+        record.referred_by_contact_id == null,
+    },
+  );
+
   const companyName = record.company_name?.trim() || company?.name?.trim();
+
+  const referredByNode = (() => {
+    if (referrerContact) {
+      return (
+        <span>
+          Referred by{" "}
+          <Link
+            to={getPersonShowPath(referrerContact)}
+            className="link-action font-medium text-foreground"
+          >
+            {getContactFullName(referrerContact)}
+          </Link>
+        </span>
+      );
+    }
+    if (referrerCompany) {
+      const name =
+        (referrerCompany as { name?: string | null }).name?.trim() || "Account";
+      return (
+        <span>
+          Referred by{" "}
+          <Link
+            to={getClientShowPath(record.referred_by_company_id!)}
+            className="link-action font-medium text-foreground"
+          >
+            {name}
+          </Link>
+        </span>
+      );
+    }
+    return null;
+  })();
 
   if (hideCompanyLink) {
     return (
@@ -105,6 +166,11 @@ export const ContactSummaryCard = (props: ContactSummaryCardProps) => {
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <h1 className="truncate text-lg font-semibold">{fullName}</h1>
               <Badge variant="secondary">{statusLabel(record.status)}</Badge>
+              {serviceTypeLabels.map((label) => (
+                <Badge key={label} variant="outline" className="text-xs">
+                  {label}
+                </Badge>
+              ))}
             </div>
             {record.title ? (
               <p className="truncate text-sm text-muted-foreground">
@@ -127,26 +193,38 @@ export const ContactSummaryCard = (props: ContactSummaryCardProps) => {
       tone="violet"
       avatar={<Avatar record={record} width={64} height={64} />}
       title={fullName}
-      badges={<Badge variant="secondary">{statusLabel(record.status)}</Badge>}
-      subtitle={
+      badges={
         <>
-          {record.title?.trim() || "Contact"}
-          {companyName ? (
-            <>
-              {" at "}
-              {record.company_id ? (
-                <Link
-                  to={getClientShowPath(record.company_id)}
-                  className="link-action font-medium text-foreground"
-                >
-                  {companyName}
-                </Link>
-              ) : (
-                companyName
-              )}
-            </>
-          ) : null}
+          <Badge variant="secondary">{statusLabel(record.status)}</Badge>
+          {serviceTypeLabels.map((label) => (
+            <Badge key={label} variant="secondary" className="text-xs">
+              {label}
+            </Badge>
+          ))}
         </>
+      }
+      subtitle={
+        <div className="space-y-1">
+          <div>
+            {record.title?.trim() || "Contact"}
+            {companyName ? (
+              <>
+                {" at "}
+                {record.company_id ? (
+                  <Link
+                    to={getClientShowPath(record.company_id)}
+                    className="link-action font-medium text-foreground"
+                  >
+                    {companyName}
+                  </Link>
+                ) : (
+                  companyName
+                )}
+              </>
+            ) : null}
+          </div>
+          {referredByNode}
+        </div>
       }
       actions={
         <ContactQuickActions contactId={record.id} contact={record} iconRow />
@@ -167,6 +245,12 @@ export const ContactSummaryCard = (props: ContactSummaryCardProps) => {
           ) : (
             "—"
           )}
+        </EntityMetaItem>
+        <EntityMetaItem label="Services">
+          {interestedLabel ||
+            (serviceTypeLabels.length > 0
+              ? serviceTypeLabels.join(", ")
+              : "—")}
         </EntityMetaItem>
         <EntityMetaItem label="Phone">
           <CrmPhoneDisplay

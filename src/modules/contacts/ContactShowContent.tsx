@@ -21,29 +21,37 @@ import {
   resolveClientTabFromUrl,
   type ClientTab,
 } from "@/modules/clients/clientShowUtils";
+import { isLeadLifecycleStatus } from "@/modules/constants/contactStatus";
 import { ContactAccountBanner } from "@/modules/contacts/ContactAccountBanner";
-import { ContactCollapsibleRelatedSidebar } from "@/modules/contacts/ContactCollapsibleRelatedSidebar";
-import { ContactRelatedSidebar } from "@/modules/contacts/ContactRelatedSidebar";
+import { ContactRelatedAccounts } from "@/modules/contacts/ContactRelatedAccounts";
 import { ContactShowActions } from "@/modules/contacts/ContactShowActions";
 import { ContactSummaryCard } from "@/modules/contacts/ContactSummaryCard";
-import { ContactMarketingPreferencesCard } from "@/modules/marketing/ContactMarketingPreferencesCard";
-import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import { LeadPipelinePanel } from "@/modules/leads/LeadPipelinePanel";
 import { useContactTabCounts } from "@/modules/contacts/useContactTabCounts";
+import { deriveContactServiceType } from "@/modules/clients/clientServiceType";
 import { ProfileFullViewLayout } from "@/modules/shared/ProfileFullViewLayout";
 
-const CONTACT_CENTER_TABS = [
+type ContactCenterTab = "pipeline" | ClientTab;
+
+const BASE_CENTER_TABS = [
   "activity",
   "deals",
   "financial",
   "tickets",
-] as const;
+] as const satisfies ReadonlyArray<ClientTab>;
 
-const getValidContactCenterTab = (value: string | null): ClientTab => {
+const getValidContactCenterTab = (
+  value: string | null,
+  isLead: boolean,
+): ContactCenterTab => {
+  if (isLead && value === "pipeline") return "pipeline";
   if (value === "people") return DEFAULT_CLIENT_TAB;
   const tab = getValidClientTab(value);
-  return (CONTACT_CENTER_TABS as readonly string[]).includes(tab)
+  return (BASE_CENTER_TABS as readonly string[]).includes(tab)
     ? tab
-    : DEFAULT_CLIENT_TAB;
+    : isLead
+      ? "pipeline"
+      : DEFAULT_CLIENT_TAB;
 };
 
 export const ContactShowContent = ({
@@ -54,13 +62,23 @@ export const ContactShowContent = ({
   const { record, isPending, refetch } = useShowContext<Contact>();
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
-  const [embeddedTab, setEmbeddedTab] = useState<ClientTab>(DEFAULT_CLIENT_TAB);
+  const isLead = isLeadLifecycleStatus(record?.status);
+  const defaultTab: ContactCenterTab = isLead ? "pipeline" : DEFAULT_CLIENT_TAB;
+  const [embeddedTab, setEmbeddedTab] = useState<ContactCenterTab>(defaultTab);
   const resolved = resolveClientTabFromUrl(searchParams.get("tab"));
-  const urlTab = getValidContactCenterTab(resolved.tab);
+  const urlTab = getValidContactCenterTab(
+    searchParams.get("tab") === "pipeline" ? "pipeline" : resolved.tab,
+    isLead,
+  );
   const currentTab = embedded ? embeddedTab : urlTab;
   const syncUrl = !embedded;
   const counts = useContactTabCounts(record);
-  const canViewMarketing = useMemberCapability("marketing.view");
+  const serviceType = deriveContactServiceType({
+    interestedService: record?.interested_service,
+    dealCount: counts.projects,
+    ticketCount: counts.tickets,
+    invoiceCount: counts.invoices,
+  });
 
   const { data: company } = useGetOne<Company>(
     "companies",
@@ -71,9 +89,20 @@ export const ContactShowContent = ({
   useEffect(() => {
     if (embedded) return;
     const rawTab = searchParams.get("tab");
-    if (!rawTab) return;
+    if (!rawTab) {
+      if (isLead) return;
+      return;
+    }
+    if (rawTab === "pipeline") {
+      if (!isLead) {
+        const next = new URLSearchParams(searchParams);
+        next.delete("tab");
+        setSearchParams(next, { replace: true });
+      }
+      return;
+    }
     const mapped = resolveClientTabFromUrl(rawTab);
-    const nextTab = getValidContactCenterTab(mapped.tab);
+    const nextTab = getValidContactCenterTab(mapped.tab, isLead);
     if (
       nextTab === rawTab &&
       (!mapped.section || mapped.section === searchParams.get("section"))
@@ -81,8 +110,11 @@ export const ContactShowContent = ({
       return;
     }
     const next = new URLSearchParams(searchParams);
-    if (nextTab === "activity") {
-      next.delete("tab");
+    if (nextTab === "activity" || (nextTab === "pipeline" && !rawTab)) {
+      if (nextTab === "activity") next.delete("tab");
+      else next.set("tab", "pipeline");
+    } else if (nextTab === "pipeline") {
+      next.set("tab", "pipeline");
     } else {
       next.set("tab", nextTab);
     }
@@ -92,12 +124,12 @@ export const ContactShowContent = ({
       next.delete("section");
     }
     setSearchParams(next, { replace: true });
-  }, [embedded, searchParams, setSearchParams]);
+  }, [embedded, isLead, searchParams, setSearchParams]);
 
   if (isPending || !record) return null;
 
   const handleTabChange = (tab: string) => {
-    const nextTab = getValidContactCenterTab(tab);
+    const nextTab = getValidContactCenterTab(tab, isLead);
     if (embedded) {
       setEmbeddedTab(nextTab);
       return;
@@ -109,10 +141,11 @@ export const ContactShowContent = ({
       nextSearchParams.set("tab", nextTab);
     }
     nextSearchParams.delete("section");
+    nextSearchParams.delete("stage");
     setSearchParams(nextSearchParams, { replace: true });
   };
 
-  const tabLabel = (_value: ClientTab, label: string, count?: number) =>
+  const tabLabel = (_value: ContactCenterTab, label: string, count?: number) =>
     `${label}${formatTabCount(count)}`;
 
   const financialCount =
@@ -126,6 +159,11 @@ export const ContactShowContent = ({
       <CardContent className="px-4 py-4">
         <Tabs value={currentTab} onValueChange={handleTabChange}>
           <TabsList className="mb-4 h-auto w-full justify-start gap-0 overflow-x-auto rounded-none border-b border-border bg-transparent p-0">
+            {isLead ? (
+              <TabsTrigger value="pipeline" className={tabTriggerClassName}>
+                Pipeline
+              </TabsTrigger>
+            ) : null}
             <TabsTrigger value="activity" className={tabTriggerClassName}>
               {tabLabel("activity", "Activity", activityCount)}
             </TabsTrigger>
@@ -139,6 +177,12 @@ export const ContactShowContent = ({
               {tabLabel("tickets", "Tickets", counts.tickets)}
             </TabsTrigger>
           </TabsList>
+
+          {isLead ? (
+            <TabsContent value="pipeline" className="mt-0">
+              <LeadPipelinePanel lead={record} embedded />
+            </TabsContent>
+          ) : null}
 
           <TabsContent value="activity" className="mt-0">
             <ClientActivityTab
@@ -174,7 +218,7 @@ export const ContactShowContent = ({
                 }}
               />
             ) : (
-              <ClientTabEmpty message="Link this contact to a company to view financial records." />
+              <ClientTabEmpty message="Link this person to an account to view financial records." />
             )}
           </TabsContent>
           <TabsContent value="tickets" className="mt-0">
@@ -197,48 +241,21 @@ export const ContactShowContent = ({
     return (
       <div className="pb-2">
         <div className="space-y-3">
-          <ContactSummaryCard record={record} hideCompanyLink />
+          <ContactSummaryCard record={record} hideCompanyLink serviceType={serviceType} />
+          <ContactRelatedAccounts
+            contact={record}
+            deals={counts.contactDeals}
+          />
           {centerTabs}
         </div>
       </div>
     );
   }
 
-  const sidebarProps = {
-    contact: record,
-    counts: {
-      tickets: counts.tickets,
-      referrals: counts.referrals,
-    },
-  };
-
-  const sidebar = isMobile ? (
-    <ContactRelatedSidebar {...sidebarProps} />
-  ) : (
-    <ContactCollapsibleRelatedSidebar {...sidebarProps} />
-  );
-
   const accountName =
     record.company_name?.trim() || company?.name?.trim() || null;
 
-  const header = (
-    <div className="space-y-3">
-      {record.company_id != null ? (
-        <ContactAccountBanner
-          companyId={record.company_id}
-          companyName={accountName}
-        />
-      ) : null}
-      <ContactSummaryCard record={record} />
-      {canViewMarketing && record.id != null ? (
-        <ContactMarketingPreferencesCard
-          contactId={Number(record.id)}
-          hasNewsletter={record.has_newsletter}
-        />
-      ) : null}
-    </div>
-  );
-
+  // Match Account Full: identity header + center tabs only (no Related rail / marketing card).
   return (
     <div className="mt-2 pb-4">
       <ContactShowActions
@@ -247,9 +264,22 @@ export const ContactShowContent = ({
       />
 
       <ProfileFullViewLayout
-        header={header}
+        header={
+          <div className="space-y-3">
+            {record.company_id != null ? (
+              <ContactAccountBanner
+                companyId={record.company_id}
+                companyName={accountName}
+              />
+            ) : null}
+            <ContactSummaryCard record={record} serviceType={serviceType} />
+            <ContactRelatedAccounts
+              contact={record}
+              deals={counts.contactDeals}
+            />
+          </div>
+        }
         main={centerTabs}
-        sidebar={sidebar}
         stacked={isMobile}
       />
     </div>
