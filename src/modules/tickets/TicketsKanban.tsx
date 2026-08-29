@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import { useKanbanEdgeAutoScroll } from "@/hooks/useKanbanEdgeAutoScroll";
 import { cn } from "@/lib/utils";
-import type { Company } from "@/components/atomic-crm/types";
+import type { Company, Contact } from "@/components/atomic-crm/types";
 import type {
   ClientInvoice,
   OrganizationMember,
@@ -140,6 +140,18 @@ export const TicketsKanban = ({
       ],
     [allTickets],
   );
+  const contactIds = useMemo(
+    () =>
+      [
+        ...new Set(
+          allTickets
+            .map((ticket) => ticket.contact_id)
+            .filter((id) => id != null)
+            .map(Number),
+        ),
+      ],
+    [allTickets],
+  );
   const assigneeIds = useMemo(
     () =>
       [
@@ -174,6 +186,14 @@ export const TicketsKanban = ({
       filter: companyIds.length ? { "id@in": `(${companyIds.join(",")})` } : {},
     },
     { enabled: companyIds.length > 0 },
+  );
+  const { data: contacts = [] } = useGetList<Contact>(
+    "contacts",
+    {
+      pagination: { page: 1, perPage: Math.max(contactIds.length, 1) },
+      filter: contactIds.length ? { "id@in": `(${contactIds.join(",")})` } : {},
+    },
+    { enabled: contactIds.length > 0 },
   );
   const { data: members = [] } = useGetList<OrganizationMember>(
     "organization_members",
@@ -215,6 +235,11 @@ export const TicketsKanban = ({
     for (const company of companies) map.set(Number(company.id), company);
     return map;
   }, [companies]);
+  const contactsById = useMemo(() => {
+    const map = new Map<number, Contact>();
+    for (const contact of contacts) map.set(Number(contact.id), contact);
+    return map;
+  }, [contacts]);
   const membersById = useMemo(() => {
     const map = new Map<number, OrganizationMember>();
     for (const member of members) map.set(Number(member.id), member);
@@ -253,17 +278,24 @@ export const TicketsKanban = ({
             ticket.company_id != null
               ? companiesById.get(Number(ticket.company_id))
               : null;
+          const contact =
+            ticket.contact_id != null
+              ? contactsById.get(Number(ticket.contact_id))
+              : null;
+          const contactName = contact
+            ? [contact.first_name, contact.last_name].filter(Boolean).join(" ")
+            : company?.name;
           return matchesTicketSearch(ticket, trimmed, {
             email: company?.primary_contact_email_jsonb?.find((entry) =>
               entry.email?.trim(),
             )?.email,
             phone: company?.phone_number,
-            contactName: company?.name,
+            contactName,
           });
         });
     if (!statusFilter || statusFilter === "all") return searched;
     return searched.filter((ticket) => ticket.status === statusFilter);
-  }, [allTickets, companiesById, searchQuery, statusFilter]);
+  }, [allTickets, companiesById, contactsById, searchQuery, statusFilter]);
 
   const syncKey = useMemo(() => ticketsKanbanSyncKey(tickets), [tickets]);
 
@@ -427,6 +459,13 @@ export const TicketsKanban = ({
                                       ticket.company_id != null
                                         ? companiesById.get(
                                             Number(ticket.company_id),
+                                          )
+                                        : null
+                                    }
+                                    contact={
+                                      ticket.contact_id != null
+                                        ? contactsById.get(
+                                            Number(ticket.contact_id),
                                           )
                                         : null
                                     }
