@@ -4,6 +4,7 @@ import { Mail, Phone } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
+import { AutocompleteCompanyInput } from "@/components/atomic-crm/companies/AutocompleteCompanyInput";
 import { getPersonShowPath } from "@/app/routing";
 import type { Contact, Deal } from "@/components/atomic-crm/types";
 import {
@@ -254,12 +255,9 @@ export const LbsProjectClientFields = ({
 
       {!isCreateVariant ? (
         <ReferenceInput source="company_id" reference="companies">
-          <AutocompleteInput
+          <AutocompleteCompanyInput
             label="Account"
-            optionText="name"
-            helperText={false}
             placeholder="Search company"
-            filterToQuery={(searchText) => ({ q: searchText })}
           />
         </ReferenceInput>
       ) : null}

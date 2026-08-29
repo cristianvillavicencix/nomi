@@ -24,6 +24,7 @@ type StandaloneSubscriptionEditPageProps = {
 };
 
 export const StandaloneSubscriptionEditPage = ({
+  embedded = false,
   subscriptionId = "",
 }: StandaloneSubscriptionEditPageProps) => {
   const [searchParams] = useSearchParams();
@@ -42,6 +43,14 @@ export const StandaloneSubscriptionEditPage = ({
 
   useSubscriptionStripeSync(subscription);
 
+  // Embedded: parent workspace owns scroll (avoid nested overflow trap).
+  const shellClass = embedded
+    ? "flex flex-col"
+    : "flex min-h-0 flex-1 flex-col";
+  const bodyClass = embedded
+    ? "px-3 py-4 md:px-4"
+    : "min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 md:px-4";
+
   if (isPending || !subscription) {
     return (
       <div className="flex flex-1 items-center justify-center p-8 text-muted-foreground">
@@ -54,7 +63,7 @@ export const StandaloneSubscriptionEditPage = ({
   const initialPaymentMode = resolveSubscriptionPaymentMode(searchParams);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className={shellClass}>
       <div className="shrink-0 border-b bg-background px-3 py-2.5 md:px-4">
         <div className="flex flex-col gap-3">
           <SubscriptionDetailHeader subscription={subscription} />
@@ -69,7 +78,7 @@ export const StandaloneSubscriptionEditPage = ({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 md:px-4">
+      <div className={bodyClass}>
         {subview === "overview" ? (
           <SubscriptionOverviewTab subscription={subscription} />
         ) : null}

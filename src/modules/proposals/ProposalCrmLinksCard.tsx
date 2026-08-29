@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useGetList, useGetOne } from "ra-core";
 import { useFormContext } from "react-hook-form";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Command, CommandEmpty, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -14,6 +19,7 @@ import {
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { getClientShowPath, getLeadShowPath } from "@/app/routing";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
+import { CompanyCreateDialog } from "@/modules/clients/CompanyCreateDialog";
 import { isLeadLifecycleStatus } from "@/modules/constants/contactStatus";
 import { getLeadStageDef } from "@/modules/leads/leadStages";
 import { ProposalCrmLinkedMeta } from "@/modules/proposals/ProposalCrmLinkedMeta";
@@ -56,6 +62,8 @@ export const ProposalCrmLinksCard = () => {
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createInitialName, setCreateInitialName] = useState("");
 
   const { company, selectedDeal } = useProposalCrmLinks();
 
@@ -114,6 +122,17 @@ export const ProposalCrmLinksCard = () => {
   const finishSelection = () => {
     setSearchOpen(false);
     setSearchQuery("");
+  };
+
+  const openCreateAccount = (initialName = "") => {
+    setCreateInitialName(initialName);
+    setCreateOpen(true);
+    setSearchOpen(false);
+  };
+
+  const selectCreatedCompany = (created: Company) => {
+    applyProposalCompanySelection(created, setValue);
+    finishSelection();
   };
 
   return (
@@ -179,10 +198,11 @@ export const ProposalCrmLinksCard = () => {
                     <CommandEmpty>
                       Type a name, company, phone, or email.
                     </CommandEmpty>
-                  ) : companies.length === 0 && leads.length === 0 ? (
-                    <CommandEmpty>No clients or leads found.</CommandEmpty>
                   ) : (
                     <>
+                      {companies.length === 0 && leads.length === 0 ? (
+                        <CommandEmpty>No clients or leads found.</CommandEmpty>
+                      ) : null}
                       {companies.length > 0 ? (
                         <EntitySearchGroup heading="Accounts">
                           {companies.map((row) => (
@@ -235,6 +255,18 @@ export const ProposalCrmLinksCard = () => {
                           })}
                         </EntitySearchGroup>
                       ) : null}
+                      <EntitySearchGroup heading="Create">
+                        <CommandItem
+                          value={`create-account-${trimmedSearch}`}
+                          onSelect={() => openCreateAccount(trimmedSearch)}
+                          className="gap-2 text-primary"
+                        >
+                          <Plus className="size-4 shrink-0" />
+                          <span className="min-w-0 truncate">
+                            {`Create "${trimmedSearch}" as new account`}
+                          </span>
+                        </CommandItem>
+                      </EntitySearchGroup>
                     </>
                   )}
                 </CommandList>
@@ -246,6 +278,24 @@ export const ProposalCrmLinksCard = () => {
         {hasSelection ? (
           <ProposalCrmLinkedMeta company={company} contact={contact} />
         ) : null}
+
+        <CompanyCreateDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          initialCompanyName={createInitialName}
+          enableDraft={false}
+          onUseExistingCompany={selectCreatedCompany}
+          onCreated={({ company: created, companyId: id, name, sector }) =>
+            selectCreatedCompany(
+              created ??
+                ({
+                  id,
+                  name,
+                  sector: sector ?? "",
+                } as Company),
+            )
+          }
+        />
       </CardContent>
     </Card>
   );

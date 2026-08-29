@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useGetList } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
@@ -22,6 +22,10 @@ import {
   getContactPrimaryPhone,
 } from "@/modules/billing/billingRecipientResolution";
 import { formatContactName } from "@/modules/billing/billingUtils";
+import {
+  CompanyCreateDialog,
+  type CompanyCreateDialogResult,
+} from "@/modules/clients/CompanyCreateDialog";
 
 export type BillToSelection = {
   companyId?: number | null;
@@ -38,6 +42,8 @@ type BillToClientSearchProps = {
   /** When set, shown in the trigger instead of `value.label` (e.g. `Contact | Company`). */
   formattedLabel?: string | null;
   searchPlaceholder?: string;
+  /** Offer “Create new account” when search has no match (default true). */
+  allowCreateAccount?: boolean;
 };
 
 const DEFAULT_SEARCH_PLACEHOLDER = "Company or client name…";
@@ -57,43 +63,54 @@ const companySelected = (
 const contactSelected = (value: BillToSelection | null, contactId: number) =>
   value?.contactId === contactId;
 
+const selectionFromCompany = (company: Company): BillToSelection => ({
+  companyId: Number(company.id),
+  contactId: company.primary_contact_id
+    ? Number(company.primary_contact_id)
+    : null,
+  label: company.name,
+  company,
+  contact: null,
+});
+
 export const BillToClientSearch = ({
   value,
   onChange,
   variant = "default",
   formattedLabel,
   searchPlaceholder = DEFAULT_SEARCH_PLACEHOLDER,
+  allowCreateAccount = true,
 }: BillToClientSearchProps) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createInitialName, setCreateInitialName] = useState("");
 
   const listFilter = useMemo(() => {
     const q = query.trim();
     return q ? { q } : {};
   }, [query]);
 
-  const { data: companies = [] } = useGetList<Company>("companies", {
-    filter: listFilter,
-    pagination: { page: 1, perPage: 15 },
-    sort: { field: "name", order: "ASC" },
-  });
-
-  const { data: contacts = [] } = useGetList<Contact>("contacts", {
-    filter: listFilter,
-    pagination: { page: 1, perPage: 15 },
-    sort: { field: "last_name", order: "ASC" },
-  });
-
-  const selectCompany = async (company: Company) => {
-    onChange({
-      companyId: Number(company.id),
-      contactId: company.primary_contact_id
-        ? Number(company.primary_contact_id)
-        : null,
-      label: company.name,
-      company,
-      contact: null,
+  const { data: companies = [], isFetching: companiesFetching } =
+    useGetList<Company>("companies", {
+      filter: listFilter,
+      pagination: { page: 1, perPage: 15 },
+      sort: { field: "name", order: "ASC" },
     });
+
+  const { data: contacts = [], isFetching: contactsFetching } =
+    useGetList<Contact>("contacts", {
+      filter: listFilter,
+      pagination: { page: 1, perPage: 15 },
+      sort: { field: "last_name", order: "ASC" },
+    });
+
+  const isFetching = companiesFetching || contactsFetching;
+  const trimmedQuery = query.trim();
+  const hasResults = companies.length > 0 || contacts.length > 0;
+
+  const selectCompany = (company: Company) => {
+    onChange(selectionFromCompany(company));
     setOpen(false);
   };
 
@@ -109,120 +126,197 @@ export const BillToClientSearch = ({
     setOpen(false);
   };
 
+  const openCreateAccount = (initialName = "") => {
+    setCreateInitialName(initialName);
+    setCreateOpen(true);
+    setOpen(false);
+  };
+
+  const handleAccountCreated = (result: CompanyCreateDialogResult) => {
+    const company =
+      result.company ??
+      ({
+        id: result.companyId,
+        name: result.name,
+        sector: result.sector ?? "",
+        primary_contact_id: result.contactId ?? null,
+      } as Company);
+    onChange({
+      companyId: Number(result.companyId),
+      contactId: result.contactId != null ? Number(result.contactId) : null,
+      label: result.name,
+      company,
+      contact: null,
+    });
+  };
+
   const triggerLabel =
     formattedLabel?.trim() || value?.label || searchPlaceholder;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        {variant === "inline" ? (
-          <button
-            type="button"
-            role="combobox"
-            aria-expanded={open}
-            className="flex w-full cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-left font-normal shadow-none outline-none focus-visible:ring-0"
-          >
-            <span
-              className={cn(
-                "min-w-0 truncate text-left",
-                value
-                  ? "font-medium text-primary hover:underline"
-                  : "text-muted-foreground",
-              )}
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          {variant === "inline" ? (
+            <button
+              type="button"
+              role="combobox"
+              aria-expanded={open}
+              className="flex w-full cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-left font-normal shadow-none outline-none focus-visible:ring-0"
             >
-              {triggerLabel}
-            </span>
-            {!value ? (
-              <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
-            ) : null}
-          </button>
-        ) : (
-          <Button
-            type="button"
-            variant="secondary"
-            role="combobox"
-            aria-expanded={open}
-            className="h-auto min-h-10 w-full justify-between py-2 font-normal"
-          >
-            <span className="truncate text-left">{triggerLabel}</span>
-            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-          </Button>
-        )}
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] min-w-[min(100vw-2rem,28rem)] p-0"
-        align="start"
-      >
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder={searchPlaceholder}
-            value={query}
-            onValueChange={setQuery}
-          />
-          <CommandList>
-            <CommandEmpty>No clients found.</CommandEmpty>
-            {companies.length > 0 ? (
-              <CommandGroup heading="Accounts">
-                {companies.map((company) => {
-                  const selected = companySelected(value, Number(company.id));
-                  const phone = getCompanyPrimaryContactPhone(company);
-                  return (
-                    <CommandItem
-                      key={`company-${company.id}`}
-                      value={`company-${company.id}`}
-                      onSelect={() => selectCompany(company)}
-                      className="items-start gap-2"
-                    >
-                      {selected ? (
-                        <Check className="mt-0.5 size-4 shrink-0" />
-                      ) : null}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{company.name}</p>
-                        {phone ? (
-                          <p className="truncate text-xs text-muted-foreground">
-                            {phone}
-                          </p>
-                        ) : null}
-                      </div>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            ) : null}
-            {contacts.length > 0 ? (
-              <CommandGroup heading="Contacts">
-                {contacts.map((contact) => {
-                  const selected = contactSelected(value, Number(contact.id));
-                  const phone = getContactPrimaryPhone(contact);
-                  const companyName = contact.company_name?.trim();
-                  return (
-                    <CommandItem
-                      key={`contact-${contact.id}`}
-                      value={`contact-${contact.id}`}
-                      onSelect={() => selectContact(contact)}
-                      className="items-start gap-2"
-                    >
-                      {selected ? (
-                        <Check className="mt-0.5 size-4 shrink-0" />
-                      ) : null}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">
-                          {contactDisplayName(contact)}
-                        </p>
-                        {companyName || phone ? (
-                          <p className="truncate text-xs text-muted-foreground">
-                            {[companyName, phone].filter(Boolean).join(" · ")}
-                          </p>
-                        ) : null}
-                      </div>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            ) : null}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+              <span
+                className={cn(
+                  "min-w-0 truncate text-left",
+                  value
+                    ? "font-medium text-primary hover:underline"
+                    : "text-muted-foreground",
+                )}
+              >
+                {triggerLabel}
+              </span>
+              {!value ? (
+                <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
+              ) : null}
+            </button>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              role="combobox"
+              aria-expanded={open}
+              className="h-auto min-h-10 w-full justify-between py-2 font-normal"
+            >
+              <span className="truncate text-left">{triggerLabel}</span>
+              <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+            </Button>
+          )}
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] min-w-[min(100vw-2rem,28rem)] p-0"
+          align="start"
+        >
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder={searchPlaceholder}
+              value={query}
+              onValueChange={setQuery}
+            />
+            <CommandList>
+              {isFetching ? (
+                <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  Searching…
+                </div>
+              ) : (
+                <>
+                  {!hasResults ? (
+                    <CommandEmpty>
+                      {trimmedQuery
+                        ? "No clients found."
+                        : "Type a company or client name."}
+                    </CommandEmpty>
+                  ) : null}
+                  {companies.length > 0 ? (
+                    <CommandGroup heading="Accounts">
+                      {companies.map((company) => {
+                        const selected = companySelected(
+                          value,
+                          Number(company.id),
+                        );
+                        const phone = getCompanyPrimaryContactPhone(company);
+                        return (
+                          <CommandItem
+                            key={`company-${company.id}`}
+                            value={`company-${company.id}`}
+                            onSelect={() => selectCompany(company)}
+                            className="items-start gap-2"
+                          >
+                            {selected ? (
+                              <Check className="mt-0.5 size-4 shrink-0" />
+                            ) : null}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium">
+                                {company.name}
+                              </p>
+                              {phone ? (
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {phone}
+                                </p>
+                              ) : null}
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  ) : null}
+                  {contacts.length > 0 ? (
+                    <CommandGroup heading="Contacts">
+                      {contacts.map((contact) => {
+                        const selected = contactSelected(
+                          value,
+                          Number(contact.id),
+                        );
+                        const phone = getContactPrimaryPhone(contact);
+                        const companyName = contact.company_name?.trim();
+                        return (
+                          <CommandItem
+                            key={`contact-${contact.id}`}
+                            value={`contact-${contact.id}`}
+                            onSelect={() => selectContact(contact)}
+                            className="items-start gap-2"
+                          >
+                            {selected ? (
+                              <Check className="mt-0.5 size-4 shrink-0" />
+                            ) : null}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium">
+                                {contactDisplayName(contact)}
+                              </p>
+                              {companyName || phone ? (
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {[companyName, phone]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </p>
+                              ) : null}
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  ) : null}
+                  {allowCreateAccount ? (
+                    <CommandGroup>
+                      <CommandItem
+                        value={`create-account-${trimmedQuery || "new"}`}
+                        onSelect={() => openCreateAccount(trimmedQuery)}
+                        className="gap-2 text-primary"
+                      >
+                        <Plus className="size-4 shrink-0" />
+                        <span className="min-w-0 truncate">
+                          {trimmedQuery
+                            ? `Create "${trimmedQuery}" as new account`
+                            : "Create new account"}
+                        </span>
+                      </CommandItem>
+                    </CommandGroup>
+                  ) : null}
+                </>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
+      {allowCreateAccount ? (
+        <CompanyCreateDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          initialCompanyName={createInitialName}
+          enableDraft={false}
+          onUseExistingCompany={selectCompany}
+          onCreated={handleAccountCreated}
+        />
+      ) : null}
+    </>
   );
 };

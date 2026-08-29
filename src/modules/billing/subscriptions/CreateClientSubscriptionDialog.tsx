@@ -19,7 +19,7 @@ export const CreateClientSubscriptionDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
       <DialogContent
-        className="flex max-h-[92vh] w-[min(96vw,76rem)] max-w-none flex-col overflow-hidden p-0 sm:max-w-[76rem]"
+        className="flex max-h-[92vh] w-[min(96vw,76rem)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:max-w-[76rem]"
         onPointerDownOutside={(event) => {
           const target = event.target as HTMLElement | null;
           if (target?.closest("[data-invoice-item-suggestions]")) {
@@ -49,12 +49,15 @@ export const CreateClientSubscriptionDialog = ({
         </div>
 
         {open ? (
-          <SubscriptionFormEditor
-            key="new-subscription"
-            mode="create"
-            onSaved={() => onOpenChange(false)}
-            onCancel={() => onOpenChange(false)}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <SubscriptionFormEditor
+              key="new-subscription"
+              mode="create"
+              scrollContainer="parent"
+              onSaved={() => onOpenChange(false)}
+              onCancel={() => onOpenChange(false)}
+            />
+          </div>
         ) : null}
       </DialogContent>
     </Dialog>

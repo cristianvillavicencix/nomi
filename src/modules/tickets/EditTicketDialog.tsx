@@ -12,11 +12,11 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, X } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
+import { AutocompleteCompanyInput } from "@/components/atomic-crm/companies/AutocompleteCompanyInput";
 import {
   FormGuardProvider,
   useGuardedDialogClose,
@@ -566,11 +566,7 @@ const EditTicketDialogBody = ({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <ReferenceInput source="company_id" reference="companies">
-              <AutocompleteInput
-                optionText="name"
-                label="Account"
-                helperText={false}
-              />
+              <AutocompleteCompanyInput label="Account" />
             </ReferenceInput>
             <SelectInput
               source="contact_id"

@@ -6,6 +6,7 @@ import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { IconButton } from "@/components/ui/icon-button";
+import { AutocompleteCompanyInput } from "@/components/atomic-crm/companies/AutocompleteCompanyInput";
 import { QuickMeetingContactCreateDialog } from "@/modules/meetings/QuickMeetingContactCreateDialog";
 import {
   useWorkCreateAccountLinkSync,
@@ -82,12 +83,9 @@ export const WorkCreateAccountLinkFields = ({
 
   const accountField = (
     <ReferenceInput source="company_id" reference="companies">
-      <AutocompleteInput
+      <AutocompleteCompanyInput
         label={hideFieldLabels ? false : "Account"}
-        optionText="name"
-        helperText={false}
         emptyText="None"
-        filterToQuery={(searchText) => ({ q: searchText })}
       />
     </ReferenceInput>
   );
