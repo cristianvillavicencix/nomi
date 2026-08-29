@@ -129,7 +129,7 @@ export const useClientSavedPaymentMethod = (billTo: BillToSelection | null) => {
     return { "company_id@eq": billTo.companyId };
   }, [billTo]);
 
-  const { data: invoices = [], isPending: invoicesPending } =
+  const { data: invoices = [], isPending: invoicesPending, refetch: refetchInvoices } =
     useGetList<ClientInvoice>(
       "client_invoices",
       {
@@ -140,7 +140,7 @@ export const useClientSavedPaymentMethod = (billTo: BillToSelection | null) => {
       { enabled: Boolean(clientFilter) },
     );
 
-  const { data: contracts = [], isPending: contractsPending } =
+  const { data: contracts = [], isPending: contractsPending, refetch: refetchContracts } =
     useGetList<Contract>(
       "contracts",
       {
@@ -151,8 +151,11 @@ export const useClientSavedPaymentMethod = (billTo: BillToSelection | null) => {
       { enabled: Boolean(clientFilter) },
     );
 
-  const { data: subscriptions = [], isPending: subscriptionsPending } =
-    useGetList<ClientSubscription>(
+  const {
+    data: subscriptions = [],
+    isPending: subscriptionsPending,
+    refetch: refetchSubscriptions,
+  } = useGetList<ClientSubscription>(
       "client_subscriptions",
       {
         filter: clientFilter ?? {},
@@ -172,9 +175,18 @@ export const useClientSavedPaymentMethod = (billTo: BillToSelection | null) => {
     [invoices, contracts, subscriptions],
   );
 
+  const refetch = async () => {
+    await Promise.all([
+      refetchInvoices(),
+      refetchContracts(),
+      refetchSubscriptions(),
+    ]);
+  };
+
   return {
     isPending: invoicesPending || contractsPending || subscriptionsPending,
     savedCard,
     allSavedCards,
+    refetch,
   };
 };

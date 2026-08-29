@@ -37,7 +37,7 @@ import { EditTicketDialog } from "@/modules/tickets/EditTicketDialog";
 import { TicketDetailPanel } from "@/modules/tickets/TicketDetailPanel";
 import { TicketEmptyDetailState } from "@/modules/tickets/TicketEmptyDetailState";
 import { TicketInboxBulkBar } from "@/modules/tickets/TicketInboxBulkBar";
-import { TicketListItem } from "@/modules/tickets/TicketListItem";
+import { TicketKanbanCard } from "@/modules/tickets/TicketKanbanCard";
 import { matchesTicketSearch } from "@/modules/tickets/ticketInboxQueue";
 import {
   type TicketStatusFilterId,
@@ -49,8 +49,6 @@ import {
   ticketShowPath,
 } from "@/modules/tickets/ticketStatusWorkflow";
 import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
-import { useTicketListAttachments } from "@/modules/tickets/useTicketListAttachments";
-import { useTicketListMessagePreviews } from "@/modules/tickets/useTicketListMessagePreviews";
 import { useTicketsInboxRealtime } from "@/modules/tickets/useTicketsInboxRealtime";
 import { useTicketInboxReads } from "@/modules/tickets/useTicketInboxReads";
 import { useMarkTicketNotificationsReadOnVisit } from "@/modules/notifications/useMarkTicketNotificationsReadOnVisit";
@@ -224,16 +222,6 @@ const TicketsInboxLayout = ({
     ],
     [listSourceTickets],
   );
-  const attachmentMap = useTicketListAttachments(ticketIds);
-  const messagePreviewMap = useTicketListMessagePreviews(ticketIds);
-  const hasAttachmentsMap = useMemo(() => {
-    const map = new Map<string, boolean>();
-    for (const [ticketId, files] of attachmentMap.entries()) {
-      map.set(ticketId, files.length > 0);
-    }
-    return map;
-  }, [attachmentMap]);
-
   const { data: companies = [] } = useGetList<Company>("companies", {
     pagination: { page: 1, perPage: Math.max(companyIds.length, 1) },
     filter:
@@ -451,10 +439,10 @@ const TicketsInboxLayout = ({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="grid h-full min-h-0 flex-1 overflow-hidden lg:grid-cols-[420px_minmax(0,1fr)]">
+      <div className="grid h-full min-h-0 min-w-0 flex-1 overflow-hidden lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
         <div
           className={cn(
-            "flex h-full min-h-0 flex-col overflow-hidden",
+            "flex h-full min-h-0 min-w-0 flex-col overflow-hidden",
             !isMobile && "border-r",
             !isMobile && selectedId ? "hidden lg:flex" : "flex",
             isMobile && selectedId && "hidden",
@@ -500,49 +488,75 @@ const TicketsInboxLayout = ({
                     </Label>
                   </div>
                 ) : null}
-                <ul className={cn(isMobile && "glass-grouped")}>
+                <ul
+                  className={cn(
+                    "space-y-1.5 p-2",
+                    isMobile && "glass-grouped space-y-0 p-0",
+                  )}
+                >
                   {visibleTickets.map((ticket) => {
                     const ticketId = String(ticket.id);
+                    const selected = String(selectedId) === ticketId;
+                    const bulkSelected = selectedTicketIds.includes(ticketId);
                     return (
-                      <TicketListItem
-                        key={ticket.id}
-                        ticket={ticket}
-                        selected={String(selectedId) === ticketId}
-                        bulkSelected={selectedTicketIds.includes(ticketId)}
-                        selectionEnabled={canManage && !isMobile}
-                        canManage={canManage}
-                        company={
-                          ticket.company_id
-                            ? companyById.get(String(ticket.company_id))
-                            : null
-                        }
-                        contact={
-                          ticket.contact_id
-                            ? contactById.get(String(ticket.contact_id))
-                            : null
-                        }
-                        assignee={
-                          ticket.assignee_id
-                            ? memberById.get(String(ticket.assignee_id))
-                            : null
-                        }
-                        members={members}
-                        hasAttachments={
-                          hasAttachmentsMap.get(ticketId) ?? false
-                        }
-                        invoices={invoicesByTicketId.get(ticketId) ?? []}
-                        messagePreview={messagePreviewMap.get(ticketId)}
-                        onSelect={() =>
-                          navigate(ticketShowPath(ticket.id, statusFilter))
-                        }
-                        onToggleBulkSelect={(checked) =>
-                          toggleTicketSelection(ticketId, checked)
-                        }
-                        onDelete={setTicketToDelete}
-                        onEdit={setTicketToEdit}
-                        onUpdated={refresh}
-                        lastReadAt={readMap.get(ticketId) ?? null}
-                      />
+                      <li key={ticket.id}>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() =>
+                            navigate(ticketShowPath(ticket.id, statusFilter))
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              navigate(
+                                ticketShowPath(ticket.id, statusFilter),
+                              );
+                            }
+                          }}
+                          className={cn(
+                            "rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            selected && "ring-2 ring-primary/40",
+                          )}
+                        >
+                          <TicketKanbanCard
+                            ticket={ticket}
+                            company={
+                              ticket.company_id
+                                ? companyById.get(String(ticket.company_id))
+                                : null
+                            }
+                            contact={
+                              ticket.contact_id
+                                ? contactById.get(String(ticket.contact_id))
+                                : null
+                            }
+                            assignee={
+                              (ticket.assignee_id ??
+                                ticket.organization_member_id)
+                                ? memberById.get(
+                                    String(
+                                      ticket.assignee_id ??
+                                        ticket.organization_member_id,
+                                    ),
+                                  )
+                                : null
+                            }
+                            members={members}
+                            invoices={invoicesByTicketId.get(ticketId) ?? []}
+                            lastReadAt={readMap.get(ticketId) ?? null}
+                            bulkSelected={bulkSelected}
+                            selectionEnabled={canManage && !isMobile}
+                            canManage={canManage}
+                            onToggleBulkSelect={(checked) =>
+                              toggleTicketSelection(ticketId, checked)
+                            }
+                            onDelete={setTicketToDelete}
+                            onEdit={setTicketToEdit}
+                            onUpdated={refresh}
+                          />
+                        </div>
+                      </li>
                     );
                   })}
                 </ul>
@@ -553,7 +567,7 @@ const TicketsInboxLayout = ({
 
         <div
           className={cn(
-            "flex h-full min-h-0 flex-col overflow-hidden",
+            "flex h-full min-h-0 min-w-0 flex-col overflow-hidden",
             isMobile && !selectedId && "hidden",
             !isMobile && !selectedId && "hidden lg:flex",
           )}

@@ -16,7 +16,7 @@ import {
   applyStripeSubscriptionSnapshot,
   buildSubscriptionMetadata,
   normalizeSubscriptionLineItems,
-  createStripeSubscriptionCheckout,
+  createStripeSubscriptionSetupCheckout,
   createStripeSubscriptionWithCard,
   deliverSubscriptionSetupLink,
   resolveClientStripePaymentMethod,
@@ -326,17 +326,11 @@ Deno.serve(
             })
             .eq("id", subscription.id);
         } else {
-          const session = await createStripeSubscriptionCheckout(stripe, {
+          const session = await createStripeSubscriptionSetupCheckout(stripe, {
             customerId: customer.id,
-            name,
-            amount: computedAmount,
-            currency: subscription.currency,
-            billingInterval,
             successUrl: `${baseUrl}/billing?${returnQuery}&setup=success`,
             cancelUrl: `${baseUrl}/billing?${returnQuery}&setup=cancel`,
             metadata,
-            lineItems: normalizedLines,
-            ...scheduleParams,
           });
 
           checkoutUrl = session.url ?? null;
@@ -346,6 +340,7 @@ Deno.serve(
               stripe_customer_id: customer.id,
               stripe_checkout_session_id: session.id,
               setup_checkout_url: checkoutUrl,
+              status: "pending_setup",
             })
             .eq("id", subscription.id);
 

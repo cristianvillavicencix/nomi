@@ -11,7 +11,6 @@ import type { Ticket } from "@/modules/types";
 import { TicketBillingSidePanel } from "@/modules/tickets/TicketBillingSidePanel";
 import { TicketClientSummaryCard } from "@/modules/tickets/TicketClientSummaryCard";
 import { TicketFilesSidePanel } from "@/modules/tickets/TicketFilesSidePanel";
-import { TicketInfoProperties } from "@/modules/tickets/TicketInfoProperties";
 import { TicketRelatedTicketsList } from "@/modules/tickets/TicketRelatedTicketsList";
 import {
   TICKET_OPEN_BILLING_EVENT,
@@ -167,7 +166,6 @@ const TicketContextBody = ({
 
   return (
     <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
-      <TicketInfoProperties ticket={ticket} />
       <TicketClientSummaryCard
         ticket={ticket}
         company={company}

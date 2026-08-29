@@ -4,8 +4,14 @@ import {
   Droppable,
   type OnDragEndResponder,
 } from "@hello-pangea/dnd";
-import { useGetList, useListContext } from "ra-core";
+import {
+  useDelete,
+  useGetList,
+  useListContext,
+  useNotify,
+} from "ra-core";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import { useKanbanEdgeAutoScroll } from "@/hooks/useKanbanEdgeAutoScroll";
 import { cn } from "@/lib/utils";
@@ -15,6 +21,16 @@ import type {
   OrganizationMember,
   Ticket,
 } from "@/modules/types";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { EditTicketDialog } from "@/modules/tickets/EditTicketDialog";
 import { TicketKanbanCard } from "@/modules/tickets/TicketKanbanCard";
 import {
   emptyTicketKanbanBuckets,
@@ -45,6 +61,7 @@ const ticketKanbanRowKey = (ticket: Ticket) =>
     ticket.subject ?? "",
     ticket.assignee_id ?? "",
     ticket.priority ?? "",
+    (ticket.service_types ?? []).join(","),
   ].join(":");
 
 const ticketsKanbanSyncKey = (tickets: Ticket[]) =>
@@ -85,6 +102,12 @@ export const TicketsKanban = ({
   selectionEnabled?: boolean;
 }) => {
   const { data = [], isPending, refetch } = useListContext<Ticket>();
+  const canManage = useMemberCapability("support.tickets.manage");
+  const notify = useNotify();
+  const [deleteOne] = useDelete();
+  const [ticketToEdit, setTicketToEdit] = useState<Ticket | null>(null);
+  const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
   const [ticketsByStatus, setTicketsByStatus] = useState<TicketsByStatus>(
     emptyTicketKanbanBuckets,
   );
@@ -152,21 +175,6 @@ export const TicketsKanban = ({
       ],
     [allTickets],
   );
-  const assigneeIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          allTickets
-            .map(
-              (ticket) =>
-                ticket.assignee_id ?? ticket.organization_member_id ?? null,
-            )
-            .filter((id): id is number => id != null)
-            .map(Number),
-        ),
-      ],
-    [allTickets],
-  );
   const linkedInvoiceIds = useMemo(
     () => [
       ...new Set(
@@ -198,12 +206,9 @@ export const TicketsKanban = ({
   const { data: members = [] } = useGetList<OrganizationMember>(
     "organization_members",
     {
-      pagination: { page: 1, perPage: Math.max(assigneeIds.length, 1) },
-      filter: assigneeIds.length
-        ? { "id@in": `(${assigneeIds.join(",")})` }
-        : {},
+      pagination: { page: 1, perPage: 200 },
+      sort: { field: "first_name", order: "ASC" },
     },
-    { enabled: assigneeIds.length > 0 },
   );
   const { data: ticketInvoices = [] } = useGetList<ClientInvoice>(
     "client_invoices",
@@ -474,6 +479,7 @@ export const TicketsKanban = ({
                                         ? membersById.get(Number(assigneeId))
                                         : null
                                     }
+                                    members={members}
                                     invoices={
                                       invoicesByTicketId.get(ticketId) ?? []
                                     }
@@ -481,12 +487,20 @@ export const TicketsKanban = ({
                                     dragging={dragSnapshot.isDragging}
                                     bulkSelected={bulkSelected}
                                     selectionEnabled={selectionEnabled}
+                                    canManage={canManage}
                                     onToggleBulkSelect={(checked) =>
                                       onToggleTicketSelection?.(
                                         ticketId,
                                         checked,
                                       )
                                     }
+                                    onEdit={
+                                      canManage ? setTicketToEdit : undefined
+                                    }
+                                    onDelete={
+                                      canManage ? setTicketToDelete : undefined
+                                    }
+                                    onUpdated={() => void refetch()}
                                   />
                                 </div>
                               )}
@@ -509,6 +523,68 @@ export const TicketsKanban = ({
         </div>
       </DragDropContext>
       {statusChangeDialog}
+      <EditTicketDialog
+        ticket={ticketToEdit}
+        open={ticketToEdit != null}
+        onOpenChange={(open) => {
+          if (!open) setTicketToEdit(null);
+        }}
+        onSaved={() => void refetch()}
+      />
+      <Dialog
+        open={ticketToDelete != null}
+        onOpenChange={(open) => {
+          if (!open) setTicketToDelete(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Delete ticket #{ticketToDelete?.id ?? ""}?
+            </DialogTitle>
+            <DialogDescription>
+              This permanently deletes the ticket and its messages. This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={deletePending}
+              onClick={() => setTicketToDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deletePending}
+              onClick={() => {
+                if (!ticketToDelete) return;
+                setDeletePending(true);
+                void (async () => {
+                  try {
+                    await deleteOne("tickets", {
+                      id: ticketToDelete.id,
+                      previousData: ticketToDelete,
+                    });
+                    notify("Ticket deleted", { type: "success" });
+                    setTicketToDelete(null);
+                    void refetch();
+                  } catch {
+                    notify("Could not delete ticket", { type: "error" });
+                  } finally {
+                    setDeletePending(false);
+                  }
+                })();
+              }}
+            >
+              {deletePending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

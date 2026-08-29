@@ -1,8 +1,5 @@
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import {
-  formatBillingDate,
-  isClientInvoiceOverdue,
-} from "@/modules/billing/billingDisplayUtils";
+import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
 import {
   formatBillToNameLine,
   resolveBillToDisplay,
@@ -16,6 +13,7 @@ import {
   STRIPE_TRANSFER_FEE_LABEL,
   type InvoiceLineDraft,
 } from "@/modules/billing/invoiceLineUtils";
+import { resolveInvoiceStatusRibbon } from "@/modules/billing/invoiceStatusRibbon";
 import { cn } from "@/lib/utils";
 import {
   invoiceDocumentArticleClass,
@@ -91,23 +89,14 @@ export const InvoiceDocumentPreview = ({
   const billToDisplay = resolveBillToDisplay(company, contact);
   const billToNameLine = formatBillToNameLine(company, contact);
 
-  const statusLabel = isClientInvoiceOverdue({ status, due_date: dueDate })
-    ? "Overdue"
-    : status === "sent"
-      ? "Sent"
-      : status === "paid"
-        ? "Paid"
-        : status === "draft"
-          ? "Draft"
-          : status.replace(/_/g, " ");
-
-  const statusRibbon = isClientInvoiceOverdue({ status, due_date: dueDate })
-    ? { label: "Overdue", className: "bg-red-600" }
-    : status === "sent"
-      ? { label: "Sent", className: "bg-blue-600" }
-      : status === "paid"
-        ? { label: "Paid", className: "bg-emerald-600" }
-        : null;
+  const statusRibbon = resolveInvoiceStatusRibbon({
+    status,
+    due_date: dueDate,
+  });
+  const statusLabel = statusRibbon?.label
+    ?? (status === "draft"
+      ? "Draft"
+      : status.replace(/_/g, " "));
 
   return (
     <div className={cn(invoiceDocumentOuterClass, className)}>

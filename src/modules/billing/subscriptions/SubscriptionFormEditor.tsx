@@ -163,23 +163,37 @@ export const SubscriptionFormEditor = forwardRef<
     string | null
   >(null);
   const [hydrated, setHydrated] = useState(mode === "create");
+  /** After request_setup create: stay open until client card is saved, then activate. */
+  const [waitingForCard, setWaitingForCard] = useState(false);
+  const [pendingSubscriptionId, setPendingSubscriptionId] = useState<
+    number | null
+  >(null);
+  const cardArrivedNotifiedRef = useRef(false);
 
   const isCanceled = subscription?.status === "canceled";
-  const isPendingSetup = subscription?.status === "pending_setup";
+  const isPendingSetup =
+    subscription?.status === "pending_setup" ||
+    (mode === "create" && waitingForCard);
   const isActiveLike =
     subscription?.status === "active" ||
     subscription?.status === "paused" ||
     subscription?.status === "past_due" ||
     subscription?.status === "trialing";
   const paymentSectionLocked =
-    readOnly || isCanceled || (isActiveLike && Boolean(subscription?.stripe_subscription_id));
+    readOnly ||
+    isCanceled ||
+    (isActiveLike && Boolean(subscription?.stripe_subscription_id));
   const formDisabled = readOnly || isCanceled;
+  const fieldsLocked = formDisabled || waitingForCard;
 
   const {
     savedCard,
     allSavedCards,
     isPending: savedCardPending,
+    refetch: refetchSavedCards,
   } = useClientSavedPaymentMethod(billTo);
+
+  const clientCardReady = waitingForCard && allSavedCards.length > 0;
 
   const cardOnFile = savedCard
     ? { brand: savedCard.brand, last4: savedCard.last4 }
@@ -326,6 +340,33 @@ export const SubscriptionFormEditor = forwardRef<
     });
   }, [allSavedCards]);
 
+  // While waiting for client card: poll saved cards and auto-select when one appears.
+  useEffect(() => {
+    if (!waitingForCard) return;
+    const tick = () => {
+      void refetchSavedCards();
+    };
+    tick();
+    const id = window.setInterval(tick, 5000);
+    return () => window.clearInterval(id);
+  }, [waitingForCard, refetchSavedCards]);
+
+  useEffect(() => {
+    if (!waitingForCard) {
+      cardArrivedNotifiedRef.current = false;
+      return;
+    }
+    if (allSavedCards.length === 0) return;
+    setPaymentMode("saved_card");
+    setSelectedSavedCardValue(savedCardOptionValue(allSavedCards[0]));
+    if (!cardArrivedNotifiedRef.current) {
+      cardArrivedNotifiedRef.current = true;
+      notify("Client card saved — review and activate the subscription", {
+        type: "info",
+      });
+    }
+  }, [waitingForCard, allSavedCards, notify]);
+
   const selectedSavedPaymentMethodId = useMemo(
     () =>
       resolveSavedCardPaymentMethodId(allSavedCards, selectedSavedCardValue),
@@ -334,6 +375,26 @@ export const SubscriptionFormEditor = forwardRef<
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      // Activate a pending subscription created via request_setup wait flow.
+      if (
+        mode === "create" &&
+        waitingForCard &&
+        pendingSubscriptionId != null &&
+        paymentMode === "saved_card"
+      ) {
+        const paymentMethodId = selectedSavedPaymentMethodId;
+        if (!paymentMethodId) {
+          throw new Error("Select a saved card to activate");
+        }
+        return dataProvider.manageClientSubscription({
+          subscriptionId: pendingSubscriptionId,
+          action: "apply_payment",
+          payment_mode: "saved_card",
+          payment_method_id: paymentMethodId,
+          base_url: resolvePublicAppBaseUrl(),
+        });
+      }
+
       if (mode === "create") {
         let paymentMethodId: string | null = null;
         if (paymentMode === "staff_card") {
@@ -418,9 +479,39 @@ export const SubscriptionFormEditor = forwardRef<
 
       return updateResult;
     },
-    onSuccess: (result) => {
+    onSuccess: (result: Record<string, unknown>) => {
       refresh();
+
+      const createdSub = result.subscription as
+        | { id?: number; status?: string }
+        | undefined;
+      const createdId =
+        createdSub?.id != null
+          ? Number(createdSub.id)
+          : pendingSubscriptionId;
+
+      if (
+        mode === "create" &&
+        paymentMode === "request_setup" &&
+        !result.used_saved_card &&
+        !result.used_staff_card &&
+        !waitingForCard
+      ) {
+        setWaitingForCard(true);
+        if (createdId != null) setPendingSubscriptionId(createdId);
+        notify(
+          sendEmail || sendSms
+            ? "Setup link sent — waiting for the client to add a card"
+            : "Subscription created — waiting for the client to add a card",
+          { type: "success" },
+        );
+        void refetchSavedCards();
+        return;
+      }
+
       if (mode === "create") {
+        setWaitingForCard(false);
+        setPendingSubscriptionId(null);
         setBillTo(null);
         setLines([emptySubscriptionLine()]);
         setReferenceNumber("");
@@ -435,8 +526,10 @@ export const SubscriptionFormEditor = forwardRef<
       }
       onSaved?.(result);
       if (mode === "create") {
-        if (result.used_saved_card || result.used_staff_card) {
-          notify("Subscription activated with card on file", { type: "success" });
+        if (result.used_saved_card || result.used_staff_card || waitingForCard) {
+          notify("Subscription activated with card on file", {
+            type: "success",
+          });
         } else if (sendEmail || sendSms) {
           notify("Subscription created — setup link sent to client", {
             type: "success",
@@ -475,19 +568,23 @@ export const SubscriptionFormEditor = forwardRef<
     subscriptionName.length > 0 &&
     Boolean(identity) &&
     (duration !== "custom" || Boolean(customEndDate)) &&
-    (mode === "edit" && isActiveLike
-      ? true
-      : paymentMode === "saved_card"
-        ? Boolean(
-            selectedSavedPaymentMethodId ||
-              savedCard?.stripePaymentMethodId ||
-              subscription?.payment_method_last4,
-          )
-        : paymentMode === "staff_card"
-          ? Boolean(recipientEmail)
-          : paymentMode === "request_setup"
+    (waitingForCard
+      ? clientCardReady &&
+        paymentMode === "saved_card" &&
+        Boolean(selectedSavedPaymentMethodId)
+      : mode === "edit" && isActiveLike
+        ? true
+        : paymentMode === "saved_card"
+          ? Boolean(
+              selectedSavedPaymentMethodId ||
+                savedCard?.stripePaymentMethodId ||
+                subscription?.payment_method_last4,
+            )
+          : paymentMode === "staff_card"
             ? Boolean(recipientEmail)
-            : false);
+            : paymentMode === "request_setup"
+              ? Boolean(recipientEmail)
+              : false);
 
   useEffect(() => {
     if (mode !== "edit" || !subscription || billTo) return;
@@ -527,7 +624,7 @@ export const SubscriptionFormEditor = forwardRef<
     cn(
       "flex w-full min-w-0 cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/40",
       paymentMode === value && "border-primary bg-primary/5 ring-1 ring-primary/20",
-      formDisabled && "pointer-events-none opacity-60",
+      fieldsLocked && "pointer-events-none opacity-60",
     );
 
   return (
@@ -545,7 +642,7 @@ export const SubscriptionFormEditor = forwardRef<
         <div
           className={cn(
             "space-y-2",
-            (formDisabled || mode === "edit") && "pointer-events-none opacity-60",
+            (fieldsLocked || mode === "edit") && "pointer-events-none opacity-60",
           )}
         >
           <Label>Client</Label>
@@ -557,14 +654,14 @@ export const SubscriptionFormEditor = forwardRef<
         </div>
 
         <div
-          className={cn("space-y-2", formDisabled && "pointer-events-none opacity-60")}
+          className={cn("space-y-2", fieldsLocked && "pointer-events-none opacity-60")}
         >
           <SubscriptionLineItemsEditor
             lines={lines}
             onChange={setLines}
             billingInterval={billingInterval}
             onBillingIntervalChange={setBillingInterval}
-            disabled={formDisabled}
+            disabled={fieldsLocked}
             currency={subscription?.currency ?? "USD"}
           />
         </div>
@@ -574,7 +671,7 @@ export const SubscriptionFormEditor = forwardRef<
             <Label htmlFor="subscription-interval">Billing interval</Label>
             <Select
               value={billingInterval}
-              disabled={formDisabled}
+              disabled={fieldsLocked}
               onValueChange={(value) =>
                 setBillingInterval(value as "weekly" | "monthly" | "yearly")
               }
@@ -604,7 +701,7 @@ export const SubscriptionFormEditor = forwardRef<
               <Label htmlFor="subscription-reference">Internal reference</Label>
               <Input
                 id="subscription-reference"
-                disabled={formDisabled}
+                disabled={fieldsLocked}
                 value={referenceNumber}
                 onChange={(event) => setReferenceNumber(event.target.value)}
                 placeholder="Optional internal note"
@@ -615,7 +712,7 @@ export const SubscriptionFormEditor = forwardRef<
             <Label htmlFor="subscription-deal">Associated deal</Label>
             <Select
               value={dealId || "none"}
-              disabled={formDisabled || !dealCompanyId}
+              disabled={fieldsLocked || !dealCompanyId}
               onValueChange={(value) =>
                 setDealId(value === "none" ? "" : value)
               }
@@ -641,7 +738,7 @@ export const SubscriptionFormEditor = forwardRef<
             <Input
               id="subscription-starts"
               type="date"
-              disabled={formDisabled || mode === "edit"}
+              disabled={fieldsLocked || mode === "edit"}
               value={startsAt}
               onChange={(event) => setStartsAt(event.target.value)}
             />
@@ -651,7 +748,7 @@ export const SubscriptionFormEditor = forwardRef<
             <Label htmlFor="subscription-duration">Duration</Label>
             <Select
               value={duration}
-              disabled={formDisabled}
+              disabled={fieldsLocked}
               onValueChange={(value) =>
                 setDuration(value as SubscriptionDurationValue)
               }
@@ -676,7 +773,7 @@ export const SubscriptionFormEditor = forwardRef<
             <Input
               id="subscription-ends"
               type="date"
-              disabled={formDisabled}
+              disabled={fieldsLocked}
               value={customEndDate}
               min={startsAt}
               onChange={(event) => setCustomEndDate(event.target.value)}
@@ -693,7 +790,7 @@ export const SubscriptionFormEditor = forwardRef<
                 setPaymentMode(value as SubscriptionPaymentMode)
               }
               className="space-y-3"
-              disabled={formDisabled}
+              disabled={fieldsLocked}
             >
               <label
                 htmlFor="payment-saved-card"
@@ -713,7 +810,7 @@ export const SubscriptionFormEditor = forwardRef<
                         cards={allSavedCards}
                         value={selectedSavedCardValue}
                         onChange={(value) => setSelectedSavedCardValue(value)}
-                        disabled={formDisabled}
+                        disabled={fieldsLocked}
                         label="Card to charge"
                       />
                     </div>
@@ -786,8 +883,8 @@ export const SubscriptionFormEditor = forwardRef<
                     Request card from client
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Optionally send a secure Stripe checkout link by email or SMS.
-                    You can also create now and use Send later.
+                    Send a secure link to save their card. The subscription stays
+                    pending until you activate it with that card.
                   </p>
                   {paymentMode === "request_setup" ? (
                     <div className="mt-4 space-y-4">
@@ -874,9 +971,20 @@ export const SubscriptionFormEditor = forwardRef<
           onSubmit={() => saveMutation.mutate()}
           onCancel={() => onCancel?.()}
           submitLabel={
-            mode === "create" ? "Create subscription" : "Save changes"
+            waitingForCard && clientCardReady
+              ? "Activate subscription"
+              : mode === "create"
+                ? "Create subscription"
+                : "Save changes"
           }
-          pendingLabel={mode === "create" ? "Creating…" : "Saving…"}
+          pendingLabel={
+            waitingForCard && clientCardReady
+              ? "Activating…"
+              : mode === "create"
+                ? "Creating…"
+                : "Saving…"
+          }
+          waitingForCard={waitingForCard && !clientCardReady}
           hideActions={hideReviewActions}
         />
       </div>

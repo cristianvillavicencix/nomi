@@ -1,6 +1,5 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
-  Copy,
   Pencil,
   CloudUpload,
   Download,
@@ -52,7 +51,7 @@ import {
   type TicketInvoiceViewMode,
 } from "@/modules/tickets/TicketInvoiceViewDialog";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import { Badge } from "@/components/ui/badge";
+import { InvoiceSummaryCard } from "@/modules/billing/InvoiceSummaryCard";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { downloadPrivateStorageFile } from "@/lib/supabase/privateStorageFile";
@@ -61,7 +60,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   canDismissNewInvoiceTab,
   canStartNewTicketInvoiceCycle,
@@ -88,114 +86,6 @@ import {
 const STORAGE_KEY = "tickets-tools-side-collapsed";
 
 type ToolsPanelView = "invoice" | "sms";
-
-const buildInvoicePaymentUrl = (
-  shareLink: {
-    short_code?: string | null;
-    short_url?: string | null;
-    url?: string | null;
-  },
-  origin: string,
-) => {
-  if (shareLink.short_code?.trim()) {
-    return `${origin.replace(/\/$/, "")}/iv/${shareLink.short_code.trim()}?pay=1`;
-  }
-  if (shareLink.short_url?.trim()) return shareLink.short_url.trim();
-  if (shareLink.url?.trim()) return shareLink.url.trim();
-  return "";
-};
-
-const TicketInvoicePaymentLink = ({
-  invoiceId,
-  status,
-}: {
-  invoiceId: number;
-  status: ClientInvoice["status"];
-}) => {
-  const notify = useNotify();
-  const dataProvider = useDataProvider<CrmDataProvider>();
-
-  const { data: shareLink, isPending } = useQuery({
-    queryKey: ["ticket-panel-invoice-link", invoiceId],
-    queryFn: () =>
-      dataProvider.shareClientInvoice({
-        invoiceId,
-        baseUrl: window.location.origin,
-      }),
-    // Paid invoices must not generate payment links — only unpaid (sent) ones.
-    enabled: status === "sent",
-    staleTime: 60_000,
-  });
-
-  if (status === "paid") {
-    return (
-      <div className="space-y-1 rounded-none border border-success/30 bg-success/5 px-3 py-2.5">
-        <p className="text-xs font-medium text-success">
-          This invoice is already paid
-        </p>
-        <p className="text-xs text-muted-foreground">
-          No payment link is needed.
-        </p>
-      </div>
-    );
-  }
-
-  if (status !== "sent") return null;
-
-  const paymentUrl = shareLink
-    ? buildInvoicePaymentUrl(shareLink, window.location.origin)
-    : "";
-
-  const copyLink = async () => {
-    if (!paymentUrl) {
-      notify("Payment link is not ready yet", { type: "warning" });
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(paymentUrl);
-      notify("Payment link copied", { type: "info" });
-    } catch {
-      notify("Could not copy link", { type: "error" });
-    }
-  };
-
-  return (
-    <div className="space-y-2 rounded-none border px-3 py-2.5">
-      <p className="text-xs font-medium text-muted-foreground">
-        Payment link sent
-      </p>
-      {isPending ? (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="size-3.5 animate-spin" />
-          Loading link…
-        </div>
-      ) : paymentUrl ? (
-        <>
-          <a
-            href={paymentUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block break-all text-xs text-primary hover:underline"
-          >
-            {paymentUrl}
-          </a>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="h-7 w-full rounded-none text-xs"
-            onClick={() => void copyLink()}
-          >
-            <Copy className="mr-1.5 size-3.5" />
-            Copy link
-          </Button>
-        </>
-      ) : (
-        <p className="text-xs text-muted-foreground">Link unavailable</p>
-      )}
-    </div>
-  );
-};
 
 type TicketBillingSidePanelProps = {
   ticket: Ticket;
@@ -383,30 +273,6 @@ export const TicketBillingSidePanel = ({
   useEffect(() => {
     setNewCycleActive(readNewInvoiceCycleActive(ticket.id));
   }, [ticket.id]);
-
-  useEffect(() => {
-    const latestSentPaidId = getLatestSentPaidInvoiceId(
-      invoiceHistoryIds,
-      invoicesById,
-    );
-    if (
-      newCycleActive &&
-      unbilledDeliverables.length === 0 &&
-      latestSentPaidId &&
-      ticket.invoice_id &&
-      String(ticket.invoice_id) === latestSentPaidId
-    ) {
-      writeNewInvoiceCycleActive(ticket.id, false);
-      setNewCycleActive(false);
-    }
-  }, [
-    newCycleActive,
-    unbilledDeliverables.length,
-    invoiceHistoryIds,
-    invoicesById,
-    ticket.invoice_id,
-    ticket.id,
-  ]);
 
   useEffect(() => {
     setSelectedInvoiceTab((current) => {
@@ -778,14 +644,6 @@ export const TicketBillingSidePanel = ({
     setDragActive(false);
   };
 
-  const formatShortDate = (value?: string | null) => {
-    if (!value) return null;
-    return new Date(value).toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   const renderDeliverableDropZone = (compact = false) => (
     <div
       role="button"
@@ -967,126 +825,86 @@ export const TicketBillingSidePanel = ({
   const handleNewInvoiceClick = () => {
     const draftInvoiceId = getDraftTicketInvoiceId(ticket, invoicesById);
     if (draftInvoiceId) {
-      setSelectedInvoiceTab(invoiceTabKey(draftInvoiceId));
+      setSelectedInvoiceTab("new");
       notify("Send or cancel the current draft invoice first", {
         type: "warning",
       });
       return;
     }
 
+    // Open the composer immediately; previous invoices stay in history.
+    writeNewInvoiceCycleActive(ticket.id, true);
+    setNewCycleActive(true);
+    setSelectedInvoiceTab("new");
+
     if (canStartNewInvoiceCycle) {
-      writeNewInvoiceCycleActive(ticket.id, true);
-      setNewCycleActive(true);
-      setSelectedInvoiceTab("new");
       newInvoiceMutation.mutate();
       return;
     }
 
     if (showNewInvoiceTab) {
-      setSelectedInvoiceTab("new");
       return;
     }
 
+    clearNewInvoiceCycle();
+    selectLatestInvoiceTab();
     notify("Send the current invoice before starting a new billing cycle", {
       type: "warning",
     });
   };
 
-  const renderInvoiceTabContent = (invoiceId: string) => {
+  const renderInvoiceTabContent = (
+    invoiceId: string,
+    options?: { showDelivery?: boolean },
+  ) => {
     const tabInvoice = invoicesById.get(invoiceId);
     const isPaid = tabInvoice?.status === "paid";
-    const isSent = tabInvoice?.status === "sent";
-    const statusDate =
-      formatShortDate(tabInvoice?.paid_at) ??
-      formatShortDate(tabInvoice?.sent_at);
     const invoiceFiles = getDeliverablesForInvoice(deliverables, invoiceId);
     const allFilesDelivered =
       invoiceFiles.length > 0 &&
       invoiceFiles.every((file) => Boolean(file.delivered_at));
     const deliveryPending =
       isPaid && invoiceFiles.length > 0 && !allFilesDelivered;
-    const amountLabel = formatSupplementMoney(
-      Number(tabInvoice?.amount) || pricing.total,
-    );
-    const statusLine =
-      tabInvoice && (isPaid || isSent)
-        ? [
-            isPaid
-              ? allFilesDelivered
-                ? "Paid & delivered"
-                : "Paid · files not sent yet"
-              : "Waiting · payment",
-            amountLabel,
-            statusDate,
-          ]
-            .filter(Boolean)
-            .join(" ·")
-        : null;
+    const showDelivery = options?.showDelivery !== false;
 
     return (
       <div className="space-y-3">
         {tabInvoice ? (
-          <div className="rounded-none border px-3 py-2.5">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="truncate text-sm font-medium">
-                    {tabInvoice.invoice_number || `Invoice #${tabInvoice.id}`}
-                  </span>
-                  {!isPaid && !isSent ? (
-                    <Badge
-                      variant="outline"
-                      className="rounded-none text-[10px]"
-                    >
-                      Draft
-                    </Badge>
-                  ) : null}
-                </div>
-                {statusLine ? (
-                  <p
-                    className={cn(
-                      "text-xs",
-                      isPaid ? "text-success" : "text-warning",
-                    )}
-                  >
-                    {statusLine}
-                  </p>
-                ) : null}
-              </div>
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                className="h-auto shrink-0 px-0"
-                onClick={() => openInvoiceDialog("view", Number(invoiceId))}
-              >
-                View
-              </Button>
-            </div>
+          <InvoiceSummaryCard
+            invoice={tabInvoice}
+            companyName={company?.name}
+            onView={() => openInvoiceDialog("view", Number(invoiceId))}
+          />
+        ) : (
+          <p className="py-2 text-xs text-muted-foreground">
+            Loading invoice…
+          </p>
+        )}
+
+        {showDelivery &&
+        isPaid &&
+        !allFilesDelivered &&
+        invoiceFiles.length > 0 ? (
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            Paid · delivery files not sent yet
+          </p>
+        ) : null}
+
+        {showDelivery ? (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">
+              Delivery files
+            </p>
+            {invoiceFiles.length > 0 ? (
+              invoiceFiles.map((file) => renderDeliverableDownloadRow(file))
+            ) : (
+              <p className="py-2 text-xs text-muted-foreground">
+                No files on this invoice.
+              </p>
+            )}
           </div>
         ) : null}
-
-        {tabInvoice &&
-        (tabInvoice.status === "sent" || tabInvoice.status === "paid") ? (
-          <TicketInvoicePaymentLink
-            invoiceId={Number(invoiceId)}
-            status={tabInvoice.status}
-          />
-        ) : null}
-
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">
-            Delivery files
-          </p>
-          {invoiceFiles.length > 0 ? (
-            invoiceFiles.map((file) => renderDeliverableDownloadRow(file))
-          ) : (
-            <p className="py-2 text-xs text-muted-foreground">
-              No files on this invoice.
-            </p>
-          )}
-        </div>
-        {deliveryPending ? (
+        {showDelivery && deliveryPending ? (
           <Button
             type="button"
             className="w-full rounded-none"
@@ -1105,76 +923,108 @@ export const TicketBillingSidePanel = ({
     );
   };
 
-  const renderInvoiceSection = () => (
-    <Tabs
-      value={selectedInvoiceTab || "new"}
-      onValueChange={(value) =>
-        setSelectedInvoiceTab(value as TicketInvoiceTabKey)
-      }
-      className="gap-3"
-    >
-      {invoiceHistoryIds.length > 0 ? (
-        <TabsList className="h-auto w-full flex-wrap justify-start rounded-none p-1">
-          {invoiceHistoryIds.map((invoiceId) => {
-            const tabInvoice = invoicesById.get(invoiceId);
-            return (
-              <TabsTrigger
-                key={invoiceId}
-                value={invoiceTabKey(invoiceId)}
-                className="rounded-none text-xs"
-              >
-                {formatInvoiceTabLabel(tabInvoice, invoiceId)}
-              </TabsTrigger>
-            );
-          })}
-          {showNewInvoiceTab ? (
-            <TabsTrigger value="new" className="rounded-none text-xs">
-              <span className="inline-flex items-center gap-1">
+  const renderInvoiceSection = () => {
+    const historyNewestFirst = [...invoiceHistoryIds].reverse();
+    const showComposer =
+      selectedInvoiceTab === "new" ||
+      newCycleActive ||
+      invoiceHistoryIds.length === 0;
+    const showNewOnRow =
+      (showNewInvoiceButton || showNewInvoiceTab || canStartNewInvoiceCycle) &&
+      !showComposer;
+
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+            {historyNewestFirst.map((invoiceId) => {
+              const tabInvoice = invoicesById.get(invoiceId);
+              const active = selectedInvoiceTab === invoiceTabKey(invoiceId);
+              return (
+                <button
+                  key={invoiceId}
+                  type="button"
+                  onClick={() => {
+                    setSelectedInvoiceTab(invoiceTabKey(invoiceId));
+                    document
+                      .getElementById(`ticket-invoice-card-${invoiceId}`)
+                      ?.scrollIntoView({
+                        block: "nearest",
+                        behavior: "smooth",
+                      });
+                  }}
+                  className={cn(
+                    "max-w-full truncate rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  {formatInvoiceTabLabel(tabInvoice, invoiceId)}
+                </button>
+              );
+            })}
+            {selectedInvoiceTab === "new" && invoiceHistoryIds.length > 0 ? (
+              <span className="inline-flex items-center gap-0.5 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
                 New
                 {canDismissNewTab ? (
-                  <span
-                    role="button"
-                    tabIndex={0}
+                  <button
+                    type="button"
                     aria-label="Cancel new invoice"
-                    className="inline-flex rounded-sm p-0.5 hover:bg-muted"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleCancelNewCycle();
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === "") {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        handleCancelNewCycle();
-                      }
-                    }}
+                    className="inline-flex rounded-sm p-0.5 hover:bg-primary/15"
+                    onClick={handleCancelNewCycle}
                   >
                     <X className="size-3" />
-                  </span>
+                  </button>
                 ) : null}
               </span>
-            </TabsTrigger>
+            ) : null}
+          </div>
+
+          {showNewOnRow ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <IconButton
+                  variant="secondary"
+                  className="shrink-0"
+                  disabled={newInvoiceMutation.isPending}
+                  aria-label="New invoice"
+                  onClick={handleNewInvoiceClick}
+                >
+                  {newInvoiceMutation.isPending ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="size-3.5" />
+                  )}
+                </IconButton>
+              </TooltipTrigger>
+              <TooltipContent side="left">New invoice</TooltipContent>
+            </Tooltip>
           ) : null}
-        </TabsList>
-      ) : null}
+        </div>
 
-      {invoiceHistoryIds.map((invoiceId) => (
-        <TabsContent
-          key={invoiceId}
-          value={invoiceTabKey(invoiceId)}
-          className="mt-0"
-        >
-          {renderInvoiceTabContent(invoiceId)}
-        </TabsContent>
-      ))}
+        {showComposer ? renderNewInvoiceTabContent() : null}
 
-      {showNewInvoiceTab ? (
-        <TabsContent value="new" className="mt-0">
-          {renderNewInvoiceTabContent()}
-        </TabsContent>
-      ) : null}
-    </Tabs>
-  );
+        {historyNewestFirst.length > 0 ? (
+          <div className="space-y-3">
+            {historyNewestFirst.map((invoiceId) => {
+              const isSelected =
+                selectedInvoiceTab === invoiceTabKey(invoiceId) ||
+                (historyNewestFirst.length === 1 &&
+                  selectedInvoiceTab !== "new");
+              return (
+                <div key={invoiceId} id={`ticket-invoice-card-${invoiceId}`}>
+                  {renderInvoiceTabContent(invoiceId, {
+                    showDelivery: isSelected,
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   const renderDialogs = () => (
     <>
@@ -1318,28 +1168,6 @@ export const TicketBillingSidePanel = ({
               Text
             </Button>
             <div className="flex-1" />
-            {activeView === "invoice" &&
-            canViewAmounts &&
-            showNewInvoiceButton ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <IconButton
-                    variant="secondary"
-                    className="shrink-0 rounded-none"
-                    disabled={newInvoiceMutation.isPending}
-                    aria-label="New invoice"
-                    onClick={handleNewInvoiceClick}
-                  >
-                    {newInvoiceMutation.isPending ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Plus className="size-3.5" />
-                    )}
-                  </IconButton>
-                </TooltipTrigger>
-                <TooltipContent side="left">New invoice</TooltipContent>
-              </Tooltip>
-            ) : null}
             <Tooltip>
               <TooltipTrigger asChild>
                 <IconButton
@@ -1351,29 +1179,6 @@ export const TicketBillingSidePanel = ({
                 </IconButton>
               </TooltipTrigger>
               <TooltipContent side="left">Hide panel</TooltipContent>
-            </Tooltip>
-          </div>
-        ) : embedView === "invoice" &&
-          canViewAmounts &&
-          showNewInvoiceButton ? (
-          <div className="flex justify-end border-b px-2 py-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <IconButton
-                  variant="secondary"
-                  className="shrink-0 rounded-none"
-                  disabled={newInvoiceMutation.isPending}
-                  aria-label="New invoice"
-                  onClick={handleNewInvoiceClick}
-                >
-                  {newInvoiceMutation.isPending ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <Plus className="size-3.5" />
-                  )}
-                </IconButton>
-              </TooltipTrigger>
-              <TooltipContent side="left">New invoice</TooltipContent>
             </Tooltip>
           </div>
         ) : null}

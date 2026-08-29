@@ -129,16 +129,19 @@ export const buildSubscriptionPriceData = (params: {
   amount: number;
   currency: string;
   billingInterval: BillingInterval;
-}): Stripe.Checkout.SessionCreateParams.LineItem.PriceData => ({
-  currency: params.currency.toLowerCase(),
-  unit_amount: amountToCents(params.amount),
-  recurring: {
-    interval: mapBillingIntervalToStripe(params.billingInterval),
-  },
-  product_data: {
-    name: params.name,
-  },
-});
+}): Stripe.Checkout.SessionCreateParams.LineItem.PriceData => {
+  const { total } = subscriptionChargeFromNet(params.amount);
+  return {
+    currency: params.currency.toLowerCase(),
+    unit_amount: amountToCents(total),
+    recurring: {
+      interval: mapBillingIntervalToStripe(params.billingInterval),
+    },
+    product_data: {
+      name: params.name,
+    },
+  };
+};
 
 export type SubscriptionLineItemInput = {
   description: string;
@@ -196,6 +199,50 @@ export const sumSubscriptionLineItemsAmount = (
     0,
   );
 
+/** Stripe-style processing fee passed through to the client (same as tickets). */
+const STRIPE_TRANSFER_FEE_RATE = 0.029;
+const STRIPE_TRANSFER_FEE_FIXED = 0.3;
+
+export const calculateTransferFee = (subtotal: number) => {
+  if (subtotal <= 0) return 0;
+  const chargeTotal =
+    (subtotal + STRIPE_TRANSFER_FEE_FIXED) / (1 - STRIPE_TRANSFER_FEE_RATE);
+  return Math.round((chargeTotal - subtotal) * 100) / 100;
+};
+
+export const subscriptionChargeFromNet = (netAmount: number) => {
+  const subtotal = Math.round((Number(netAmount) || 0) * 100) / 100;
+  const feeAmount = subtotal > 0 ? calculateTransferFee(subtotal) : 0;
+  const total = Math.round((subtotal + feeAmount) * 100) / 100;
+  return { subtotal, feeAmount, total };
+};
+
+/**
+ * Inflate line unit prices so Stripe charges net + fee while CRM keeps net amount.
+ * Distributes fee proportionally across lines and fixes cent drift on the last line.
+ */
+export const grossUpSubscriptionLinesForStripe = (
+  lines: SubscriptionLineItemInput[],
+): SubscriptionLineItemInput[] => {
+  if (lines.length === 0) return lines;
+  const net = sumSubscriptionLineItemsAmount(lines);
+  if (net <= 0) return lines;
+  const { total: gross } = subscriptionChargeFromNet(net);
+  const factor = gross / net;
+  const inflated = lines.map((line) => ({
+    ...line,
+    unit_price: Math.round(line.unit_price * factor * 100) / 100,
+  }));
+  const inflatedSum = sumSubscriptionLineItemsAmount(inflated);
+  const drift = Math.round((gross - inflatedSum) * 100) / 100;
+  if (drift !== 0) {
+    const last = inflated[inflated.length - 1];
+    const qty = Math.max(1, last.quantity);
+    last.unit_price = Math.round((last.unit_price + drift / qty) * 100) / 100;
+  }
+  return inflated;
+};
+
 const buildStripeLineItemPriceData = (
   line: SubscriptionLineItemInput,
   currency: string,
@@ -214,7 +261,7 @@ export const buildStripeSubscriptionCreateItems = (
   currency: string,
   billingInterval: BillingInterval,
 ): Stripe.SubscriptionCreateParams.Item[] =>
-  lineItems.map((line) => ({
+  grossUpSubscriptionLinesForStripe(lineItems).map((line) => ({
     price_data: buildStripeLineItemPriceData(line, currency, billingInterval),
     quantity: Math.max(1, Math.round(line.quantity)) || 1,
   }));
@@ -224,7 +271,7 @@ export const buildStripeCheckoutLineItems = (
   currency: string,
   billingInterval: BillingInterval,
 ): Stripe.Checkout.SessionCreateParams.LineItem[] =>
-  lineItems.map((line) => ({
+  grossUpSubscriptionLinesForStripe(lineItems).map((line) => ({
     quantity: Math.max(1, Math.round(line.quantity)) || 1,
     price_data: buildStripeLineItemPriceData(line, currency, billingInterval),
   }));
@@ -425,6 +472,26 @@ export async function createStripeSubscriptionCheckout(
   });
 }
 
+/** Collect a card only — does not create/activate a Stripe subscription. */
+export async function createStripeSubscriptionSetupCheckout(
+  stripe: Stripe,
+  params: {
+    customerId: string;
+    successUrl: string;
+    cancelUrl: string;
+    metadata: Record<string, string>;
+  },
+) {
+  return stripe.checkout.sessions.create({
+    mode: "setup",
+    customer: params.customerId,
+    success_url: params.successUrl,
+    cancel_url: params.cancelUrl,
+    metadata: params.metadata,
+    payment_method_types: ["card"],
+  });
+}
+
 export async function updateStripeSubscriptionBilling(
   stripe: Stripe,
   params: {
@@ -455,10 +522,11 @@ export async function updateStripeSubscriptionBilling(
   });
 
   const items: Stripe.SubscriptionUpdateParams.Item[] = [];
-  for (let index = normalizedLines.length; index < existingItems.length; index++) {
+  const stripeLines = grossUpSubscriptionLinesForStripe(normalizedLines);
+  for (let index = stripeLines.length; index < existingItems.length; index++) {
     items.push({ id: existingItems[index].id, deleted: true });
   }
-  normalizedLines.forEach((line, index) => {
+  stripeLines.forEach((line, index) => {
     const existingItem = existingItems[index];
     const price_data = buildStripeLineItemPriceData(
       line,
@@ -646,6 +714,74 @@ const retrieveStripeSubscriptionExpanded = async (
     expand: ["default_payment_method"],
   });
 
+/** Persist card from a completed setup Checkout without activating the subscription. */
+export async function persistSetupCheckoutPaymentMethod(
+  stripe: Stripe,
+  supabase: SupabaseClient,
+  params: {
+    subscription: Pick<
+      ClientSubscriptionRow,
+      "id" | "org_id" | "stripe_customer_id"
+    >;
+    session: Stripe.Checkout.Session;
+  },
+) {
+  const setupIntentRaw = params.session.setup_intent;
+  let setupIntent: Stripe.SetupIntent | null = null;
+  if (typeof setupIntentRaw === "string" && setupIntentRaw) {
+    setupIntent = await stripe.setupIntents.retrieve(setupIntentRaw, {
+      expand: ["payment_method"],
+    });
+  } else if (setupIntentRaw && typeof setupIntentRaw === "object") {
+    setupIntent = setupIntentRaw as Stripe.SetupIntent;
+  }
+
+  const pmInfo = readPaymentMethodFromStripe(
+    setupIntent?.payment_method as Stripe.PaymentMethod | string | null,
+  );
+  if (!pmInfo.id) {
+    return { saved: false as const };
+  }
+
+  const customerId =
+    params.subscription.stripe_customer_id?.trim() ||
+    (typeof params.session.customer === "string"
+      ? params.session.customer
+      : null);
+
+  if (customerId) {
+    try {
+      await stripe.paymentMethods.attach(pmInfo.id, { customer: customerId });
+    } catch {
+      // Already attached is fine.
+    }
+    await stripe.customers.update(customerId, {
+      invoice_settings: { default_payment_method: pmInfo.id },
+    });
+  }
+
+  const now = new Date().toISOString();
+  await supabase
+    .from("client_subscriptions")
+    .update({
+      stripe_customer_id: customerId,
+      stripe_payment_method_id: pmInfo.id,
+      payment_method_brand: pmInfo.brand,
+      payment_method_last4: pmInfo.last4,
+      status: "pending_setup",
+      updated_at: now,
+    })
+    .eq("id", params.subscription.id)
+    .eq("org_id", params.subscription.org_id);
+
+  return {
+    saved: true as const,
+    payment_method_id: pmInfo.id,
+    brand: pmInfo.brand,
+    last4: pmInfo.last4,
+  };
+}
+
 const subscriptionMatchesSigmaRecord = (
   stripeSub: Stripe.Subscription,
   subscription: ClientSubscriptionRow,
@@ -658,11 +794,15 @@ const subscriptionMatchesSigmaRecord = (
     return true;
   }
 
-  const expectedAmountCents = amountToCents(Number(subscription.amount));
-  return stripeSub.items.data.some((item) => {
+  const expectedGrossCents = amountToCents(
+    subscriptionChargeFromNet(Number(subscription.amount)).total,
+  );
+  const stripeTotalCents = stripeSub.items.data.reduce((sum, item) => {
     const unitAmount = item.price?.unit_amount;
-    return unitAmount != null && unitAmount === expectedAmountCents;
-  });
+    if (unitAmount == null) return sum;
+    return sum + unitAmount * (item.quantity ?? 1);
+  }, 0);
+  return stripeTotalCents === expectedGrossCents;
 };
 
 export async function syncClientSubscriptionFromStripe(
@@ -725,8 +865,19 @@ export async function syncClientSubscriptionFromStripe(
   const checkoutSessionId = subscription.stripe_checkout_session_id?.trim();
   if (checkoutSessionId) {
     const session = await stripe.checkout.sessions.retrieve(checkoutSessionId, {
-      expand: ["subscription"],
+      expand: ["subscription", "setup_intent", "setup_intent.payment_method"],
     });
+    if (session.mode === "setup") {
+      await persistSetupCheckoutPaymentMethod(stripe, supabase, {
+        subscription,
+        session,
+      });
+      return {
+        synced: false,
+        reason: "setup_card_saved",
+        awaiting_activation: true,
+      };
+    }
     if (session.mode === "subscription" && session.subscription) {
       const stripeSubId =
         typeof session.subscription === "string"
@@ -1239,22 +1390,11 @@ export async function applySubscriptionPayment(
       })
       .eq("id", params.subscription.id);
   } else {
-    const subscriptionLines = normalizeSubscriptionLineItems(
-      params.subscription.line_items,
-      params.subscription.name,
-      Number(params.subscription.amount),
-    );
-    const session = await createStripeSubscriptionCheckout(stripe, {
+    const session = await createStripeSubscriptionSetupCheckout(stripe, {
       customerId: stripeCustomerId,
-      name: params.subscription.name,
-      amount: Number(params.subscription.amount),
-      currency: params.subscription.currency,
-      billingInterval: params.subscription.billing_interval,
       successUrl: `${baseUrl}/billing?${returnQuery}&setup=success`,
       cancelUrl: `${baseUrl}/billing?${returnQuery}&setup=cancel`,
       metadata,
-      lineItems: subscriptionLines,
-      ...scheduleParams,
     });
 
     checkoutUrl = session.url ?? null;

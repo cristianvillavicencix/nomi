@@ -15,6 +15,7 @@ import {
   formatSubscriptionAmountLabel,
   subscriptionStatusLabel,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
+import { subscriptionChargeFromNet } from "@/modules/billing/subscriptions/subscriptionFeeUtils";
 import { formatSubscriptionScheduleLabel } from "@/modules/billing/subscriptions/subscriptionScheduleUtils";
 import { resolveCompanyAddressForDisplay } from "@/modules/clients/clientAddressUtils";
 import type { ClientInvoice, ClientSubscription } from "@/modules/types";
@@ -131,6 +132,12 @@ export const SubscriptionOverviewTab = ({
     subscription.currency,
     subscription.billing_interval,
   );
+  const charge = subscriptionChargeFromNet(Number(subscription.amount));
+  const clientPaysLabel = formatSubscriptionAmountLabel(
+    charge.total,
+    subscription.currency,
+    subscription.billing_interval,
+  );
 
   const schedule = formatSubscriptionScheduleLabel({
     startsAt: subscription.starts_at?.slice(0, 10) ?? null,
@@ -220,17 +227,12 @@ export const SubscriptionOverviewTab = ({
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Subscription amount", value: amountLabel },
+            { label: "Plan (net)", value: amountLabel },
+            { label: "Client pays", value: clientPaysLabel },
             {
               label: "Next billing",
               value: formatBillingDate(
                 subscription.next_billing_at?.slice(0, 10),
-              ),
-            },
-            {
-              label: "Last billed",
-              value: formatBillingDate(
-                subscription.last_billed_at?.slice(0, 10),
               ),
             },
             {

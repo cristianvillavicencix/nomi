@@ -15,7 +15,7 @@ import {
   applyStripeSubscriptionSnapshot,
   applySubscriptionPayment,
   buildSubscriptionMetadata,
-  createStripeSubscriptionCheckout,
+  createStripeSubscriptionSetupCheckout,
   deliverSubscriptionSetupLink,
   ensureSubscriptionStripeCustomer,
   normalizeSubscriptionLineItems,
@@ -176,12 +176,8 @@ Deno.serve(
           const baseUrl = resolveClientAppBaseUrl(body.base_url);
           const returnQuery = `tab=subscriptions&subscription=${subscription.id}`;
 
-          const session = await createStripeSubscriptionCheckout(stripe, {
+          const session = await createStripeSubscriptionSetupCheckout(stripe, {
             customerId: stripeCustomerId,
-            name: subscription.name,
-            amount: Number(subscription.amount),
-            currency: subscription.currency,
-            billingInterval: subscription.billing_interval as BillingInterval,
             successUrl: `${baseUrl}/billing?${returnQuery}&setup=success`,
             cancelUrl: `${baseUrl}/billing?${returnQuery}&setup=cancel`,
             metadata,

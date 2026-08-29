@@ -1,10 +1,20 @@
-import type { MouseEvent, ReactNode } from "react";
-import { UserRound } from "lucide-react";
+import type { MouseEvent } from "react";
+import { Flag, Hourglass, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useViewTransitionState } from "react-router";
-import { SignedMemberAvatarImage } from "@/components/avatar/SignedMemberAvatarImage";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { IconButton } from "@/components/ui/icon-button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type {
@@ -12,32 +22,29 @@ import type {
   OrganizationMember,
   Ticket,
 } from "@/modules/types";
-import {
-  formatTicketListTime,
-  memberDisplayName,
-} from "@/modules/tickets/ticketInboxUi";
+import { TicketListAssigneeControl } from "@/modules/tickets/TicketListCardControls";
+import { formatTicketListTime } from "@/modules/tickets/ticketInboxUi";
 import {
   getTicketInvoiceBadges,
   ticketHasUnpaidInvoice,
 } from "@/modules/tickets/ticketListInvoiceBadgeUtils";
 import { resolveTicketPrimaryContactName } from "@/modules/tickets/ticketListMeta";
 import { TicketMetaSep } from "@/modules/tickets/TicketMetaSep";
+import { resolveTicketKanbanRibbon } from "@/modules/tickets/ticketKanbanCardMeta";
+import { TicketServiceTypeChips } from "@/modules/tickets/TicketServiceTypeChips";
 import {
   formatTicketCardSubject,
   resolveTicketCardRailTone,
 } from "@/modules/tickets/ticketOverviewConfig";
 import {
   isElevatedTicketPriority,
-  ticketPriorityClassName,
   ticketPriorityLabel,
 } from "@/modules/tickets/ticketPriorityUi";
 import { isTicketUnread } from "@/modules/tickets/ticketReadState";
-import {
-  getTicketWaitingDurationLabel,
-  ticketWaitingSlaClassName,
-} from "@/modules/tickets/ticketSlaUtils";
+import { getTicketWaitingDurationLabel } from "@/modules/tickets/ticketSlaUtils";
 import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
 
+/** Kanban board ticket card (classification via TicketServiceTypeChips). */
 const railClassName: Record<
   ReturnType<typeof resolveTicketCardRailTone>,
   string
@@ -48,42 +55,67 @@ const railClassName: Record<
   default: "bg-border",
 };
 
-const memberInitials = (member?: OrganizationMember | null) => {
-  const label = memberDisplayName(member);
-  if (!label) return null;
-  const parts = label.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
-  }
-  return label.slice(0, 2).toUpperCase();
-};
+const MetaIcon = ({
+  icon: Icon,
+  label,
+  className,
+}: {
+  icon: typeof Flag;
+  label: string;
+  className?: string;
+}) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <span
+        className={cn(
+          "inline-flex size-4 shrink-0 items-center justify-center",
+          className,
+        )}
+        aria-label={label}
+      >
+        <Icon className="size-3" strokeWidth={2} aria-hidden />
+      </span>
+    </TooltipTrigger>
+    <TooltipContent side="top">{label}</TooltipContent>
+  </Tooltip>
+);
 
 export const TicketKanbanCard = ({
   ticket,
   company,
   contact,
   assignee,
+  members = [],
   invoices = [],
   lastReadAt,
   className,
   dragging,
   bulkSelected = false,
   selectionEnabled = false,
+  canManage = false,
   onToggleBulkSelect,
+  onEdit,
+  onDelete,
+  onUpdated,
 }: {
   ticket: Ticket;
   company?: Company | null;
   contact?: Contact | null;
   assignee?: OrganizationMember | null;
+  members?: OrganizationMember[];
   invoices?: ClientInvoice[];
   lastReadAt?: string | null;
   className?: string;
   dragging?: boolean;
   bulkSelected?: boolean;
   selectionEnabled?: boolean;
+  canManage?: boolean;
   onToggleBulkSelect?: (checked: boolean) => void;
+  onEdit?: (ticket: Ticket) => void;
+  onDelete?: (ticket: Ticket) => void;
+  onUpdated?: () => void;
 }) => {
-  const stopCheckboxBubble = (event: MouseEvent) => {
+  const stopActionBubble = (event: MouseEvent) => {
     event.stopPropagation();
   };
   const unpaid = ticketHasUnpaidInvoice(ticket, invoices);
@@ -102,56 +134,14 @@ export const TicketKanbanCard = ({
   const showHref = ticketShowPath(ticket.id);
   const isTransitioning = useViewTransitionState(showHref);
 
-  const badgeSlots: ReactNode[] = [];
-  if (elevated && priorityLabel) {
-    badgeSlots.push(
-      <Badge
-        key="priority"
-        variant="outline"
-        className={cn(
-          "h-5 shrink-0 px-1.5 text-[10px] font-medium",
-          ticketPriorityClassName(ticket.priority),
-        )}
-      >
-        {priorityLabel}
-      </Badge>,
-    );
-  }
-  if (waitingLabel) {
-    badgeSlots.push(
-      <Badge
-        key="waiting"
-        variant="outline"
-        className={cn(
-          "h-5 shrink-0 px-1.5 text-[10px] font-medium",
-          ticketWaitingSlaClassName(ticket.status, ticket.updated_at),
-        )}
-      >
-        {waitingLabel}
-      </Badge>,
-    );
-  }
-  for (const invoiceBadge of getTicketInvoiceBadges(ticket, invoices)) {
-    badgeSlots.push(
-      <Badge
-        key={invoiceBadge.key}
-        variant="outline"
-        className={cn(
-          "h-5 shrink-0 px-1.5 text-[10px] font-medium",
-          invoiceBadge.className,
-        )}
-      >
-        {invoiceBadge.label}
-      </Badge>,
-    );
-  }
+  const invoiceSignal = getTicketInvoiceBadges(ticket, invoices)[0] ?? null;
+  const ribbon = resolveTicketKanbanRibbon(invoiceSignal);
 
   const companyName = company?.name?.trim() || null;
   const contactName = resolveTicketPrimaryContactName(ticket, company, contact);
   const identityParts = [companyName, contactName].filter(Boolean) as string[];
-  const assigneeName = memberDisplayName(assignee) ?? "Unassigned";
-  const initials = memberInitials(assignee);
   const resolved = ticket.status === "resolved";
+  const showManageMenu = canManage && (onEdit || onDelete);
 
   return (
     <div
@@ -170,55 +160,106 @@ export const TicketKanbanCard = ({
         className={cn("absolute inset-y-0 left-0 w-[3px]", railClassName[rail])}
       />
 
-      {selectionEnabled ? (
+      {ribbon ? (
         <div
-          className="absolute left-2.5 top-2 z-10"
-          onClick={stopCheckboxBubble}
-          onPointerDown={stopCheckboxBubble}
+          className="pointer-events-none absolute bottom-0 right-0 z-[1] size-14 overflow-hidden rounded-br-lg"
+          aria-label={ribbon.label}
         >
-          <Checkbox
-            checked={bulkSelected}
-            onCheckedChange={(value) => onToggleBulkSelect?.(value === true)}
-            aria-label={`Select ticket #${ticket.id}`}
+          <span
             className={cn(
-              "bg-background/90 shadow-xs",
-              !bulkSelected &&
-                "opacity-0 transition-opacity group-hover:opacity-100",
+              "absolute bottom-[0.85rem] -right-6 w-[5.75rem] -rotate-45 py-px text-center text-[8px] font-bold uppercase tracking-wider shadow-sm",
+              ribbon.className,
             )}
-          />
+          >
+            {ribbon.label}
+          </span>
         </div>
       ) : null}
 
+      {/* Top-right: avatar (swaps with select checkbox); ⋯ below avatar */}
       <div
-        className="absolute right-2 top-2 z-10"
-        title={assigneeName}
-        aria-label={assigneeName}
+        className="absolute right-1.5 top-1.5 z-10 flex flex-col items-center gap-0.5"
+        onClick={stopActionBubble}
+        onPointerDown={stopActionBubble}
       >
-        <Avatar className="size-7 border bg-background shadow-xs">
-          {assignee ? (
-            <SignedMemberAvatarImage
-              member={assignee}
-              size={48}
-              alt={assigneeName}
-            />
+        <div className="relative size-7">
+          {selectionEnabled ? (
+            <div
+              className={cn(
+                "absolute inset-0 flex items-center justify-center transition-opacity",
+                bulkSelected
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100",
+              )}
+            >
+              <Checkbox
+                checked={bulkSelected}
+                onCheckedChange={(value) =>
+                  onToggleBulkSelect?.(value === true)
+                }
+                aria-label={`Select ticket #${ticket.id}`}
+                className="bg-background shadow-xs"
+              />
+            </div>
           ) : null}
-          <AvatarFallback className="text-[10px] font-medium text-muted-foreground">
-            {initials ? (
-              initials
-            ) : (
-              <UserRound className="size-3.5 text-muted-foreground" />
+          <div
+            className={cn(
+              "absolute inset-0 transition-opacity",
+              selectionEnabled &&
+                (bulkSelected
+                  ? "pointer-events-none opacity-0"
+                  : "group-hover:pointer-events-none group-hover:opacity-0"),
             )}
-          </AvatarFallback>
-        </Avatar>
+          >
+            <TicketListAssigneeControl
+              ticket={ticket}
+              assignee={assignee}
+              members={members}
+              canManage={canManage}
+              onUpdated={onUpdated}
+            />
+          </div>
+        </div>
+
+        {showManageMenu ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <IconButton
+                className={cn(
+                  "size-6 text-muted-foreground hover:text-foreground",
+                  "opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100",
+                )}
+                aria-label={`Ticket #${ticket.id} actions`}
+              >
+                <MoreHorizontal className="size-3.5" />
+              </IconButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-40"
+              onClick={stopActionBubble}
+            >
+              {onEdit ? (
+                <DropdownMenuItem onSelect={() => onEdit(ticket)}>
+                  <Pencil className="size-3.5" />
+                  Edit
+                </DropdownMenuItem>
+              ) : null}
+              {onDelete ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => onDelete(ticket)}
+                >
+                  <Trash2 className="size-3.5" />
+                  Delete
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
       </div>
 
-      <div
-        className={cn(
-          "px-3 py-2.5 pl-3.5 pr-11",
-          selectionEnabled && "pl-8",
-        )}
-      >
-        {/* Row 1: title */}
+      <div className="relative z-[2] px-3 py-2.5 pl-3.5 pr-11">
         <p
           className="line-clamp-2 text-sm font-semibold leading-snug"
           style={
@@ -230,7 +271,6 @@ export const TicketKanbanCard = ({
           {formatTicketCardSubject(ticket.subject)}
         </p>
 
-        {/* Row 2: company | primary contact */}
         {identityParts.length > 0 ? (
           <p className="mt-1 truncate text-xs text-muted-foreground">
             {identityParts.map((part, index) => (
@@ -246,17 +286,37 @@ export const TicketKanbanCard = ({
           </p>
         )}
 
-        {/* Row 3: #ticket | time | badges */}
+        {/* #ticket · time · clickable type chips · priority */}
         <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
           <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
             <span className="font-mono text-foreground/80">#{ticket.id}</span>
             <TicketMetaSep />
             {formatTicketListTime(ticket.updated_at)}
           </span>
-          {badgeSlots.length > 0 ? (
-            <span className="flex min-w-0 flex-wrap items-center gap-1">
-              {badgeSlots}
-            </span>
+          <TicketServiceTypeChips
+            ticket={ticket}
+            canManage={canManage}
+            onUpdated={onUpdated}
+          />
+          {(elevated && priorityLabel) || waitingLabel ? (
+            <TooltipProvider delayDuration={200}>
+              <span className="inline-flex items-center gap-0.5">
+                {elevated && priorityLabel ? (
+                  <MetaIcon
+                    icon={Flag}
+                    label={priorityLabel}
+                    className="text-orange-500 dark:text-orange-400"
+                  />
+                ) : null}
+                {waitingLabel ? (
+                  <MetaIcon
+                    icon={Hourglass}
+                    label={waitingLabel}
+                    className="text-amber-600 dark:text-amber-400"
+                  />
+                ) : null}
+              </span>
+            </TooltipProvider>
           ) : null}
         </div>
       </div>

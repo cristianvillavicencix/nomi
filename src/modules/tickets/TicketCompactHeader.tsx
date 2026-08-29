@@ -130,7 +130,7 @@ export const TicketCompactHeader = ({
             ) : null}
           </div>
 
-          <p className="flex min-w-0 flex-wrap items-baseline gap-y-0.5 text-sm text-muted-foreground">
+          <p className="min-w-0 truncate text-sm text-muted-foreground">
             {contactName && personPath ? (
               <Link
                 to={personPath}

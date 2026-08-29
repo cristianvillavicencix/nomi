@@ -17,16 +17,18 @@ import {
 import { memberDisplayName } from "@/modules/tickets/ticketInboxUi";
 import { cn } from "@/lib/utils";
 
-const PropertyRow = ({
+const PropertyChip = ({
   label,
   children,
 }: {
   label: string;
   children: ReactNode;
 }) => (
-  <div className="flex items-start justify-between gap-3">
-    <dt className="shrink-0 text-xs text-muted-foreground">{label}</dt>
-    <dd className="min-w-0 text-right text-sm text-foreground">{children}</dd>
+  <div className="min-w-0 rounded-lg border bg-muted/15 px-2.5 py-2">
+    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+      {label}
+    </p>
+    <div className="mt-1 min-w-0 text-sm text-foreground">{children}</div>
   </div>
 );
 
@@ -53,28 +55,16 @@ export const TicketInfoProperties = ({ ticket }: { ticket: Ticket }) => {
       <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
         Properties
       </p>
-      <dl className="mt-3 space-y-2.5">
-        <PropertyRow label="Status">
+      <div className="mt-2.5 grid grid-cols-2 gap-2">
+        <PropertyChip label="Status">
           <Badge
             variant={ticketStatusVariant(ticket.status)}
             className="h-5 px-1.5 text-[10px] capitalize"
           >
             {ticketStatusLabel(ticket.status)}
           </Badge>
-        </PropertyRow>
-        {statusDurationLabel ? (
-          <PropertyRow label="In status">
-            <span
-              className={cn(
-                "inline-flex rounded-md border px-1.5 py-0.5 text-xs font-medium",
-                statusDurationClass,
-              )}
-            >
-              {statusDurationLabel}
-            </span>
-          </PropertyRow>
-        ) : null}
-        <PropertyRow label="Priority">
+        </PropertyChip>
+        <PropertyChip label="Priority">
           <span
             className={cn(
               "inline-flex rounded-md border px-1.5 py-0.5 text-xs font-medium capitalize",
@@ -84,13 +74,25 @@ export const TicketInfoProperties = ({ ticket }: { ticket: Ticket }) => {
           >
             {priorityLabel}
           </span>
-        </PropertyRow>
-        <PropertyRow label="Assignee">
-          <span className="font-medium">
+        </PropertyChip>
+        {statusDurationLabel ? (
+          <PropertyChip label="In status">
+            <span
+              className={cn(
+                "inline-flex rounded-md border px-1.5 py-0.5 text-xs font-medium",
+                statusDurationClass,
+              )}
+            >
+              {statusDurationLabel}
+            </span>
+          </PropertyChip>
+        ) : null}
+        <PropertyChip label="Assignee">
+          <span className="block truncate font-medium">
             {assignee ? memberDisplayName(assignee) : "Unassigned"}
           </span>
-        </PropertyRow>
-      </dl>
+        </PropertyChip>
+      </div>
     </section>
   );
 };

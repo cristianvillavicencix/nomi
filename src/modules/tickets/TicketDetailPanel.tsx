@@ -188,16 +188,16 @@ export const TicketDetailPanel = ({
     <TicketThreadQuoteProvider onQuote={handleQuote}>
       <div
         className={cn(
-          "relative flex h-full min-h-0 overflow-hidden bg-background",
-          previewMode && "flex-nowrap",
+          "relative h-full min-h-0 w-full min-w-0 overflow-hidden bg-background",
+          // Grid keeps the thread on minmax(0,1fr) and the context rail/panel
+          // on an auto track — more reliable than flex-1 + width transitions.
+          previewMode ? "flex flex-nowrap" : "grid grid-cols-[minmax(0,1fr)_auto]",
         )}
       >
         <div
           className={cn(
-            "flex min-h-0 flex-col overflow-hidden",
-            previewMode ? TICKET_PREVIEW_THREAD_CLASS : "min-w-0 flex-1",
-            !previewMode &&
-              "transition-[flex-grow,width,min-width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
+            "flex min-h-0 min-w-0 flex-col overflow-hidden",
+            previewMode ? TICKET_PREVIEW_THREAD_CLASS : "w-full",
           )}
         >
           <TicketCompactHeader

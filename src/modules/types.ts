@@ -353,6 +353,8 @@ export type Ticket = {
   billing_has_siding?: boolean;
   billing_has_esx?: boolean;
   billing_has_pdf_analysis?: boolean;
+  /** Board classification chips (independent of billing). */
+  service_types?: string[] | null;
   delivery_status?: "none" | "ready" | "invoice_sent" | "delivered";
   delivered_at?: string | null;
   created_at?: string;

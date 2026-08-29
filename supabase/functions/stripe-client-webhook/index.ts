@@ -14,6 +14,7 @@ import {
   applyStripeSubscriptionSnapshot,
   CLIENT_SUBSCRIPTION_METADATA_TYPE,
   mirrorSubscriptionInvoiceToSigma,
+  persistSetupCheckoutPaymentMethod,
   type ClientSubscriptionRow,
 } from "../_shared/clientSubscriptionStripe.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
@@ -81,32 +82,65 @@ const handleClientSubscriptionWebhook = async (
 
   switch (event.type) {
     case "checkout.session.completed": {
-      const session = object as {
+      const sessionPartial = object as {
         id?: string;
         mode?: string;
         subscription?: string | null;
         metadata?: Record<string, string> | null;
       };
-      if (session.mode !== "subscription") {
-        return { handled: false };
-      }
 
-      let subscriptionId = resolveSubscriptionIdFromMetadata(session.metadata);
-      if (!subscriptionId && session.id) {
+      let subscriptionId = resolveSubscriptionIdFromMetadata(
+        sessionPartial.metadata,
+      );
+      if (!subscriptionId && sessionPartial.id) {
         const { data: bySession } = await supabaseAdmin
           .from("client_subscriptions")
           .select("id")
-          .eq("stripe_checkout_session_id", session.id)
+          .eq("stripe_checkout_session_id", sessionPartial.id)
           .maybeSingle();
         subscriptionId = bySession?.id ?? null;
       }
 
-      if (!subscriptionId || !session.subscription) {
+      if (sessionPartial.mode === "setup") {
+        if (!subscriptionId || !sessionPartial.id) {
+          return { handled: false };
+        }
+        const { data: row } = await supabaseAdmin
+          .from("client_subscriptions")
+          .select("*")
+          .eq("id", subscriptionId)
+          .maybeSingle();
+        if (!row) return { handled: false };
+
+        const fullSession = await stripe.checkout.sessions.retrieve(
+          sessionPartial.id,
+          { expand: ["setup_intent", "setup_intent.payment_method"] },
+        );
+        const saved = await persistSetupCheckoutPaymentMethod(
+          stripe,
+          supabaseAdmin,
+          {
+            subscription: row as ClientSubscriptionRow,
+            session: fullSession,
+          },
+        );
+        return {
+          handled: true,
+          subscription_id: subscriptionId,
+          setup_card_saved: saved.saved,
+        };
+      }
+
+      if (sessionPartial.mode !== "subscription") {
+        return { handled: false };
+      }
+
+      if (!subscriptionId || !sessionPartial.subscription) {
         return { handled: false };
       }
 
       const stripeSub = await stripe.subscriptions.retrieve(
-        session.subscription as string,
+        sessionPartial.subscription as string,
         { expand: ["default_payment_method"] },
       );
       await applyStripeSubscriptionSnapshot(

@@ -4,6 +4,11 @@ import {
   formatSubscriptionAmountLabel,
   buildSubscriptionBankStatementPreview,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
+import {
+  formatSubscriptionMoney,
+  STRIPE_TRANSFER_FEE_LABEL,
+  subscriptionChargeFromNet,
+} from "@/modules/billing/subscriptions/subscriptionFeeUtils";
 import { resolveInvoiceOrganizationName } from "@/modules/billing/invoiceOrganizationInfo";
 import {
   formatSubscriptionScheduleLabel,
@@ -45,6 +50,7 @@ type SubscriptionCreateReviewPanelProps = {
   submitLabel?: string;
   pendingLabel?: string;
   hideActions?: boolean;
+  waitingForCard?: boolean;
 };
 
 const SummaryRow = ({
@@ -83,6 +89,7 @@ export const SubscriptionCreateReviewPanel = ({
   submitLabel = "Create subscription",
   pendingLabel = "Creating…",
   hideActions = false,
+  waitingForCard = false,
 }: SubscriptionCreateReviewPanelProps) => {
   const schedule = formatSubscriptionScheduleLabel({
     startsAt: startsAtDate,
@@ -90,8 +97,16 @@ export const SubscriptionCreateReviewPanel = ({
     billingInterval,
   });
 
+  const charge = useMemo(() => subscriptionChargeFromNet(amount), [amount]);
+
   const amountLabel = formatSubscriptionAmountLabel(
     amount,
+    "USD",
+    billingInterval,
+  );
+
+  const totalChargeLabel = formatSubscriptionAmountLabel(
+    charge.total,
     "USD",
     billingInterval,
   );
@@ -114,10 +129,7 @@ export const SubscriptionCreateReviewPanel = ({
     });
   }, [subscriptionName, amount, orgTitle]);
 
-  const bankChargeAmount = useMemo(() => {
-    const formatted = formatSubscriptionAmountLabel(amount, "USD", billingInterval);
-    return formatted.replace(/\/(mo|wk|yr)$/, "");
-  }, [amount, billingInterval]);
+  const bankChargeAmount = formatSubscriptionMoney(charge.total);
 
   return (
     <div className="flex h-full min-h-[32rem] flex-col rounded-xl border bg-muted/15 p-5 md:sticky md:top-0">
@@ -130,9 +142,21 @@ export const SubscriptionCreateReviewPanel = ({
         </h3>
       </div>
 
+      {waitingForCard ? (
+        <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100">
+          Waiting for the client to add a card. This screen will update when the
+          card is saved — then you can activate the subscription.
+        </div>
+      ) : null}
+
       <div className="rounded-lg border bg-background px-4 py-1">
         <SummaryRow label="Client" value={clientLabel || "—"} />
-        <SummaryRow label="Amount" value={amountLabel} />
+        <SummaryRow label="Plan (net)" value={amountLabel} />
+        <SummaryRow
+          label={`Processing fee (${STRIPE_TRANSFER_FEE_LABEL})`}
+          value={formatSubscriptionMoney(charge.feeAmount)}
+        />
+        <SummaryRow label="Client pays" value={totalChargeLabel} />
         <SummaryRow label="Starts" value={schedule.start} />
         <SummaryRow label="Ends" value={schedule.end} />
         <SummaryRow
@@ -146,7 +170,8 @@ export const SubscriptionCreateReviewPanel = ({
             <ul className="space-y-1">
               {savedCards.map((card) => (
                 <li key={`${card.source}-${card.last4}`}>
-                  {formatSavedCardLabel(card)} · {savedCardSourceLabel(card.source)}
+                  {formatSavedCardLabel(card)} ·{" "}
+                  {savedCardSourceLabel(card.source)}
                 </li>
               ))}
             </ul>
@@ -170,7 +195,7 @@ export const SubscriptionCreateReviewPanel = ({
               </span>
             </div>
             <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-              Approximate label for recurring card debits. Banks may shorten or
+              Approximate debit including processing fee. Banks may shorten or
               wrap the merchant name.
             </p>
           </div>
@@ -208,7 +233,7 @@ export const SubscriptionCreateReviewPanel = ({
           <Button
             type="button"
             variant="primary"
-            disabled={!canSubmit || isPending}
+            disabled={!canSubmit || isPending || waitingForCard}
             onClick={onSubmit}
           >
             {isPending ? (
@@ -216,6 +241,8 @@ export const SubscriptionCreateReviewPanel = ({
                 <Loader2 className="size-4 animate-spin" />
                 {pendingLabel}
               </>
+            ) : waitingForCard ? (
+              "Waiting for card…"
             ) : (
               submitLabel
             )}
