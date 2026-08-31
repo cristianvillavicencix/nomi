@@ -32,9 +32,9 @@ export const buildSubscriptionBankStatementPreview = (params: {
 };
 
 /**
- * Card statement text for subscription prices.
- * Subscriptions reject payment_settings…statement_descriptor_suffix; set it on
- * Product via price_data.product_data.statement_descriptor instead.
+ * Card statement text for subscription Products.
+ * Subscriptions.create rejects inline product_data / statement_descriptor_suffix
+ * on payment_settings — create a Product with statement_descriptor instead.
  */
 export const subscriptionProductStatementDescriptor = (subscriptionName: string) =>
   sanitizeStripeStatementSuffix(subscriptionName);

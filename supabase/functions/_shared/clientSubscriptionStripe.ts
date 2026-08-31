@@ -256,11 +256,11 @@ export const grossUpSubscriptionLinesForStripe = (
   return inflated;
 };
 
-const buildStripeLineItemPriceData = (
+const buildStripeCheckoutPriceData = (
   line: SubscriptionLineItemInput,
   currency: string,
   billingInterval: BillingInterval,
-): Stripe.SubscriptionCreateParams.Item.PriceData => ({
+): Stripe.Checkout.SessionCreateParams.LineItem.PriceData => ({
   currency: currency.toLowerCase(),
   unit_amount: amountToCents(line.unit_price),
   recurring: {
@@ -274,15 +274,36 @@ const buildStripeLineItemPriceData = (
   },
 });
 
-export const buildStripeSubscriptionCreateItems = (
+/** Subscriptions.create price_data requires `product` (id), not inline product_data. */
+async function buildStripeSubscriptionCreateItems(
+  stripe: Stripe,
   lineItems: SubscriptionLineItemInput[],
   currency: string,
   billingInterval: BillingInterval,
-): Stripe.SubscriptionCreateParams.Item[] =>
-  grossUpSubscriptionLinesForStripe(lineItems).map((line) => ({
-    price_data: buildStripeLineItemPriceData(line, currency, billingInterval),
-    quantity: Math.max(1, Math.round(line.quantity)) || 1,
-  }));
+): Promise<Stripe.SubscriptionCreateParams.Item[]> {
+  const inflated = grossUpSubscriptionLinesForStripe(lineItems);
+  const items: Stripe.SubscriptionCreateParams.Item[] = [];
+  for (const line of inflated) {
+    const product = await stripe.products.create({
+      name: line.description.slice(0, 250) || "Subscription",
+      statement_descriptor: subscriptionProductStatementDescriptor(
+        line.description,
+      ),
+    });
+    items.push({
+      quantity: Math.max(1, Math.round(line.quantity)) || 1,
+      price_data: {
+        currency: currency.toLowerCase(),
+        unit_amount: amountToCents(line.unit_price),
+        recurring: {
+          interval: mapBillingIntervalToStripe(billingInterval),
+        },
+        product: product.id,
+      },
+    });
+  }
+  return items;
+}
 
 export const buildStripeCheckoutLineItems = (
   lineItems: SubscriptionLineItemInput[],
@@ -291,7 +312,7 @@ export const buildStripeCheckoutLineItems = (
 ): Stripe.Checkout.SessionCreateParams.LineItem[] =>
   grossUpSubscriptionLinesForStripe(lineItems).map((line) => ({
     quantity: Math.max(1, Math.round(line.quantity)) || 1,
-    price_data: buildStripeLineItemPriceData(line, currency, billingInterval),
+    price_data: buildStripeCheckoutPriceData(line, currency, billingInterval),
   }));
 
 const readPaymentMethodFromStripe = (
@@ -430,7 +451,8 @@ export async function createStripeSubscriptionWithCard(
     startsAt: params.startsAt,
     endsAt: params.endsAt,
   });
-  const items = buildStripeSubscriptionCreateItems(
+  const items = await buildStripeSubscriptionCreateItems(
+    stripe,
     params.lineItems ??
       normalizeSubscriptionLineItems([], params.name, params.amount),
     params.currency,
@@ -545,20 +567,30 @@ export async function updateStripeSubscriptionBilling(
   for (let index = stripeLines.length; index < existingItems.length; index++) {
     items.push({ id: existingItems[index].id, deleted: true });
   }
-  stripeLines.forEach((line, index) => {
-    const existingItem = existingItems[index];
-    const price_data = buildStripeLineItemPriceData(
-      line,
-      params.currency,
-      params.billingInterval,
-    );
+  for (let index = 0; index < stripeLines.length; index++) {
+    const line = stripeLines[index];
+    const product = await stripe.products.create({
+      name: line.description.slice(0, 250) || "Subscription",
+      statement_descriptor: subscriptionProductStatementDescriptor(
+        line.description,
+      ),
+    });
+    const price_data: Stripe.SubscriptionUpdateParams.Item.PriceData = {
+      currency: params.currency.toLowerCase(),
+      unit_amount: amountToCents(line.unit_price),
+      recurring: {
+        interval: mapBillingIntervalToStripe(params.billingInterval),
+      },
+      product: product.id,
+    };
     const quantity = Math.max(1, Math.round(line.quantity)) || 1;
+    const existingItem = existingItems[index];
     if (existingItem) {
       items.push({ id: existingItem.id, price_data, quantity });
     } else {
       items.push({ price_data, quantity });
     }
-  });
+  }
 
   const updateParams: Stripe.SubscriptionUpdateParams = {
     items,
