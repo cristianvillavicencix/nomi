@@ -69,7 +69,7 @@ import {
 import { IconButton } from "@/components/ui/icon-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Markdown } from "@/components/atomic-crm/misc/Markdown";
+import { ContractDocumentMarkdown } from "@/modules/billing/subscriptions/ContractDocumentMarkdown";
 import {
   Dialog,
   DialogContent,
@@ -1356,9 +1356,11 @@ export const SubscriptionFormEditor = forwardRef<
                       placeholder="Markdown terms shown to the client before signature"
                     />
                   ) : (
-                    <div className="max-h-40 overflow-y-auto rounded-md border bg-background p-3 text-sm">
+                    <div className="max-h-48 overflow-y-auto rounded-md border bg-white p-3 text-sm">
                       {agreementTermsMarkdown.trim() ? (
-                        <Markdown>{agreementTermsMarkdown}</Markdown>
+                        <ContractDocumentMarkdown>
+                          {agreementTermsMarkdown}
+                        </ContractDocumentMarkdown>
                       ) : (
                         <p className="text-muted-foreground">
                           Select a package with a linked contract, or choose a

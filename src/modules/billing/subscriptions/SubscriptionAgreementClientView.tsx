@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { Markdown } from "@/components/atomic-crm/misc/Markdown";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SignaturePad } from "@/components/ui/signature-pad";
+import { ContractDocumentMarkdown } from "@/modules/billing/subscriptions/ContractDocumentMarkdown";
 import { formatSubscriptionAmountLabel } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
 import { cn } from "@/lib/utils";
 
@@ -136,20 +136,26 @@ export const SubscriptionAgreementClientView = ({
         </div>
       ) : null}
 
-      <div className="rounded-lg border bg-white p-4">
-        <p className="mb-2 text-sm font-medium">Agreement</p>
+      <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="border-b bg-[#4a8a3c]/[0.06] px-4 py-2.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#4a8a3c]">
+            Agreement
+          </p>
+        </div>
         {!model.terms_markdown?.trim() ? (
-          <p className="text-sm text-destructive">
+          <p className="p-4 text-sm text-destructive">
             {preview
               ? "Add terms above to preview them here."
               : "Terms are missing. Contact the sender."}
           </p>
         ) : (
-          <div className="max-h-72 overflow-y-auto rounded-md border bg-muted/20 p-3 text-sm">
-            <Markdown>{model.terms_markdown}</Markdown>
+          <div className="max-h-[min(28rem,55vh)] overflow-y-auto px-4 py-4 sm:px-5">
+            <ContractDocumentMarkdown>
+              {model.terms_markdown}
+            </ContractDocumentMarkdown>
           </div>
         )}
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="border-t px-4 py-2 text-xs text-muted-foreground">
           Scroll through the agreement, then sign below.
         </p>
       </div>

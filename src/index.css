@@ -612,3 +612,123 @@ html.nomi-form-embed body {
   }
 }
 
+/*
+ * Contract / subscription agreement document typography.
+ * Green section headings + checkmark lists (client-facing legal docs).
+ */
+.contract-document {
+  --contract-accent: #4a8a3c;
+  --contract-body: #4b5563;
+  color: var(--contract-body);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+.contract-document > *:first-child {
+  margin-top: 0;
+}
+
+.contract-document > *:last-child {
+  margin-bottom: 0;
+}
+
+.contract-document h1,
+.contract-document h2,
+.contract-document h3,
+.contract-document h4 {
+  color: var(--contract-accent);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  margin: 1.35em 0 0.55em;
+}
+
+.contract-document h1 {
+  font-size: 1.15rem;
+  text-transform: uppercase;
+}
+
+.contract-document h2 {
+  font-size: 1rem;
+  text-transform: uppercase;
+}
+
+.contract-document h3 {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+}
+
+.contract-document p {
+  margin: 0.65em 0;
+}
+
+.contract-document strong,
+.contract-document b {
+  color: var(--contract-accent);
+  font-weight: 700;
+}
+
+.contract-document a {
+  color: var(--contract-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.contract-document ul {
+  list-style: none;
+  margin: 0.75em 0;
+  padding: 0;
+}
+
+.contract-document ul > li {
+  position: relative;
+  margin: 0.45em 0;
+  padding-left: 1.75rem;
+}
+
+.contract-document ul > li::before {
+  content: "";
+  position: absolute;
+  top: 0.2em;
+  left: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 9999px;
+  background-color: var(--contract-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 8.2l2.4 2.4L12 5' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 0.7rem 0.7rem;
+}
+
+.contract-document ol {
+  margin: 0.75em 0;
+  padding-left: 1.35rem;
+}
+
+.contract-document ol > li {
+  margin: 0.4em 0;
+  padding-left: 0.25rem;
+}
+
+.contract-document ol > li::marker {
+  color: var(--contract-accent);
+  font-weight: 700;
+}
+
+.contract-document hr {
+  border: 0;
+  border-top: 1px solid color-mix(in oklab, var(--contract-accent) 25%, transparent);
+  margin: 1.25em 0;
+}
+
+.contract-document em,
+.contract-document i {
+  color: color-mix(in oklab, var(--contract-body) 85%, black);
+}
+
+.dark .contract-document {
+  --contract-accent: #6bb35a;
+  --contract-body: #cbd5e1;
+}
+

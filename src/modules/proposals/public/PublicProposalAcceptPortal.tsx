@@ -2,13 +2,13 @@ import { useMutation } from "@tanstack/react-query";
 import { Check, Loader2, Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Markdown } from "@/components/atomic-crm/misc/Markdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { ContractDocumentMarkdown } from "@/modules/billing/subscriptions/ContractDocumentMarkdown";
 import { isClientBillingSkipped } from "@/modules/billing/clientBillingProvider";
 import type { ProposalLocale } from "@/modules/proposals/document/proposalDocumentI18n";
 import { formatProposalMoney } from "@/modules/proposals/document/useProposalDocumentData";
@@ -259,10 +259,10 @@ export const PublicProposalAcceptPortal = ({
               ) : (
                 <>
                   <p className="text-sm font-medium">{copy.termsHeading}</p>
-                  <div className="max-h-40 overflow-y-auto rounded-lg border bg-muted/20 p-3 text-sm">
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <Markdown>{termsMarkdown}</Markdown>
-                    </div>
+                  <div className="max-h-56 overflow-y-auto rounded-lg border bg-white p-3 text-sm sm:p-4">
+                    <ContractDocumentMarkdown>
+                      {termsMarkdown}
+                    </ContractDocumentMarkdown>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {copy.termsScrollHint}

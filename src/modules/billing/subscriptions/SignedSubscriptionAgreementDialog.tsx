@@ -1,4 +1,4 @@
-import { Markdown } from "@/components/atomic-crm/misc/Markdown";
+import { ContractDocumentMarkdown } from "@/modules/billing/subscriptions/ContractDocumentMarkdown";
 import {
   Dialog,
   DialogContent,
@@ -47,8 +47,8 @@ export function SignedSubscriptionAgreementDialog({
             </div>
           ) : null}
           {termsMarkdown?.trim() ? (
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <Markdown>{termsMarkdown}</Markdown>
+            <div className="rounded-lg border bg-white px-4 py-4 sm:px-5">
+              <ContractDocumentMarkdown>{termsMarkdown}</ContractDocumentMarkdown>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
