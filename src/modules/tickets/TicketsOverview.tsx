@@ -1,4 +1,4 @@
-import { Inbox, KanbanSquare, List as ListIcon } from "lucide-react";
+import { Inbox, KanbanSquare, List as ListIcon, Tags } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useGetIdentity, useGetList, useListContext } from "ra-core";
 import { useNavigate, useSearchParams } from "react-router";
@@ -33,6 +33,7 @@ import {
 import { TicketInboxBulkBar } from "@/modules/tickets/TicketInboxBulkBar";
 import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
 import { TicketListItem } from "@/modules/tickets/TicketListItem";
+import { TicketsByType } from "@/modules/tickets/TicketsByType";
 import { TicketsKanban } from "@/modules/tickets/TicketsKanban";
 import { TicketsOverviewTable } from "@/modules/tickets/TicketsOverviewTable";
 import { useTicketsInboxRealtime } from "@/modules/tickets/useTicketsInboxRealtime";
@@ -40,6 +41,12 @@ import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 
 const OVERVIEW_LIST_FILTER = { "merged_into_ticket_id@is": null };
+
+const isBoardLikeView = (view: TicketsOverviewView) =>
+  view === "kanban" || view === "types";
+
+const isTicketsOverviewView = (value: string): value is TicketsOverviewView =>
+  value === "table" || value === "kanban" || value === "types";
 
 export const TicketsOverview = () => {
   const { identity } = useGetIdentity();
@@ -85,8 +92,8 @@ export const TicketsOverview = () => {
       title={false}
       disableBreadcrumb
       contentScrollable={false}
-      pagination={view === "kanban" || isMobile ? false : undefined}
-      perPage={view === "kanban" ? 200 : 50}
+      pagination={isBoardLikeView(view) || isMobile ? false : undefined}
+      perPage={isBoardLikeView(view) ? 200 : 50}
       sort={{ field: "updated_at", order: "DESC" }}
       filter={OVERVIEW_LIST_FILTER}
       disableSyncWithLocation
@@ -338,7 +345,7 @@ const TicketsOverviewBody = ({
               type="single"
               value={view}
               onValueChange={(value) => {
-                if (value === "table" || value === "kanban") onViewChange(value);
+                if (isTicketsOverviewView(value)) onViewChange(value);
               }}
               variant="outline"
               size="sm"
@@ -356,6 +363,14 @@ const TicketsOverviewBody = ({
                 <KanbanSquare className="size-4" />
                 Board
               </ToggleGroupItem>
+              <ToggleGroupItem
+                value="types"
+                aria-label="By type view"
+                className="flex-1"
+              >
+                <Tags className="size-4" />
+                Types
+              </ToggleGroupItem>
             </ToggleGroup>
           </div>
         }
@@ -363,6 +378,15 @@ const TicketsOverviewBody = ({
         {view === "kanban" ? (
           <div className="min-h-0 flex-1 overflow-hidden pb-mobile-dock">
             <TicketsKanban
+              onSelectTicket={onSelectTicket}
+              searchQuery={searchQuery}
+              statusFilter={statusFilter}
+              selectionEnabled={false}
+            />
+          </div>
+        ) : view === "types" ? (
+          <div className="min-h-0 flex-1 overflow-hidden pb-mobile-dock">
+            <TicketsByType
               onSelectTicket={onSelectTicket}
               searchQuery={searchQuery}
               statusFilter={statusFilter}
@@ -415,7 +439,7 @@ const TicketsOverviewBody = ({
             type="single"
             value={view}
             onValueChange={(value) => {
-              if (value === "table" || value === "kanban") onViewChange(value);
+              if (isTicketsOverviewView(value)) onViewChange(value);
             }}
             variant="outline"
             size="sm"
@@ -428,6 +452,10 @@ const TicketsOverviewBody = ({
             <ToggleGroupItem value="kanban" aria-label="Board view">
               <KanbanSquare className="size-4" />
               Board
+            </ToggleGroupItem>
+            <ToggleGroupItem value="types" aria-label="By type view">
+              <Tags className="size-4" />
+              Types
             </ToggleGroupItem>
           </ToggleGroup>
           <CreateTicketButton alwaysShowLabel />
@@ -442,6 +470,16 @@ const TicketsOverviewBody = ({
             selectedTicketIds={selectedTicketIds}
             onToggleTicketSelection={toggleTicketSelection}
             onToggleAllVisible={toggleAllVisible}
+            selectionEnabled={canManage}
+          />
+        </div>
+      ) : view === "types" ? (
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <TicketsByType
+            onSelectTicket={onSelectTicket}
+            searchQuery={searchQuery}
+            selectedTicketIds={selectedTicketIds}
+            onToggleTicketSelection={toggleTicketSelection}
             selectionEnabled={canManage}
           />
         </div>

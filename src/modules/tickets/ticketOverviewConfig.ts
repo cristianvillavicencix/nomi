@@ -1,4 +1,4 @@
-export type TicketsOverviewView = "table" | "kanban";
+export type TicketsOverviewView = "table" | "kanban" | "types";
 
 export const TICKETS_OVERVIEW_VIEW_KEY = "nomi.tickets.overviewView";
 
@@ -19,7 +19,8 @@ export const isTicketKanbanColumnId = (
 export const readPersistedTicketsOverviewView = (): TicketsOverviewView => {
   if (typeof window === "undefined") return "table";
   const stored = window.localStorage.getItem(TICKETS_OVERVIEW_VIEW_KEY);
-  return stored === "kanban" ? "kanban" : "table";
+  if (stored === "kanban" || stored === "types") return stored;
+  return "table";
 };
 
 export const ticketStatusForKanban = (

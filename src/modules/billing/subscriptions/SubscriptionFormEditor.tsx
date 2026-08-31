@@ -85,8 +85,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Eye } from "lucide-react";
+import { Eye, FileText } from "lucide-react";
 import { SubscriptionAgreementClientView } from "@/modules/billing/subscriptions/SubscriptionAgreementClientView";
+import { SignedSubscriptionAgreementDialog } from "@/modules/billing/subscriptions/SignedSubscriptionAgreementDialog";
 import {
   buildSubscriptionContractVariables,
   mergeSubscriptionContractTerms,
@@ -229,6 +230,7 @@ export const SubscriptionFormEditor = forwardRef<
   const [termsEditMode, setTermsEditMode] = useState(false);
   const [changeContractOpen, setChangeContractOpen] = useState(false);
   const [agreementPreviewOpen, setAgreementPreviewOpen] = useState(false);
+  const [signedAgreementOpen, setSignedAgreementOpen] = useState(false);
   const [sendEmail, setSendEmail] = useState(false);
   const [sendSms, setSendSms] = useState(false);
   const [message, setMessage] = useState("");
@@ -1108,6 +1110,37 @@ export const SubscriptionFormEditor = forwardRef<
             </div>
           ) : null}
 
+          {mode === "edit" &&
+          subscription?.enrollment_mode === "agreement" &&
+          (subscription.agreement_signed_at ||
+            subscription.agreement_terms_markdown?.trim()) ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/10 px-3 py-2.5">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Agreement
+                </p>
+                <p className="text-sm">
+                  {subscription.agreement_signed_at
+                    ? `Signed${
+                        subscription.agreement_signatory_name
+                          ? ` by ${subscription.agreement_signatory_name}`
+                          : ""
+                      }`
+                    : "Awaiting signature"}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setSignedAgreementOpen(true)}
+              >
+                <FileText className="size-3.5" />
+                View signed agreement
+              </Button>
+            </div>
+          ) : null}
+
           <CreateFormFieldRow
             columns={2}
             className={cn(fieldsLocked && "pointer-events-none opacity-60")}
@@ -1648,6 +1681,15 @@ export const SubscriptionFormEditor = forwardRef<
           </div>
         </DialogContent>
       </Dialog>
+
+      <SignedSubscriptionAgreementDialog
+        open={signedAgreementOpen}
+        onOpenChange={setSignedAgreementOpen}
+        termsMarkdown={subscription?.agreement_terms_markdown}
+        signatoryName={subscription?.agreement_signatory_name}
+        signedAt={subscription?.agreement_signed_at}
+        signaturePng={subscription?.agreement_signature_png}
+      />
     </div>
   );
 });

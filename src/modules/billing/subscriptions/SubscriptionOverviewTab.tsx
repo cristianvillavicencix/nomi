@@ -1,5 +1,6 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
+import { ExternalLink, FileText } from "lucide-react";
 import { useGetList, useGetMany } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { getClientShowPath } from "@/app/routing";
@@ -20,6 +21,7 @@ import { formatSubscriptionScheduleLabel } from "@/modules/billing/subscriptions
 import { resolveCompanyAddressForDisplay } from "@/modules/clients/clientAddressUtils";
 import type { ClientInvoice, ClientSubscription } from "@/modules/types";
 import { MoneyText } from "@/lib/permissions/MoneyText";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -28,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SignedSubscriptionAgreementDialog } from "@/modules/billing/subscriptions/SignedSubscriptionAgreementDialog";
 
 type SubscriptionOverviewTabProps = {
   subscription: ClientSubscription;
@@ -81,6 +84,7 @@ const parseLineItems = (subscription: ClientSubscription) => {
 export const SubscriptionOverviewTab = ({
   subscription,
 }: SubscriptionOverviewTabProps) => {
+  const [signedAgreementOpen, setSignedAgreementOpen] = useState(false);
   const { data: companies = [] } = useGetMany<Company>(
     "companies",
     { ids: subscription.company_id ? [subscription.company_id] : [] },
@@ -235,6 +239,32 @@ export const SubscriptionOverviewTab = ({
                 />
               </div>
             ) : null}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {subscription.agreement_signed_at ||
+              subscription.agreement_terms_markdown?.trim() ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setSignedAgreementOpen(true)}
+                >
+                  <FileText className="size-3.5" />
+                  View signed agreement
+                </Button>
+              ) : null}
+              {subscription.setup_short_code?.trim() ? (
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <a
+                    href={`/sub-agree/${subscription.setup_short_code.trim()}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink className="size-3.5" />
+                    Open client link
+                  </a>
+                </Button>
+              ) : null}
+            </div>
           </OverviewCard>
         ) : null}
 
@@ -343,6 +373,15 @@ export const SubscriptionOverviewTab = ({
           </div>
         </OverviewCard>
       </div>
+
+      <SignedSubscriptionAgreementDialog
+        open={signedAgreementOpen}
+        onOpenChange={setSignedAgreementOpen}
+        termsMarkdown={subscription.agreement_terms_markdown}
+        signatoryName={subscription.agreement_signatory_name}
+        signedAt={subscription.agreement_signed_at}
+        signaturePng={subscription.agreement_signature_png}
+      />
     </div>
   );
 };
