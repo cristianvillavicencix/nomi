@@ -23,6 +23,8 @@ export type SubscriptionPaymentMode =
   | "staff_card"
   | "request_setup";
 
+export type SubscriptionEnrollmentMode = "direct" | "agreement";
+
 export const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
 export const parseIsoDateAtStartOfDay = (isoDate: string) => {

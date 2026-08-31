@@ -598,6 +598,8 @@ export const billingProvider = {
     line_items?: Array<Record<string, unknown>>;
     starts_at?: string | null;
     ends_at?: string | null;
+    enrollment_mode?: "direct" | "agreement";
+    agreement_terms_markdown?: string | null;
     payment_mode?: "saved_card" | "staff_card" | "request_setup";
     payment_method_id?: string | null;
     send_email?: boolean;
@@ -611,6 +613,7 @@ export const billingProvider = {
     const { data, error } = await invokeEdgeFunction<{
       subscription: Record<string, unknown>;
       checkout_url?: string | null;
+      agreement_share_url?: string | null;
       used_saved_card?: boolean;
       used_staff_card?: boolean;
       email_sent?: boolean;

@@ -32,20 +32,38 @@ const invokePublicFunction = async <T>(
   return payload;
 };
 
-export type PublicSubscriptionSetupPayload = {
-  checkout_url?: string | null;
+export type PublicSubscriptionAgreementPayload = {
+  short_code: string;
+  subscription_id: number;
   subscription_name: string;
   subscription_number?: string | null;
+  amount: number;
+  currency: string;
+  billing_interval: "weekly" | "monthly" | "yearly";
+  line_items: Array<Record<string, unknown>>;
+  terms_markdown: string;
+  terms_version?: string | null;
   status?: string | null;
   already_active?: boolean;
+  already_signed?: boolean;
+  signatory_name?: string | null;
   card_on_file?: boolean;
-  /** When the short code belongs to an agreement enrollment. */
-  is_agreement?: boolean;
-  agreement_path?: string | null;
+  needs_card?: boolean;
 };
 
-export const fetchPublicSubscriptionSetupByShortCode = (shortCode: string) =>
-  invokePublicFunction<PublicSubscriptionSetupPayload>(
-    "get_public_subscription_setup",
+export const fetchPublicSubscriptionAgreement = (shortCode: string) =>
+  invokePublicFunction<PublicSubscriptionAgreementPayload>(
+    "get_public_subscription_agreement",
     { short_code: shortCode },
+  );
+
+export const signPublicSubscriptionAgreement = (input: {
+  short_code: string;
+  signatory_name: string;
+  signature_png: string;
+  base_url?: string;
+}) =>
+  invokePublicFunction<{ checkout_url: string; signed: boolean }>(
+    "sign_subscription_agreement",
+    input,
   );

@@ -29,6 +29,8 @@ const isPublicSharePath = (pathname: string) => {
     "/proposal",
     "/invoice",
     "/portal",
+    "/sub",
+    "/sub-agree",
   ];
   return roots.some(
     (root) => pathname === root || pathname.startsWith(`${root}/`),
@@ -66,5 +68,7 @@ export const config = {
     "/iv/:path*",
     "/portal/:path*",
     "/p/:path*",
+    "/sub/:path*",
+    "/sub-agree/:path*",
   ],
 };

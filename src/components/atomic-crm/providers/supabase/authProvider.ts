@@ -116,6 +116,9 @@ function clearCache() {
  * When the app is deployed with a Vite `base` (e.g. /profile/), pathname is
  * /profile/sign-up, not /sign-up — strict equality in checkAuth was skipping
  * the public page and users ended up in the app with an active session.
+ *
+ * Client share links (invoice, subscription agreement, etc.) must also skip
+ * auth — otherwise a fresh visitor hits “not initialized” → /login.
  */
 function isPublicAuthRoute(): boolean {
   if (typeof window === "undefined") return false;
@@ -123,7 +126,29 @@ function isPublicAuthRoute(): boolean {
   const hash = window.location.hash;
   const segment = (s: "sign-up" | "set-password" | "forgot-password") =>
     path === `/${s}` || path.endsWith(`/${s}`) || hash.includes(`#/${s}`);
-  return segment("set-password") || segment("forgot-password");
+  if (segment("set-password") || segment("forgot-password")) {
+    return true;
+  }
+
+  const publicRoots = [
+    "/b",
+    "/c",
+    "/cal",
+    "/f",
+    "/pr",
+    "/iv",
+    "/p",
+    "/book",
+    "/forms",
+    "/proposal",
+    "/invoice",
+    "/portal",
+    "/sub",
+    "/sub-agree",
+  ];
+  return publicRoots.some(
+    (root) => path === root || path.startsWith(`${root}/`),
+  );
 }
 
 export const authProvider: AuthProvider = {

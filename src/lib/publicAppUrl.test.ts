@@ -16,6 +16,22 @@ describe("publicAppUrl", () => {
     expect(url).not.toContain("localhost");
   });
 
+  it("builds agreement share links under /sub-agree", () => {
+    expect(
+      resolveSubscriptionSetupShareUrl({
+        setup_short_code: "abc123",
+        enrollment_mode: "agreement",
+      }),
+    ).toBe(`${DEFAULT_PUBLIC_APP_URL}/sub-agree/abc123`);
+
+    expect(
+      resolveSubscriptionSetupShareUrl({
+        setup_share_url: "https://www.nomicrm.com/sub-agree/xyz",
+        setup_short_code: "xyz",
+      }),
+    ).toBe(`${DEFAULT_PUBLIC_APP_URL}/sub-agree/xyz`);
+  });
+
   it("falls back to production origin outside dev", () => {
     expect(resolvePublicAppBaseUrl()).toBe(DEFAULT_PUBLIC_APP_URL);
   });

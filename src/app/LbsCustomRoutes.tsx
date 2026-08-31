@@ -219,6 +219,13 @@ const SubscriptionSetupShortUrlRedirect = lazy(() =>
     }),
   ),
 );
+const PublicSubscriptionAgreementPage = lazy(() =>
+  import("@/modules/billing/public/PublicSubscriptionAgreementPage").then(
+    (module) => ({
+      default: module.PublicSubscriptionAgreementPage,
+    }),
+  ),
+);
 const PortalShortUrlRedirect = lazy(() =>
   import("@/modules/portal/PortalShortUrlRedirect").then((module) => ({
     default: module.PortalShortUrlRedirect,
@@ -341,6 +348,14 @@ export const renderLbsPublicFormRoute = () => (
       element={
         <LazyRoute label="Loading…">
           <SubscriptionSetupShortUrlRedirect />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="/sub-agree/:shortCode"
+      element={
+        <LazyRoute label="Loading agreement…">
+          <PublicSubscriptionAgreementPage />
         </LazyRoute>
       }
     />

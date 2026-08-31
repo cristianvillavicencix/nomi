@@ -22,6 +22,10 @@ export const SubscriptionSetupShortUrlRedirect = () => {
     void fetchPublicSubscriptionSetupByShortCode(shortCode)
       .then((payload) => {
         if (cancelled) return;
+        if (payload.is_agreement && payload.agreement_path) {
+          navigate(payload.agreement_path, { replace: true });
+          return;
+        }
         if (payload.already_active) {
           setError(
             "This subscription is already active. Contact us if you need to update your payment method.",
@@ -32,6 +36,10 @@ export const SubscriptionSetupShortUrlRedirect = () => {
           setError(
             "Your card is already saved. We'll activate your subscription shortly — no further action needed.",
           );
+          return;
+        }
+        if (!payload.checkout_url?.trim()) {
+          setError("This setup link is no longer available");
           return;
         }
         window.location.replace(payload.checkout_url);

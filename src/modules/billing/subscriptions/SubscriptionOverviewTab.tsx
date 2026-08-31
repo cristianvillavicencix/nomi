@@ -201,6 +201,43 @@ export const SubscriptionOverviewTab = ({
           />
         </OverviewCard>
 
+        {subscription.enrollment_mode === "agreement" ? (
+          <OverviewCard title="Agreement">
+            <SummaryRow
+              label="Status"
+              value={
+                subscription.agreement_signed_at
+                  ? "Signed"
+                  : "Awaiting signature"
+              }
+            />
+            {subscription.agreement_signatory_name ? (
+              <SummaryRow
+                label="Signed by"
+                value={subscription.agreement_signatory_name}
+              />
+            ) : null}
+            {subscription.agreement_signed_at ? (
+              <SummaryRow
+                label="Signed at"
+                value={formatBillingDate(
+                  subscription.agreement_signed_at.slice(0, 10),
+                )}
+              />
+            ) : null}
+            {subscription.agreement_signature_png?.startsWith("data:image/") ? (
+              <div className="mt-2 space-y-1">
+                <p className="text-xs text-muted-foreground">Signature</p>
+                <img
+                  src={subscription.agreement_signature_png}
+                  alt="Client signature"
+                  className="max-h-24 rounded-md border bg-white"
+                />
+              </div>
+            ) : null}
+          </OverviewCard>
+        ) : null}
+
         <OverviewCard title="Status">
           <SummaryRow
             label="Status"

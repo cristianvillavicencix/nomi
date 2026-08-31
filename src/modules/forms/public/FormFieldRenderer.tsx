@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -10,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
+import { SignaturePad } from "@/components/ui/signature-pad";
 import type { FormFieldDef } from "@/modules/forms/types";
 import { DynamicListField } from "@/modules/forms/public/fields/DynamicListField";
 import { FormFileMultiField } from "@/modules/forms/public/fields/FormFileMultiField";
@@ -42,9 +41,6 @@ export const FormFieldRenderer = ({
   token,
   disabled,
 }: FormFieldRendererProps) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const isDrawing = useRef(false);
-
   const commonLabel = (
     <Label htmlFor={field.key}>
       {field.label ?? field.key}
@@ -319,86 +315,14 @@ export const FormFieldRenderer = ({
   }
 
   if (field.type === "signature") {
-    const startDraw = (
-      event:
-        | React.MouseEvent<HTMLCanvasElement>
-        | React.TouchEvent<HTMLCanvasElement>,
-    ) => {
-      isDrawing.current = true;
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      const rect = canvas.getBoundingClientRect();
-      const point =
-        "touches" in event
-          ? event.touches[0]
-          : (event as React.MouseEvent<HTMLCanvasElement>);
-      ctx.lineWidth = 2;
-      ctx.lineCap = "round";
-      ctx.strokeStyle = "#111";
-      ctx.beginPath();
-      ctx.moveTo(point.clientX - rect.left, point.clientY - rect.top);
-    };
-
-    const draw = (
-      event:
-        | React.MouseEvent<HTMLCanvasElement>
-        | React.TouchEvent<HTMLCanvasElement>,
-    ) => {
-      if (!isDrawing.current) return;
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      const rect = canvas.getBoundingClientRect();
-      const point =
-        "touches" in event
-          ? event.touches[0]
-          : (event as React.MouseEvent<HTMLCanvasElement>);
-      ctx.lineTo(point.clientX - rect.left, point.clientY - rect.top);
-      ctx.stroke();
-    };
-
-    const endDraw = () => {
-      isDrawing.current = false;
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      onChange(canvas.toDataURL("image/png"));
-    };
-
     return (
       <div className="space-y-2">
         {commonLabel}
-        <canvas
-          ref={canvasRef}
-          width={480}
-          height={120}
-          className="w-full rounded-md border bg-white touch-none"
-          onMouseDown={startDraw}
-          onMouseMove={draw}
-          onMouseUp={endDraw}
-          onMouseLeave={endDraw}
-          onTouchStart={startDraw}
-          onTouchMove={draw}
-          onTouchEnd={endDraw}
-        />
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
+        <SignaturePad
+          value={readString(value)}
+          onChange={onChange}
           disabled={disabled}
-          onClick={() => {
-            const canvas = canvasRef.current;
-            const ctx = canvas?.getContext("2d");
-            if (canvas && ctx) {
-              ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
-            onChange("");
-          }}
-        >
-          Clear signature
-        </Button>
+        />
         {helpText}
       </div>
     );

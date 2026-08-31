@@ -22,12 +22,27 @@ Deno.serve(
 
       const { data: tokenRow, error: tokenError } = await supabaseAdmin
         .from("public_client_subscription_setup_tokens")
-        .select("org_id, subscription_id, checkout_url")
+        .select("org_id, subscription_id, checkout_url, purpose")
         .eq("short_code", shortCode)
         .maybeSingle();
 
       if (tokenError || !tokenRow) {
         return createErrorResponse(404, "Invalid or expired link");
+      }
+
+      if (tokenRow.purpose === "agreement") {
+        return new Response(
+          JSON.stringify({
+            checkout_url: null,
+            subscription_name: "Subscription",
+            is_agreement: true,
+            agreement_path: `/sub-agree/${shortCode}`,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       const checkoutUrl = tokenRow.checkout_url?.trim();

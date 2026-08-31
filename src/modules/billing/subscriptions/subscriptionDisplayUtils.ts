@@ -107,13 +107,27 @@ export type SubscriptionListRibbon = {
 };
 
 export const resolveSubscriptionListRibbon = (
-  subscription: Pick<ClientSubscription, "ends_at" | "status">,
+  subscription: Pick<
+    ClientSubscription,
+    "ends_at" | "status" | "enrollment_mode" | "agreement_signed_at"
+  >,
 ): SubscriptionListRibbon => {
   if (isSubscriptionExpired(subscription)) {
     return {
       key: "expired",
       label: "Expired",
       className: "bg-zinc-500 text-white dark:bg-zinc-600",
+    };
+  }
+  if (
+    subscription.enrollment_mode === "agreement" &&
+    subscription.status === "pending_setup" &&
+    !subscription.agreement_signed_at
+  ) {
+    return {
+      key: "agreement_pending",
+      label: "Agreement",
+      className: "bg-indigo-600 text-white dark:bg-indigo-500",
     };
   }
   switch (subscription.status) {
@@ -229,9 +243,20 @@ export const formatSubscriptionAmountLabel = (
 export const formatSubscriptionNextBillingLabel = (
   subscription: Pick<
     ClientSubscription,
-    "status" | "next_billing_at" | "ends_at"
+    | "status"
+    | "next_billing_at"
+    | "ends_at"
+    | "enrollment_mode"
+    | "agreement_signed_at"
   >,
 ) => {
+  if (
+    subscription.enrollment_mode === "agreement" &&
+    subscription.status === "pending_setup" &&
+    !subscription.agreement_signed_at
+  ) {
+    return "Awaiting signature";
+  }
   if (subscription.status === "pending_setup") {
     return "Setup pending";
   }
@@ -295,6 +320,9 @@ export const canSyncSubscriptionFromStripe = (
 
 export const buildSubscriptionSetupSharePath = (shortCode: string) =>
   `/sub/${shortCode.trim()}`;
+
+export const buildSubscriptionAgreementSharePath = (shortCode: string) =>
+  `/sub-agree/${shortCode.trim()}`;
 
 export const buildSubscriptionSetupShareUrl = (
   origin: string,

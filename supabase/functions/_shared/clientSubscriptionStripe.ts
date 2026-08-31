@@ -7,7 +7,10 @@ import {
 } from "./clientProposalBilling.ts";
 import { resolveBillingRecipientEmailFromParts } from "./billingRecipientResolution.ts";
 import { sendSubscriptionSetupDelivery } from "./clientSubscriptionDelivery.ts";
-import { ensureSubscriptionSetupShareLink } from "./clientSubscriptionSetupLink.ts";
+import {
+  ensureSubscriptionAgreementShareLink,
+  ensureSubscriptionSetupShareLink,
+} from "./clientSubscriptionSetupLink.ts";
 import { subscriptionStatementDescriptorSettings } from "./subscriptionStatementDescriptor.ts";
 import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
 
@@ -54,6 +57,14 @@ export type ClientSubscriptionRow = {
   pause_resumes_at?: string | null;
   setup_checkout_url: string | null;
   setup_share_url?: string | null;
+  enrollment_mode?: "direct" | "agreement" | null;
+  agreement_signed_at?: string | null;
+  agreement_signatory_name?: string | null;
+  agreement_signature_png?: string | null;
+  agreement_signed_ip?: string | null;
+  agreement_terms_markdown?: string | null;
+  agreement_terms_version?: string | null;
+  stripe_payment_method_id?: string | null;
   subscription_number?: string | null;
   starts_at: string | null;
   ends_at: string | null;
@@ -1657,4 +1668,110 @@ export async function deliverSubscriptionSetupLink(
     sendSms: params.sendSms,
     contactId: params.subscription.contact_id,
   });
+}
+
+export async function deliverSubscriptionAgreementLink(
+  supabase: SupabaseClient,
+  params: {
+    orgId: number;
+    memberId: number;
+    orgName: string | null;
+    subscription: ClientSubscriptionRow;
+    baseUrl: string;
+    emailTo?: string | null;
+    smsTo?: string | null;
+    subject?: string | null;
+    message?: string | null;
+    sendEmail?: boolean;
+    sendSms?: boolean;
+  },
+) {
+  const { shareUrl } = await ensureSubscriptionAgreementShareLink(supabase, {
+    orgId: params.orgId,
+    subscriptionId: params.subscription.id,
+    baseUrl: params.baseUrl,
+  });
+
+  return sendSubscriptionSetupDelivery(supabase, {
+    orgId: params.orgId,
+    memberId: params.memberId,
+    orgName: params.orgName,
+    subscriptionName: params.subscription.name,
+    subscriptionNumber: params.subscription.subscription_number ?? null,
+    amountLabel: formatSubscriptionAmountLabel(
+      Number(params.subscription.amount),
+      params.subscription.currency,
+      params.subscription.billing_interval,
+    ),
+    shareUrl,
+    emailTo: params.emailTo,
+    smsTo: params.smsTo,
+    subject:
+      params.subject?.trim() ||
+      `Review and sign: ${params.subscription.name}`,
+    message:
+      params.message?.trim() ||
+      `Please review the subscription terms, sign, and add your card to start billing.\n\n${shareUrl}`,
+    sendEmail: params.sendEmail,
+    sendSms: params.sendSms,
+    contactId: params.subscription.contact_id,
+  });
+}
+
+/**
+ * After setup Checkout saves a card, agreement enrollments auto-create the
+ * Stripe subscription. Direct / request_setup leave activation to staff.
+ */
+export async function maybeActivateAgreementAfterCardSaved(
+  stripe: Stripe,
+  supabase: SupabaseClient,
+  subscription: ClientSubscriptionRow,
+  paymentMethodId: string,
+): Promise<{ activated: boolean; reason?: string }> {
+  if ((subscription.enrollment_mode ?? "direct") !== "agreement") {
+    return { activated: false, reason: "not_agreement" };
+  }
+  if (!subscription.agreement_signed_at) {
+    return { activated: false, reason: "not_signed" };
+  }
+  if (subscription.stripe_subscription_id?.trim()) {
+    return { activated: false, reason: "already_active" };
+  }
+  if (subscription.status !== "pending_setup") {
+    return { activated: false, reason: "not_pending" };
+  }
+
+  const customerId = subscription.stripe_customer_id?.trim();
+  if (!customerId || !paymentMethodId.trim()) {
+    return { activated: false, reason: "missing_customer_or_pm" };
+  }
+
+  const metadata = buildSubscriptionMetadata({
+    orgId: subscription.org_id,
+    subscriptionId: subscription.id,
+    contactId: subscription.contact_id,
+    companyId: subscription.company_id,
+  });
+
+  const stripeSub = await createStripeSubscriptionWithCard(stripe, {
+    customerId,
+    paymentMethodId: paymentMethodId.trim(),
+    name: subscription.name,
+    amount: Number(subscription.amount),
+    currency: subscription.currency,
+    billingInterval: subscription.billing_interval,
+    metadata,
+    lineItems: normalizeSubscriptionLineItems(
+      Array.isArray(subscription.line_items)
+        ? (subscription.line_items as Array<Record<string, unknown>>)
+        : [],
+      subscription.name,
+      Number(subscription.amount),
+    ),
+    startsAt: subscription.starts_at,
+    endsAt: subscription.ends_at,
+  });
+
+  await applyStripeSubscriptionSnapshot(supabase, subscription.id, stripeSub);
+  return { activated: true };
 }

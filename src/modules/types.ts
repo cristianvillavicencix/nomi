@@ -227,6 +227,13 @@ export type ClientSubscription = {
     | "paused"
     | "canceled"
     | "trialing";
+  enrollment_mode?: "direct" | "agreement" | null;
+  agreement_terms_markdown?: string | null;
+  agreement_terms_version?: string | null;
+  agreement_signed_at?: string | null;
+  agreement_signatory_name?: string | null;
+  agreement_signature_png?: string | null;
+  agreement_signed_ip?: string | null;
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
   stripe_checkout_session_id?: string | null;

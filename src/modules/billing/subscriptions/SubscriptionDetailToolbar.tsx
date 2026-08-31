@@ -14,6 +14,7 @@ import {
   Save,
   Send,
   CalendarClock,
+  Eye,
 } from "lucide-react";
 import { useSearchParams } from "react-router";
 import { useState, type ComponentProps } from "react";
@@ -355,17 +356,28 @@ export const SubscriptionDetailToolbar = ({
     const shareUrl = resolveSubscriptionSetupShareUrl({
       setup_share_url: subscription.setup_share_url,
       setup_short_code: subscription.setup_short_code,
+      enrollment_mode: subscription.enrollment_mode,
     });
     const url =
-      shareUrl.endsWith("/sub/…")
+      shareUrl.endsWith("/sub/…") || shareUrl.endsWith("/sub-agree/…")
         ? subscription.setup_checkout_url?.trim()
         : shareUrl;
     if (!url) {
-      notify("No setup link yet. Send a setup link first.", { type: "warning" });
+      notify(
+        subscription.enrollment_mode === "agreement"
+          ? "No agreement link yet. Send the agreement first."
+          : "No setup link yet. Send a setup link first.",
+        { type: "warning" },
+      );
       return;
     }
     await navigator.clipboard.writeText(url);
-    notify("Setup link copied", { type: "success" });
+    notify(
+      subscription.enrollment_mode === "agreement"
+        ? "Agreement link copied"
+        : "Setup link copied",
+      { type: "success" },
+    );
   };
 
   const showSetupLink = canShowSubscriptionSetupLink(subscription);
@@ -510,10 +522,33 @@ export const SubscriptionDetailToolbar = ({
             <ToolbarButton
               disabled={busy}
               onClick={() => void copyCheckoutUrl()}
-              title="Copy setup link"
+              title={
+                subscription.enrollment_mode === "agreement"
+                  ? "Copy agreement link"
+                  : "Copy setup link"
+              }
             >
               <Copy className="size-3.5" />
               Copy link
+            </ToolbarButton>
+          ) : null}
+
+          {showSetupLink &&
+          subscription.enrollment_mode === "agreement" &&
+          (subscription.setup_share_url?.trim() ||
+            subscription.setup_short_code?.trim()) ? (
+            <ToolbarButton
+              disabled={busy}
+              title="View as client"
+              aria-label="View as client"
+              onClick={() => {
+                const openUrl =
+                  subscription.setup_share_url?.trim() ||
+                  `${window.location.origin}/sub-agree/${subscription.setup_short_code}`;
+                window.open(openUrl, "_blank", "noopener,noreferrer");
+              }}
+            >
+              <Eye className="size-3.5" />
             </ToolbarButton>
           ) : null}
 

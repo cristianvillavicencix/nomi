@@ -18,6 +18,7 @@ import {
   normalizeSubscriptionLineItems,
   createStripeSubscriptionSetupCheckout,
   createStripeSubscriptionWithCard,
+  deliverSubscriptionAgreementLink,
   deliverSubscriptionSetupLink,
   resolveClientStripePaymentMethod,
   resolveSubscriptionClientName,
@@ -39,6 +40,8 @@ type CreateBody = {
   line_items?: Array<Record<string, unknown>>;
   starts_at?: string | null;
   ends_at?: string | null;
+  enrollment_mode?: "direct" | "agreement";
+  agreement_terms_markdown?: string | null;
   payment_mode?: "saved_card" | "staff_card" | "request_setup";
   payment_method_id?: string | null;
   send_email?: boolean;
@@ -154,11 +157,35 @@ Deno.serve(
         const startsAt = body.starts_at?.trim() || null;
         const endsAt = body.ends_at?.trim() || null;
         const referenceNumber = body.reference_number?.trim() || null;
+        const enrollmentMode =
+          body.enrollment_mode === "agreement" ? "agreement" : "direct";
         const paymentMode =
           body.payment_mode ??
           (body.payment_method_id?.trim()
             ? "staff_card"
             : "request_setup");
+
+        let agreementTermsMarkdown =
+          body.agreement_terms_markdown?.trim() || "";
+        let agreementTermsVersion: string | null = null;
+        if (enrollmentMode === "agreement") {
+          if (!agreementTermsMarkdown) {
+            const { data: orgTerms } = await supabaseAdmin
+              .from("organization_contract_terms")
+              .select("body_markdown, version")
+              .eq("org_id", member.org_id)
+              .eq("is_active", true)
+              .maybeSingle();
+            agreementTermsMarkdown = orgTerms?.body_markdown?.trim() || "";
+            agreementTermsVersion = orgTerms?.version?.trim() || null;
+          }
+          if (!agreementTermsMarkdown) {
+            return createErrorResponse(
+              400,
+              "Add subscription terms (or publish organization contract terms) before sending for signature",
+            );
+          }
+        }
 
         const { data: subscriptionNumber, error: numberError } =
           await supabaseAdmin.rpc("next_client_subscription_number", {
@@ -189,6 +216,11 @@ Deno.serve(
             starts_at: startsAt,
             ends_at: endsAt,
             status: "pending_setup",
+            enrollment_mode: enrollmentMode,
+            agreement_terms_markdown:
+              enrollmentMode === "agreement" ? agreementTermsMarkdown : null,
+            agreement_terms_version:
+              enrollmentMode === "agreement" ? agreementTermsVersion : null,
             created_by_member_id: member.id,
           })
           .select("*")
@@ -249,6 +281,59 @@ Deno.serve(
         let emailSkipped = false;
         let smsSent = false;
         let smsSkipped = false;
+
+        // Agreement path: no Stripe sub / setup Checkout yet — client signs first.
+        if (enrollmentMode === "agreement") {
+          const shouldSendEmail = body.send_email !== false;
+          const shouldSendSms = body.send_sms === true;
+          const delivery = await deliverSubscriptionAgreementLink(
+            supabaseAdmin,
+            {
+              orgId: member.org_id,
+              memberId: Number(member.id),
+              orgName: org?.name ?? null,
+              subscription: {
+                ...(subscription as ClientSubscriptionRow),
+                stripe_customer_id: customer.id,
+              },
+              baseUrl,
+              emailTo: recipientEmail,
+              smsTo: body.sms_to,
+              subject: body.subject,
+              message: body.message,
+              sendEmail: shouldSendEmail,
+              sendSms: shouldSendSms,
+            },
+          );
+          emailSent = delivery.emailSent;
+          emailSkipped = delivery.emailSkipped;
+          smsSent = delivery.smsSent;
+          smsSkipped = delivery.smsSkipped;
+
+          const { data: freshAgreement } = await supabaseAdmin
+            .from("client_subscriptions")
+            .select("*")
+            .eq("id", subscription.id)
+            .single();
+
+          return new Response(
+            JSON.stringify({
+              subscription: freshAgreement,
+              checkout_url: null,
+              agreement_share_url: freshAgreement?.setup_share_url ?? null,
+              used_saved_card: false,
+              used_staff_card: false,
+              email_sent: emailSent,
+              email_skipped: emailSkipped,
+              sms_sent: smsSent,
+              sms_skipped: smsSkipped,
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
 
         const scheduleParams = { startsAt, endsAt };
 

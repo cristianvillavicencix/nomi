@@ -130,6 +130,14 @@ const SHARE_ROUTE_RULES: ShareRouteRule[] = [
       "Access your projects and documents from Sigma by Latino Business Support.",
     imagePath: "/og/sigma-portal.jpg",
   },
+  {
+    test: (pathname) =>
+      /^\/sub-agree(\/|$)/.test(pathname) || /^\/sub(\/|$)/.test(pathname),
+    title: "Subscription setup",
+    description:
+      "Review your subscription, sign if needed, and add a payment card securely.",
+    imagePath: "/og/sigma-invoice.jpg",
+  },
 ];
 
 export const resolvePublicShareMeta = (

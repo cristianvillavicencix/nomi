@@ -57,6 +57,7 @@ import {
   SUBSCRIPTION_DURATION_OPTIONS,
   todayIsoDate,
   type SubscriptionDurationValue,
+  type SubscriptionEnrollmentMode,
   type SubscriptionPaymentMode,
 } from "@/modules/billing/subscriptions/subscriptionScheduleUtils";
 import { BILLING_INTERVALS } from "@/modules/proposals/proposalCommercialConstants";
@@ -65,7 +66,14 @@ import {
   FloatingFieldShell,
   floatingFieldControlClassName,
 } from "@/components/ui/floating-field";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -75,6 +83,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { Eye } from "lucide-react";
+import { SubscriptionAgreementClientView } from "@/modules/billing/subscriptions/SubscriptionAgreementClientView";
 import {
   CreateFormFieldRow,
   CreateFormSection,
@@ -197,6 +207,11 @@ export const SubscriptionFormEditor = forwardRef<
   const [messageFocused, setMessageFocused] = useState(false);
   const [paymentMode, setPaymentMode] =
     useState<SubscriptionPaymentMode>("request_setup");
+  const [enrollmentMode, setEnrollmentMode] =
+    useState<SubscriptionEnrollmentMode>("direct");
+  const [agreementTermsMarkdown, setAgreementTermsMarkdown] = useState("");
+  const [agreementTermsEdited, setAgreementTermsEdited] = useState(false);
+  const [agreementPreviewOpen, setAgreementPreviewOpen] = useState(false);
   const [sendEmail, setSendEmail] = useState(false);
   const [sendSms, setSendSms] = useState(false);
   const [message, setMessage] = useState("");
@@ -275,6 +290,30 @@ export const SubscriptionFormEditor = forwardRef<
     [billTo],
   );
 
+  const { data: orgTermsRows = [] } = useGetList<{
+    id: number;
+    body_markdown?: string | null;
+    version?: string | null;
+    is_active?: boolean;
+  }>(
+    "organization_contract_terms",
+    {
+      pagination: { page: 1, perPage: 5 },
+      sort: { field: "id", order: "DESC" },
+      filter: { "is_active@eq": true },
+    },
+    { enabled: mode === "create" && enrollmentMode === "agreement" },
+  );
+  const orgTermsMarkdown = orgTermsRows[0]?.body_markdown?.trim() ?? "";
+
+  useEffect(() => {
+    if (enrollmentMode !== "agreement") return;
+    if (agreementTermsEdited) return;
+    if (orgTermsMarkdown) {
+      setAgreementTermsMarkdown(orgTermsMarkdown);
+    }
+  }, [enrollmentMode, agreementTermsEdited, orgTermsMarkdown]);
+
   useEffect(() => {
     if (paymentMode !== "request_setup") return;
     if (sendEmail || sendSms) return;
@@ -294,6 +333,7 @@ export const SubscriptionFormEditor = forwardRef<
   const previewShareUrl = resolveSubscriptionSetupShareUrl({
     setup_share_url: subscription?.setup_share_url,
     setup_short_code: subscription?.setup_short_code,
+    enrollment_mode: subscription?.enrollment_mode ?? enrollmentMode,
   });
 
   const defaultMessage = useMemo(
@@ -471,6 +511,32 @@ export const SubscriptionFormEditor = forwardRef<
       }
 
       if (mode === "create") {
+        if (enrollmentMode === "agreement") {
+          if (!agreementTermsMarkdown.trim()) {
+            throw new Error("Add terms before sending the agreement link");
+          }
+          return dataProvider.createClientSubscription({
+            company_id: billTo?.companyId ?? null,
+            contact_id: billTo?.contactId ?? null,
+            deal_id: dealId ? Number(dealId) : null,
+            reference_number: referenceNumber.trim() || null,
+            name: subscriptionName,
+            amount,
+            billing_interval: billingInterval,
+            starts_at: startsAt ? `${startsAt}T00:00:00.000Z` : null,
+            ends_at: endsAtIso,
+            enrollment_mode: "agreement",
+            agreement_terms_markdown: agreementTermsMarkdown.trim(),
+            line_items: lineItemsPayload,
+            send_email: sendEmail,
+            send_sms: sendSms,
+            email_to: recipientEmail || null,
+            sms_to: recipientPhone || null,
+            message: messageEdited ? message.trim() || null : null,
+            base_url: resolvePublicAppBaseUrl(),
+          });
+        }
+
         let paymentMethodId: string | null = null;
         if (paymentMode === "staff_card") {
           paymentMethodId = (await staffCardRef.current?.confirmCard()) ?? null;
@@ -494,6 +560,7 @@ export const SubscriptionFormEditor = forwardRef<
           billing_interval: billingInterval,
           starts_at: startsAt ? `${startsAt}T00:00:00.000Z` : null,
           ends_at: endsAtIso,
+          enrollment_mode: "direct",
           payment_mode: paymentMode,
           payment_method_id: paymentMethodId,
           line_items: lineItemsPayload,
@@ -567,6 +634,37 @@ export const SubscriptionFormEditor = forwardRef<
 
       if (
         mode === "create" &&
+        enrollmentMode === "agreement" &&
+        !waitingForCard
+      ) {
+        setWaitingForCard(false);
+        setPendingSubscriptionId(null);
+        setBillTo(null);
+        setLines([]);
+        setReferenceNumber("");
+        setDealId("");
+        setBillingInterval("monthly");
+        setStartsAt(todayIsoDate());
+        setDuration("ongoing");
+        setCustomEndDate("");
+        setPaymentMode("request_setup");
+        setEnrollmentMode("direct");
+        setAgreementTermsMarkdown("");
+        setAgreementTermsEdited(false);
+        setMessage("");
+        setMessageEdited(false);
+        onSaved?.(result);
+        notify(
+          sendEmail || sendSms
+            ? "Agreement link sent — waiting for client signature and card"
+            : "Subscription created — copy the agreement link to send to the client",
+          { type: "success" },
+        );
+        return;
+      }
+
+      if (
+        mode === "create" &&
         paymentMode === "request_setup" &&
         !result.used_saved_card &&
         !result.used_staff_card &&
@@ -596,6 +694,9 @@ export const SubscriptionFormEditor = forwardRef<
         setDuration("ongoing");
         setCustomEndDate("");
         setPaymentMode("request_setup");
+        setEnrollmentMode("direct");
+        setAgreementTermsMarkdown("");
+        setAgreementTermsEdited(false);
         setMessage("");
         setMessageEdited(false);
       }
@@ -933,6 +1034,160 @@ export const SubscriptionFormEditor = forwardRef<
 
         {!paymentSectionLocked ? (
           <CreateFormSection title="Payment" className="[&>div]:space-y-3">
+            {mode === "create" ? (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Start mode
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={cn(
+                      "rounded-md border px-3 py-1.5 text-sm transition-colors",
+                      enrollmentMode === "direct"
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border text-muted-foreground hover:bg-muted/40",
+                      fieldsLocked && "pointer-events-none opacity-60",
+                    )}
+                    disabled={fieldsLocked}
+                    onClick={() => {
+                      setEnrollmentMode("direct");
+                      if (!sendEmail && !sendSms) {
+                        setSendEmail(false);
+                        setSendSms(false);
+                      }
+                    }}
+                  >
+                    Direct
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      "rounded-md border px-3 py-1.5 text-sm transition-colors",
+                      enrollmentMode === "agreement"
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border text-muted-foreground hover:bg-muted/40",
+                      fieldsLocked && "pointer-events-none opacity-60",
+                    )}
+                    disabled={fieldsLocked}
+                    onClick={() => {
+                      setEnrollmentMode("agreement");
+                      setSendEmail(Boolean(recipientEmail));
+                      setSendSms(false);
+                    }}
+                  >
+                    Agreement
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {enrollmentMode === "agreement"
+                    ? "Client reviews terms, signs, then adds a card. Billing starts automatically."
+                    : "Create with a card on file, enter a card, or request setup from the client."}
+                </p>
+              </div>
+            ) : null}
+
+            {mode === "create" && enrollmentMode === "agreement" ? (
+              <div className="space-y-3 rounded-md border bg-muted/10 p-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Terms and conditions
+                    </p>
+                    <IconButton
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label="View as client"
+                      title="View how the client sees the portal"
+                      disabled={fieldsLocked}
+                      onClick={() => setAgreementPreviewOpen(true)}
+                    >
+                      <Eye className="size-4" />
+                    </IconButton>
+                  </div>
+                  <textarea
+                    className="min-h-[120px] w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    disabled={fieldsLocked}
+                    value={agreementTermsMarkdown}
+                    onChange={(event) => {
+                      setAgreementTermsEdited(true);
+                      setAgreementTermsMarkdown(event.target.value);
+                    }}
+                    placeholder="Markdown terms shown to the client before signature"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Send agreement link via
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      [
+                        {
+                          id: "email" as const,
+                          label: recipientEmail
+                            ? `Email (${recipientEmail})`
+                            : "Email",
+                          disabled: !recipientEmail,
+                        },
+                        {
+                          id: "sms" as const,
+                          label: recipientPhone
+                            ? `SMS (${recipientPhone})`
+                            : "SMS",
+                          disabled: !recipientPhone,
+                        },
+                        {
+                          id: "both" as const,
+                          label: "Both",
+                          disabled: !recipientEmail || !recipientPhone,
+                        },
+                      ] as const
+                    ).map((option) => {
+                      const selected =
+                        option.id === "email"
+                          ? sendEmail && !sendSms
+                          : option.id === "sms"
+                            ? sendSms && !sendEmail
+                            : sendEmail && sendSms;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          disabled={fieldsLocked || option.disabled}
+                          className={cn(
+                            "rounded-md border px-3 py-1.5 text-sm",
+                            selected
+                              ? "border-primary bg-primary/5"
+                              : "border-border text-muted-foreground",
+                            (fieldsLocked || option.disabled) &&
+                              "pointer-events-none opacity-50",
+                          )}
+                          onClick={() => {
+                            if (option.id === "email") {
+                              setSendEmail(true);
+                              setSendSms(false);
+                            } else if (option.id === "sms") {
+                              setSendEmail(false);
+                              setSendSms(true);
+                            } else {
+                              setSendEmail(true);
+                              setSendSms(true);
+                            }
+                          }}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {enrollmentMode === "direct" || mode !== "create" ? (
+              <>
             {hasSavedCards ? (
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">
@@ -1083,6 +1338,8 @@ export const SubscriptionFormEditor = forwardRef<
                 />
               </div>
             ) : null}
+              </>
+            ) : null}
           </CreateFormSection>
         ) : subscription?.payment_method_last4 ? (
           <CreateFormSection title="Payment">
@@ -1121,21 +1378,53 @@ export const SubscriptionFormEditor = forwardRef<
           submitLabel={
             waitingForCard && clientCardReady
               ? "Activate subscription"
-              : mode === "create"
-                ? "Create subscription"
-                : "Save changes"
+              : mode === "create" && enrollmentMode === "agreement"
+                ? "Send agreement"
+                : mode === "create"
+                  ? "Create subscription"
+                  : "Save changes"
           }
           pendingLabel={
             waitingForCard && clientCardReady
               ? "Activating…"
-              : mode === "create"
-                ? "Creating…"
-                : "Saving…"
+              : mode === "create" && enrollmentMode === "agreement"
+                ? "Sending…"
+                : mode === "create"
+                  ? "Creating…"
+                  : "Saving…"
           }
           waitingForCard={waitingForCard && !clientCardReady}
           hideActions={hideReviewActions}
         />
       </div>
+
+      <Dialog open={agreementPreviewOpen} onOpenChange={setAgreementPreviewOpen}>
+        <DialogContent className="max-h-[92vh] gap-0 overflow-hidden border-0 bg-transparent p-0 shadow-none sm:max-w-md">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Client portal preview</DialogTitle>
+          </DialogHeader>
+          <div className="mx-auto max-h-[92vh] w-full max-w-md overflow-y-auto rounded-xl border bg-slate-50 shadow-xl">
+            <div className="sticky top-0 z-10 border-b bg-white/95 px-4 py-2.5 backdrop-blur">
+              <p className="text-center text-xs font-medium text-muted-foreground">
+                How the client sees the agreement portal
+              </p>
+            </div>
+            <div className="px-4 py-6">
+              <SubscriptionAgreementClientView
+                preview
+                model={{
+                  subscription_name: subscriptionName,
+                  amount,
+                  currency: "USD",
+                  billing_interval: billingInterval,
+                  line_items: lineItemsPayload,
+                  terms_markdown: agreementTermsMarkdown,
+                }}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });

@@ -14,6 +14,7 @@ import {
   applyStripeSubscriptionSnapshot,
   CLIENT_SUBSCRIPTION_METADATA_TYPE,
   mirrorSubscriptionInvoiceToSigma,
+  maybeActivateAgreementAfterCardSaved,
   persistSetupCheckoutPaymentMethod,
   type ClientSubscriptionRow,
 } from "../_shared/clientSubscriptionStripe.ts";
@@ -124,10 +125,30 @@ const handleClientSubscriptionWebhook = async (
             session: fullSession,
           },
         );
+
+        let agreementActivated = false;
+        if (saved.saved && saved.payment_method_id) {
+          const { data: refreshed } = await supabaseAdmin
+            .from("client_subscriptions")
+            .select("*")
+            .eq("id", subscriptionId)
+            .maybeSingle();
+          if (refreshed) {
+            const activation = await maybeActivateAgreementAfterCardSaved(
+              stripe,
+              supabaseAdmin,
+              refreshed as ClientSubscriptionRow,
+              saved.payment_method_id,
+            );
+            agreementActivated = activation.activated;
+          }
+        }
+
         return {
           handled: true,
           subscription_id: subscriptionId,
           setup_card_saved: saved.saved,
+          agreement_activated: agreementActivated,
         };
       }
 

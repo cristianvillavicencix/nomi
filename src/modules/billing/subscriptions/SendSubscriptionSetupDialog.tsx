@@ -101,8 +101,13 @@ export const SendSubscriptionSetupDialog = ({
       resolveSubscriptionSetupShareUrl({
         setup_share_url: subscription.setup_share_url,
         setup_short_code: subscription.setup_short_code,
+        enrollment_mode: subscription.enrollment_mode,
       }),
-    [subscription.setup_share_url, subscription.setup_short_code],
+    [
+      subscription.setup_share_url,
+      subscription.setup_short_code,
+      subscription.enrollment_mode,
+    ],
   );
 
   const amountLabel = formatSubscriptionAmountLabel(

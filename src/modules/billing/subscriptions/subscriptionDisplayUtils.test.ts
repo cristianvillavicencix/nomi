@@ -49,6 +49,14 @@ describe("subscriptionDisplayUtils", () => {
     ).toBe("Pending");
     expect(
       resolveSubscriptionListRibbon({
+        status: "pending_setup",
+        ends_at: null,
+        enrollment_mode: "agreement",
+        agreement_signed_at: null,
+      }).label,
+    ).toBe("Agreement");
+    expect(
+      resolveSubscriptionListRibbon({
         status: "active",
         ends_at: "2020-01-01T00:00:00.000Z",
       }).label,
