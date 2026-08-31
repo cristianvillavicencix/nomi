@@ -1,7 +1,8 @@
 import { useGetIdentity } from "ra-core";
 import { CaretDown } from "@phosphor-icons/react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { useCallback, useMemo } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ThemeModeToggle } from "@/components/admin/theme-mode-toggle";
 import { UserMenu } from "@/components/admin/user-menu";
@@ -59,27 +60,40 @@ const TopNavLink = ({
   item: LbsNavItem;
   active: boolean;
   badgeCount?: number;
-}) => (
-  <Link
-    to={item.to}
-    state={LINK_STATE}
-    aria-label={item.label}
-    className={cn(
-      "relative inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors",
-      active
-        ? "bg-secondary-foreground/10 text-secondary-foreground"
-        : "text-secondary-foreground/70 hover:bg-secondary-foreground/5 hover:text-secondary-foreground",
-    )}
-  >
-    <SidebarNavIcon
-      icon={item.icon}
-      active={active}
-      className={cn(active ? "text-secondary-foreground" : undefined)}
-    />
-    <span className="whitespace-nowrap">{item.label}</span>
-    {badgeCount > 0 ? <TopNavBadge count={badgeCount} /> : null}
-  </Link>
-);
+}) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleClick = (event: ReactMouseEvent<HTMLAnchorElement>) => {
+    if (item.to !== "/tickets") return;
+    if (location.pathname === "/tickets" && !location.search) return;
+    event.preventDefault();
+    navigate("/tickets", { state: LINK_STATE, viewTransition: true });
+  };
+
+  return (
+    <Link
+      to={item.to}
+      state={LINK_STATE}
+      aria-label={item.label}
+      onClick={handleClick}
+      className={cn(
+        "relative inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors",
+        active
+          ? "bg-secondary-foreground/10 text-secondary-foreground"
+          : "text-secondary-foreground/70 hover:bg-secondary-foreground/5 hover:text-secondary-foreground",
+      )}
+    >
+      <SidebarNavIcon
+        icon={item.icon}
+        active={active}
+        className={cn(active ? "text-secondary-foreground" : undefined)}
+      />
+      <span className="whitespace-nowrap">{item.label}</span>
+      {badgeCount > 0 ? <TopNavBadge count={badgeCount} /> : null}
+    </Link>
+  );
+};
 
 const Header = () => {
   const { darkModeLogo, lightModeLogo, title } = useConfigurationContext();

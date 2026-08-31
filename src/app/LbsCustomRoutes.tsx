@@ -590,6 +590,14 @@ export const renderLbsCustomRoutes = ({
         }
       />
       <Route
+        path="/tickets/inbox"
+        element={<Navigate to="/tickets" replace />}
+      />
+      <Route
+        path="/tickets/inbox/*"
+        element={<Navigate to="/tickets" replace />}
+      />
+      <Route
         path="/proposals"
         element={
           <ProtectedRoute resource="proposals" action="list">

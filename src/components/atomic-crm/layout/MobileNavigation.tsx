@@ -8,7 +8,8 @@ import {
   Ticket,
   Users,
 } from "@phosphor-icons/react";
-import { Link, matchPath, useLocation } from "react-router";
+import { Link, matchPath, useLocation, useNavigate } from "react-router";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import { sidebarNavIconWeight } from "@/app/SidebarNavIcon";
 import { getAccountsHubPath } from "@/app/routing";
 import { useMessagesUnreadCounts } from "@/modules/messages/useMessagesUnreadCounts";
@@ -117,40 +118,53 @@ const NavigationButton = ({
   label: string;
   isActive: boolean;
   badgeCount?: number;
-}) => (
-  <Link
-    to={href}
-    aria-current={isActive ? "page" : undefined}
-    className={cn(
-      "relative z-10 flex min-w-0 flex-1 items-stretch justify-center px-0.5 py-1 transition-transform active:scale-[0.96]",
-      isActive ? "text-foreground" : "text-muted-foreground",
-    )}
-  >
-    <span
+}) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleClick = (event: ReactMouseEvent<HTMLAnchorElement>) => {
+    if (href !== "/tickets") return;
+    if (location.pathname === "/tickets" && !location.search) return;
+    event.preventDefault();
+    navigate("/tickets", { viewTransition: true });
+  };
+
+  return (
+    <Link
+      to={href}
+      aria-current={isActive ? "page" : undefined}
+      onClick={handleClick}
       className={cn(
-        "relative flex w-full max-w-[4.75rem] flex-col items-center justify-center gap-0.5 rounded-[13px] px-1 py-1 transition-colors",
-        isActive && "bg-black/[0.07] dark:bg-white/[0.12]",
+        "relative z-10 flex min-w-0 flex-1 items-stretch justify-center px-0.5 py-1 transition-transform active:scale-[0.96]",
+        isActive ? "text-foreground" : "text-muted-foreground",
       )}
     >
-      <span className="relative flex size-6 items-center justify-center">
-        <Icon className="size-6" weight={sidebarNavIconWeight(isActive)} />
-        {badgeCount > 0 ? (
-          <Badge
-            variant="default"
-            className="absolute -right-2.5 -top-1.5 min-w-4 rounded-full border-0 px-1 py-0 text-[10px] leading-4"
-          >
-            {formatUnreadBadgeCount(badgeCount)}
-          </Badge>
-        ) : null}
-      </span>
       <span
         className={cn(
-          "max-w-full truncate text-[10px] leading-none tracking-tight",
-          isActive ? "font-semibold" : "font-medium",
+          "relative flex w-full max-w-[4.75rem] flex-col items-center justify-center gap-0.5 rounded-[13px] px-1 py-1 transition-colors",
+          isActive && "bg-black/[0.07] dark:bg-white/[0.12]",
         )}
       >
-        {label}
+        <span className="relative flex size-6 items-center justify-center">
+          <Icon className="size-6" weight={sidebarNavIconWeight(isActive)} />
+          {badgeCount > 0 ? (
+            <Badge
+              variant="default"
+              className="absolute -right-2.5 -top-1.5 min-w-4 rounded-full border-0 px-1 py-0 text-[10px] leading-4"
+            >
+              {formatUnreadBadgeCount(badgeCount)}
+            </Badge>
+          ) : null}
+        </span>
+        <span
+          className={cn(
+            "max-w-full truncate text-[10px] leading-none tracking-tight",
+            isActive ? "font-semibold" : "font-medium",
+          )}
+        >
+          {label}
+        </span>
       </span>
-    </span>
-  </Link>
-);
+    </Link>
+  );
+};

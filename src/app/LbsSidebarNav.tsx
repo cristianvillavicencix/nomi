@@ -1,7 +1,8 @@
 import { useGetIdentity } from "ra-core";
 import { CaretDown } from "@phosphor-icons/react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -397,6 +398,17 @@ const SidebarNavLink = ({
   badgeCount?: number;
   collapsed?: boolean;
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  /** Always land on module list root (e.g. /tickets overview, not a ticket show/inbox). */
+  const handleClick = (event: ReactMouseEvent<HTMLAnchorElement>) => {
+    if (item.to !== "/tickets") return;
+    if (location.pathname === "/tickets" && !location.search) return;
+    event.preventDefault();
+    navigate("/tickets", { state: LINK_STATE, viewTransition: true });
+  };
+
   if (collapsed) {
     return (
       <SidebarMenuItem>
@@ -409,6 +421,7 @@ const SidebarNavLink = ({
                 state={LINK_STATE}
                 aria-label={item.label}
                 className={sidebarNavLinkCollapsedClass(active)}
+                onClick={handleClick}
               >
                 <SidebarNavIcon icon={item.icon} active={active} />
                 {badgeCount > 0 ? (
@@ -439,6 +452,7 @@ const SidebarNavLink = ({
         to={item.to}
         state={LINK_STATE}
         className={sidebarNavLinkClass(active)}
+        onClick={handleClick}
       >
         <SidebarNavIcon icon={item.icon} active={active} />
         <span className="truncate">{item.label}</span>
