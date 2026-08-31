@@ -13,6 +13,7 @@ import {
   ModuleToolbar,
   ModuleToolbarActions,
 } from "@/components/atomic-crm/layout/ModuleToolbar";
+import { useTicketsFromMessageSearch } from "@/modules/tickets/useTicketMessageSearch";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { MobilePageChrome } from "@/components/atomic-crm/layout/MobilePageChrome";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -130,6 +131,10 @@ const TicketsOverviewBody = ({
     useState<TicketStatusFilterId>("all");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const canManage = useMemberCapability("support.tickets.manage");
+  const {
+    messageHitIds,
+    messageHitTickets,
+  } = useTicketsFromMessageSearch(searchQuery);
 
   useEffect(() => {
     setSelectedTicketIds([]);
@@ -233,9 +238,21 @@ const TicketsOverviewBody = ({
 
   const filteredTickets = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
+    const byId = new Map<string, Ticket>();
+    for (const ticket of allTickets) {
+      byId.set(String(ticket.id), ticket);
+    }
+    for (const ticket of messageHitTickets) {
+      if (ticket.merged_into_ticket_id == null) {
+        byId.set(String(ticket.id), ticket);
+      }
+    }
+    const pool = [...byId.values()];
+
     const searched = !query
-      ? allTickets
-      : allTickets.filter((ticket) => {
+      ? pool
+      : pool.filter((ticket) => {
+          if (messageHitIds.has(String(ticket.id))) return true;
           const company = companyById.get(String(ticket.company_id ?? ""));
           const contact = contactById.get(String(ticket.contact_id ?? ""));
           const haystack = [
@@ -245,6 +262,8 @@ const TicketsOverviewBody = ({
             contact?.first_name,
             contact?.last_name,
             contact?.email,
+            ticket.requester_email,
+            ticket.requester_name,
           ]
             .filter(Boolean)
             .join(" ")
@@ -253,7 +272,15 @@ const TicketsOverviewBody = ({
         });
     if (statusFilter === "all") return searched;
     return searched.filter((ticket) => ticket.status === statusFilter);
-  }, [allTickets, companyById, contactById, searchQuery, statusFilter]);
+  }, [
+    allTickets,
+    companyById,
+    contactById,
+    searchQuery,
+    statusFilter,
+    messageHitIds,
+    messageHitTickets,
+  ]);
 
   const statusFilterCounts = useMemo(() => {
     const counts = {
@@ -301,7 +328,7 @@ const TicketsOverviewBody = ({
               <ModuleSearchField
                 value={searchQuery}
                 onChange={setSearchQuery}
-                basePlaceholder="Search tickets"
+                basePlaceholder="Search tickets, emails…"
                 total={filteredTickets.length}
                 itemSingular="ticket"
                 className="w-full min-w-0 flex-1 [&>div]:max-w-none"

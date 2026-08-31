@@ -39,6 +39,7 @@ import { TicketEmptyDetailState } from "@/modules/tickets/TicketEmptyDetailState
 import { TicketInboxBulkBar } from "@/modules/tickets/TicketInboxBulkBar";
 import { TicketKanbanCard } from "@/modules/tickets/TicketKanbanCard";
 import { matchesTicketSearch } from "@/modules/tickets/ticketInboxQueue";
+import { useTicketsFromMessageSearch } from "@/modules/tickets/useTicketMessageSearch";
 import {
   type TicketStatusFilterId,
 } from "@/modules/tickets/ticketInboxConfig";
@@ -182,11 +183,22 @@ const TicketsInboxLayout = ({
 
   const trimmedSearch = searchQuery.trim();
   const isSearching = Boolean(trimmedSearch);
+  const { messageHitIds, messageHitTickets } =
+    useTicketsFromMessageSearch(searchQuery);
 
-  const listSourceTickets = useMemo(
-    () => (isSearching ? allTickets : tickets),
-    [isSearching, allTickets, tickets],
-  );
+  const listSourceTickets = useMemo(() => {
+    if (!isSearching) return tickets;
+    const byId = new Map<string, Ticket>();
+    for (const ticket of allTickets) {
+      byId.set(String(ticket.id), ticket);
+    }
+    for (const ticket of messageHitTickets) {
+      if (ticket.merged_into_ticket_id == null) {
+        byId.set(String(ticket.id), ticket);
+      }
+    }
+    return [...byId.values()];
+  }, [isSearching, allTickets, tickets, messageHitTickets]);
 
   const counts = useMemo(
     () => countTicketsByInboxFilter(allTickets),
@@ -342,6 +354,7 @@ const TicketsInboxLayout = ({
     if (!isSearching) return tickets;
 
     return listSourceTickets.filter((ticket) => {
+      if (messageHitIds.has(String(ticket.id))) return true;
       const company = ticket.company_id
         ? companyById.get(String(ticket.company_id))
         : null;
@@ -367,6 +380,7 @@ const TicketsInboxLayout = ({
     contactById,
     searchQuery,
     isSearching,
+    messageHitIds,
   ]);
 
   const selectedTickets = useMemo(
