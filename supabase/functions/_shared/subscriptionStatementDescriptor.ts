@@ -31,12 +31,10 @@ export const buildSubscriptionBankStatementPreview = (params: {
   return `${prefix}* ${suffix}`;
 };
 
-export const subscriptionStatementDescriptorSettings = (subscriptionName: string) => ({
-  payment_settings: {
-    payment_method_options: {
-      card: {
-        statement_descriptor_suffix: sanitizeStripeStatementSuffix(subscriptionName),
-      },
-    },
-  },
-});
+/**
+ * Card statement text for subscription prices.
+ * Subscriptions reject payment_settings…statement_descriptor_suffix; set it on
+ * Product via price_data.product_data.statement_descriptor instead.
+ */
+export const subscriptionProductStatementDescriptor = (subscriptionName: string) =>
+  sanitizeStripeStatementSuffix(subscriptionName);

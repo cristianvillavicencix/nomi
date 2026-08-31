@@ -11,7 +11,7 @@ import {
   ensureSubscriptionAgreementShareLink,
   ensureSubscriptionSetupShareLink,
 } from "./clientSubscriptionSetupLink.ts";
-import { subscriptionStatementDescriptorSettings } from "./subscriptionStatementDescriptor.ts";
+import { subscriptionProductStatementDescriptor } from "./subscriptionStatementDescriptor.ts";
 import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
 
 export type BillingInterval = "weekly" | "monthly" | "yearly";
@@ -151,6 +151,7 @@ export const buildSubscriptionPriceData = (params: {
     },
     product_data: {
       name: params.name,
+      statement_descriptor: subscriptionProductStatementDescriptor(params.name),
     },
   };
 };
@@ -265,7 +266,12 @@ const buildStripeLineItemPriceData = (
   recurring: {
     interval: mapBillingIntervalToStripe(billingInterval),
   },
-  product_data: { name: line.description },
+  product_data: {
+    name: line.description,
+    statement_descriptor: subscriptionProductStatementDescriptor(
+      line.description,
+    ),
+  },
 });
 
 export const buildStripeSubscriptionCreateItems = (
@@ -436,7 +442,6 @@ export async function createStripeSubscriptionWithCard(
     collection_method: "charge_automatically",
     // Fail loudly on SCA / card decline instead of leaving an incomplete Stripe sub.
     payment_behavior: "error_if_incomplete",
-    ...subscriptionStatementDescriptorSettings(params.name),
     items,
     metadata: params.metadata,
     ...(schedule.trial_end ? { trial_end: schedule.trial_end } : {}),
@@ -557,7 +562,6 @@ export async function updateStripeSubscriptionBilling(
 
   const updateParams: Stripe.SubscriptionUpdateParams = {
     items,
-    ...subscriptionStatementDescriptorSettings(params.name),
     proration_behavior: "create_prorations",
   };
 
