@@ -67,7 +67,9 @@ import {
   floatingFieldControlClassName,
 } from "@/components/ui/floating-field";
 import { IconButton } from "@/components/ui/icon-button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Markdown } from "@/components/atomic-crm/misc/Markdown";
 import {
   Dialog,
   DialogContent,
@@ -85,6 +87,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Eye } from "lucide-react";
 import { SubscriptionAgreementClientView } from "@/modules/billing/subscriptions/SubscriptionAgreementClientView";
+import {
+  buildSubscriptionContractVariables,
+  mergeSubscriptionContractTerms,
+  resolveDefaultContractTermsIdFromPackages,
+} from "@/modules/billing/subscriptions/subscriptionAgreementMerge";
+import type {
+  OrganizationContractTerms,
+  ServicePackage,
+} from "@/modules/types";
 import {
   CreateFormFieldRow,
   CreateFormSection,
@@ -211,6 +222,12 @@ export const SubscriptionFormEditor = forwardRef<
     useState<SubscriptionEnrollmentMode>("direct");
   const [agreementTermsMarkdown, setAgreementTermsMarkdown] = useState("");
   const [agreementTermsEdited, setAgreementTermsEdited] = useState(false);
+  const [selectedContractTermsId, setSelectedContractTermsId] = useState<
+    number | null
+  >(null);
+  const [contractPickedManually, setContractPickedManually] = useState(false);
+  const [termsEditMode, setTermsEditMode] = useState(false);
+  const [changeContractOpen, setChangeContractOpen] = useState(false);
   const [agreementPreviewOpen, setAgreementPreviewOpen] = useState(false);
   const [sendEmail, setSendEmail] = useState(false);
   const [sendSms, setSendSms] = useState(false);
@@ -290,29 +307,147 @@ export const SubscriptionFormEditor = forwardRef<
     [billTo],
   );
 
-  const { data: orgTermsRows = [] } = useGetList<{
-    id: number;
-    body_markdown?: string | null;
-    version?: string | null;
-    is_active?: boolean;
-  }>(
-    "organization_contract_terms",
-    {
-      pagination: { page: 1, perPage: 5 },
-      sort: { field: "id", order: "DESC" },
-      filter: { "is_active@eq": true },
-    },
-    { enabled: mode === "create" && enrollmentMode === "agreement" },
+  const { data: contractTemplates = [] } =
+    useGetList<OrganizationContractTerms>(
+      "organization_contract_terms",
+      {
+        pagination: { page: 1, perPage: 100 },
+        sort: { field: "title", order: "ASC" },
+        filter: { "is_active@eq": true },
+      },
+      { enabled: mode === "create" && enrollmentMode === "agreement" },
+    );
+
+  const packageIdsOnLines = useMemo(
+    () =>
+      [
+        ...new Set(
+          lines
+            .map((line) =>
+              line.package_id != null ? Number(line.package_id) : null,
+            )
+            .filter((id): id is number => id != null && Number.isFinite(id)),
+        ),
+      ],
+    [lines],
   );
-  const orgTermsMarkdown = orgTermsRows[0]?.body_markdown?.trim() ?? "";
+
+  const { data: packagesForLines = [] } = useGetMany<ServicePackage>(
+    "service_packages",
+    { ids: packageIdsOnLines },
+    {
+      enabled:
+        mode === "create" &&
+        enrollmentMode === "agreement" &&
+        packageIdsOnLines.length > 0,
+    },
+  );
+
+  const selectedTemplate = useMemo(
+    () =>
+      contractTemplates.find(
+        (row) => Number(row.id) === Number(selectedContractTermsId),
+      ) ?? null,
+    [contractTemplates, selectedContractTermsId],
+  );
+
+  const clientDisplayName = useMemo(() => {
+    const contact = billTo?.contact;
+    if (contact) {
+      const name = [contact.first_name, contact.last_name]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      if (name) return name;
+    }
+    return billTo?.company?.name?.trim() || "Client";
+  }, [billTo]);
+
+  const clientAddress = useMemo(() => {
+    const company = billTo?.company as
+      | (Company & {
+          address?: string | null;
+          city?: string | null;
+          state_abbr?: string | null;
+          zipcode?: string | null;
+        })
+      | undefined;
+    if (!company) return "—";
+    const parts = [
+      company.address,
+      company.city,
+      company.state_abbr,
+      company.zipcode,
+    ]
+      .map((part) => (typeof part === "string" ? part.trim() : ""))
+      .filter(Boolean);
+    return parts.join(", ") || "—";
+  }, [billTo]);
 
   useEffect(() => {
     if (enrollmentMode !== "agreement") return;
-    if (agreementTermsEdited) return;
-    if (orgTermsMarkdown) {
-      setAgreementTermsMarkdown(orgTermsMarkdown);
+    if (contractPickedManually) return;
+    const packagesById = new Map(
+      packagesForLines.map((pkg) => [
+        Number(pkg.id),
+        {
+          default_contract_terms_id:
+            pkg.default_contract_terms_id != null
+              ? Number(pkg.default_contract_terms_id)
+              : null,
+        },
+      ]),
+    );
+    const orgDefault = contractTemplates.find((row) => row.is_default);
+    const resolved = resolveDefaultContractTermsIdFromPackages({
+      lineItems: lines.map((line) => ({
+        package_id: line.package_id != null ? Number(line.package_id) : null,
+      })),
+      packagesById,
+      orgDefaultTermsId: orgDefault ? Number(orgDefault.id) : null,
+      activeTermsIds: contractTemplates.map((row) => Number(row.id)),
+    });
+    setSelectedContractTermsId(resolved);
+  }, [
+    enrollmentMode,
+    contractPickedManually,
+    lines,
+    packagesForLines,
+    contractTemplates,
+  ]);
+
+  useEffect(() => {
+    if (enrollmentMode !== "agreement") return;
+    if (agreementTermsEdited || termsEditMode) return;
+    if (!selectedTemplate?.body_markdown?.trim()) {
+      setAgreementTermsMarkdown("");
+      return;
     }
-  }, [enrollmentMode, agreementTermsEdited, orgTermsMarkdown]);
+    const vars = buildSubscriptionContractVariables({
+      clientName: clientDisplayName,
+      clientAddress,
+      subscriptionName: subscriptionNameFromLines(lines) || "Subscription",
+      subscriptionNumber: null,
+      amount: sumSubscriptionLinesAmount(lines),
+      currency: "USD",
+      billingInterval,
+      lineItems: subscriptionLinesToPayload(lines),
+      termsVersion: selectedTemplate.version || "1.0",
+      defaultVariables: selectedTemplate.default_variables ?? null,
+    });
+    setAgreementTermsMarkdown(
+      mergeSubscriptionContractTerms(selectedTemplate.body_markdown, vars),
+    );
+  }, [
+    enrollmentMode,
+    agreementTermsEdited,
+    termsEditMode,
+    selectedTemplate,
+    clientDisplayName,
+    clientAddress,
+    lines,
+    billingInterval,
+  ]);
 
   useEffect(() => {
     if (paymentMode !== "request_setup") return;
@@ -526,6 +661,7 @@ export const SubscriptionFormEditor = forwardRef<
             starts_at: startsAt ? `${startsAt}T00:00:00.000Z` : null,
             ends_at: endsAtIso,
             enrollment_mode: "agreement",
+            agreement_contract_terms_id: selectedContractTermsId,
             agreement_terms_markdown: agreementTermsMarkdown.trim(),
             line_items: lineItemsPayload,
             send_email: sendEmail,
@@ -1090,32 +1226,114 @@ export const SubscriptionFormEditor = forwardRef<
             {mode === "create" && enrollmentMode === "agreement" ? (
               <div className="space-y-3 rounded-md border bg-muted/10 p-3">
                 <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Contract
+                      </p>
+                      <p className="truncate text-sm font-medium">
+                        {selectedTemplate
+                          ? `${selectedTemplate.title} (v${selectedTemplate.version})`
+                          : "No template selected"}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={fieldsLocked || contractTemplates.length === 0}
+                        onClick={() => setChangeContractOpen(true)}
+                      >
+                        Change contract
+                      </Button>
+                      <IconButton
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-label="View as client"
+                        title="View how the client sees the portal"
+                        disabled={fieldsLocked}
+                        onClick={() => setAgreementPreviewOpen(true)}
+                      >
+                        <Eye className="size-4" />
+                      </IconButton>
+                    </div>
+                  </div>
+
+                  {changeContractOpen ? (
+                    <Select
+                      value={
+                        selectedContractTermsId != null
+                          ? String(selectedContractTermsId)
+                          : undefined
+                      }
+                      onValueChange={(value) => {
+                        setContractPickedManually(true);
+                        setAgreementTermsEdited(false);
+                        setTermsEditMode(false);
+                        setSelectedContractTermsId(Number(value));
+                        setChangeContractOpen(false);
+                      }}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Choose a contract template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contractTemplates.map((row) => (
+                          <SelectItem
+                            key={String(row.id)}
+                            value={String(row.id)}
+                          >
+                            {row.title}
+                            {row.is_default ? " (org default)" : ""} · v
+                            {row.version}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : null}
+
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-medium text-muted-foreground">
-                      Terms and conditions
+                      Terms preview (filled for this client)
                     </p>
-                    <IconButton
+                    <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      aria-label="View as client"
-                      title="View how the client sees the portal"
                       disabled={fieldsLocked}
-                      onClick={() => setAgreementPreviewOpen(true)}
+                      onClick={() => {
+                        setTermsEditMode((current) => !current);
+                        if (!termsEditMode) setAgreementTermsEdited(true);
+                      }}
                     >
-                      <Eye className="size-4" />
-                    </IconButton>
+                      {termsEditMode ? "Done editing" : "Edit terms"}
+                    </Button>
                   </div>
-                  <textarea
-                    className="min-h-[120px] w-full rounded-md border bg-background px-3 py-2 text-sm"
-                    disabled={fieldsLocked}
-                    value={agreementTermsMarkdown}
-                    onChange={(event) => {
-                      setAgreementTermsEdited(true);
-                      setAgreementTermsMarkdown(event.target.value);
-                    }}
-                    placeholder="Markdown terms shown to the client before signature"
-                  />
+                  {termsEditMode ? (
+                    <textarea
+                      className="min-h-[140px] w-full rounded-md border bg-background px-3 py-2 text-sm"
+                      disabled={fieldsLocked}
+                      value={agreementTermsMarkdown}
+                      onChange={(event) => {
+                        setAgreementTermsEdited(true);
+                        setAgreementTermsMarkdown(event.target.value);
+                      }}
+                      placeholder="Markdown terms shown to the client before signature"
+                    />
+                  ) : (
+                    <div className="max-h-40 overflow-y-auto rounded-md border bg-background p-3 text-sm">
+                      {agreementTermsMarkdown.trim() ? (
+                        <Markdown>{agreementTermsMarkdown}</Markdown>
+                      ) : (
+                        <p className="text-muted-foreground">
+                          Select a package with a linked contract, or choose a
+                          template with Change contract.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">
@@ -1157,10 +1375,10 @@ export const SubscriptionFormEditor = forwardRef<
                           type="button"
                           disabled={fieldsLocked || option.disabled}
                           className={cn(
-                            "rounded-md border px-3 py-1.5 text-sm",
+                            "rounded-md border px-3 py-1.5 text-sm transition-colors",
                             selected
                               ? "border-primary bg-primary/5"
-                              : "border-border text-muted-foreground",
+                              : "border-border text-muted-foreground hover:bg-muted/40",
                             (fieldsLocked || option.disabled) &&
                               "pointer-events-none opacity-50",
                           )}
@@ -1419,6 +1637,11 @@ export const SubscriptionFormEditor = forwardRef<
                   billing_interval: billingInterval,
                   line_items: lineItemsPayload,
                   terms_markdown: agreementTermsMarkdown,
+                  contract_title: selectedTemplate?.title ?? null,
+                  terms_version: selectedTemplate?.version ?? null,
+                  organization_name: orgTitle || "Provider",
+                  client_name: clientDisplayName,
+                  client_address: clientAddress,
                 }}
               />
             </div>

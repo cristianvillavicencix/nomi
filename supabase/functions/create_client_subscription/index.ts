@@ -27,6 +27,12 @@ import {
   type BillingInterval,
   type ClientSubscriptionRow,
 } from "../_shared/clientSubscriptionStripe.ts";
+import {
+  buildSubscriptionContractVariables,
+  mergeContractTerms,
+  pickContractTermsForSubscription,
+  type ContractTermsRow,
+} from "../_shared/subscriptionContractTerms.ts";
 
 type CreateBody = {
   company_id?: number | null;
@@ -42,6 +48,7 @@ type CreateBody = {
   ends_at?: string | null;
   enrollment_mode?: "direct" | "agreement";
   agreement_terms_markdown?: string | null;
+  agreement_contract_terms_id?: number | null;
   payment_mode?: "saved_card" | "staff_card" | "request_setup";
   payment_method_id?: string | null;
   send_email?: boolean;
@@ -168,21 +175,104 @@ Deno.serve(
         let agreementTermsMarkdown =
           body.agreement_terms_markdown?.trim() || "";
         let agreementTermsVersion: string | null = null;
+        let agreementContractTermsId: number | null = null;
         if (enrollmentMode === "agreement") {
-          if (!agreementTermsMarkdown) {
-            const { data: orgTerms } = await supabaseAdmin
-              .from("organization_contract_terms")
-              .select("body_markdown, version")
+          const { data: templates = [] } = await supabaseAdmin
+            .from("organization_contract_terms")
+            .select(
+              "id, version, title, body_markdown, default_variables, is_default, is_active, slug",
+            )
+            .eq("org_id", member.org_id)
+            .eq("is_active", true)
+            .order("is_default", { ascending: false })
+            .order("created_at", { ascending: false });
+
+          const packageIds = [
+            ...new Set(
+              normalizedLines
+                .map((line) =>
+                  line.package_id != null ? Number(line.package_id) : null,
+                )
+                .filter((id): id is number => id != null && Number.isFinite(id)),
+            ),
+          ];
+          const packageDefaults = new Map<number, number | null | undefined>();
+          if (packageIds.length > 0) {
+            const { data: pkgs } = await supabaseAdmin
+              .from("service_packages")
+              .select("id, default_contract_terms_id")
               .eq("org_id", member.org_id)
-              .eq("is_active", true)
-              .maybeSingle();
-            agreementTermsMarkdown = orgTerms?.body_markdown?.trim() || "";
-            agreementTermsVersion = orgTerms?.version?.trim() || null;
+              .in("id", packageIds);
+            for (const pkg of pkgs ?? []) {
+              packageDefaults.set(
+                Number(pkg.id),
+                pkg.default_contract_terms_id != null
+                  ? Number(pkg.default_contract_terms_id)
+                  : null,
+              );
+            }
           }
+
+          const requestedId = body.agreement_contract_terms_id
+            ? Number(body.agreement_contract_terms_id)
+            : null;
+          const picked = pickContractTermsForSubscription({
+            requestedId,
+            lineItems: normalizedLines,
+            packageDefaults,
+            templates: (templates ?? []) as ContractTermsRow[],
+          });
+
+          if (picked) {
+            agreementContractTermsId = Number(picked.id);
+            agreementTermsVersion = picked.version?.trim() || null;
+          }
+
+          let clientAddress = "—";
+          if (resolvedCompanyId) {
+            const { data: company } = await supabaseAdmin
+              .from("companies")
+              .select("address, city, state_abbr, zipcode")
+              .eq("id", resolvedCompanyId)
+              .maybeSingle();
+            const parts = [
+              company?.address,
+              company?.city,
+              company?.state_abbr,
+              company?.zipcode,
+            ]
+              .map((part) =>
+                typeof part === "string" ? part.trim() : "",
+              )
+              .filter(Boolean);
+            if (parts.length > 0) clientAddress = parts.join(", ");
+          }
+
+          const templateBody = picked?.body_markdown?.trim() || "";
+          const defaults =
+            (picked?.default_variables as Record<string, string> | null) ?? {};
+
+          // Staff-sent body (already merged or manually edited) wins; else merge template.
+          if (!agreementTermsMarkdown && templateBody) {
+            const vars = buildSubscriptionContractVariables({
+              clientName: clientInfo.name ?? "Client",
+              clientAddress,
+              subscriptionName: name,
+              subscriptionNumber: null,
+              amount,
+              currency: (body.currency ?? "USD").toUpperCase(),
+              billingInterval,
+              lineItems: normalizedLines,
+              termsVersion: agreementTermsVersion ?? "1.0",
+              defaultVariables: defaults,
+            });
+            agreementTermsMarkdown = mergeContractTerms(templateBody, vars);
+          }
+
           if (!agreementTermsMarkdown) {
             return createErrorResponse(
               400,
-              "Add subscription terms (or publish organization contract terms) before sending for signature",
+              "Add subscription terms (or publish a contract template) before sending for signature",
             );
           }
         }
@@ -217,6 +307,8 @@ Deno.serve(
             ends_at: endsAt,
             status: "pending_setup",
             enrollment_mode: enrollmentMode,
+            agreement_contract_terms_id:
+              enrollmentMode === "agreement" ? agreementContractTermsId : null,
             agreement_terms_markdown:
               enrollmentMode === "agreement" ? agreementTermsMarkdown : null,
             agreement_terms_version:

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Markdown } from "@/components/atomic-crm/misc/Markdown";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,11 @@ export type SubscriptionAgreementClientViewModel = {
   billing_interval: "weekly" | "monthly" | "yearly";
   line_items?: Array<Record<string, unknown>>;
   terms_markdown?: string | null;
+  contract_title?: string | null;
+  terms_version?: string | null;
+  organization_name?: string | null;
+  client_name?: string | null;
+  client_address?: string | null;
 };
 
 const lineTotal = (row: Record<string, unknown>) => {
@@ -27,11 +33,14 @@ export const SubscriptionAgreementClientView = ({
   model,
   preview = false,
   className,
+  footer,
 }: {
   model: SubscriptionAgreementClientViewModel;
   /** When true, signature controls are decorative and disabled. */
   preview?: boolean;
   className?: string;
+  /** Live portal signature / continue UI. Defaults to disabled preview controls. */
+  footer?: ReactNode;
 }) => {
   const amountLabel = formatSubscriptionAmountLabel(
     model.amount,
@@ -40,6 +49,8 @@ export const SubscriptionAgreementClientView = ({
   );
   const lines = Array.isArray(model.line_items) ? model.line_items : [];
   const currency = model.currency || "USD";
+  const provider = model.organization_name?.trim() || "Provider";
+  const client = model.client_name?.trim() || "Client";
 
   return (
     <div className={cn("flex w-full flex-col gap-5", className)}>
@@ -52,7 +63,7 @@ export const SubscriptionAgreementClientView = ({
 
       <div className="space-y-1">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Subscription agreement
+          {model.contract_title?.trim() || "Subscription agreement"}
         </p>
         <h1 className="text-xl font-semibold tracking-tight">
           {model.subscription_name || "Subscription"}
@@ -62,7 +73,32 @@ export const SubscriptionAgreementClientView = ({
             {model.subscription_number}
           </p>
         ) : null}
+        {model.terms_version ? (
+          <p className="text-xs text-muted-foreground">
+            Document version {model.terms_version}
+          </p>
+        ) : null}
         <p className="text-base font-medium">{amountLabel}</p>
+      </div>
+
+      <div className="grid gap-3 rounded-lg border bg-white p-4 sm:grid-cols-2">
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Provider
+          </p>
+          <p className="text-sm font-medium">{provider}</p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Client
+          </p>
+          <p className="text-sm font-medium">{client}</p>
+          {model.client_address?.trim() ? (
+            <p className="text-xs text-muted-foreground">
+              {model.client_address}
+            </p>
+          ) : null}
+        </div>
       </div>
 
       {lines.length > 0 ? (
@@ -101,7 +137,7 @@ export const SubscriptionAgreementClientView = ({
       ) : null}
 
       <div className="rounded-lg border bg-white p-4">
-        <p className="mb-2 text-sm font-medium">Terms and conditions</p>
+        <p className="mb-2 text-sm font-medium">Agreement</p>
         {!model.terms_markdown?.trim() ? (
           <p className="text-sm text-destructive">
             {preview
@@ -109,48 +145,55 @@ export const SubscriptionAgreementClientView = ({
               : "Terms are missing. Contact the sender."}
           </p>
         ) : (
-          <div className="max-h-56 overflow-y-auto rounded-md border bg-muted/20 p-3 text-sm">
+          <div className="max-h-72 overflow-y-auto rounded-md border bg-muted/20 p-3 text-sm">
             <Markdown>{model.terms_markdown}</Markdown>
           </div>
         )}
         <p className="mt-2 text-xs text-muted-foreground">
-          Scroll through the terms, then agree and sign below.
+          Scroll through the agreement, then sign below.
         </p>
       </div>
 
-      <div
-        className={cn(
-          "space-y-4 rounded-lg border bg-white p-4",
-          preview && "pointer-events-none opacity-80",
-        )}
-      >
-        <div className="flex items-start gap-2">
-          <Checkbox id="agree-terms-preview" checked={false} disabled />
-          <Label htmlFor="agree-terms-preview" className="text-sm leading-snug">
-            I have read and agree to the terms. My signature starts this
-            subscription after I add a payment card.
-          </Label>
-        </div>
+      {footer !== undefined ? (
+        footer
+      ) : (
+        <div
+          className={cn(
+            "space-y-4 rounded-lg border bg-white p-4",
+            preview && "pointer-events-none opacity-80",
+          )}
+        >
+          <div className="flex items-start gap-2">
+            <Checkbox id="agree-terms-preview" checked={false} disabled />
+            <Label
+              htmlFor="agree-terms-preview"
+              className="text-sm leading-snug"
+            >
+              I have read and agree to the terms. My signature starts this
+              subscription after I add a payment card.
+            </Label>
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="signatory-preview">Initials / full name</Label>
-          <Input
-            id="signatory-preview"
-            placeholder="e.g. J.D. or Jane Doe"
-            disabled
-            value=""
-          />
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="signatory-preview">Initials / full name</Label>
+            <Input
+              id="signatory-preview"
+              placeholder="e.g. J.D. or Jane Doe"
+              disabled
+              value=""
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label>Signature</Label>
-          <SignaturePad value="" onChange={() => undefined} disabled />
-          <p className="text-xs text-muted-foreground">
-            Draw with your finger or mouse. Name, date, time, and IP are
-            recorded with this signature.
-          </p>
+          <div className="space-y-2">
+            <Label>Signature</Label>
+            <SignaturePad value="" onChange={() => undefined} disabled />
+            <p className="text-xs text-muted-foreground">
+              Draw with your finger or mouse. Name, date, time, and IP are
+              recorded with this signature.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

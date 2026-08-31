@@ -43,6 +43,10 @@ export type PublicSubscriptionAgreementPayload = {
   line_items: Array<Record<string, unknown>>;
   terms_markdown: string;
   terms_version?: string | null;
+  contract_title?: string | null;
+  organization_name?: string | null;
+  client_name?: string | null;
+  client_address?: string | null;
   status?: string | null;
   already_active?: boolean;
   already_signed?: boolean;

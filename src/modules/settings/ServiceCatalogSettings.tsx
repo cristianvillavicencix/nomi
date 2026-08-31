@@ -60,6 +60,10 @@ const toPackageDraft = (pkg: ServicePackage): Partial<CatalogItemDraft> => ({
   ticket_billing_enabled: pkg.ticket_billing_enabled ?? false,
   ticket_pricing_mode: pkg.ticket_pricing_mode ?? "flat",
   ticket_billing_slug: pkg.ticket_billing_slug ?? "",
+  default_contract_terms_id:
+    pkg.default_contract_terms_id != null
+      ? Number(pkg.default_contract_terms_id)
+      : null,
 });
 
 const toAddonDraft = (addon: ServiceAddon): Partial<CatalogItemDraft> => ({

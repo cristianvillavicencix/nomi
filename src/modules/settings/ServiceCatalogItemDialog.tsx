@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useGetList } from "ra-core";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,7 @@ import {
 } from "@/modules/proposals/proposalCommercialConstants";
 import { CATALOG_CATEGORIES } from "@/modules/catalog/catalogConstants";
 import { slugifyTicketBillingSlug } from "@/modules/catalog/ticketCatalogPricing";
+import type { OrganizationContractTerms } from "@/modules/types";
 
 export type CatalogItemDraft = {
   name: string;
@@ -42,6 +44,7 @@ export type CatalogItemDraft = {
   ticket_billing_enabled?: boolean;
   ticket_pricing_mode?: "flat" | "supplement_lines";
   ticket_billing_slug?: string;
+  default_contract_terms_id?: number | null;
 };
 
 const emptyDraft = (sortOrder: number): CatalogItemDraft => ({
@@ -58,6 +61,7 @@ const emptyDraft = (sortOrder: number): CatalogItemDraft => ({
   ticket_billing_enabled: false,
   ticket_pricing_mode: "flat",
   ticket_billing_slug: "",
+  default_contract_terms_id: null,
 });
 
 export const ServiceCatalogItemDialog = ({
@@ -84,6 +88,13 @@ export const ServiceCatalogItemDialog = ({
   const [draft, setDraft] = useState<CatalogItemDraft>(emptyDraft(sortOrder));
   const [isSaving, setIsSaving] = useState(false);
   const [showMore, setShowMore] = useState(!isQuick);
+
+  const { data: contractTemplates = [] } =
+    useGetList<OrganizationContractTerms>("organization_contract_terms", {
+      filter: { "is_active@eq": true },
+      pagination: { page: 1, perPage: 100 },
+      sort: { field: "title", order: "ASC" },
+    }, { enabled: open && variant === "package" });
 
   useEffect(() => {
     if (!open) return;
@@ -335,6 +346,43 @@ export const ServiceCatalogItemDialog = ({
               </SelectContent>
             </Select>
           </div>
+
+          {variant === "package" && !isQuick ? (
+            <div className="space-y-1.5">
+              <Label>Default contract</Label>
+              <Select
+                value={
+                  draft.default_contract_terms_id != null
+                    ? String(draft.default_contract_terms_id)
+                    : "none"
+                }
+                onValueChange={(value) =>
+                  setDraft((current) => ({
+                    ...current,
+                    default_contract_terms_id:
+                      value === "none" ? null : Number(value),
+                  }))
+                }
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {contractTemplates.map((row) => (
+                    <SelectItem key={String(row.id)} value={String(row.id)}>
+                      {row.title}
+                      {row.is_default ? " (default)" : ""} · v{row.version}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Auto-loaded when this package is added to a subscription
+                agreement.
+              </p>
+            </div>
+          ) : null}
 
           <div className="space-y-1.5">
             <Label htmlFor="catalog-description">

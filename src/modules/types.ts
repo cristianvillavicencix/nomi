@@ -84,6 +84,7 @@ export type ServicePackage = {
   ticket_billing_enabled?: boolean;
   ticket_pricing_mode?: "flat" | "supplement_lines" | null;
   ticket_billing_slug?: string | null;
+  default_contract_terms_id?: Identifier | null;
   sort_order?: number;
   created_at?: string;
   updated_at?: string;
@@ -110,8 +111,10 @@ export type OrganizationContractTerms = {
   version: string;
   title: string;
   body_markdown: string;
+  slug?: string;
   default_variables?: Record<string, string>;
   is_active?: boolean;
+  is_default?: boolean;
   published_at?: string | null;
   created_at?: string;
 } & Pick<RaRecord, "id">;
@@ -228,6 +231,7 @@ export type ClientSubscription = {
     | "canceled"
     | "trialing";
   enrollment_mode?: "direct" | "agreement" | null;
+  agreement_contract_terms_id?: Identifier | null;
   agreement_terms_markdown?: string | null;
   agreement_terms_version?: string | null;
   agreement_signed_at?: string | null;

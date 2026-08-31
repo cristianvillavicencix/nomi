@@ -34,7 +34,7 @@ Deno.serve(
       const { data: subscription } = await supabaseAdmin
         .from("client_subscriptions")
         .select(
-          "id, name, amount, currency, billing_interval, line_items, status, subscription_number, enrollment_mode, agreement_terms_markdown, agreement_terms_version, agreement_signed_at, agreement_signatory_name, payment_method_last4, stripe_subscription_id",
+          "id, name, amount, currency, billing_interval, line_items, status, subscription_number, enrollment_mode, agreement_terms_markdown, agreement_terms_version, agreement_contract_terms_id, agreement_signed_at, agreement_signatory_name, payment_method_last4, stripe_subscription_id, contact_id, company_id",
         )
         .eq("id", tokenRow.subscription_id)
         .eq("org_id", tokenRow.org_id)
@@ -43,6 +43,53 @@ Deno.serve(
       if (!subscription || subscription.enrollment_mode !== "agreement") {
         return createErrorResponse(404, "Invalid or expired link");
       }
+
+      const [{ data: org }, { data: contact }, { data: company }, { data: terms }] =
+        await Promise.all([
+          supabaseAdmin
+            .from("organizations")
+            .select("name")
+            .eq("id", tokenRow.org_id)
+            .maybeSingle(),
+          subscription.contact_id
+            ? supabaseAdmin
+                .from("contacts")
+                .select("first_name, last_name")
+                .eq("id", subscription.contact_id)
+                .maybeSingle()
+            : Promise.resolve({ data: null }),
+          subscription.company_id
+            ? supabaseAdmin
+                .from("companies")
+                .select("name, address, city, state_abbr, zipcode")
+                .eq("id", subscription.company_id)
+                .maybeSingle()
+            : Promise.resolve({ data: null }),
+          subscription.agreement_contract_terms_id
+            ? supabaseAdmin
+                .from("organization_contract_terms")
+                .select("title, version")
+                .eq("id", subscription.agreement_contract_terms_id)
+                .maybeSingle()
+            : Promise.resolve({ data: null }),
+        ]);
+
+      const contactName = contact
+        ? [contact.first_name, contact.last_name].filter(Boolean).join(" ").trim()
+        : "";
+      const clientName =
+        contactName ||
+        (typeof company?.name === "string" ? company.name.trim() : "") ||
+        "Client";
+      const clientAddress = [
+        company?.address,
+        company?.city,
+        company?.state_abbr,
+        company?.zipcode,
+      ]
+        .map((part) => (typeof part === "string" ? part.trim() : ""))
+        .filter(Boolean)
+        .join(", ") || "—";
 
       const alreadyActive =
         subscription.status === "active" ||
@@ -64,7 +111,11 @@ Deno.serve(
             ? subscription.line_items
             : [],
           terms_markdown: subscription.agreement_terms_markdown ?? "",
-          terms_version: subscription.agreement_terms_version ?? null,
+          terms_version: subscription.agreement_terms_version ?? terms?.version ?? null,
+          contract_title: terms?.title ?? null,
+          organization_name: org?.name ?? null,
+          client_name: clientName,
+          client_address: clientAddress,
           status: subscription.status,
           already_active: alreadyActive,
           already_signed: alreadySigned,

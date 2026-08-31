@@ -214,13 +214,27 @@ export async function resolveProposalTermsMarkdown(
     .select("version, title, body_markdown, default_variables")
     .eq("org_id", proposal.org_id)
     .eq("is_active", true)
+    .eq("is_default", true)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const termsVersion = activeTerms?.version ?? "1.0";
+  const termsRow =
+    activeTerms ??
+    (
+      await supabase
+        .from("organization_contract_terms")
+        .select("version, title, body_markdown, default_variables")
+        .eq("org_id", proposal.org_id)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    ).data;
+
+  const termsVersion = termsRow?.version ?? "1.0";
   const variables = {
-    ...(activeTerms?.default_variables as Record<string, string> | undefined),
+    ...(termsRow?.default_variables as Record<string, string> | undefined),
     ...buildContractVariables({
       proposal,
       contactName,
@@ -231,12 +245,12 @@ export async function resolveProposalTermsMarkdown(
     }),
   };
 
-  const termsBody = activeTerms?.body_markdown?.trim() ?? "";
+  const termsBody = termsRow?.body_markdown?.trim() ?? "";
   const markdown = termsBody ? mergeContractTerms(termsBody, variables) : "";
 
   return {
     markdown,
-    title: activeTerms?.title?.trim() || null,
+    title: termsRow?.title?.trim() || null,
     version: termsVersion,
   };
 }

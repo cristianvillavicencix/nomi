@@ -600,6 +600,7 @@ export const billingProvider = {
     ends_at?: string | null;
     enrollment_mode?: "direct" | "agreement";
     agreement_terms_markdown?: string | null;
+    agreement_contract_terms_id?: number | null;
     payment_mode?: "saved_card" | "staff_card" | "request_setup";
     payment_method_id?: string | null;
     send_email?: boolean;
