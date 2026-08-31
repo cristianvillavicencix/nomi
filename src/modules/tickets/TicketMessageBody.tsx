@@ -5,13 +5,12 @@ import {
   sanitizeTicketEmailHtmlOriginal,
 } from "@/modules/tickets/sanitizeTicketEmailHtml";
 import { TicketQuotedEmailSection } from "@/modules/tickets/TicketQuotedEmailSection";
+import { resolveTicketHtmlDisplay } from "@/modules/tickets/resolveTicketHtmlDisplay";
 import {
-  hasRichHtmlStructure,
   hasSubstantialQuotedContent,
   isForwardedStyleEmail,
   isForwardedStylePlainEmail,
   isPlainTextSimilar,
-  splitHtmlEmail,
   splitPlainTextEmail,
 } from "@/modules/tickets/ticketEmailQuotedContent";
 import { htmlToPlainText } from "@/modules/tickets/ticketReplyRichText";
@@ -98,44 +97,29 @@ export const TicketMessageBody = ({
   const plain = body?.trim();
 
   if (html) {
-    if (emailVariant === "inbound") {
-      return (
-        <HtmlTicketBody
-          html={html}
-          stripHrefs={stripHrefs}
-          attachmentSrcs={attachmentSrcs}
-          attachmentTitles={attachmentTitles}
-          preserveOriginalLayout
-        />
-      );
-    }
+    const display = resolveTicketHtmlDisplay(html);
 
-    if (isForwardedStyleEmail(html)) {
+    if (display.mode === "full") {
       if (plain && isForwardedStylePlainEmail(plain)) {
         return <PlainTicketText text={plain} />;
       }
 
       return (
         <HtmlTicketBody
-          html={html}
+          html={display.html}
           stripHrefs={stripHrefs}
           attachmentSrcs={attachmentSrcs}
           attachmentTitles={attachmentTitles}
-          preserveOriginalLayout
+          preserveOriginalLayout={
+            emailVariant === "inbound" || isForwardedStyleEmail(display.html)
+          }
         />
       );
     }
 
-    const split = splitHtmlEmail(html);
-    const hasQuoted =
-      Boolean(split.quoted) && hasSubstantialQuotedContent(split.quoted);
-    const htmlMainText = htmlToPlainText(split.content || html);
-
-    // Plain body is already stripped on ingest; HTML may still include the quoted thread.
+    const htmlMainText = htmlToPlainText(display.content);
     const usePlainAsMain =
-      Boolean(plain) &&
-      hasQuoted &&
-      isPlainTextSimilar(plain, htmlMainText);
+      Boolean(plain) && isPlainTextSimilar(plain, htmlMainText);
 
     if (usePlainAsMain && plain) {
       const mainPlain = splitPlainTextEmail(plain).content || plain;
@@ -143,51 +127,28 @@ export const TicketMessageBody = ({
         <div className="space-y-1">
           <PlainTicketText text={mainPlain} />
           <TicketQuotedEmailSection
-            quoted={split.quoted!}
-            quoteHeader={split.quoteHeader}
+            quoted={display.quoted}
+            quoteHeader={display.quoteHeader}
             isHtml
           />
         </div>
       );
     }
 
-    if (
-      emailVariant !== "outbound" &&
-      plain &&
-      !hasQuoted &&
-      !hasRichHtmlStructure(html)
-    ) {
-      if (isPlainTextSimilar(plain, htmlMainText)) {
-        return (
-          <div className="space-y-1">
-            <PlainTicketText text={plain} />
-          </div>
-        );
-      }
-    }
-
-    const displayHtml = hasQuoted
-      ? stripTrailingDuplicateOfQuoted(
-          split.content || html,
-          split.quoted!,
-          true,
-        )
-      : split.content || html;
     return (
       <div className="space-y-1">
         <HtmlTicketBody
-          html={displayHtml}
+          html={display.content}
           stripHrefs={stripHrefs}
           attachmentSrcs={attachmentSrcs}
           attachmentTitles={attachmentTitles}
+          preserveOriginalLayout={emailVariant === "inbound"}
         />
-        {hasQuoted ? (
-          <TicketQuotedEmailSection
-            quoted={split.quoted!}
-            quoteHeader={split.quoteHeader}
-            isHtml
-          />
-        ) : null}
+        <TicketQuotedEmailSection
+          quoted={display.quoted}
+          quoteHeader={display.quoteHeader}
+          isHtml
+        />
       </div>
     );
   }
