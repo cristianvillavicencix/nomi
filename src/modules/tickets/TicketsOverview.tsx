@@ -9,7 +9,6 @@ import {
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
 import {
-  ModuleSearchField,
   ModuleToolbar,
   ModuleToolbarActions,
 } from "@/components/atomic-crm/layout/ModuleToolbar";
@@ -33,6 +32,7 @@ import {
 import { TicketInboxBulkBar } from "@/modules/tickets/TicketInboxBulkBar";
 import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
 import { TicketListItem } from "@/modules/tickets/TicketListItem";
+import { TicketSearchField } from "@/modules/tickets/TicketSearchField";
 import { TicketsByType } from "@/modules/tickets/TicketsByType";
 import { TicketsKanban } from "@/modules/tickets/TicketsKanban";
 import { TicketsOverviewTable } from "@/modules/tickets/TicketsOverviewTable";
@@ -332,9 +332,13 @@ const TicketsOverviewBody = ({
                 counts={statusFilterCounts}
                 ariaLabel="Filter tickets"
               />
-              <ModuleSearchField
+              <TicketSearchField
                 value={searchQuery}
                 onChange={setSearchQuery}
+                tickets={filteredTickets}
+                companyById={companyById}
+                contactById={contactById}
+                onSelectTicket={onSelectTicket}
                 basePlaceholder="Search tickets, emails…"
                 total={filteredTickets.length}
                 itemSingular="ticket"
@@ -427,9 +431,13 @@ const TicketsOverviewBody = ({
       )}
     >
       <ModuleToolbar className="shrink-0">
-        <ModuleSearchField
+        <TicketSearchField
           value={searchQuery}
           onChange={setSearchQuery}
+          tickets={filteredTickets}
+          companyById={companyById}
+          contactById={contactById}
+          onSelectTicket={onSelectTicket}
           basePlaceholder="Search tickets by subject, requester, or client"
           total={total}
           itemSingular="ticket"

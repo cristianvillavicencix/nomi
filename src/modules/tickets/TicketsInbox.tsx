@@ -29,7 +29,6 @@ import {
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
 import {
-  ModuleSearchField,
   ModuleToolbar,
 } from "@/components/atomic-crm/layout/ModuleToolbar";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
@@ -38,6 +37,7 @@ import { TicketDetailPanel } from "@/modules/tickets/TicketDetailPanel";
 import { TicketEmptyDetailState } from "@/modules/tickets/TicketEmptyDetailState";
 import { TicketInboxBulkBar } from "@/modules/tickets/TicketInboxBulkBar";
 import { TicketKanbanCard } from "@/modules/tickets/TicketKanbanCard";
+import { TicketSearchField } from "@/modules/tickets/TicketSearchField";
 import { matchesTicketSearch } from "@/modules/tickets/ticketInboxQueue";
 import { useTicketsFromMessageSearch } from "@/modules/tickets/useTicketMessageSearch";
 import {
@@ -464,9 +464,17 @@ const TicketsInboxLayout = ({
         >
           <div className={cn("shrink-0 p-3", isMobile ? "glass-header" : "space-y-0 border-b bg-background")}>
             <ModuleToolbar>
-              <ModuleSearchField
+              <TicketSearchField
                 value={searchQuery}
                 onChange={handleSearch}
+                tickets={visibleTickets}
+                companyById={companyById}
+                contactById={contactById}
+                onSelectTicket={(ticketId) =>
+                  navigate(ticketShowPath(ticketId, statusFilter), {
+                    viewTransition: true,
+                  })
+                }
                 basePlaceholder="Search tickets, emails, clients"
                 total={counts.all}
                 itemSingular="ticket"
