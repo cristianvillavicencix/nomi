@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useGetIdentity, useListContext } from "ra-core";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
@@ -17,7 +17,10 @@ import {
 } from "@/components/atomic-crm/layout/ModuleToolbar";
 import type { Contract } from "@/modules/types";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getClientShowPath } from "@/app/routing";
+import { ContractTermsSettings } from "@/modules/settings/ContractTermsSettings";
+import { cn } from "@/lib/utils";
 
 const formatDate = (value?: string | null) => {
   if (!value) return "—";
@@ -30,30 +33,61 @@ const formatDate = (value?: string | null) => {
   });
 };
 
+type ContractsTab = "signed" | "templates";
+
+const resolveContractsTab = (raw: string | null): ContractsTab =>
+  raw === "templates" ? "templates" : "signed";
+
 export const ContractsList = () => {
   const { identity } = useGetIdentity();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = resolveContractsTab(searchParams.get("tab"));
+
   if (!identity) return null;
 
+  const setTab = (next: string) => {
+    const value = resolveContractsTab(next);
+    const params = new URLSearchParams(searchParams);
+    if (value === "signed") params.delete("tab");
+    else params.set("tab", value);
+    setSearchParams(params, { replace: true });
+  };
+
   return (
-    <List
-      resource="contracts"
-      title={false}
-      disableBreadcrumb
-      perPage={25}
-      sort={{ field: "updated_at", order: "DESC" }}
-      actions={
-        <PageActions>
-          <PageTitle label="Contracts" />
-        </PageActions>
-      }
-      pagination={<ListPagination rowsPerPageOptions={[10, 25, 50]} />}
-    >
-      <ContractsListLayout />
-    </List>
+    <div className="space-y-4">
+      <PageActions>
+        <PageTitle label="Contracts" />
+      </PageActions>
+
+      <Tabs value={tab} onValueChange={setTab} className="gap-4">
+        <TabsList className="h-9 w-fit">
+          <TabsTrigger value="signed">Signed</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="signed" className="mt-0 outline-none">
+          <List
+            resource="contracts"
+            title={false}
+            disableBreadcrumb
+            perPage={25}
+            sort={{ field: "updated_at", order: "DESC" }}
+            actions={false}
+            pagination={<ListPagination rowsPerPageOptions={[10, 25, 50]} />}
+          >
+            <ContractsSignedListLayout />
+          </List>
+        </TabsContent>
+
+        <TabsContent value="templates" className="mt-0 outline-none">
+          <ContractTermsSettings />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 
-const ContractsListLayout = () => {
+const ContractsSignedListLayout = () => {
   const { data, isPending, filterValues } = useListContext<Contract>();
   const navigate = useNavigate();
   const hasFilters = filterValues && Object.keys(filterValues).length > 0;
@@ -93,7 +127,8 @@ const ContractsListLayout = () => {
       <div className="space-y-3">
         {toolbar}
         <p className="py-8 text-center text-sm text-muted-foreground">
-          No contracts yet.
+          No signed contracts yet. Templates for new agreements are under the
+          Templates tab.
         </p>
       </div>
     );
@@ -117,7 +152,7 @@ const ContractsListLayout = () => {
             source="status"
             label="Status"
             render={(record: Contract) => (
-              <Badge variant="outline" className="capitalize">
+              <Badge variant="outline" className={cn("capitalize")}>
                 {record.status?.replace(/-/g, " ") ?? "draft"}
               </Badge>
             )}
