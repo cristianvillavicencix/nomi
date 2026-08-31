@@ -1,4 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/components/atomic-crm/providers/supabase/supabase", () => ({
+  supabase: {},
+}));
+
 import { prepareContactWriteData } from "@/components/atomic-crm/providers/supabase/dataProviderWriteHelpers";
 
 describe("prepareContactWriteData", () => {
