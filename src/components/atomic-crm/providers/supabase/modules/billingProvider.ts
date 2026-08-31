@@ -674,6 +674,10 @@ export const billingProvider = {
       | "undo_cancel"
       | "reactivate"
       | "send_setup"
+      | "request_card_update"
+      | "update_payment_method"
+      | "list_payment_methods"
+      | "detach_payment_method"
       | "update"
       | "apply_payment"
       | "sync_stripe";
@@ -694,9 +698,11 @@ export const billingProvider = {
     message?: string | null;
     subject?: string | null;
     base_url?: string | null;
+    /** Days until auto-resume for pause. Null = until manual resume. */
+    pause_days?: number | null;
   }) {
     const { data, error } = await invokeEdgeFunction<{
-      subscription: Record<string, unknown>;
+      subscription?: Record<string, unknown>;
       checkout_url?: string | null;
       setup_link_stale?: boolean;
       synced?: boolean;
@@ -705,6 +711,14 @@ export const billingProvider = {
       used_staff_card?: boolean;
       email_sent?: boolean;
       sms_sent?: boolean;
+      payment_methods?: Array<{
+        id: string;
+        brand: string | null;
+        last4: string;
+        exp_month: number | null;
+        exp_year: number | null;
+      }>;
+      detached?: boolean;
     }>("manage_client_subscription", {
       method: "POST",
       body: {
@@ -727,6 +741,7 @@ export const billingProvider = {
         message: params.message,
         subject: params.subject,
         base_url: params.base_url ?? resolvePublicAppBaseUrl(),
+        pause_days: params.pause_days,
       },
     });
 
@@ -737,6 +752,13 @@ export const billingProvider = {
           "Failed to update subscription",
         ),
       );
+    }
+
+    if (
+      params.action === "list_payment_methods" ||
+      params.action === "detach_payment_method"
+    ) {
+      return data ?? {};
     }
 
     if (!data?.subscription) {

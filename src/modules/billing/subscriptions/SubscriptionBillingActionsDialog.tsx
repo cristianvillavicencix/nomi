@@ -1,13 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import {
-  CalendarClock,
-  Loader2,
-  OctagonX,
-  Pause,
-  Play,
-  RotateCcw,
-} from "lucide-react";
-import { useState } from "react";
+import { Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useDataProvider, useNotify, useRefresh } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
@@ -21,243 +14,259 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
-type BillingAction =
+export type BillingAction =
   | "pause"
   | "resume"
   | "cancel_at_period_end"
   | "cancel_now"
   | "undo_cancel";
 
+export type PauseDurationDays = 7 | 14 | 21 | 30 | null;
+
 type SubscriptionBillingActionsDialogProps = {
   subscription: ClientSubscription;
-  open: boolean;
+  /** When set, opens the confirm step for this action (picker dialog is skipped). */
+  confirmAction: BillingAction | null;
   onOpenChange: (open: boolean) => void;
-  canPause: boolean;
-  canResume: boolean;
-  canCancel: boolean;
   canCancelDraft: boolean;
-  canUndoCancel: boolean;
 };
 
-type ActionOption = {
-  action: BillingAction;
-  title: string;
+const PAUSE_DURATION_OPTIONS: Array<{
+  days: PauseDurationDays;
+  label: string;
   description: string;
-  icon: typeof Pause;
-  destructive?: boolean;
-};
+}> = [
+  {
+    days: 7,
+    label: "1 week",
+    description: "Resume automatically in 7 days",
+  },
+  {
+    days: 14,
+    label: "2 weeks",
+    description: "Resume automatically in 14 days",
+  },
+  {
+    days: 21,
+    label: "3 weeks",
+    description: "Resume automatically in 21 days",
+  },
+  {
+    days: 30,
+    label: "1 month",
+    description: "Resume automatically in 30 days",
+  },
+  {
+    days: null,
+    label: "Until I resume",
+    description: "Stays paused until you click Resume",
+  },
+];
 
 const successMessages: Record<BillingAction, string> = {
-  pause: "Billing paused — no new charges until you resume",
+  pause: "Billing paused",
   resume: "Billing resumed",
   cancel_at_period_end: "Billing will stop at the end of the current period",
   cancel_now: "Billing stopped — subscription record kept for history",
   undo_cancel: "Scheduled billing stop removed",
 };
 
+const actionCopy = (
+  action: BillingAction,
+  subscription: ClientSubscription,
+  canCancelDraft: boolean,
+): { title: string; description: string; destructive?: boolean } => {
+  const periodEndLabel = subscription.current_period_end
+    ? formatBillingDate(subscription.current_period_end.slice(0, 10))
+    : "the end of the current period";
+
+  switch (action) {
+    case "pause":
+      return {
+        title: "Pause billing",
+        description:
+          "Temporarily stop charges. This is not a cancel — use Stop if you want billing to end permanently.",
+      };
+    case "resume":
+      return {
+        title: "Resume billing",
+        description: "Turn automatic charges back on for this subscription.",
+      };
+    case "undo_cancel":
+      return {
+        title: "Keep billing active",
+        description:
+          "Remove the scheduled stop so renewals continue after the current period.",
+      };
+    case "cancel_at_period_end":
+      return {
+        title: "Stop at period end",
+        description: `Permanently stop future renewals after ${periodEndLabel}. The subscription record is kept; nothing is deleted.`,
+      };
+    case "cancel_now":
+      return {
+        title: canCancelDraft
+          ? "Cancel before billing starts"
+          : "Stop billing now",
+        description: canCancelDraft
+          ? "Mark this subscription as canceled before any charge runs. The record stays in the CRM for history."
+          : "End billing immediately. The subscription record stays in the CRM — it is not deleted.",
+        destructive: true,
+      };
+  }
+};
+
 export const SubscriptionBillingActionsDialog = ({
   subscription,
-  open,
+  confirmAction,
   onOpenChange,
-  canPause,
-  canResume,
-  canCancel,
   canCancelDraft,
-  canUndoCancel,
 }: SubscriptionBillingActionsDialogProps) => {
   const notify = useNotify();
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
-  const [pendingAction, setPendingAction] = useState<BillingAction | null>(null);
+  const [pendingAction, setPendingAction] = useState<BillingAction | null>(
+    confirmAction,
+  );
+  const [pauseDays, setPauseDays] = useState<PauseDurationDays>(7);
+
+  useEffect(() => {
+    setPendingAction(confirmAction);
+    if (confirmAction === "pause") {
+      setPauseDays(7);
+    }
+  }, [confirmAction]);
 
   const manageMutation = useMutation({
-    mutationFn: (action: BillingAction) =>
+    mutationFn: (input: {
+      action: BillingAction;
+      pause_days?: number | null;
+    }) =>
       dataProvider.manageClientSubscription({
         subscriptionId: subscription.id,
-        action,
+        action: input.action,
+        pause_days: input.pause_days,
       }),
-    onSuccess: (_result, action) => {
+    onSuccess: (_result, input) => {
       refresh();
-      onOpenChange(false);
       setPendingAction(null);
-      notify(successMessages[action], { type: "success" });
+      onOpenChange(false);
+      if (input.action === "pause") {
+        notify(
+          input.pause_days
+            ? `Billing paused — resumes automatically in ${input.pause_days} days`
+            : "Billing paused — resume manually when ready",
+          { type: "success" },
+        );
+        return;
+      }
+      notify(successMessages[input.action], { type: "success" });
     },
     onError: (error: Error) => {
       notify(error.message || "Could not update billing", { type: "error" });
     },
   });
 
-  const periodEndLabel = subscription.current_period_end
-    ? formatBillingDate(subscription.current_period_end.slice(0, 10))
-    : "the end of the current period";
-
-  const options: ActionOption[] = [
-    ...(canPause
-      ? [
-          {
-            action: "pause" as const,
-            title: "Pause billing",
-            description:
-              "Temporarily stop charges. The subscription stays in your records and you can resume later.",
-            icon: Pause,
-          },
-        ]
-      : []),
-    ...(canResume
-      ? [
-          {
-            action: "resume" as const,
-            title: "Resume billing",
-            description: "Turn automatic charges back on for this subscription.",
-            icon: Play,
-          },
-        ]
-      : []),
-    ...(canUndoCancel
-      ? [
-          {
-            action: "undo_cancel" as const,
-            title: "Keep billing active",
-            description:
-              "Remove the scheduled stop so renewals continue after the current period.",
-            icon: RotateCcw,
-          },
-        ]
-      : []),
-    ...(canCancel && subscription.stripe_subscription_id
-      ? [
-          {
-            action: "cancel_at_period_end" as const,
-            title: "Stop at period end",
-            description: `Stop future renewals after ${periodEndLabel}. The subscription record is kept; nothing is deleted.`,
-            icon: CalendarClock,
-          },
-        ]
-      : []),
-    ...(canCancel || canCancelDraft
-      ? [
-          {
-            action: "cancel_now" as const,
-            title: canCancelDraft ? "Cancel before billing starts" : "Stop billing now",
-            description: canCancelDraft
-              ? "Mark this subscription as canceled before any charge runs. The record stays in the CRM for history."
-              : "End billing immediately. The subscription record stays in the CRM — it is not deleted.",
-            icon: OctagonX,
-            destructive: true,
-          },
-        ]
-      : []),
-  ];
-
-  const selectedOption = options.find(
-    (option) => option.action === pendingAction,
-  );
-
-  const closeAll = () => {
-    if (manageMutation.isPending) return;
-    setPendingAction(null);
-    onOpenChange(false);
-  };
+  const selected = pendingAction
+    ? actionCopy(pendingAction, subscription, canCancelDraft)
+    : null;
+  const isPause = pendingAction === "pause";
 
   return (
-    <>
-      <Dialog open={open && !pendingAction} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Manage billing</DialogTitle>
-            <DialogDescription>
-              Pause, resume, or stop charges for {subscription.name}. These
-              actions never delete the subscription from your records.
-            </DialogDescription>
-          </DialogHeader>
+    <Dialog
+      open={Boolean(pendingAction && selected)}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !manageMutation.isPending) {
+          setPendingAction(null);
+          onOpenChange(false);
+        }
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{selected?.title}</DialogTitle>
+          <DialogDescription>{selected?.description}</DialogDescription>
+        </DialogHeader>
 
+        {isPause ? (
           <div className="space-y-2">
-            {options.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No billing actions are available for this subscription right now.
-              </p>
-            ) : (
-              options.map(({ action, title, description, icon: Icon, destructive }) => (
+            <p className="text-xs font-medium text-muted-foreground">
+              How long should billing stay paused?
+            </p>
+            <div className="grid gap-2">
+              {PAUSE_DURATION_OPTIONS.map((option) => (
                 <button
-                  key={action}
+                  key={String(option.days)}
                   type="button"
-                  className="flex w-full items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-muted/40"
-                  onClick={() => setPendingAction(action)}
+                  onClick={() => setPauseDays(option.days)}
+                  className={cn(
+                    "rounded-md border px-3 py-2.5 text-left transition-colors",
+                    pauseDays === option.days
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                      : "border-border hover:bg-muted/40",
+                  )}
                 >
-                  <Icon
-                    className={
-                      destructive
-                        ? "mt-0.5 size-5 text-destructive"
-                        : "mt-0.5 size-5 text-muted-foreground"
-                    }
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium">{title}</span>
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      {description}
-                    </span>
+                  <span className="block text-sm font-medium">
+                    {option.label}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {option.description}
                   </span>
                 </button>
-              ))
-            )}
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Need to end billing forever? Close this and use{" "}
+              <span className="font-medium text-foreground">Stop</span> instead.
+            </p>
           </div>
-
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={closeAll}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={Boolean(pendingAction && selectedOption)}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen && !manageMutation.isPending) {
-            setPendingAction(null);
-          }
-        }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{selectedOption?.title}</DialogTitle>
-            <DialogDescription>{selectedOption?.description}</DialogDescription>
-          </DialogHeader>
+        ) : (
           <p className="text-sm text-muted-foreground">
-            This does not delete the subscription from Sigma. Invoice history and
-            client records stay intact.
+            This does not delete the subscription from your records. Invoice
+            history and client records stay intact.
           </p>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={manageMutation.isPending}
-              onClick={() => setPendingAction(null)}
-            >
-              Back
-            </Button>
-            <Button
-              type="button"
-              variant={selectedOption?.destructive ? "destructive" : "primary"}
-              disabled={!pendingAction || manageMutation.isPending}
-              onClick={() => {
-                if (!pendingAction) return;
-                manageMutation.mutate(pendingAction);
-              }}
-            >
-              {manageMutation.isPending ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Working…
-                </>
-              ) : (
-                "Confirm"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+        )}
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={manageMutation.isPending}
+            onClick={() => {
+              setPendingAction(null);
+              onOpenChange(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant={selected?.destructive ? "destructive" : "primary"}
+            disabled={!pendingAction || manageMutation.isPending}
+            onClick={() => {
+              if (!pendingAction) return;
+              manageMutation.mutate({
+                action: pendingAction,
+                pause_days:
+                  pendingAction === "pause" ? pauseDays : undefined,
+              });
+            }}
+          >
+            {manageMutation.isPending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Working…
+              </>
+            ) : isPause ? (
+              "Pause billing"
+            ) : (
+              "Confirm"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

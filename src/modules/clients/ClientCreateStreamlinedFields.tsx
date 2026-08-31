@@ -24,6 +24,7 @@ import { LBS_COMPANY_INDUSTRY_CHOICES } from "@/modules/leads/leadFormConstants"
 import {
   CreateFormCollapsible,
   CreateFormFieldRow,
+  CreateFormSection,
 } from "@/modules/shared/createForm/CreateFormLayout";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import type {
@@ -57,7 +58,7 @@ const COMPANY_SIZE_CHOICES = [
   { id: 500, name: "250+" },
 ];
 
-/** Streamlined company create layout aligned with the product mockup. */
+/** Streamlined company create layout with floating labels and sections. */
 export const ClientCreateStreamlinedFields = ({
   duplicateNotice,
 }: {
@@ -143,104 +144,126 @@ export const ClientCreateStreamlinedFields = ({
   };
 
   return (
-    <div className="space-y-5">
-      {placesEnabled ? (
-        <GooglePlacesAutocompleteInput
-          source="company_name"
-          label="Company name"
-          mode="business"
-          validate={requiredName}
-          helperText={false}
-          onPlaceDetails={(details) =>
-            applyGoogleBusinessToClientForm(setValue, details)
-          }
-        />
-      ) : (
-        <TextInput
-          source="company_name"
-          label="Company name"
-          validate={requiredName}
-          helperText={false}
-        />
-      )}
-
-      {duplicateNotice}
-
-      <TextInput
-        source="company_website"
-        label="Website"
-        helperText={false}
-        validate={optionalUrl}
-        placeholder="https://"
-      />
-
-      <ProgressiveMultiChannelInput<ClientCreateFormValues>
-        source="company_emails"
-        kind="email"
-        label="Email"
-        valueKey="value"
-        typeChoices={COMPANY_CHANNEL_TYPE_CHOICES}
-        addLabel="+ Add email"
-      />
-      <ProgressiveMultiChannelInput<ClientCreateFormValues>
-        source="company_phones"
-        kind="phone"
-        label="Phone"
-        valueKey="value"
-        typeChoices={COMPANY_CHANNEL_TYPE_CHOICES}
-        addLabel="+ Add phone"
-      />
-
-      {placesEnabled ? (
-        <GooglePlacesAutocompleteInput
-          source="company_address"
-          label="Address"
-          mode="address"
-          helperText={false}
-          onPlaceDetails={(details) =>
-            applyGoogleAddressToClientForm(setValue, details, "company")
-          }
-        />
-      ) : null}
-      <StructuredAddressFields
-        prefix="company"
-        forceShowCountry={placesEnabled}
-        showStreet={!placesEnabled}
-      />
-
-      <PrimaryContactReferenceCard
-        mode="create"
-        selectedContactId={selectedPrimaryId}
-        draftPrimaryContact={draftPrimaryContact}
-        onSelectContact={applyExistingPrimary}
-        onSelectDraftContact={applyDraftPrimary}
-        onClearContact={clearPrimarySelection}
-      />
-
-      <CreateFormFieldRow columns={2}>
-        <SelectInput
-          source="company_sector"
-          label="Sector"
-          choices={industryChoices}
-          optionText="label"
-          optionValue="value"
-          helperText={false}
-          emptyText="Select sector"
-        />
-        <ReferenceInput
-          source="organization_member_id"
-          reference="organization_members"
-          filter={{ "disabled@neq": true }}
-        >
-          <AutocompleteInput
-            label="Assigned to"
-            optionText={memberDisplayName}
+    <div className="space-y-6">
+      <CreateFormSection
+        title="Account"
+        description="Business identity and how customers reach you."
+      >
+        {placesEnabled ? (
+          <GooglePlacesAutocompleteInput
+            source="company_name"
+            label="Company name"
+            mode="business"
+            validate={requiredName}
             helperText={false}
-            defaultValue={identity?.id}
-            validate={required()}
+            labelVariant="floating"
+            onPlaceDetails={(details) =>
+              applyGoogleBusinessToClientForm(setValue, details)
+            }
           />
-        </ReferenceInput>
-      </CreateFormFieldRow>
+        ) : (
+          <TextInput
+            source="company_name"
+            label="Company name"
+            validate={requiredName}
+            helperText={false}
+            labelVariant="floating"
+          />
+        )}
+
+        {duplicateNotice}
+
+        <TextInput
+          source="company_website"
+          label="Website"
+          helperText={false}
+          validate={optionalUrl}
+          labelVariant="floating"
+        />
+
+        <ProgressiveMultiChannelInput<ClientCreateFormValues>
+          source="company_emails"
+          kind="email"
+          label="Email"
+          valueKey="value"
+          typeChoices={COMPANY_CHANNEL_TYPE_CHOICES}
+          addLabel="+ Add email"
+        />
+        <ProgressiveMultiChannelInput<ClientCreateFormValues>
+          source="company_phones"
+          kind="phone"
+          label="Phone"
+          valueKey="value"
+          typeChoices={COMPANY_CHANNEL_TYPE_CHOICES}
+          addLabel="+ Add phone"
+        />
+      </CreateFormSection>
+
+      <CreateFormSection
+        title="Address"
+        description="Where this business is located."
+      >
+        {placesEnabled ? (
+          <GooglePlacesAutocompleteInput
+            source="company_address"
+            label="Address"
+            mode="address"
+            helperText={false}
+            labelVariant="floating"
+            onPlaceDetails={(details) =>
+              applyGoogleAddressToClientForm(setValue, details, "company")
+            }
+          />
+        ) : null}
+        <StructuredAddressFields
+          prefix="company"
+          forceShowCountry={placesEnabled}
+          showStreet={!placesEnabled}
+        />
+      </CreateFormSection>
+
+      <CreateFormSection
+        title="Primary contact"
+        description="Who we reach first for this account."
+      >
+        <PrimaryContactReferenceCard
+          mode="create"
+          selectedContactId={selectedPrimaryId}
+          draftPrimaryContact={draftPrimaryContact}
+          onSelectContact={applyExistingPrimary}
+          onSelectDraftContact={applyDraftPrimary}
+          onClearContact={clearPrimarySelection}
+        />
+      </CreateFormSection>
+
+      <CreateFormSection title="Details">
+        <CreateFormFieldRow columns={2}>
+          <SelectInput
+            source="company_sector"
+            label="Sector"
+            choices={industryChoices}
+            optionText="label"
+            optionValue="value"
+            helperText={false}
+            emptyText=" "
+            labelVariant="floating"
+          />
+          <ReferenceInput
+            source="organization_member_id"
+            reference="organization_members"
+            filter={{ "disabled@neq": true }}
+          >
+            <AutocompleteInput
+              label="Assigned to"
+              optionText={memberDisplayName}
+              helperText={false}
+              defaultValue={identity?.id}
+              validate={required()}
+              labelVariant="floating"
+            />
+          </ReferenceInput>
+        </CreateFormFieldRow>
+      </CreateFormSection>
 
       <CreateFormCollapsible label="More optional fields">
         <CreateFormFieldRow columns={2}>
@@ -250,12 +273,14 @@ export const ClientCreateStreamlinedFields = ({
             choices={COMPANY_SIZE_CHOICES}
             optionText="name"
             helperText={false}
-            emptyText="Select size"
+            emptyText=" "
+            labelVariant="floating"
           />
           <TextInput
             source="company_revenue"
             label="Revenue"
             helperText={false}
+            labelVariant="floating"
           />
         </CreateFormFieldRow>
         <CreateFormFieldRow columns={2}>
@@ -263,12 +288,14 @@ export const ClientCreateStreamlinedFields = ({
             source="tax_identifier"
             label="Tax identifier"
             helperText={false}
+            labelVariant="floating"
           />
           <TextInput
             source="linkedin_url"
             label="LinkedIn URL"
             helperText={false}
             validate={optionalUrl}
+            labelVariant="floating"
           />
         </CreateFormFieldRow>
         <TextInput
@@ -276,6 +303,7 @@ export const ClientCreateStreamlinedFields = ({
           label="Description"
           helperText={false}
           multiline
+          labelVariant="floating"
         />
       </CreateFormCollapsible>
     </div>

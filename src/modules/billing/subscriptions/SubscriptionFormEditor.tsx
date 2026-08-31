@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import {
   useDataProvider,
@@ -31,7 +32,6 @@ import type { InvoiceLineDraft } from "@/modules/billing/invoiceLineUtils";
 import { SubscriptionCreateReviewPanel } from "@/modules/billing/subscriptions/SubscriptionCreateReviewPanel";
 import { SubscriptionLineItemsEditor } from "@/modules/billing/subscriptions/SubscriptionLineItemsEditor";
 import {
-  emptySubscriptionLine,
   subscriptionLinesFromRecord,
   subscriptionLinesToPayload,
   subscriptionNameFromLines,
@@ -42,11 +42,7 @@ import {
   resolveSavedCardPaymentMethodId,
   savedCardOptionValue,
 } from "@/modules/billing/subscriptions/SavedCardSelect";
-import {
-  formatSavedCardLabel,
-  savedCardSourceLabel,
-  useClientSavedPaymentMethod,
-} from "@/modules/billing/subscriptions/useClientSavedPaymentMethod";
+import { useClientSavedPaymentMethod } from "@/modules/billing/subscriptions/useClientSavedPaymentMethod";
 import {
   SubscriptionStaffCardForm,
   type SubscriptionStaffCardFormHandle,
@@ -65,11 +61,11 @@ import {
 } from "@/modules/billing/subscriptions/subscriptionScheduleUtils";
 import { BILLING_INTERVALS } from "@/modules/proposals/proposalCommercialConstants";
 import type { ClientSubscription, LbsDeal } from "@/modules/types";
-import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
+import {
+  FloatingFieldShell,
+  floatingFieldControlClassName,
+} from "@/components/ui/floating-field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -78,7 +74,51 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import {
+  CreateFormFieldRow,
+  CreateFormSection,
+} from "@/modules/shared/createForm/CreateFormLayout";
 
+const floatingSelectTriggerClassName =
+  "h-9 w-full border-0 bg-transparent px-3 shadow-none hover:bg-transparent focus:ring-0 data-[size=default]:h-9";
+
+const FloatingSelectField = ({
+  id,
+  label,
+  value,
+  onValueChange,
+  disabled,
+  children,
+  activeWhenEmpty = false,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  disabled?: boolean;
+  children: ReactNode;
+  activeWhenEmpty?: boolean;
+}) => {
+  const [open, setOpen] = useState(false);
+  const active = open || activeWhenEmpty || Boolean(value && value !== "none");
+  return (
+    <FloatingFieldShell active={active} label={label} htmlFor={id}>
+      <Select
+        value={value}
+        disabled={disabled}
+        open={open}
+        onOpenChange={setOpen}
+        onValueChange={onValueChange}
+      >
+        <SelectTrigger id={id} className={floatingSelectTriggerClassName}>
+          <SelectValue placeholder=" " />
+        </SelectTrigger>
+        <SelectContent>{children}</SelectContent>
+      </Select>
+    </FloatingFieldShell>
+  );
+};
 export type SubscriptionFormEditorHandle = {
   submit: () => void;
   canSubmit: boolean;
@@ -141,9 +181,7 @@ export const SubscriptionFormEditor = forwardRef<
   const contact = contacts[0];
 
   const [billTo, setBillTo] = useState<BillToSelection | null>(null);
-  const [lines, setLines] = useState<InvoiceLineDraft[]>([
-    emptySubscriptionLine(),
-  ]);
+  const [lines, setLines] = useState<InvoiceLineDraft[]>([]);
   const [referenceNumber, setReferenceNumber] = useState("");
   const [dealId, setDealId] = useState<string>("");
   const [billingInterval, setBillingInterval] = useState<
@@ -153,6 +191,10 @@ export const SubscriptionFormEditor = forwardRef<
   const [duration, setDuration] =
     useState<SubscriptionDurationValue>("ongoing");
   const [customEndDate, setCustomEndDate] = useState("");
+  const [referenceFocused, setReferenceFocused] = useState(false);
+  const [startsFocused, setStartsFocused] = useState(false);
+  const [endsFocused, setEndsFocused] = useState(false);
+  const [messageFocused, setMessageFocused] = useState(false);
   const [paymentMode, setPaymentMode] =
     useState<SubscriptionPaymentMode>("request_setup");
   const [sendEmail, setSendEmail] = useState(false);
@@ -169,6 +211,7 @@ export const SubscriptionFormEditor = forwardRef<
     number | null
   >(null);
   const cardArrivedNotifiedRef = useRef(false);
+  const prevSavedCardCountRef = useRef(0);
 
   const isCanceled = subscription?.status === "canceled";
   const isPendingSetup =
@@ -195,8 +238,18 @@ export const SubscriptionFormEditor = forwardRef<
 
   const clientCardReady = waitingForCard && allSavedCards.length > 0;
 
-  const cardOnFile = savedCard
-    ? { brand: savedCard.brand, last4: savedCard.last4 }
+  const selectedSavedCard = useMemo(
+    () =>
+      allSavedCards.find(
+        (card) => savedCardOptionValue(card) === selectedSavedCardValue,
+      ) ??
+      savedCard ??
+      null,
+    [allSavedCards, selectedSavedCardValue, savedCard],
+  );
+
+  const cardOnFile = selectedSavedCard
+    ? { brand: selectedSavedCard.brand, last4: selectedSavedCard.last4 }
     : subscription?.payment_method_last4
       ? {
           brand: subscription.payment_method_brand,
@@ -221,6 +274,19 @@ export const SubscriptionFormEditor = forwardRef<
       }),
     [billTo],
   );
+
+  useEffect(() => {
+    if (paymentMode !== "request_setup") return;
+    if (sendEmail || sendSms) return;
+    if (recipientEmail && recipientPhone) {
+      setSendEmail(true);
+      setSendSms(true);
+    } else if (recipientEmail) {
+      setSendEmail(true);
+    } else if (recipientPhone) {
+      setSendSms(true);
+    }
+  }, [paymentMode, recipientEmail, recipientPhone, sendEmail, sendSms]);
 
   const subscriptionName = subscriptionNameFromLines(lines);
   const amount = sumSubscriptionLinesAmount(lines);
@@ -306,20 +372,29 @@ export const SubscriptionFormEditor = forwardRef<
   }, [mode, initialPaymentMode, isPendingSetup, hydrated]);
 
   useEffect(() => {
+    prevSavedCardCountRef.current = 0;
+  }, [billTo?.contactId, billTo?.companyId]);
+
+  useEffect(() => {
     if (formDisabled || savedCardPending || paymentSectionLocked) return;
-    if (savedCard && isPendingSetup) {
-      setPaymentMode("saved_card");
-    } else if (!savedCard) {
+    const count = allSavedCards.length;
+    const prev = prevSavedCardCountRef.current;
+    if (count > 0 && prev === 0) {
+      // Cards just became available for this client → land on card on file.
+      setPaymentMode((current) =>
+        current === "staff_card" ? current : "saved_card",
+      );
+    } else if (count === 0) {
       setPaymentMode((current) =>
         current === "saved_card" ? "request_setup" : current,
       );
     }
+    prevSavedCardCountRef.current = count;
   }, [
     formDisabled,
-    savedCard,
+    allSavedCards.length,
     savedCardPending,
     paymentSectionLocked,
-    isPendingSetup,
     billTo?.contactId,
     billTo?.companyId,
   ]);
@@ -513,7 +588,7 @@ export const SubscriptionFormEditor = forwardRef<
         setWaitingForCard(false);
         setPendingSubscriptionId(null);
         setBillTo(null);
-        setLines([emptySubscriptionLine()]);
+        setLines([]);
         setReferenceNumber("");
         setDealId("");
         setBillingInterval("monthly");
@@ -583,7 +658,8 @@ export const SubscriptionFormEditor = forwardRef<
           : paymentMode === "staff_card"
             ? Boolean(recipientEmail)
             : paymentMode === "request_setup"
-              ? Boolean(recipientEmail)
+              ? (sendEmail && Boolean(recipientEmail)) ||
+                (sendSms && Boolean(recipientPhone))
               : false);
 
   useEffect(() => {
@@ -622,10 +698,54 @@ export const SubscriptionFormEditor = forwardRef<
 
   const paymentOptionClass = (value: SubscriptionPaymentMode) =>
     cn(
-      "flex w-full min-w-0 cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/40",
-      paymentMode === value && "border-primary bg-primary/5 ring-1 ring-primary/20",
+      "inline-flex h-9 items-center justify-center rounded-md border px-3 text-sm font-medium transition-colors",
+      paymentMode === value
+        ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary/20"
+        : "border-border bg-background text-muted-foreground hover:bg-muted/40 hover:text-foreground",
       fieldsLocked && "pointer-events-none opacity-60",
     );
+
+  const hasSavedCards = allSavedCards.length > 0;
+  const requestDelivery: "email" | "sms" | "both" =
+    sendEmail && sendSms
+      ? "both"
+      : sendSms
+        ? "sms"
+        : "email";
+
+  const setRequestDelivery = (next: "email" | "sms" | "both") => {
+    if (next === "email") {
+      setSendEmail(true);
+      setSendSms(false);
+      return;
+    }
+    if (next === "sms") {
+      setSendEmail(false);
+      setSendSms(true);
+      return;
+    }
+    setSendEmail(true);
+    setSendSms(true);
+  };
+
+  const selectPaymentMode = (next: SubscriptionPaymentMode) => {
+    setPaymentMode(next);
+    if (next === "request_setup") {
+      if (recipientEmail && recipientPhone) {
+        setSendEmail(true);
+        setSendSms(true);
+      } else if (recipientEmail) {
+        setSendEmail(true);
+        setSendSms(false);
+      } else if (recipientPhone) {
+        setSendEmail(false);
+        setSendSms(true);
+      } else {
+        setSendEmail(false);
+        setSendSms(false);
+      }
+    }
+  };
 
   return (
     <div
@@ -634,322 +754,350 @@ export const SubscriptionFormEditor = forwardRef<
         scrollContainer === "self" && "min-h-0 flex-1 overflow-y-auto",
       )}
     >
-      <div className="min-w-0 space-y-5 border-b px-4 py-6 md:border-b-0 md:border-r md:px-6">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {mode === "create" ? "Setup" : "Subscription"}
-        </p>
+      <div className="min-w-0 space-y-8 border-b px-4 py-5 md:border-b-0 md:border-r md:px-6">
+        <CreateFormSection title="Client" className="[&>div]:space-y-3">
+          <div
+            className={cn(
+              (fieldsLocked || mode === "edit") &&
+                "pointer-events-none opacity-60",
+            )}
+          >
+            <BillToClientSearch
+              value={billTo}
+              onChange={setBillTo}
+              variant="floating"
+              label="Client"
+              searchPlaceholder="Company, client name, or phone…"
+            />
+          </div>
+        </CreateFormSection>
 
-        <div
-          className={cn(
-            "space-y-2",
-            (fieldsLocked || mode === "edit") && "pointer-events-none opacity-60",
-          )}
-        >
-          <Label>Client</Label>
-          <BillToClientSearch
-            value={billTo}
-            onChange={setBillTo}
-            searchPlaceholder="Company, client name, or phone…"
-          />
-        </div>
+        <CreateFormSection title="Plan" className="[&>div]:space-y-4">
+          <div
+            className={cn(fieldsLocked && "pointer-events-none opacity-60")}
+          >
+            <SubscriptionLineItemsEditor
+              lines={lines}
+              onChange={setLines}
+              billingInterval={billingInterval}
+              onBillingIntervalChange={setBillingInterval}
+              disabled={fieldsLocked}
+              currency={subscription?.currency ?? "USD"}
+            />
+          </div>
+        </CreateFormSection>
 
-        <div
-          className={cn("space-y-2", fieldsLocked && "pointer-events-none opacity-60")}
-        >
-          <SubscriptionLineItemsEditor
-            lines={lines}
-            onChange={setLines}
-            billingInterval={billingInterval}
-            onBillingIntervalChange={setBillingInterval}
-            disabled={fieldsLocked}
-            currency={subscription?.currency ?? "USD"}
-          />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="subscription-interval">Billing interval</Label>
-            <Select
+        <CreateFormSection title="Schedule" className="[&>div]:space-y-4">
+          <CreateFormFieldRow
+            columns={2}
+            className={cn(fieldsLocked && "pointer-events-none opacity-60")}
+          >
+            <FloatingSelectField
+              id="subscription-interval"
+              label="Billing interval"
               value={billingInterval}
               disabled={fieldsLocked}
+              activeWhenEmpty
               onValueChange={(value) =>
                 setBillingInterval(value as "weekly" | "monthly" | "yearly")
               }
             >
-              <SelectTrigger id="subscription-interval">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {BILLING_INTERVALS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+              {BILLING_INTERVALS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </FloatingSelectField>
 
-        <div
-          className={cn(
-            "grid gap-3",
-            mode === "edit" ? "sm:grid-cols-2" : undefined,
-          )}
-        >
-          {mode === "edit" ? (
-            <div className="space-y-2">
-              <Label htmlFor="subscription-reference">Internal reference</Label>
-              <Input
-                id="subscription-reference"
-                disabled={fieldsLocked}
-                value={referenceNumber}
-                onChange={(event) => setReferenceNumber(event.target.value)}
-                placeholder="Optional internal note"
-              />
-            </div>
-          ) : null}
-          <div className="space-y-2">
-            <Label htmlFor="subscription-deal">Associated deal</Label>
-            <Select
-              value={dealId || "none"}
-              disabled={fieldsLocked || !dealCompanyId}
-              onValueChange={(value) =>
-                setDealId(value === "none" ? "" : value)
-              }
-            >
-              <SelectTrigger id="subscription-deal">
-                <SelectValue placeholder="Select deal" />
-              </SelectTrigger>
-              <SelectContent>
+            {mode === "edit" ? (
+              <FloatingFieldShell
+                active={referenceFocused || Boolean(referenceNumber.trim())}
+                label="Internal reference"
+                htmlFor="subscription-reference"
+              >
+                <Input
+                  id="subscription-reference"
+                  disabled={fieldsLocked}
+                  value={referenceNumber}
+                  onChange={(event) => setReferenceNumber(event.target.value)}
+                  onFocus={() => setReferenceFocused(true)}
+                  onBlur={() => setReferenceFocused(false)}
+                  placeholder=" "
+                  className={floatingFieldControlClassName}
+                />
+              </FloatingFieldShell>
+            ) : (
+              <FloatingSelectField
+                id="subscription-deal"
+                label="Associated deal"
+                value={dealId || "none"}
+                disabled={fieldsLocked || !dealCompanyId}
+                activeWhenEmpty
+                onValueChange={(value) =>
+                  setDealId(value === "none" ? "" : value)
+                }
+              >
                 <SelectItem value="none">No deal</SelectItem>
                 {dealOptions.map((deal) => (
                   <SelectItem key={String(deal.id)} value={String(deal.id)}>
                     {deal.name ?? `Deal #${deal.id}`}
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+              </FloatingSelectField>
+            )}
+          </CreateFormFieldRow>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="subscription-starts">Starts</Label>
-            <Input
-              id="subscription-starts"
-              type="date"
-              disabled={fieldsLocked || mode === "edit"}
-              value={startsAt}
-              onChange={(event) => setStartsAt(event.target.value)}
-            />
-          </div>
+          {mode === "edit" ? (
+            <div
+              className={cn(fieldsLocked && "pointer-events-none opacity-60")}
+            >
+              <FloatingSelectField
+                id="subscription-deal-edit"
+                label="Associated deal"
+                value={dealId || "none"}
+                disabled={fieldsLocked || !dealCompanyId}
+                activeWhenEmpty
+                onValueChange={(value) =>
+                  setDealId(value === "none" ? "" : value)
+                }
+              >
+                <SelectItem value="none">No deal</SelectItem>
+                {dealOptions.map((deal) => (
+                  <SelectItem key={String(deal.id)} value={String(deal.id)}>
+                    {deal.name ?? `Deal #${deal.id}`}
+                  </SelectItem>
+                ))}
+              </FloatingSelectField>
+            </div>
+          ) : null}
 
-          <div className="space-y-2">
-            <Label htmlFor="subscription-duration">Duration</Label>
-            <Select
+          <CreateFormFieldRow
+            columns={2}
+            className={cn(fieldsLocked && "pointer-events-none opacity-60")}
+          >
+            <FloatingFieldShell
+              active={startsFocused || Boolean(startsAt.trim())}
+              label="Starts"
+              htmlFor="subscription-starts"
+            >
+              <Input
+                id="subscription-starts"
+                type="date"
+                disabled={fieldsLocked || mode === "edit"}
+                value={startsAt}
+                onChange={(event) => setStartsAt(event.target.value)}
+                onFocus={() => setStartsFocused(true)}
+                onBlur={() => setStartsFocused(false)}
+                className={floatingFieldControlClassName}
+              />
+            </FloatingFieldShell>
+
+            <FloatingSelectField
+              id="subscription-duration"
+              label="Duration"
               value={duration}
               disabled={fieldsLocked}
+              activeWhenEmpty
               onValueChange={(value) =>
                 setDuration(value as SubscriptionDurationValue)
               }
             >
-              <SelectTrigger id="subscription-duration">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SUBSCRIPTION_DURATION_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+              {SUBSCRIPTION_DURATION_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </FloatingSelectField>
+          </CreateFormFieldRow>
 
-        {duration === "custom" ? (
-          <div className="space-y-2">
-            <Label htmlFor="subscription-ends">End date</Label>
-            <Input
-              id="subscription-ends"
-              type="date"
-              disabled={fieldsLocked}
-              value={customEndDate}
-              min={startsAt}
-              onChange={(event) => setCustomEndDate(event.target.value)}
-            />
-          </div>
-        ) : null}
+          {duration === "custom" ? (
+            <FloatingFieldShell
+              active={endsFocused || Boolean(customEndDate.trim())}
+              label="End date"
+              htmlFor="subscription-ends"
+            >
+              <Input
+                id="subscription-ends"
+                type="date"
+                disabled={fieldsLocked}
+                value={customEndDate}
+                min={startsAt}
+                onChange={(event) => setCustomEndDate(event.target.value)}
+                onFocus={() => setEndsFocused(true)}
+                onBlur={() => setEndsFocused(false)}
+                className={floatingFieldControlClassName}
+              />
+            </FloatingFieldShell>
+          ) : null}
+        </CreateFormSection>
 
         {!paymentSectionLocked ? (
-          <div className="space-y-3">
-            <Label>Payment</Label>
-            <RadioGroup
-              value={paymentMode}
-              onValueChange={(value) =>
-                setPaymentMode(value as SubscriptionPaymentMode)
-              }
-              className="space-y-3"
-              disabled={fieldsLocked}
-            >
-              <label
-                htmlFor="payment-saved-card"
-                className={paymentOptionClass("saved_card")}
-              >
-                <RadioGroupItem
-                  id="payment-saved-card"
-                  value="saved_card"
-                  className="mt-1 shrink-0"
-                  disabled={!cardOnFile && !savedCard}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">Use card on file</p>
-                  {paymentMode === "saved_card" && allSavedCards.length > 0 ? (
-                    <div className="mt-3">
-                      <SavedCardSelect
-                        cards={allSavedCards}
-                        value={selectedSavedCardValue}
-                        onChange={(value) => setSelectedSavedCardValue(value)}
-                        disabled={fieldsLocked}
-                        label="Card to charge"
-                      />
-                    </div>
-                  ) : allSavedCards.length > 0 ? (
-                    <ul className="mt-1 space-y-1">
-                      {allSavedCards.map((card) => (
-                        <li
-                          key={savedCardOptionValue(card)}
-                          className="text-xs text-muted-foreground"
-                        >
-                          {formatSavedCardLabel(card)} ·{" "}
-                          {savedCardSourceLabel(card.source)}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : subscription?.payment_method_last4 ? (
-                    <p className="text-xs text-muted-foreground">
-                      {subscription.payment_method_brand ?? "Card"} ····
-                      {subscription.payment_method_last4}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      No saved card for this client
-                    </p>
+          <CreateFormSection title="Payment" className="[&>div]:space-y-3">
+            {hasSavedCards ? (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Card on file
+                </p>
+                <div
+                  className={cn(
+                    fieldsLocked && "pointer-events-none opacity-60",
+                    paymentMode === "saved_card"
+                      ? "rounded-md ring-1 ring-primary/25"
+                      : "opacity-80",
                   )}
+                >
+                  <SavedCardSelect
+                    cards={allSavedCards}
+                    value={selectedSavedCardValue}
+                    onChange={(value) => {
+                      setSelectedSavedCardValue(value);
+                      setPaymentMode("saved_card");
+                    }}
+                    disabled={fieldsLocked}
+                    label="Select card"
+                  />
                 </div>
-              </label>
+              </div>
+            ) : null}
 
-              <label
-                htmlFor="payment-staff-card"
-                className={paymentOptionClass("staff_card")}
-              >
-                <RadioGroupItem
-                  id="payment-staff-card"
-                  value="staff_card"
-                  className="mt-1 shrink-0"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">
-                    Enter card (client present)
+            <div className="space-y-2">
+              {hasSavedCards ? (
+                <p className="text-xs font-medium text-muted-foreground">
+                  Or use another method
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={paymentOptionClass("request_setup")}
+                  disabled={fieldsLocked}
+                  onClick={() => selectPaymentMode("request_setup")}
+                >
+                  Request from client
+                </button>
+                <button
+                  type="button"
+                  className={paymentOptionClass("staff_card")}
+                  disabled={fieldsLocked}
+                  onClick={() => selectPaymentMode("staff_card")}
+                >
+                  Enter manually
+                </button>
+              </div>
+            </div>
+
+            {paymentMode === "request_setup" ? (
+              <div className="space-y-3 rounded-md border bg-muted/10 p-3">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Send setup link via
                   </p>
-                  {paymentMode === "staff_card" ? (
-                    <div className="mt-3">
-                      <SubscriptionStaffCardForm
-                        ref={staffCardRef}
-                        enabled={paymentMode === "staff_card"}
-                        billTo={billTo}
-                        recipientEmail={recipientEmail}
-                      />
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Staff-assisted Stripe card entry
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      [
+                        {
+                          id: "email" as const,
+                          label: recipientEmail
+                            ? `Email (${recipientEmail})`
+                            : "Email",
+                          disabled: !recipientEmail,
+                        },
+                        {
+                          id: "sms" as const,
+                          label: recipientPhone
+                            ? `SMS (${recipientPhone})`
+                            : "SMS",
+                          disabled: !recipientPhone,
+                        },
+                        {
+                          id: "both" as const,
+                          label: "Both",
+                          disabled: !recipientEmail || !recipientPhone,
+                        },
+                      ] as const
+                    ).map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        disabled={fieldsLocked || option.disabled}
+                        onClick={() => setRequestDelivery(option.id)}
+                        className={cn(
+                          "inline-flex h-8 items-center rounded-md border px-3 text-xs font-medium transition-colors",
+                          requestDelivery === option.id
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : "border-border bg-background text-muted-foreground hover:bg-muted/40",
+                          (fieldsLocked || option.disabled) &&
+                            "pointer-events-none opacity-50",
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  {!recipientEmail && !recipientPhone ? (
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      This client needs an email or phone to send the setup
+                      link.
                     </p>
-                  )}
-                </div>
-              </label>
-
-              <label
-                htmlFor="payment-request-setup"
-                className={paymentOptionClass("request_setup")}
-              >
-                <RadioGroupItem
-                  id="payment-request-setup"
-                  value="request_setup"
-                  className="mt-1 shrink-0"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">
-                    Request card from client
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Send a secure link to save their card. The subscription stays
-                    pending until you activate it with that card.
-                  </p>
-                  {paymentMode === "request_setup" ? (
-                    <div className="mt-4 space-y-4">
-                      <div className="grid gap-3 xl:grid-cols-2">
-                        <label className="flex min-w-0 items-start gap-2 text-sm">
-                          <Checkbox
-                            checked={sendEmail}
-                            onCheckedChange={(checked) =>
-                              setSendEmail(checked === true)
-                            }
-                            disabled={!recipientEmail}
-                            className="mt-0.5"
-                          />
-                          <span className="min-w-0 break-all">
-                            Email
-                            {recipientEmail ? `: ${recipientEmail}` : ""}
-                          </span>
-                        </label>
-                        <label className="flex min-w-0 items-start gap-2 text-sm">
-                          <Checkbox
-                            checked={sendSms}
-                            onCheckedChange={(checked) =>
-                              setSendSms(checked === true)
-                            }
-                            disabled={!recipientPhone}
-                            className="mt-0.5"
-                          />
-                          <span className="min-w-0 break-all">
-                            SMS
-                            {recipientPhone ? `: ${recipientPhone}` : ""}
-                          </span>
-                        </label>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="subscription-message">Message</Label>
-                        <Textarea
-                          id="subscription-message"
-                          rows={4}
-                          value={messageEdited ? message : ""}
-                          onChange={(event) => {
-                            setMessageEdited(true);
-                            setMessage(event.target.value);
-                          }}
-                          placeholder={defaultMessage}
-                          className="min-h-24"
-                        />
-                      </div>
-                    </div>
                   ) : null}
                 </div>
-              </label>
-            </RadioGroup>
-          </div>
+
+                <FloatingFieldShell
+                  active={
+                    messageFocused ||
+                    Boolean(
+                      (messageEdited ? message : defaultMessage).trim(),
+                    )
+                  }
+                  label="Message"
+                  htmlFor="subscription-message"
+                  className="min-h-[4.5rem] items-stretch"
+                >
+                  <Textarea
+                    id="subscription-message"
+                    rows={3}
+                    value={messageEdited ? message : ""}
+                    onChange={(event) => {
+                      setMessageEdited(true);
+                      setMessage(event.target.value);
+                    }}
+                    onFocus={() => setMessageFocused(true)}
+                    onBlur={() => setMessageFocused(false)}
+                    placeholder={defaultMessage}
+                    className={cn(
+                      floatingFieldControlClassName,
+                      "h-auto min-h-[4.5rem] resize-y py-2",
+                    )}
+                  />
+                </FloatingFieldShell>
+              </div>
+            ) : null}
+
+            {paymentMode === "staff_card" ? (
+              <div className="rounded-md border bg-muted/10 p-3">
+                <SubscriptionStaffCardForm
+                  ref={staffCardRef}
+                  enabled={paymentMode === "staff_card"}
+                  billTo={billTo}
+                  recipientEmail={recipientEmail}
+                />
+              </div>
+            ) : null}
+          </CreateFormSection>
         ) : subscription?.payment_method_last4 ? (
-          <div className="rounded-lg border bg-muted/20 px-4 py-3 text-sm">
-            <p className="font-medium">Payment method on file</p>
-            <p className="text-muted-foreground">
-              {subscription.payment_method_brand ?? "Card"} ····
-              {subscription.payment_method_last4}
-            </p>
-          </div>
+          <CreateFormSection title="Payment">
+            <div className="rounded-md border bg-muted/20 px-3 py-2.5 text-sm">
+              <p className="font-medium">Payment method on file</p>
+              <p className="text-muted-foreground">
+                {subscription.payment_method_brand ?? "Card"} ····
+                {subscription.payment_method_last4}
+              </p>
+            </div>
+          </CreateFormSection>
         ) : null}
       </div>
 
-      <div className="min-w-0 px-4 py-6 md:px-6">
+      <div className="min-w-0 px-4 py-5 md:px-5">
         <SubscriptionCreateReviewPanel
           clientLabel={clientLabel}
           subscriptionName={subscriptionName}

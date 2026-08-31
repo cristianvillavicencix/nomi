@@ -4,15 +4,13 @@ import type { Company, Contact } from "@/components/atomic-crm/types";
 import { formatContactName } from "@/modules/billing/billingUtils";
 import {
   formatSubscriptionAmountLabel,
+  resolveSubscriptionListRibbon,
   subscriptionMatchesSearchQuery,
   subscriptionMatchesStatusFilter,
-  subscriptionStatusLabel,
-  subscriptionStatusVariant,
   formatSubscriptionNextBillingLabel,
   type SubscriptionStatusFilter,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
 import type { ClientSubscription } from "@/modules/types";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -148,6 +146,7 @@ export const SubscriptionListSidebar = ({
             company?.name ??
             formatContactName(contact) ??
             "No customer";
+          const ribbon = resolveSubscriptionListRibbon(row);
 
           return (
             <li key={row.id}>
@@ -155,7 +154,7 @@ export const SubscriptionListSidebar = ({
                 type="button"
                 onClick={() => onSelectSubscription(String(row.id))}
                 className={cn(
-                  "flex w-full flex-col gap-1.5 text-left transition-colors",
+                  "relative flex w-full flex-col gap-1.5 overflow-hidden text-left transition-colors",
                   isMobile
                     ? "px-1 py-3 hover:bg-black/[0.03] active:bg-black/[0.05]"
                     : "px-3 py-3 hover:bg-muted/40",
@@ -165,7 +164,21 @@ export const SubscriptionListSidebar = ({
                       : "bg-primary/5 ring-1 ring-inset ring-primary/20"),
                 )}
               >
-                <div className="flex items-start justify-between gap-2">
+                <div
+                  className="pointer-events-none absolute bottom-0 right-0 z-[1] size-14 overflow-hidden"
+                  aria-label={ribbon.label}
+                >
+                  <span
+                    className={cn(
+                      "absolute bottom-[0.85rem] -right-6 w-[5.75rem] -rotate-45 py-px text-center text-[8px] font-bold uppercase tracking-wider shadow-sm",
+                      ribbon.className,
+                    )}
+                  >
+                    {ribbon.label}
+                  </span>
+                </div>
+
+                <div className="flex items-start justify-between gap-2 pr-8">
                   <span className="min-w-0 truncate text-sm font-medium">
                     {clientLabel}
                   </span>
@@ -177,7 +190,7 @@ export const SubscriptionListSidebar = ({
                     )}
                   </span>
                 </div>
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center justify-between gap-2 pr-8">
                   <span className="truncate text-xs text-muted-foreground">
                     {row.subscription_number ?? row.name}
                   </span>
@@ -185,12 +198,6 @@ export const SubscriptionListSidebar = ({
                     {formatSubscriptionNextBillingLabel(row)}
                   </span>
                 </div>
-                <Badge
-                  variant={subscriptionStatusVariant(row.status, row)}
-                  className="w-fit text-[10px] uppercase tracking-wide"
-                >
-                  {subscriptionStatusLabel(row.status, row)}
-                </Badge>
               </button>
             </li>
           );

@@ -1,7 +1,6 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import type { ClipboardEventHandler, FocusEvent } from "react";
-import { Star, X } from "lucide-react";
-import { useInput } from "ra-core";
+import { Plus, Star, X } from "lucide-react";
 import {
   useFieldArray,
   useFormContext,
@@ -10,15 +9,7 @@ import {
 } from "react-hook-form";
 import { EmailInput } from "@/components/admin/email-input";
 import { PhoneInput } from "@/components/admin/phone-input";
-import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 export type ProgressiveChannelTypeChoice = {
@@ -72,78 +63,16 @@ const syncCompanyPrimaryFlags = <T extends FieldValues>(
   }
 };
 
-/** Flattened input styles when nested inside a shared bordered row. */
-const groupedValueFieldClassName =
-  "min-w-0 flex-1 gap-0 [&_[data-slot=input]]:h-9 [&_[data-slot=input]]:rounded-none [&_[data-slot=input]]:border-0 [&_[data-slot=input]]:bg-transparent [&_[data-slot=input]]:shadow-none [&_[data-slot=input]]:focus-visible:ring-0";
-
-const ChannelTypeSelect = ({
-  source,
-  choices,
-}: {
-  source: string;
-  choices: readonly ProgressiveChannelTypeChoice[];
-}) => {
-  const { field } = useInput({ source });
-  const mergedChoices = useMemo(() => {
-    const seen = new Set<string>();
-    const result: ProgressiveChannelTypeChoice[] = [];
-    const add = (id: string, name?: string) => {
-      const trimmed = id.trim();
-      if (!trimmed || seen.has(trimmed)) return;
-      seen.add(trimmed);
-      result.push({ id: trimmed, name: name ?? trimmed });
-    };
-
-    for (const choice of choices) {
-      add(choice.id, choice.name);
-    }
-    add(field.value?.toString() ?? "");
-
-    return result;
-  }, [choices, field.value]);
-
-  const value = field.value?.toString() || defaultType(mergedChoices);
-
-  return (
-    <Select
-      key={`channel-type:${value}`}
-      value={value}
-      onValueChange={field.onChange}
-      disabled={field.disabled}
-    >
-      <SelectTrigger
-        className={cn(
-          "h-9 w-[6.25rem] shrink-0 rounded-none border-0 border-l border-input",
-          "bg-muted/50 px-2.5 text-xs font-medium shadow-none",
-          "hover:bg-muted/70 focus:ring-0 focus-visible:ring-0",
-          "[&>svg]:size-3.5 [&>svg]:opacity-60",
-        )}
-      >
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent align="end">
-        {mergedChoices.map((choice) => (
-          <SelectItem key={choice.id} value={choice.id} className="text-sm">
-            {choice.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-};
-
 const ChannelValueInput = ({
   kind,
   source,
   label,
-  grouped,
   onFirstEmailBlur,
   onFirstEmailPaste,
 }: {
   kind: "email" | "phone";
   source: string;
-  label: string | false;
-  grouped: boolean;
+  label: string;
   onFirstEmailBlur?: ProgressiveMultiChannelInputProps<FieldValues>["onFirstEmailBlur"];
   onFirstEmailPaste?: ProgressiveMultiChannelInputProps<FieldValues>["onFirstEmailPaste"];
 }) => {
@@ -151,7 +80,8 @@ const ChannelValueInput = ({
     source,
     label,
     helperText: false as const,
-    className: grouped ? groupedValueFieldClassName : undefined,
+    labelVariant: "floating" as const,
+    className: "min-w-0 flex-1",
   };
 
   if (kind === "email") {
@@ -216,102 +146,68 @@ export const ProgressiveMultiChannelInput = <T extends FieldValues>({
     }
   };
 
-  const primaryControlWidth = "size-9";
-
   return (
-    <div className="space-y-2">
-      {multi ? (
-        <p className="text-sm font-medium leading-none">{label}</p>
-      ) : null}
+    <div className="space-y-3">
+      {fields.map((field, index) => {
+        const valueSource = `${String(source)}.${index}.${valueKey}`;
+        const isLast = index === fields.length - 1;
+        const isPrimary = index === 0;
 
-      <div className="space-y-2">
-        {fields.map((field, index) => {
-          const valueSource = `${String(source)}.${index}.${valueKey}`;
-          const typeSource = `${String(source)}.${index}.type`;
+        return (
+          <div key={field.id} className="flex items-center gap-1">
+            <ChannelValueInput
+              kind={kind}
+              source={valueSource}
+              label={label}
+              onFirstEmailBlur={index === 0 ? onFirstEmailBlur : undefined}
+              onFirstEmailPaste={index === 0 ? onFirstEmailPaste : undefined}
+            />
 
-          if (!multi) {
-            return (
-              <ChannelValueInput
-                key={field.id}
-                kind={kind}
-                source={valueSource}
-                label={label}
-                grouped={false}
-                onFirstEmailBlur={index === 0 ? onFirstEmailBlur : undefined}
-                onFirstEmailPaste={index === 0 ? onFirstEmailPaste : undefined}
+            <IconButton
+              type="button"
+              className={cn(
+                "size-9 shrink-0",
+                isPrimary
+                  ? "text-amber-500"
+                  : "text-muted-foreground hover:text-amber-500",
+              )}
+              aria-label={isPrimary ? "Primary" : "Set as primary"}
+              title={isPrimary ? "Primary" : "Set as primary"}
+              disabled={isPrimary && !multi}
+              onClick={() => makePrimary(index)}
+            >
+              <Star
+                className={cn("size-4", isPrimary && "fill-current")}
               />
-            );
-          }
+            </IconButton>
 
-          return (
-            <div key={field.id} className="flex items-center gap-2">
-              <div
-                className={cn(
-                  "flex min-w-0 flex-1 overflow-hidden rounded-md border border-input bg-background shadow-xs",
-                  "transition-[color,box-shadow]",
-                  "focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50",
-                )}
+            {multi ? (
+              <IconButton
+                type="button"
+                className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={() => handleRemove(index)}
+                aria-label={`Remove ${kind}`}
+                title={`Remove ${kind}`}
               >
-                <ChannelValueInput
-                  kind={kind}
-                  source={valueSource}
-                  label={false}
-                  grouped
-                  onFirstEmailBlur={index === 0 ? onFirstEmailBlur : undefined}
-                  onFirstEmailPaste={
-                    index === 0 ? onFirstEmailPaste : undefined
-                  }
-                />
-                <ChannelTypeSelect source={typeSource} choices={typeChoices} />
-              </div>
+                <X className="size-4" />
+              </IconButton>
+            ) : null}
 
-              <div className="flex h-9 shrink-0 items-center gap-1">
-                {index === 0 ? (
-                  <IconButton
-                    type="button"
-                    className={cn(primaryControlWidth, "text-amber-500")}
-                    aria-label="Primary"
-                    title="Primary"
-                    disabled
-                  >
-                    <Star className="size-4 fill-current" />
-                  </IconButton>
-                ) : (
-                  <IconButton
-                    type="button"
-                    className={cn(
-                      primaryControlWidth,
-                      "text-muted-foreground hover:text-amber-500",
-                    )}
-                    aria-label="Set as primary"
-                    title="Set as primary"
-                    onClick={() => makePrimary(index)}
-                  >
-                    <Star className="size-4" />
-                  </IconButton>
-                )}
-                <IconButton
-                  className={cn(primaryControlWidth, "text-muted-foreground hover:text-destructive")}
-                  onClick={() => handleRemove(index)}
-                  aria-label={`Remove ${kind}`}
-                >
-                  <X className="size-4" />
-                </IconButton>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <Button
-        type="button"
-        variant="link"
-        size="sm"
-        className="h-auto px-0 text-muted-foreground"
-        onClick={appendRow}
-      >
-        {addLabel}
-      </Button>
+            {isLast ? (
+              <IconButton
+                type="button"
+                variant="secondary"
+                className="size-9 shrink-0"
+                onClick={appendRow}
+                aria-label={addLabel}
+                title={addLabel}
+              >
+                <Plus className="size-4" />
+              </IconButton>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 };

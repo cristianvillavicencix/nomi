@@ -109,11 +109,11 @@ export const formatSubscriptionScheduleLabel = (params: {
 export const subscriptionPaymentModeLabel = (mode: SubscriptionPaymentMode) => {
   switch (mode) {
     case "saved_card":
-      return "Use card on file";
+      return "Card on file";
     case "staff_card":
-      return "Enter card (client present)";
+      return "Enter manually";
     case "request_setup":
-      return "Request card from client";
+      return "Request from client";
     default:
       return mode;
   }

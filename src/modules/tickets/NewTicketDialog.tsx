@@ -45,6 +45,7 @@ import {
 } from "@/modules/tickets/ticketRequester";
 import { TicketDescriptionComposer } from "@/modules/tickets/TicketDescriptionComposer";
 import { CONTACT_STATUS_FILTER } from "@/modules/shared/relatedFilters";
+import { CreateFormFieldRow } from "@/modules/shared/createForm/CreateFormLayout";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -355,6 +356,7 @@ const NewTicketDialogBody = ({
             mode="address"
             placeholder="Job site address or search on Google…"
             helperText="Pick a Google address suggestion, or type any subject."
+            labelVariant="floating"
             validate={(value) =>
               typeof value === "string" && value.trim().length > 0
                 ? undefined
@@ -369,24 +371,29 @@ const NewTicketDialogBody = ({
             }}
           />
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <CreateFormFieldRow>
             <SelectInput
               source="status"
               label="Status"
               choices={statusChoices}
               helperText={false}
+              labelVariant="floating"
             />
             <SelectInput
               source="priority"
               label="Priority"
               choices={priorityChoices}
               helperText={false}
+              labelVariant="floating"
             />
-          </div>
+          </CreateFormFieldRow>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <CreateFormFieldRow>
             <ReferenceInput source="company_id" reference="companies">
-              <AutocompleteCompanyInput label="Account" />
+              <AutocompleteCompanyInput
+                label="Account"
+                labelVariant="floating"
+              />
             </ReferenceInput>
             <SelectInput
               source="contact_id"
@@ -399,8 +406,9 @@ const NewTicketDialogBody = ({
               }
               disabled={!companyId}
               emptyText={contactEmptyText}
+              labelVariant="floating"
             />
-          </div>
+          </CreateFormFieldRow>
 
           <TicketDescriptionComposer
             templateContext={templateContext}

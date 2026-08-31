@@ -3,7 +3,10 @@ import {
   savedCardSourceLabel,
   type ClientSavedPaymentMethod,
 } from "@/modules/billing/subscriptions/useClientSavedPaymentMethod";
-import { Label } from "@/components/ui/label";
+import {
+  FloatingFieldShell,
+  floatingFieldControlClassName,
+} from "@/components/ui/floating-field";
 import {
   Select,
   SelectContent,
@@ -11,6 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export const savedCardOptionValue = (card: ClientSavedPaymentMethod) =>
   card.stripePaymentMethodId?.trim() ||
@@ -33,6 +38,8 @@ export const SavedCardSelect = ({
   label = "Saved card",
   id = "saved-card-select",
 }: SavedCardSelectProps) => {
+  const [open, setOpen] = useState(false);
+
   if (cards.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -48,25 +55,45 @@ export const SavedCardSelect = ({
 
   if (cards.length === 1) {
     const card = cards[0];
+    const optionValue = savedCardOptionValue(card);
     return (
-      <div className="space-y-1">
-        {label ? <Label htmlFor={id}>{label}</Label> : null}
-        <p id={id} className="text-sm font-medium">
-          {formatSavedCardLabel(card)}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {savedCardSourceLabel(card.source)}
-        </p>
-      </div>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange(optionValue, card)}
+        className="w-full text-left disabled:pointer-events-none disabled:opacity-60"
+      >
+        <FloatingFieldShell active label={label} htmlFor={id}>
+          <div
+            id={id}
+            className={cn(
+              floatingFieldControlClassName,
+              "flex flex-col justify-center gap-0.5 py-1.5",
+            )}
+          >
+            <span className="text-sm font-medium leading-none">
+              {formatSavedCardLabel(card)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {savedCardSourceLabel(card.source)}
+            </span>
+          </div>
+        </FloatingFieldShell>
+      </button>
     );
   }
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+    <FloatingFieldShell
+      active={open || Boolean(resolvedValue)}
+      label={label}
+      htmlFor={id}
+    >
       <Select
         value={resolvedValue}
         disabled={disabled}
+        open={open}
+        onOpenChange={setOpen}
         onValueChange={(next) => {
           const card = cards.find(
             (candidate) => savedCardOptionValue(candidate) === next,
@@ -74,8 +101,19 @@ export const SavedCardSelect = ({
           if (card) onChange(next, card);
         }}
       >
-        <SelectTrigger id={id}>
-          <SelectValue placeholder="Select a saved card" />
+        <SelectTrigger
+          id={id}
+          className="h-9 border-0 bg-transparent px-3 shadow-none hover:bg-transparent focus:ring-0 data-[size=default]:h-9"
+        >
+          <SelectValue placeholder="Select card">
+            {(() => {
+              const selected =
+                cards.find(
+                  (card) => savedCardOptionValue(card) === resolvedValue,
+                ) ?? cards[0];
+              return selected ? formatSavedCardLabel(selected) : null;
+            })()}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {cards.map((card) => {
@@ -88,7 +126,7 @@ export const SavedCardSelect = ({
           })}
         </SelectContent>
       </Select>
-    </div>
+    </FloatingFieldShell>
   );
 };
 

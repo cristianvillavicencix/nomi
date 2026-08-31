@@ -99,6 +99,69 @@ export const subscriptionStatusVariant = (
   }
 };
 
+/** Corner ribbon for subscription list cards (same pattern as ticket kanban). */
+export type SubscriptionListRibbon = {
+  key: string;
+  label: string;
+  className: string;
+};
+
+export const resolveSubscriptionListRibbon = (
+  subscription: Pick<ClientSubscription, "ends_at" | "status">,
+): SubscriptionListRibbon => {
+  if (isSubscriptionExpired(subscription)) {
+    return {
+      key: "expired",
+      label: "Expired",
+      className: "bg-zinc-500 text-white dark:bg-zinc-600",
+    };
+  }
+  switch (subscription.status) {
+    case "active":
+      return {
+        key: "active",
+        label: "Active",
+        className: "bg-emerald-600 text-white dark:bg-emerald-500",
+      };
+    case "trialing":
+      return {
+        key: "trialing",
+        label: "Trial",
+        className: "bg-sky-600 text-white dark:bg-sky-500",
+      };
+    case "pending_setup":
+      return {
+        key: "pending",
+        label: "Pending",
+        className: "bg-amber-500 text-white dark:bg-amber-600",
+      };
+    case "past_due":
+      return {
+        key: "past_due",
+        label: "Past due",
+        className: "bg-destructive text-destructive-foreground",
+      };
+    case "paused":
+      return {
+        key: "paused",
+        label: "Paused",
+        className: "bg-violet-600 text-white dark:bg-violet-500",
+      };
+    case "canceled":
+      return {
+        key: "canceled",
+        label: "Canceled",
+        className: "bg-zinc-600 text-white dark:bg-zinc-500",
+      };
+    default:
+      return {
+        key: "unknown",
+        label: subscriptionStatusLabel(subscription.status, subscription),
+        className: "bg-muted text-muted-foreground",
+      };
+  }
+};
+
 export const countSubscriptionsByStatusFilter = (
   rows: ClientSubscription[],
 ): Record<SubscriptionStatusFilter, number> => {

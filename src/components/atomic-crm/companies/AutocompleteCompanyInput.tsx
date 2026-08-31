@@ -15,6 +15,7 @@ type AutocompleteCompanyInputProps = Pick<
   placeholder?: string;
   emptyText?: string;
   filterToQuery?: (searchText: string) => Record<string, unknown>;
+  labelVariant?: "default" | "floating";
 };
 
 type PendingCreate = {
@@ -44,6 +45,7 @@ export const AutocompleteCompanyInput = ({
   placeholder = "Search account…",
   emptyText,
   filterToQuery = (searchText) => ({ q: searchText }),
+  labelVariant = "default",
 }: AutocompleteCompanyInputProps) => {
   const isMobile = useIsMobile();
   const [createOpen, setCreateOpen] = useState(false);
@@ -88,6 +90,7 @@ export const AutocompleteCompanyInput = ({
         createLabel="Create new account"
         validate={validate}
         modal={isMobile}
+        labelVariant={labelVariant}
       />
       <CompanyCreateDialog
         open={createOpen}

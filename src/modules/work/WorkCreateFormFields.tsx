@@ -33,6 +33,7 @@ export const WorkCreateEventFields = ({
       validate={required()}
       autoFocus
       helperText={false}
+      labelVariant="floating"
     />
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <DateInput
@@ -40,6 +41,7 @@ export const WorkCreateEventFields = ({
         label="Date"
         helperText={false}
         validate={required()}
+        labelVariant="floating"
       />
       <CalendarTimeInput
         source="event_time"

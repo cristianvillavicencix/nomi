@@ -6,12 +6,14 @@ import {
   Loader2,
   Mail,
   MessageSquare,
+  OctagonX,
   Pause,
   Pencil,
   Play,
   RotateCcw,
   Save,
   Send,
+  CalendarClock,
 } from "lucide-react";
 import { useSearchParams } from "react-router";
 import { useState, type ComponentProps } from "react";
@@ -21,17 +23,15 @@ import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
 import { resolveSubscriptionSetupShareUrl } from "@/lib/publicAppUrl";
 import {
   canShowSubscriptionSetupLink,
-  canSyncSubscriptionFromStripe,
   formatSubscriptionAmountLabel,
   isSubscriptionExpired,
   subscriptionStatusLabel,
   subscriptionStatusVariant,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
-import { useSubscriptionStripeSync } from "@/modules/billing/subscriptions/useSubscriptionStripeSync";
 import { SendSubscriptionSetupDialog } from "@/modules/billing/subscriptions/SendSubscriptionSetupDialog";
 import { CollectSubscriptionPaymentDialog } from "@/modules/billing/subscriptions/CollectSubscriptionPaymentDialog";
 import { FinishSubscriptionSetupDialog } from "@/modules/billing/subscriptions/FinishSubscriptionSetupDialog";
-import { SubscriptionBillingActionsDialog } from "@/modules/billing/subscriptions/SubscriptionBillingActionsDialog";
+import { SubscriptionBillingActionsDialog, type BillingAction } from "@/modules/billing/subscriptions/SubscriptionBillingActionsDialog";
 import { SubscriptionCollectPaymentMenu } from "@/modules/billing/subscriptions/SubscriptionCollectPaymentMenu";
 import {
   buildSubscriptionDetailSearchParams,
@@ -116,50 +116,31 @@ const SubscriptionPastDueBanner = ({
   </div>
 );
 
-const SubscriptionActiveBanner = ({
-  subscription,
+const SubscriptionPausedBanner = ({
+  resumesAt,
 }: {
-  subscription: ClientSubscription;
-}) => {
-  const amountLabel = formatSubscriptionAmountLabel(
-    Number(subscription.amount),
-    subscription.currency,
-    subscription.billing_interval,
-  );
-  const nextCharge = subscription.next_billing_at?.slice(0, 10);
-
-  return (
-    <div className="rounded-lg border bg-muted/20 px-4 py-3">
-      <p className="text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">What&apos;s next?</span>{" "}
-        {nextCharge ? (
-          <>
-            Next charge{" "}
-            <span className="font-medium text-foreground">{amountLabel}</span> on{" "}
-            <span className="font-medium text-foreground">
-              {formatBillingDate(nextCharge)}
-            </span>
-            .
-          </>
-        ) : (
-          <>
-            Active subscription billing{" "}
-            <span className="font-medium text-foreground">{amountLabel}</span>.
-          </>
-        )}
-      </p>
-      {subscription.payment_method_last4 ? (
-        <p className="mt-1 text-sm text-muted-foreground">
-          Card on file:{" "}
+  resumesAt?: string | null;
+}) => (
+  <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 py-3">
+    <p className="text-sm text-muted-foreground">
+      <span className="font-medium text-foreground">Billing paused.</span>{" "}
+      {resumesAt ? (
+        <>
+          Stripe will resume automatic charges on{" "}
           <span className="font-medium text-foreground">
-            {subscription.payment_method_brand ?? "Card"} ····
-            {subscription.payment_method_last4}
+            {formatBillingDate(resumesAt.slice(0, 10))}
           </span>
-        </p>
-      ) : null}
-    </div>
-  );
-};
+          . You can also resume anytime.
+        </>
+      ) : (
+        <>
+          Charges stay off until you click Resume. This is not a cancel — use
+          Stop if you want billing to end permanently.
+        </>
+      )}
+    </p>
+  </div>
+);
 
 const SubscriptionScheduledCancelBanner = ({
   endsAt,
@@ -179,7 +160,7 @@ const SubscriptionScheduledCancelBanner = ({
           </span>
         </>
       ) : null}
-      . Use Undo cancel in the menu to keep billing active.
+      . Use Undo cancel to keep billing active.
     </p>
   </div>
 );
@@ -227,23 +208,71 @@ export const SubscriptionDetailHeader = ({
   subscription,
 }: {
   subscription: ClientSubscription;
-}) => (
-  <div className="space-y-1">
-    <div className="flex flex-wrap items-center gap-2">
-      <h2 className="text-base font-semibold">{subscription.name}</h2>
-      <Badge
-        variant={subscriptionStatusVariant(subscription.status, subscription)}
-      >
-        {subscriptionStatusLabel(subscription.status, subscription)}
-      </Badge>
+}) => {
+  const isActiveLike =
+    subscription.status === "active" || subscription.status === "trialing";
+  const showBillingMeta =
+    isActiveLike && !subscription.cancel_at_period_end;
+  const amountLabel = formatSubscriptionAmountLabel(
+    Number(subscription.amount),
+    subscription.currency,
+    subscription.billing_interval,
+  );
+  const nextCharge = subscription.next_billing_at?.slice(0, 10);
+  const cardLabel = subscription.payment_method_last4
+    ? `${subscription.payment_method_brand ?? "Card"} ····${subscription.payment_method_last4}`
+    : null;
+
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-base font-semibold">{subscription.name}</h2>
+        <Badge
+          variant={subscriptionStatusVariant(subscription.status, subscription)}
+        >
+          {subscriptionStatusLabel(subscription.status, subscription)}
+        </Badge>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted-foreground">
+        {subscription.subscription_number ? (
+          <span>#{subscription.subscription_number}</span>
+        ) : null}
+        {showBillingMeta && nextCharge ? (
+          <>
+            {subscription.subscription_number ? (
+              <span aria-hidden>·</span>
+            ) : null}
+            <span>
+              Next charge{" "}
+              <span className="font-medium text-foreground">{amountLabel}</span>{" "}
+              on{" "}
+              <span className="font-medium text-foreground">
+                {formatBillingDate(nextCharge)}
+              </span>
+            </span>
+          </>
+        ) : null}
+        {showBillingMeta && !nextCharge ? (
+          <>
+            {subscription.subscription_number ? (
+              <span aria-hidden>·</span>
+            ) : null}
+            <span>
+              Billing{" "}
+              <span className="font-medium text-foreground">{amountLabel}</span>
+            </span>
+          </>
+        ) : null}
+        {showBillingMeta && cardLabel ? (
+          <>
+            <span aria-hidden>·</span>
+            <span className="font-medium text-foreground">{cardLabel}</span>
+          </>
+        ) : null}
+      </div>
     </div>
-    {subscription.subscription_number ? (
-      <p className="text-sm text-muted-foreground">
-        #{subscription.subscription_number}
-      </p>
-    ) : null}
-  </div>
-);
+  );
+};
 
 export const SubscriptionDetailToolbar = ({
   subscription,
@@ -262,11 +291,8 @@ export const SubscriptionDetailToolbar = ({
   const [collectDialogMode, setCollectDialogMode] = useState<
     "saved_card" | "staff_card" | null
   >(null);
-  const [billingActionsOpen, setBillingActionsOpen] = useState(false);
-
-  const { syncFromStripe, isSyncing } = useSubscriptionStripeSync(subscription, {
-    enabled: false,
-  });
+  const [billingConfirmAction, setBillingConfirmAction] =
+    useState<BillingAction | null>(null);
 
   const manageMutation = useMutation({
     mutationFn: (
@@ -307,12 +333,9 @@ export const SubscriptionDetailToolbar = ({
     !subscription.stripe_subscription_id?.trim() &&
     !expired &&
     !isCanceled;
-  const canManageBilling =
-    canPause ||
-    canResume ||
-    canCancel ||
-    canCancelDraft ||
-    canUndoCancel;
+  const canStopBilling =
+    (canCancel && Boolean(subscription.stripe_subscription_id)) ||
+    canCancelDraft;
 
   const openEditTab = () => {
     setSearchParams(
@@ -346,7 +369,6 @@ export const SubscriptionDetailToolbar = ({
   };
 
   const showSetupLink = canShowSubscriptionSetupLink(subscription);
-  const canSyncFromStripe = canSyncSubscriptionFromStripe(subscription);
   const showFinishSetup = canCollectPayment;
 
   const handleFinishSetupAction = (
@@ -382,13 +404,11 @@ export const SubscriptionDetailToolbar = ({
       />
       <SubscriptionBillingActionsDialog
         subscription={subscription}
-        open={billingActionsOpen}
-        onOpenChange={setBillingActionsOpen}
-        canPause={canPause}
-        canResume={canResume}
-        canCancel={canCancel && Boolean(subscription.stripe_subscription_id)}
+        confirmAction={billingConfirmAction}
+        onOpenChange={(open) => {
+          if (!open) setBillingConfirmAction(null);
+        }}
         canCancelDraft={canCancelDraft}
-        canUndoCancel={canUndoCancel}
       />
       <div className={cn("flex flex-col gap-3", className)}>
         <div className="flex flex-wrap items-center gap-0 divide-x rounded-md border bg-background">
@@ -497,39 +517,70 @@ export const SubscriptionDetailToolbar = ({
             </ToolbarButton>
           ) : null}
 
-          {canSyncFromStripe ? (
+          {canPause ? (
             <ToolbarButton
-              disabled={busy || isSyncing}
-              onClick={() => syncFromStripe()}
-              title="Sync status and invoices from Stripe"
+              disabled={busy}
+              onClick={() => setBillingConfirmAction("pause")}
+              title="Pause billing"
             >
-              {isSyncing ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <RotateCcw className="size-3.5" />
-              )}
-              Sync from Stripe
+              <Pause className="size-3.5" />
+              Pause
             </ToolbarButton>
           ) : null}
 
           {canResume ? (
             <ToolbarButton
               disabled={busy}
-              onClick={() => setBillingActionsOpen(true)}
+              onClick={() => setBillingConfirmAction("resume")}
               title="Resume billing"
             >
               <Play className="size-3.5" />
               Resume
             </ToolbarButton>
-          ) : canManageBilling ? (
+          ) : null}
+
+          {canUndoCancel ? (
             <ToolbarButton
               disabled={busy}
-              onClick={() => setBillingActionsOpen(true)}
-              title="Pause or stop billing"
+              onClick={() => setBillingConfirmAction("undo_cancel")}
+              title="Keep billing active"
             >
-              <Pause className="size-3.5" />
-              Manage billing
+              <RotateCcw className="size-3.5" />
+              Undo cancel
             </ToolbarButton>
+          ) : null}
+
+          {canStopBilling ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <ToolbarButton disabled={busy} title="Stop billing">
+                  <OctagonX className="size-3.5" />
+                  Stop
+                  <ChevronDown className="size-3 opacity-60" />
+                </ToolbarButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {canCancel && subscription.stripe_subscription_id ? (
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      setBillingConfirmAction("cancel_at_period_end")
+                    }
+                  >
+                    <CalendarClock className="size-4" />
+                    Stop at period end
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => setBillingConfirmAction("cancel_now")}
+                >
+                  <OctagonX className="size-4" />
+                  {canCancelDraft
+                    ? "Cancel before billing starts"
+                    : "Stop billing now"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : null}
         </div>
 
@@ -547,17 +598,17 @@ export const SubscriptionDetailToolbar = ({
           />
         ) : null}
 
+        {status === "paused" ? (
+          <SubscriptionPausedBanner
+            resumesAt={subscription.pause_resumes_at}
+          />
+        ) : null}
+
         {subscription.cancel_at_period_end &&
         (status === "active" || status === "trialing") ? (
           <SubscriptionScheduledCancelBanner
             endsAt={subscription.current_period_end}
           />
-        ) : null}
-
-        {status === "active" || status === "trialing" ? (
-          !subscription.cancel_at_period_end ? (
-            <SubscriptionActiveBanner subscription={subscription} />
-          ) : null
         ) : null}
 
         {expired && !isCanceled ? (

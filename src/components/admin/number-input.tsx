@@ -2,10 +2,16 @@ import * as React from "react";
 import { useEffect, useState } from "react";
 import type { InputProps } from "ra-core";
 import { FieldTitle, useInput, useResourceContext } from "ra-core";
-import { FormControl, FormField, FormLabel } from "@/components/admin/form";
+import {
+  FormControl,
+  FormError,
+  FormField,
+  FormLabel,
+} from "@/components/admin/form";
 import { Input } from "@/components/ui/input";
-import { FormError } from "@/components/admin/form";
+import { FloatingFieldShell } from "@/components/ui/floating-field";
 import { InputHelperText } from "@/components/admin/input-helper-text";
+import { cn } from "@/lib/utils";
 
 /**
  * Input component for numeric values (integers and floats) with parsing and formatting support.
@@ -15,19 +21,6 @@ import { InputHelperText } from "@/components/admin/input-helper-text";
  * Supports min/max constraints and step increments.
  *
  * @see {@link https://marmelab.com/shadcn-admin-kit/docs/numberinput/ NumberInput documentation}
- *
- * @example
- * import { Edit, SimpleForm, NumberInput, TextInput } from '@/components/admin';
- *
- * const ProductEdit = () => (
- *   <Edit>
- *     <SimpleForm>
- *       <TextInput source="name" />
- *       <NumberInput source="price" step={0.01} min={0} />
- *       <NumberInput source="quantity" min={0} />
- *     </SimpleForm>
- *   </Edit>
- * );
  */
 export const NumberInput = (props: NumberInputProps) => {
   const {
@@ -40,17 +33,19 @@ export const NumberInput = (props: NumberInputProps) => {
     parse = convertStringToNumber,
     onFocus,
     helperText,
+    labelVariant = "default",
     ...rest
   } = props;
   const resource = useResourceContext({ resource: resourceProp });
 
   const { id, field, isRequired } = useInput(props);
+  const [focused, setFocused] = useState(false);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    const numberValue = parse(value);
+    const next = event.target.value;
+    const numberValue = parse(next);
 
-    setValue(value);
+    setValue(next);
     field.onChange(numberValue ?? 0);
   };
 
@@ -63,11 +58,13 @@ export const NumberInput = (props: NumberInputProps) => {
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     onFocus?.(event);
     hasFocus.current = true;
+    setFocused(true);
   };
 
   const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
     field.onBlur?.(event);
     hasFocus.current = false;
+    setFocused(false);
     setValue(field.value?.toString() ?? "");
   };
 
@@ -77,29 +74,59 @@ export const NumberInput = (props: NumberInputProps) => {
     }
   }, [field.value]);
 
+  const useFloating = labelVariant === "floating" && label !== false;
+  const hasValue = String(value ?? "").length > 0;
+  const floatingActive = focused || hasValue;
+  const labelNode =
+    label !== false ? (
+      <FieldTitle
+        label={label}
+        source={source}
+        resource={resource}
+        isRequired={useFloating ? false : isRequired}
+      />
+    ) : null;
+
+  const inputEl = (
+    <FormControl>
+      <Input
+        {...rest}
+        {...field}
+        type="number"
+        value={value}
+        placeholder={useFloating ? " " : rest.placeholder}
+        className={cn(
+          useFloating &&
+            "h-9 border-0 bg-transparent px-3 shadow-none focus-visible:ring-0",
+        )}
+        onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+      />
+    </FormControl>
+  );
+
+  if (useFloating) {
+    return (
+      <FormField id={id} className={cn("gap-1.5", className)} name={field.name}>
+        <FloatingFieldShell
+          active={floatingActive}
+          label={labelNode}
+          htmlFor={id}
+          required={isRequired}
+        >
+          {inputEl}
+        </FloatingFieldShell>
+        <InputHelperText helperText={helperText} />
+        <FormError />
+      </FormField>
+    );
+  }
+
   return (
     <FormField id={id} className={className} name={field.name}>
-      {label !== false && (
-        <FormLabel>
-          <FieldTitle
-            label={label}
-            source={source}
-            resource={resource}
-            isRequired={isRequired}
-          />
-        </FormLabel>
-      )}
-      <FormControl>
-        <Input
-          {...rest}
-          {...field}
-          type="number"
-          value={value}
-          onChange={handleChange}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-        />
-      </FormControl>
+      {labelNode ? <FormLabel>{labelNode}</FormLabel> : null}
+      {inputEl}
       <InputHelperText helperText={helperText} />
       <FormError />
     </FormField>
@@ -113,6 +140,7 @@ export interface NumberInputProps
       "defaultValue" | "onBlur" | "onChange" | "type"
     > {
   parse?: (value: string) => number;
+  labelVariant?: "default" | "floating";
 }
 
 const convertStringToNumber = (value?: string | null) => {

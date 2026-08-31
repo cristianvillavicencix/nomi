@@ -129,6 +129,7 @@ const DirectorySalesFields = () => (
       }))}
       validate={required()}
       helperText={false}
+      labelVariant="floating"
     />
     <AutocompleteArrayInput
       source="interested_services"
@@ -158,6 +159,7 @@ const PipelineSalesFields = () => (
         }))}
         validate={required()}
         helperText={false}
+        labelVariant="floating"
       />
       <AutocompleteArrayInput
         source="interested_services"
@@ -177,17 +179,20 @@ const PipelineSalesFields = () => (
         optionText="name"
         helperText={false}
         readOnly
+        labelVariant="floating"
       />
       <NumberInput
         source="lead_value_estimate"
         label="Est. value ($)"
         helperText={false}
         min={0}
+        labelVariant="floating"
       />
       <DateInput
         source="next_followup_at"
         label="Follow-up date"
         helperText={false}
+        labelVariant="floating"
       />
       <LeadReferrerInputs />
     </CreateFormFieldRow>
@@ -231,8 +236,14 @@ export const PersonFormCreateLayout = ({
             label="First name"
             validate={required()}
             helperText={false}
+            labelVariant="floating"
           />
-          <TextInput source="last_name" label="Last name" helperText={false} />
+          <TextInput
+            source="last_name"
+            label="Last name"
+            helperText={false}
+            labelVariant="floating"
+          />
         </CreateFormFieldRow>
 
         <ProgressiveMultiChannelInput
@@ -261,6 +272,7 @@ export const PersonFormCreateLayout = ({
           label="Title / role"
           helperText={false}
           placeholder="Owner, Office manager, Estimator…"
+          labelVariant="floating"
         />
 
         <PersonAssignmentSection
@@ -280,8 +292,14 @@ export const PersonFormCreateLayout = ({
             label="First name"
             validate={required()}
             helperText={false}
+            labelVariant="floating"
           />
-          <TextInput source="last_name" label="Last name" helperText={false} />
+          <TextInput
+            source="last_name"
+            label="Last name"
+            helperText={false}
+            labelVariant="floating"
+          />
         </CreateFormFieldRow>
 
         <ProgressiveMultiChannelInput
@@ -327,6 +345,7 @@ export const PersonFormCreateLayout = ({
             optionText="name"
             helperText={false}
             emptyText="Select role"
+            labelVariant="floating"
           />
         ) : null}
 

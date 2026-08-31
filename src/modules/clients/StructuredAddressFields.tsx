@@ -25,29 +25,33 @@ export const StructuredAddressFields = ({
   const showCountry = forceShowCountry || shouldShowCountryField(country);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {showStreet ? (
         <TextInput
           source={field(prefix, "address")}
           label="Street"
           helperText={false}
+          labelVariant="floating"
         />
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         <TextInput
           source={field(prefix, "city")}
           label="City"
           helperText={false}
+          labelVariant="floating"
         />
         <TextInput
           source={field(prefix, "state_abbr")}
           label="State"
           helperText={false}
+          labelVariant="floating"
         />
         <TextInput
           source={field(prefix, "zipcode")}
           label="ZIP"
           helperText={false}
+          labelVariant="floating"
         />
       </div>
       {showCountry ? (
@@ -55,6 +59,7 @@ export const StructuredAddressFields = ({
           source={field(prefix, "country")}
           label="Country"
           helperText={false}
+          labelVariant="floating"
         />
       ) : null}
     </div>

@@ -20,6 +20,11 @@ export const CreateClientSubscriptionDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
       <DialogContent
         className="flex max-h-[92vh] w-[min(96vw,76rem)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:max-w-[76rem]"
+        onOpenAutoFocus={(event) => {
+          // Keep focus on the dialog chrome — do not autofocus Client search
+          // (that was opening the suggestions popover immediately).
+          event.preventDefault();
+        }}
         onPointerDownOutside={(event) => {
           const target = event.target as HTMLElement | null;
           if (target?.closest("[data-invoice-item-suggestions]")) {

@@ -172,15 +172,19 @@ const handleClientSubscriptionWebhook = async (
             ? (object as { customer?: string | null }).customer
             : null;
         if (customerId) {
-          const { data: pending } = await supabaseAdmin
+          // Only auto-link when exactly one unlinked pending_setup row exists for
+          // this customer — otherwise we risk attaching the wrong CRM subscription.
+          const { data: pendingRows } = await supabaseAdmin
             .from("client_subscriptions")
             .select("*")
             .eq("stripe_customer_id", customerId)
             .eq("status", "pending_setup")
+            .is("stripe_subscription_id", null)
             .order("updated_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          subscription = (pending as ClientSubscriptionRow | null) ?? null;
+            .limit(2);
+          if (pendingRows?.length === 1) {
+            subscription = pendingRows[0] as ClientSubscriptionRow;
+          }
         }
       }
 
@@ -233,6 +237,17 @@ const handleClientSubscriptionWebhook = async (
         subscription,
         stripeInvoice: fullInvoice,
       });
+
+      // Keep CRM status/periods in sync after a successful charge (clears past_due).
+      const stripeSub = await stripe.subscriptions.retrieve(stripeSubId, {
+        expand: ["default_payment_method"],
+      });
+      await applyStripeSubscriptionSnapshot(
+        supabaseAdmin,
+        subscription.id,
+        stripeSub,
+      );
+
       return {
         handled: true,
         subscription_id: subscription.id,

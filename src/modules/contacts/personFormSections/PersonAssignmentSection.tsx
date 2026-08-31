@@ -62,6 +62,7 @@ export const PersonAssignmentSection = ({
         label="Assigned to"
         optionText={saleOptionRenderer}
         validate={required()}
+        labelVariant="floating"
       />
     </ReferenceInput>
   );

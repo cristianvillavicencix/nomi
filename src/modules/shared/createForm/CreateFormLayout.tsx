@@ -83,6 +83,38 @@ export const CreateFormSectionLabel = ({
   </p>
 );
 
+/** Categorized block for create dialogs (Account, Contact, Address, …). */
+export const CreateFormSection = ({
+  title,
+  description,
+  action,
+  children,
+  className,
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) => (
+  <section className={cn("space-y-3", className)}>
+    <header className="flex items-start justify-between gap-3">
+      <div className="min-w-0 space-y-0.5">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {title}
+        </h3>
+        {description ? (
+          <p className="text-xs leading-snug text-muted-foreground/90">
+            {description}
+          </p>
+        ) : null}
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </header>
+    <div className="space-y-4">{children}</div>
+  </section>
+);
+
 export const CreateFormCollapsible = ({
   label,
   children,

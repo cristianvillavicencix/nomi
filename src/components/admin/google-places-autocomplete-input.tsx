@@ -14,6 +14,7 @@ import {
 } from "@/components/admin/form";
 import { InputHelperText } from "@/components/admin/input-helper-text";
 import { Input } from "@/components/ui/input";
+import { FloatingFieldShell } from "@/components/ui/floating-field";
 import {
   Popover,
   PopoverAnchor,
@@ -41,6 +42,7 @@ export type GooglePlacesAutocompleteInputProps = Omit<InputProps, "source"> &
     suggestionHeader?: ReactNode;
     disabled?: boolean;
     readOnly?: boolean;
+    labelVariant?: "default" | "floating";
   };
 
 export const GooglePlacesAutocompleteInput = ({
@@ -57,6 +59,7 @@ export const GooglePlacesAutocompleteInput = ({
   suggestionHeader,
   disabled,
   readOnly,
+  labelVariant = "default",
 }: GooglePlacesAutocompleteInputProps) => {
   const resource = useResourceContext({ source });
   const { id, field, isRequired } = useInput({
@@ -69,6 +72,7 @@ export const GooglePlacesAutocompleteInput = ({
   });
 
   const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [suggestions, setSuggestions] = useState<
     Array<{ placeId: string; text: string }>
   >([]);
@@ -182,82 +186,129 @@ export const GooglePlacesAutocompleteInput = ({
     </>
   );
 
-  return (
-    <FormField id={id} name={field.name} className={className}>
-      {label !== false ? (
-        <FormLabel>
-          <FieldTitle
-            label={label}
-            source={source}
-            resource={resource}
-            isRequired={isRequired}
-          />
-        </FormLabel>
-      ) : null}
-      <FormControl>
-        <Popover open={open} onOpenChange={setOpen} modal>
-          <PopoverAnchor asChild>
-            <div className="relative w-full">
-              {multiline ? (
-                <Textarea
-                  {...field}
-                  value={field.value ?? ""}
-                  disabled={disabled || isFetchingDetails}
-                  readOnly={readOnly}
-                  rows={2}
-                  placeholder={placeholder ?? defaultPlaceholder}
-                  className="min-h-9 max-h-24 resize-y py-2 leading-snug"
-                  onFocus={() => {
-                    if (canShowSuggestions) setOpen(true);
-                  }}
-                  onChange={(event) => {
-                    field.onChange(event.target.value);
-                    onManualChange?.();
-                    if (event.target.value.trim().length >= 3) {
-                      setOpen(true);
-                    } else {
-                      setOpen(false);
-                    }
-                  }}
-                />
-              ) : (
-                <Input
-                  {...field}
-                  value={field.value ?? ""}
-                  disabled={disabled || isFetchingDetails}
-                  readOnly={readOnly}
-                  placeholder={placeholder ?? defaultPlaceholder}
-                  onFocus={() => {
-                    if (canShowSuggestions) setOpen(true);
-                  }}
-                  onChange={(event) => {
-                    field.onChange(event.target.value);
-                    onManualChange?.();
-                    if (event.target.value.trim().length >= 3) {
-                      setOpen(true);
-                    } else {
-                      setOpen(false);
-                    }
-                  }}
-                />
+  const useFloating = labelVariant === "floating" && label !== false;
+  const floatingActive = focused || open || String(field.value ?? "").length > 0;
+  const inputPlaceholder = useFloating
+    ? " "
+    : (placeholder ?? defaultPlaceholder);
+
+  const fieldControl = (
+    <Popover open={open} onOpenChange={setOpen} modal>
+      <PopoverAnchor asChild>
+        <div className="relative w-full">
+          {multiline ? (
+            <Textarea
+              {...field}
+              value={field.value ?? ""}
+              disabled={disabled || isFetchingDetails}
+              readOnly={readOnly}
+              rows={2}
+              placeholder={inputPlaceholder}
+              className={cn(
+                "max-h-24 min-h-9 resize-y py-2 leading-snug",
+                useFloating &&
+                  "min-h-[5.5rem] rounded-md border-0 bg-transparent px-3 py-2 shadow-none focus-visible:ring-0",
               )}
-              {isFetchingDetails ? (
-                <Loader2 className="pointer-events-none absolute top-2.5 right-2 size-4 animate-spin text-muted-foreground" />
-              ) : null}
-            </div>
-          </PopoverAnchor>
-          {open && canShowSuggestions ? (
-            <PopoverContent
-              className="max-h-72 w-[var(--radix-popover-trigger-width)] overflow-y-auto p-2"
-              align="start"
-              sideOffset={6}
-              onOpenAutoFocus={(event) => event.preventDefault()}
-            >
-              {panelContent}
-            </PopoverContent>
+              onFocus={() => {
+                setFocused(true);
+                if (canShowSuggestions) setOpen(true);
+              }}
+              onBlur={() => setFocused(false)}
+              onChange={(event) => {
+                field.onChange(event.target.value);
+                onManualChange?.();
+                if (event.target.value.trim().length >= 3) {
+                  setOpen(true);
+                } else {
+                  setOpen(false);
+                }
+              }}
+            />
+          ) : (
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              disabled={disabled || isFetchingDetails}
+              readOnly={readOnly}
+              placeholder={inputPlaceholder}
+              className={cn(
+                useFloating &&
+                  "h-9 border-0 bg-transparent px-3 shadow-none focus-visible:ring-0",
+              )}
+              onFocus={() => {
+                setFocused(true);
+                if (canShowSuggestions) setOpen(true);
+              }}
+              onBlur={() => {
+                setFocused(false);
+                field.onBlur();
+              }}
+              onChange={(event) => {
+                field.onChange(event.target.value);
+                onManualChange?.();
+                if (event.target.value.trim().length >= 3) {
+                  setOpen(true);
+                } else {
+                  setOpen(false);
+                }
+              }}
+            />
+          )}
+          {isFetchingDetails ? (
+            <Loader2
+              className={cn(
+                "pointer-events-none absolute right-2 size-4 animate-spin text-muted-foreground",
+                useFloating ? "top-2.5" : "top-2.5",
+              )}
+            />
           ) : null}
-        </Popover>
-      </FormControl>
+        </div>
+      </PopoverAnchor>
+      {open && canShowSuggestions ? (
+        <PopoverContent
+          className="max-h-72 w-[var(--radix-popover-trigger-width)] overflow-y-auto p-2"
+          align="start"
+          sideOffset={6}
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
+          {panelContent}
+        </PopoverContent>
+      ) : null}
+    </Popover>
+  );
+
+  const labelNode =
+    label !== false ? (
+      <FieldTitle
+        label={label}
+        source={source}
+        resource={resource}
+        isRequired={useFloating ? false : isRequired}
+      />
+    ) : null;
+
+  return (
+    <FormField
+      id={id}
+      name={field.name}
+      className={cn(useFloating && "gap-1.5", className)}
+    >
+      {useFloating ? (
+        <FloatingFieldShell
+          active={floatingActive}
+          label={labelNode}
+          htmlFor={id}
+          required={isRequired}
+          className={multiline ? "min-h-[5.5rem] items-stretch" : undefined}
+        >
+          <FormControl>{fieldControl}</FormControl>
+        </FloatingFieldShell>
+      ) : (
+        <>
+          {labelNode ? <FormLabel>{labelNode}</FormLabel> : null}
+          <FormControl>{fieldControl}</FormControl>
+        </>
+      )}
       <InputHelperText
         helperText={
           helperText ??

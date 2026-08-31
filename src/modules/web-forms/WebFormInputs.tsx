@@ -14,6 +14,7 @@ export const WebFormInputs = ({
     <TextInput
       source="name"
       validate={(value) => (value ? undefined : "Required")}
+      labelVariant="floating"
     />
     <TextInput
       source="slug"
@@ -24,8 +25,14 @@ export const WebFormInputs = ({
           ? "System form slug cannot be changed."
           : "Used in the public link: /forms/your-slug"
       }
+      labelVariant="floating"
     />
-    <TextInput source="description" multiline rows={3} />
+    <TextInput
+      source="description"
+      multiline
+      rows={3}
+      labelVariant="floating"
+    />
     <BooleanInput source="active" label="Active" />
     {showFieldsEditor ? <WebFormFieldsEditor /> : null}
   </>

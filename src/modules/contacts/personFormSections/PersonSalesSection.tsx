@@ -27,6 +27,7 @@ export const PersonSalesSection = ({
       }))}
       validate={required()}
       helperText={false}
+      labelVariant="floating"
     />
     <LeadReferrerInputs />
 

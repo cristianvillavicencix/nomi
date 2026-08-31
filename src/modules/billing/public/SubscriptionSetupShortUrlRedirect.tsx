@@ -24,7 +24,13 @@ export const SubscriptionSetupShortUrlRedirect = () => {
         if (cancelled) return;
         if (payload.already_active) {
           setError(
-            "This subscription already has a card on file. Contact us if you need to update your payment method.",
+            "This subscription is already active. Contact us if you need to update your payment method.",
+          );
+          return;
+        }
+        if (payload.card_on_file && payload.status === "pending_setup") {
+          setError(
+            "Your card is already saved. We'll activate your subscription shortly — no further action needed.",
           );
           return;
         }

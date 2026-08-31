@@ -44,12 +44,14 @@ export const PersonCompactPreview = ({
           label="First name"
           validate={required()}
           helperText={false}
+          labelVariant="floating"
         />
         <TextInput
           source="last_name"
           label="Last name"
           validate={required()}
           helperText={false}
+          labelVariant="floating"
         />
       </div>
       <ProgressiveMultiChannelInput

@@ -59,6 +59,7 @@ const BriefAddressFields = ({ field }: { field: WebsiteBriefFieldDef }) => {
           label="Street"
           placeholder="123 Main St"
           mode="address"
+          labelVariant="floating"
           onPlaceDetails={handlePlace}
         />
       </div>
@@ -66,21 +67,25 @@ const BriefAddressFields = ({ field }: { field: WebsiteBriefFieldDef }) => {
         source={`website_brief.${baseKey}_city`}
         label="City"
         helperText={false}
+        labelVariant="floating"
       />
       <TextInput
         source={`website_brief.${baseKey}_state`}
         label="State / Province"
         helperText={false}
+        labelVariant="floating"
       />
       <TextInput
         source={`website_brief.${baseKey}_zip`}
         label="ZIP / Postal code"
         helperText={false}
+        labelVariant="floating"
       />
       <TextInput
         source={`website_brief.${baseKey}_country`}
         label="Country"
         helperText={false}
+        labelVariant="floating"
       />
     </div>
   );
@@ -236,6 +241,7 @@ export const BriefFieldInput = ({
           label={field.label}
           choices={field.options.map((value) => ({ id: value, name: value }))}
           helperText={field.helperText ?? false}
+          labelVariant="floating"
         />
       </div>
     );
@@ -249,6 +255,7 @@ export const BriefFieldInput = ({
           label={field.label}
           placeholder={field.placeholder}
           helperText={field.helperText ?? false}
+          labelVariant="floating"
         />
       </div>
     );
@@ -264,6 +271,7 @@ export const BriefFieldInput = ({
         multiline={field.multiline || field.fieldType === "textarea"}
         rows={field.rows ?? (field.fieldType === "textarea" ? 3 : undefined)}
         validate={isUrlField && validateUrl ? validateUrl : undefined}
+        labelVariant="floating"
       />
     </div>
   );

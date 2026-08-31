@@ -22,6 +22,7 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from "@/components/ui/popover";
+import { FloatingFieldShell } from "@/components/ui/floating-field";
 import type {
   ChoicesProps,
   InputProps,
@@ -89,6 +90,7 @@ export const AutocompleteInput = (
       filterToQuery?: (searchText: string) => any;
       translateChoice?: boolean;
       placeholder?: string;
+      labelVariant?: "default" | "floating";
       inputText?:
         | React.ReactNode
         | ((option: any | undefined) => React.ReactNode);
@@ -111,6 +113,7 @@ export const AutocompleteInput = (
     optionContent,
     popoverContentClassName,
     modal,
+    labelVariant = "default",
   } = props;
   const {
     allChoices = [],
@@ -320,111 +323,142 @@ export const AutocompleteInput = (
     listRef.current?.scrollTo({ top: 0 });
   }, [open, visibleChoices.length]);
 
+  const useFloating = labelVariant === "floating" && props.label !== false;
+  const floatingActive =
+    open || Boolean(selectedLabel) || Boolean(filterValue.trim());
+  const labelNode =
+    props.label !== false ? (
+      <FieldTitle
+        label={props.label}
+        source={props.source ?? source}
+        resource={resource}
+        isRequired={useFloating ? false : isRequired}
+      />
+    ) : null;
+
+  const combobox = (
+    <div className="relative w-full">
+      <Popover
+        open={open}
+        onOpenChange={handleOpenChange}
+        modal={modal ?? false}
+      >
+        <PopoverAnchor asChild>
+          <div ref={anchorRef} className="relative w-full">
+            <Input
+              value={inputDisplayValue}
+              onChange={handleInputChange}
+              onFocus={handleInputFocus}
+              onPointerDown={handleInputPointerDown}
+              placeholder={
+                useFloating
+                  ? " "
+                  : !open && selectedLabel
+                    ? undefined
+                    : placeholder
+              }
+              aria-expanded={open}
+              aria-autocomplete="list"
+              role="combobox"
+              className={cn(
+                "pr-9",
+                useFloating &&
+                  "h-9 border-0 bg-transparent px-3 shadow-none focus-visible:ring-0",
+              )}
+            />
+            <ChevronsUpDown
+              className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 shrink-0 opacity-50"
+              aria-hidden
+            />
+          </div>
+        </PopoverAnchor>
+        <PopoverContent
+          className={cn(
+            entitySearchPopoverClassName,
+            popoverContentClassName,
+          )}
+          align="start"
+          side="bottom"
+          sideOffset={4}
+          collisionPadding={12}
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          onCloseAutoFocus={(event) => event.preventDefault()}
+          onInteractOutside={handlePopoverInteractOutside}
+          onPointerDownOutside={handlePopoverInteractOutside}
+          onWheel={stopScrollPropagation}
+          onTouchMove={stopScrollPropagation}
+        >
+          <Command shouldFilter={false}>
+            <CommandList
+              ref={listRef}
+              className="max-h-[min(18rem,50vh)] scroll-py-0"
+            >
+              {visibleChoices.length === 0 ? (
+                <CommandEmpty>No matching item found.</CommandEmpty>
+              ) : null}
+              <CommandGroup>
+                {visibleChoices.map((choice) => {
+                  const isCreateItem =
+                    !!createItem && choice?.id === createItem.id;
+                  const disabled = getOptionDisabled(choice);
+                  const choiceValue = String(getChoiceValue(choice));
+
+                  return (
+                    <CommandItem
+                      key={choiceValue}
+                      value={
+                        isCreateItem ? `?${filterValue}?` : choiceValue
+                      }
+                      onSelect={() =>
+                        handleChangeWithCreateSupport(choice)
+                      }
+                      disabled={disabled}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4 shrink-0",
+                          field.value === getChoiceValue(choice)
+                            ? "opacity-100"
+                            : "opacity-0",
+                        )}
+                      />
+                      {getOptionContent(
+                        isCreateItem ? createItem : choice,
+                        isCreateItem,
+                      )}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+
   return (
     <>
-      <FormField className={props.className} id={id} name={source}>
-        {props.label !== false && (
-          <FormLabel>
-            <FieldTitle
-              label={props.label}
-              source={props.source ?? source}
-              resource={resource}
-              isRequired={isRequired}
-            />
-          </FormLabel>
+      <FormField
+        className={cn(useFloating && "gap-1.5", props.className)}
+        id={id}
+        name={source}
+      >
+        {useFloating ? (
+          <FloatingFieldShell
+            active={floatingActive}
+            label={labelNode}
+            htmlFor={id}
+            required={isRequired}
+          >
+            <FormControl>{combobox}</FormControl>
+          </FloatingFieldShell>
+        ) : (
+          <>
+            {labelNode ? <FormLabel>{labelNode}</FormLabel> : null}
+            <FormControl>{combobox}</FormControl>
+          </>
         )}
-        <FormControl>
-          <div className="relative w-full">
-            <Popover
-              open={open}
-              onOpenChange={handleOpenChange}
-              modal={modal ?? false}
-            >
-              <PopoverAnchor asChild>
-                <div ref={anchorRef} className="relative w-full">
-                  <Input
-                    value={inputDisplayValue}
-                    onChange={handleInputChange}
-                    onFocus={handleInputFocus}
-                    onPointerDown={handleInputPointerDown}
-                    placeholder={
-                      !open && selectedLabel ? undefined : placeholder
-                    }
-                    aria-expanded={open}
-                    aria-autocomplete="list"
-                    role="combobox"
-                    className="pr-9"
-                  />
-                  <ChevronsUpDown
-                    className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 shrink-0 opacity-50"
-                    aria-hidden
-                  />
-                </div>
-              </PopoverAnchor>
-              <PopoverContent
-                className={cn(
-                  entitySearchPopoverClassName,
-                  popoverContentClassName,
-                )}
-                align="start"
-                side="bottom"
-                sideOffset={4}
-                collisionPadding={12}
-                onOpenAutoFocus={(event) => event.preventDefault()}
-                onCloseAutoFocus={(event) => event.preventDefault()}
-                onInteractOutside={handlePopoverInteractOutside}
-                onPointerDownOutside={handlePopoverInteractOutside}
-                onWheel={stopScrollPropagation}
-                onTouchMove={stopScrollPropagation}
-              >
-                <Command shouldFilter={false}>
-                  <CommandList
-                    ref={listRef}
-                    className="max-h-[min(18rem,50vh)] scroll-py-0"
-                  >
-                    {visibleChoices.length === 0 ? (
-                      <CommandEmpty>No matching item found.</CommandEmpty>
-                    ) : null}
-                    <CommandGroup>
-                      {visibleChoices.map((choice) => {
-                        const isCreateItem =
-                          !!createItem && choice?.id === createItem.id;
-                        const disabled = getOptionDisabled(choice);
-                        const choiceValue = String(getChoiceValue(choice));
-
-                        return (
-                          <CommandItem
-                            key={choiceValue}
-                            value={
-                              isCreateItem ? `?${filterValue}?` : choiceValue
-                            }
-                            onSelect={() =>
-                              handleChangeWithCreateSupport(choice)
-                            }
-                            disabled={disabled}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4 shrink-0",
-                                field.value === getChoiceValue(choice)
-                                  ? "opacity-100"
-                                  : "opacity-0",
-                              )}
-                            />
-                            {getOptionContent(
-                              isCreateItem ? createItem : choice,
-                              isCreateItem,
-                            )}
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </FormControl>
         <InputHelperText helperText={props.helperText} />
         <FormError />
       </FormField>

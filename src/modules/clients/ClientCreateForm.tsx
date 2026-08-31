@@ -214,6 +214,7 @@ const ClientCreateFormFieldsDefault = ({
             mode="business"
             validate={requiredName}
             helperText={false}
+            labelVariant="floating"
             onPlaceDetails={(details) =>
               applyGoogleBusinessToClientForm(setValue, details)
             }
@@ -224,6 +225,7 @@ const ClientCreateFormFieldsDefault = ({
             label="Business name"
             validate={requiredName}
             helperText={false}
+            labelVariant="floating"
           />
         )}
         <ProgressiveMultiChannelInput<ClientCreateFormValues>
@@ -247,6 +249,7 @@ const ClientCreateFormFieldsDefault = ({
           label="Website"
           helperText={false}
           validate={optionalUrl}
+          labelVariant="floating"
         />
         <SelectInput
           source="company_sector"
@@ -256,6 +259,7 @@ const ClientCreateFormFieldsDefault = ({
           optionValue="value"
           helperText={false}
           emptyText="Select industry"
+          labelVariant="floating"
         />
         {placesEnabled ? (
           <GooglePlacesAutocompleteInput
@@ -263,6 +267,7 @@ const ClientCreateFormFieldsDefault = ({
             label="Street"
             mode="address"
             helperText={false}
+            labelVariant="floating"
             onPlaceDetails={(details) =>
               applyGoogleAddressToClientForm(setValue, details, "company")
             }
@@ -354,6 +359,7 @@ const ClientCreateFormFieldsDefault = ({
             label="Notes"
             helperText={false}
             multiline
+            labelVariant="floating"
           />
         </div>
       </details>
@@ -442,16 +448,19 @@ const InvoiceContactFields = ({
         source="invoice_contact_name"
         label="Invoice contact name"
         helperText={false}
+        labelVariant="floating"
       />
       <EmailInput
         source="invoice_email"
         label="Invoice email"
         helperText={false}
+        labelVariant="floating"
       />
       <PhoneInput
         source="invoice_phone"
         label="Invoice phone"
         helperText={false}
+        labelVariant="floating"
       />
     </div>
   );

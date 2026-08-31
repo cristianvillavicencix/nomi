@@ -44,8 +44,8 @@ Deno.serve(
 
       const alreadyActive =
         subscription?.status === "active" ||
-        subscription?.status === "trialing" ||
-        Boolean(subscription?.payment_method_last4?.trim());
+        subscription?.status === "trialing";
+      const cardOnFile = Boolean(subscription?.payment_method_last4?.trim());
 
       return new Response(
         JSON.stringify({
@@ -54,6 +54,7 @@ Deno.serve(
           subscription_number: subscription?.subscription_number ?? null,
           status: subscription?.status ?? null,
           already_active: alreadyActive,
+          card_on_file: cardOnFile,
         }),
         {
           status: 200,

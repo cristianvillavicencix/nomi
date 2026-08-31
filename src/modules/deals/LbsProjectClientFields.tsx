@@ -249,6 +249,7 @@ export const LbsProjectClientFields = ({
               return startContactCreateFromSearch({ contactName: query });
             }}
             createItemLabel='Create contact "%{item}"'
+            labelVariant={isCreateVariant ? undefined : "floating"}
           />
         </ReferenceInput>
       )}
@@ -258,6 +259,7 @@ export const LbsProjectClientFields = ({
           <AutocompleteCompanyInput
             label="Account"
             placeholder="Search company"
+            labelVariant="floating"
           />
         </ReferenceInput>
       ) : null}

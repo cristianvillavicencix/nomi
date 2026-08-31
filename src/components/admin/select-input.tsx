@@ -14,7 +14,7 @@ import {
   useTranslate,
 } from "ra-core";
 import type { ComponentProps, ReactElement } from "react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { FormError, FormField, FormLabel } from "@/components/admin/form";
 import { InputHelperText } from "@/components/admin/input-helper-text";
@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FloatingFieldShell } from "@/components/ui/floating-field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -93,10 +94,12 @@ export const SelectInput = (props: SelectInputProps) => {
     create,
     createLabel,
     onCreate,
+    labelVariant = "default",
 
     ...rest
   } = props;
   const translate = useTranslate();
+  const [selectOpen, setSelectOpen] = useState(false);
 
   useEffect(() => {
     if (emptyValue == null) {
@@ -242,74 +245,106 @@ export const SelectInput = (props: SelectInputProps) => {
     field.onChange(emptyValue);
   };
 
+  const hasSelectValue =
+    field.value != null &&
+    field.value !== "" &&
+    field.value !== emptyValue;
+  const floatingActive = selectOpen || hasSelectValue;
+  const useFloating =
+    labelVariant === "floating" && label !== "" && label !== false;
+
+  const labelTitle =
+    label !== "" && label !== false ? (
+      <FieldTitle
+        label={label}
+        source={source}
+        resource={resourceProp}
+        isRequired={useFloating ? false : isRequired}
+      />
+    ) : null;
+
+  const selectControl = (
+    <div className="relative">
+      <Select
+        //FIXME https://github.com/radix-ui/primitives/issues/3135
+        key={`select:${field.value?.toString() ?? emptyValue}`}
+        value={field.value?.toString() || emptyValue}
+        onValueChange={handleChangeWithCreateSupport}
+        open={selectOpen}
+        onOpenChange={setSelectOpen}
+      >
+        <SelectTrigger
+          className={cn(
+            "w-full transition-all hover:bg-accent",
+            useFloating &&
+              "h-9 border-0 bg-transparent px-3 shadow-none hover:bg-transparent focus:ring-0 data-[size=default]:h-9",
+          )}
+          disabled={field.disabled}
+        >
+          <SelectValue
+            placeholder={useFloating ? " " : renderEmptyItemOption()}
+          />
+
+          {hasSelectValue ? (
+            <div
+              role="button"
+              className="pointer-events-auto ml-auto p-0 text-muted-foreground opacity-50 hover:bg-transparent hover:opacity-100"
+              onClick={handleReset}
+            >
+              <X className="h-4 w-4" />
+            </div>
+          ) : null}
+        </SelectTrigger>
+        <SelectContent>
+          {finalChoices?.map((choice) => {
+            if (!choice) return null;
+            const value = getChoiceValue(choice);
+            const isDisabled = getDisableValue(choice);
+
+            return (
+              <SelectItem
+                key={value}
+                value={value?.toString()}
+                disabled={isDisabled}
+              >
+                {renderMenuItemOption(
+                  !!createItem && choice?.id === createItem.id
+                    ? createItem
+                    : choice,
+                )}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
   return (
     <>
       <FormField
         id={id}
         name={field.name}
-        className={cn("w-full min-w-20", className)}
+        className={cn("w-full min-w-20", useFloating && "gap-1.5", className)}
         {...rest}
       >
-        {label !== "" && label !== false && (
-          <FormLabel>
-            <FieldTitle
-              label={label}
-              source={source}
-              resource={resourceProp}
-              isRequired={isRequired}
-            />
-          </FormLabel>
-        )}
-        <div className="relative">
-          <Select
-            //FIXME https://github.com/radix-ui/primitives/issues/3135
-            // Setting a key based on the value fixes an issue where onValueChange
-            // was called with an empty string when the controlled value was changed.
-            // See: https://github.com/radix-ui/primitives/issues/3135#issuecomment-2916908248
-            key={`select:${field.value?.toString() ?? emptyValue}`}
-            value={field.value?.toString() || emptyValue}
-            onValueChange={handleChangeWithCreateSupport}
+        {useFloating ? (
+          <FloatingFieldShell
+            active={floatingActive}
+            label={labelTitle}
+            htmlFor={id}
+            required={isRequired}
           >
-            <SelectTrigger
-              className={cn("w-full transition-all hover:bg-accent")}
-              disabled={field.disabled}
-            >
-              <SelectValue placeholder={renderEmptyItemOption()} />
-
-              {field.value && field.value !== emptyValue ? (
-                <div
-                  role="button"
-                  className="p-0 ml-auto pointer-events-auto hover:bg-transparent text-muted-foreground opacity-50 hover:opacity-100"
-                  onClick={handleReset}
-                >
-                  <X className="h-4 w-4" />
-                </div>
-              ) : null}
-            </SelectTrigger>
-            <SelectContent>
-              {finalChoices?.map((choice) => {
-                if (!choice) return null;
-                const value = getChoiceValue(choice);
-                const isDisabled = getDisableValue(choice);
-
-                return (
-                  <SelectItem
-                    key={value}
-                    value={value?.toString()}
-                    disabled={isDisabled}
-                  >
-                    {renderMenuItemOption(
-                      !!createItem && choice?.id === createItem.id
-                        ? createItem
-                        : choice,
-                    )}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </div>
+            {selectControl}
+          </FloatingFieldShell>
+        ) : (
+          <>
+            {labelTitle ? <FormLabel>{labelTitle}</FormLabel> : null}
+            {selectControl}
+          </>
+        )}
         <InputHelperText helperText={helperText} />
+        <FormError />
       </FormField>
       {createElement}
     </>
@@ -324,4 +359,5 @@ export type SelectInputProps = ChoicesProps &
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     emptyValue?: any;
     onChange?: (value: string) => void;
+    labelVariant?: "default" | "floating";
   } & Omit<ComponentProps<typeof FormField>, "id" | "name" | "children">;

@@ -82,11 +82,13 @@ export const WebsiteBriefInlineSectionForm = ({
               optionText="label"
               optionValue="value"
               helperText={false}
+              labelVariant="floating"
             />
             <DateInput
               source="expected_end_date"
               label="Delivery date"
               helperText={false}
+              labelVariant="floating"
             />
           </div>
         ) : (

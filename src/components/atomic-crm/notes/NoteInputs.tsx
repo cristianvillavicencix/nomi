@@ -55,6 +55,7 @@ export const NoteInputs = ({
             helperText={false}
             validate={required()}
             modal
+            labelVariant="floating"
           />
         </ReferenceInput>
       )}
@@ -97,6 +98,7 @@ export const NoteInputs = ({
               optionText={optionRenderer}
               defaultValue={"warm"}
               helperText={false}
+              labelVariant="floating"
             />
           )}
           <DateTimeInput
@@ -105,6 +107,7 @@ export const NoteInputs = ({
             helperText={false}
             className="text-primary"
             defaultValue={getCurrentDate()}
+            labelVariant="floating"
           />
         </div>
         <FileInput source="attachments" multiple>

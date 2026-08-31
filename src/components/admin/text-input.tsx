@@ -1,5 +1,6 @@
 import type { InputProps } from "ra-core";
 import { useInput, useResourceContext, FieldTitle } from "ra-core";
+import { useState } from "react";
 import {
   FormControl,
   FormError,
@@ -8,11 +9,15 @@ import {
 } from "@/components/admin/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { FloatingFieldShell } from "@/components/ui/floating-field";
 import { InputHelperText } from "@/components/admin/input-helper-text";
+import { cn } from "@/lib/utils";
 
 export type TextInputProps = InputProps & {
   multiline?: boolean;
   inputClassName?: string;
+  /** Floating label sits inside the field and rises when focused or filled. */
+  labelVariant?: "default" | "floating";
 } & React.ComponentProps<"textarea"> &
   React.ComponentProps<"input">;
 
@@ -24,18 +29,6 @@ export type TextInputProps = InputProps & {
  * component depending on the `multiline` prop.
  *
  * @see {@link https://marmelab.com/shadcn-admin-kit/docs/textinput/ TextInput documentation}
- *
- * @example
- * import { Edit, SimpleForm, TextInput } from '@/components/admin';
- *
- * const PostEdit = () => (
- *   <Edit>
- *     <SimpleForm>
- *       <TextInput source="title" />
- *       <TextInput source="description" multiline rows={4} />
- *     </SimpleForm>
- *   </Edit>
- * );
  */
 export const TextInput = (props: TextInputProps) => {
   const resource = useResourceContext(props);
@@ -46,11 +39,91 @@ export const TextInput = (props: TextInputProps) => {
     className,
     inputClassName,
     helperText,
+    labelVariant = "default",
     validate: _validateProp,
     format: _formatProp,
+    placeholder,
     ...rest
   } = props;
   const { id, field, isRequired } = useInput(props);
+  const [focused, setFocused] = useState(false);
+
+  const labelNode =
+    label !== false ? (
+      <FieldTitle
+        label={label}
+        source={source}
+        resource={resource}
+        isRequired={false}
+      />
+    ) : null;
+
+  const hasValue = String(field.value ?? "").length > 0;
+  const floatingActive = focused || hasValue;
+
+  if (labelVariant === "floating" && label !== false) {
+    return (
+      <FormField
+        id={id}
+        className={cn("gap-1.5", className)}
+        name={field.name}
+      >
+        <FloatingFieldShell
+          active={floatingActive}
+          label={labelNode}
+          htmlFor={id}
+          required={isRequired}
+          className={multiline ? "min-h-[5.5rem] items-stretch" : undefined}
+        >
+          <FormControl>
+            {multiline ? (
+              <Textarea
+                {...rest}
+                {...field}
+                id={id}
+                placeholder={placeholder ?? " "}
+                className={cn(
+                  "min-h-[5.5rem] resize-y rounded-md border-0 bg-transparent px-3 py-2 shadow-none focus-visible:ring-0",
+                  inputClassName,
+                )}
+                onFocus={(event) => {
+                  setFocused(true);
+                  rest.onFocus?.(event as never);
+                }}
+                onBlur={(event) => {
+                  setFocused(false);
+                  field.onBlur();
+                  rest.onBlur?.(event as never);
+                }}
+              />
+            ) : (
+              <Input
+                {...rest}
+                {...field}
+                id={id}
+                placeholder={placeholder ?? " "}
+                className={cn(
+                  "h-9 border-0 bg-transparent px-3 shadow-none focus-visible:ring-0",
+                  inputClassName,
+                )}
+                onFocus={(event) => {
+                  setFocused(true);
+                  rest.onFocus?.(event);
+                }}
+                onBlur={(event) => {
+                  setFocused(false);
+                  field.onBlur();
+                  rest.onBlur?.(event);
+                }}
+              />
+            )}
+          </FormControl>
+        </FloatingFieldShell>
+        <InputHelperText helperText={helperText} />
+        <FormError />
+      </FormField>
+    );
+  }
 
   return (
     <FormField id={id} className={className} name={field.name}>
@@ -68,7 +141,12 @@ export const TextInput = (props: TextInputProps) => {
         {multiline ? (
           <Textarea {...rest} {...field} className={inputClassName} />
         ) : (
-          <Input {...rest} {...field} className={inputClassName} />
+          <Input
+            {...rest}
+            {...field}
+            placeholder={placeholder}
+            className={inputClassName}
+          />
         )}
       </FormControl>
       <InputHelperText helperText={helperText} />

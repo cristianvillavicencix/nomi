@@ -87,8 +87,14 @@ export const LeadContactSection = () => {
           label="First name"
           validate={required()}
           helperText={false}
+          labelVariant="floating"
         />
-        <TextInput source="last_name" label="Last name" helperText={false} />
+        <TextInput
+          source="last_name"
+          label="Last name"
+          helperText={false}
+          labelVariant="floating"
+        />
       </div>
 
       <ProgressiveMultiChannelInput
@@ -119,6 +125,7 @@ export const LeadContactSection = () => {
         helperText={
           leadType === "individual" ? "Required for future billing." : false
         }
+        labelVariant="floating"
         onPlaceDetails={(details) =>
           applyGoogleAddressToContactLeadForm(setValue, details)
         }
@@ -132,6 +139,7 @@ export const LeadContactSection = () => {
           optionText="name"
           helperText={false}
           emptyText="Select role"
+          labelVariant="floating"
         />
       ) : null}
     </div>

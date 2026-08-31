@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { CreateFormSection } from "@/modules/shared/createForm/CreateFormLayout";
 
 type PersonFormSectionProps = {
   title: string;
@@ -13,8 +13,7 @@ export const PersonFormSection = ({
   children,
   className,
 }: PersonFormSectionProps) => (
-  <section className={cn("flex flex-col gap-4", className)}>
-    <h6 className="text-lg font-semibold">{title}</h6>
+  <CreateFormSection title={title} className={className}>
     {children}
-  </section>
+  </CreateFormSection>
 );

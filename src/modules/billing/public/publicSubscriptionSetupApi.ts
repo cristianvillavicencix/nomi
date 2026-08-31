@@ -38,6 +38,7 @@ export type PublicSubscriptionSetupPayload = {
   subscription_number?: string | null;
   status?: string | null;
   already_active?: boolean;
+  card_on_file?: boolean;
 };
 
 export const fetchPublicSubscriptionSetupByShortCode = (shortCode: string) =>

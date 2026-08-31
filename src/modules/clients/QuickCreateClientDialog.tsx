@@ -17,7 +17,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  FloatingFieldShell,
+  floatingFieldControlClassName,
+} from "@/components/ui/floating-field";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import {
   buildQuickClientUpsertInput,
@@ -58,6 +61,10 @@ export const QuickCreateClientDialog = ({
   const dataProvider = useDataProvider<CrmDataProvider>();
   const queryClient = useQueryClient();
   const [values, setValues] = useState<QuickCreateClientInput>(emptyValues());
+  const [businessNameFocused, setBusinessNameFocused] = useState(false);
+  const [contactNameFocused, setContactNameFocused] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [phoneFocused, setPhoneFocused] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -109,8 +116,14 @@ export const QuickCreateClientDialog = ({
         </DialogHeader>
 
         <div className="grid gap-4 py-1">
-          <div className="space-y-2">
-            <Label htmlFor="quick-business-name">Business name *</Label>
+          <FloatingFieldShell
+            active={
+              businessNameFocused || Boolean(values.businessName.trim())
+            }
+            label="Business name"
+            htmlFor="quick-business-name"
+            required
+          >
             <Input
               id="quick-business-name"
               value={values.businessName}
@@ -120,12 +133,18 @@ export const QuickCreateClientDialog = ({
                   businessName: event.target.value,
                 }))
               }
-              placeholder="Acme Corp"
+              onFocus={() => setBusinessNameFocused(true)}
+              onBlur={() => setBusinessNameFocused(false)}
+              className={floatingFieldControlClassName}
               autoFocus
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="quick-contact-name">Contact full name *</Label>
+          </FloatingFieldShell>
+          <FloatingFieldShell
+            active={contactNameFocused || Boolean(values.contactName.trim())}
+            label="Contact full name"
+            htmlFor="quick-contact-name"
+            required
+          >
             <Input
               id="quick-contact-name"
               value={values.contactName}
@@ -135,12 +154,17 @@ export const QuickCreateClientDialog = ({
                   contactName: event.target.value,
                 }))
               }
-              placeholder="Jane Smith"
+              onFocus={() => setContactNameFocused(true)}
+              onBlur={() => setContactNameFocused(false)}
+              className={floatingFieldControlClassName}
             />
-          </div>
+          </FloatingFieldShell>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="quick-email">Email</Label>
+            <FloatingFieldShell
+              active={emailFocused || Boolean(values.email?.trim())}
+              label="Email"
+              htmlFor="quick-email"
+            >
               <Input
                 id="quick-email"
                 type="email"
@@ -151,11 +175,16 @@ export const QuickCreateClientDialog = ({
                     email: event.target.value,
                   }))
                 }
-                placeholder="jane@acme.com"
+                onFocus={() => setEmailFocused(true)}
+                onBlur={() => setEmailFocused(false)}
+                className={floatingFieldControlClassName}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="quick-phone">Phone</Label>
+            </FloatingFieldShell>
+            <FloatingFieldShell
+              active={phoneFocused || Boolean(values.phone?.trim())}
+              label="Phone"
+              htmlFor="quick-phone"
+            >
               <Input
                 id="quick-phone"
                 value={values.phone ?? ""}
@@ -165,9 +194,11 @@ export const QuickCreateClientDialog = ({
                     phone: event.target.value,
                   }))
                 }
-                placeholder="(555) 555-5555"
+                onFocus={() => setPhoneFocused(true)}
+                onBlur={() => setPhoneFocused(false)}
+                className={floatingFieldControlClassName}
               />
-            </div>
+            </FloatingFieldShell>
           </div>
         </div>
 

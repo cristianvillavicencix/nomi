@@ -103,15 +103,16 @@ const CompanyProfileFields = () => {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <CompanyTimezoneAutoFill />
-      <TextInput source="companyLegalName" label="Business name" />
-      <TextInput source="companyPhone" label="Phone" />
-      <TextInput source="companyEmail" label="Email" type="email" />
+      <TextInput source="companyLegalName" label="Business name" labelVariant="floating" />
+      <TextInput source="companyPhone" label="Phone" labelVariant="floating" />
+      <TextInput source="companyEmail" label="Email" type="email" labelVariant="floating" />
       <TextInput
         source="companyWebsite"
         label="Website"
         type="url"
         placeholder="https://example.com"
         validate={optionalWebsite}
+        labelVariant="floating"
       />
       <div className="sm:col-span-2 lg:col-span-3">
         {placesEnabled ? (
@@ -122,6 +123,7 @@ const CompanyProfileFields = () => {
             multiline
             className="w-full"
             helperText="Used for invoices and to set your workspace timezone"
+            labelVariant="floating"
             onPlaceDetails={(details) =>
               applyGoogleAddressToOrgProfileForm(setValue, details)
             }
@@ -134,33 +136,38 @@ const CompanyProfileFields = () => {
             multiline
             rows={2}
             helperText="Used for invoices and to set your workspace timezone"
+            labelVariant="floating"
           />
         )}
       </div>
-      <TextInput source="companyCity" label="City" />
+      <TextInput source="companyCity" label="City" labelVariant="floating" />
       <TextInput
         source="companyState"
         label="State"
         placeholder="TX"
         helperText="Two-letter US state (e.g. TX)"
+        labelVariant="floating"
       />
       <TextInput
         source="companyPostalCode"
         label="ZIP / Postal code"
         placeholder="78640"
+        labelVariant="floating"
       />
-      <TextInput source="companyCountry" label="Country" />
+      <TextInput source="companyCountry" label="Country" labelVariant="floating" />
       <SelectInput
         source="companyTimezone"
         label="Workspace timezone"
         choices={US_TIMEZONE_CHOICES}
         helperText="Host timezone for meetings, booking links, and calendar invites. Auto-filled from your address; you can override."
+        labelVariant="floating"
       />
       <div className="sm:col-span-2 lg:col-span-1">
         <SelectInput
           source="primaryBusinessSector"
           label="Your sector (industry)"
           choices={SECTOR_CHOICES}
+          labelVariant="floating"
         />
       </div>
     </div>
@@ -169,7 +176,7 @@ const CompanyProfileFields = () => {
 
 const BrandingFields = () => (
   <div className="space-y-4">
-    <TextInput source="title" label="App title" />
+    <TextInput source="title" label="App title" labelVariant="floating" />
     <div className="flex flex-wrap gap-8">
       <div className="flex flex-col items-center gap-1">
         <p className="text-sm text-muted-foreground">Light logo</p>

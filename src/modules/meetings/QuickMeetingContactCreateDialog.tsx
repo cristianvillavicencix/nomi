@@ -20,7 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import type { Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { ContactDuplicateResolveDialog } from "@/modules/contacts/ContactDuplicateResolveDialog";
@@ -168,42 +167,34 @@ export const QuickMeetingContactCreateDialog = ({
 
             <div className="space-y-4 px-6 py-5">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="quick-contact-first-name">First name</Label>
-                  <TextInput
-                    source="first_name"
-                    label={false}
-                    helperText={false}
-                    autoFocus
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="quick-contact-last-name">Last name</Label>
-                  <TextInput
-                    source="last_name"
-                    label={false}
-                    helperText={false}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <EmailInput
-                  source="email"
-                  label={false}
+                <TextInput
+                  source="first_name"
+                  label="First name"
                   helperText={false}
-                  placeholder="name@company.com"
+                  autoFocus
+                  labelVariant="floating"
+                />
+                <TextInput
+                  source="last_name"
+                  label="Last name"
+                  helperText={false}
+                  labelVariant="floating"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Phone</Label>
-                <PhoneInput
-                  source="phone"
-                  label={false}
-                  helperText={false}
-                  placeholder="(555) 555-0100"
-                />
-              </div>
+              <EmailInput
+                source="email"
+                label="Email"
+                helperText={false}
+                placeholder="name@company.com"
+                labelVariant="floating"
+              />
+              <PhoneInput
+                source="phone"
+                label="Phone"
+                helperText={false}
+                placeholder="(555) 555-0100"
+                labelVariant="floating"
+              />
               <p className="text-xs text-muted-foreground">
                 Add at least an email or phone number so you can share the video
                 link.

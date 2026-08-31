@@ -1,5 +1,4 @@
 import * as React from "react";
-import clsx from "clsx";
 import type { InputProps } from "ra-core";
 import { useInput, FieldTitle } from "ra-core";
 import {
@@ -9,7 +8,9 @@ import {
   FormLabel,
 } from "@/components/admin/form";
 import { Input } from "@/components/ui/input";
+import { FloatingFieldShell } from "@/components/ui/floating-field";
 import { InputHelperText } from "@/components/admin/input-helper-text";
+import { cn } from "@/lib/utils";
 
 /**
  * Date and time picker input for editing datetime values with timezone support.
@@ -54,6 +55,7 @@ export const DateTimeInput = ({
   validate,
   disabled,
   readOnly,
+  labelVariant = "default",
   ...rest
 }: DateTimeInputProps) => {
   const { field, id, isRequired } = useInput({
@@ -103,6 +105,10 @@ export const DateTimeInput = ({
 
   const { onBlur: onBlurFromField } = field;
   const hasFocus = React.useRef(false);
+  const [focused, setFocused] = React.useState(false);
+  const [displayValue, setDisplayValue] = React.useState(
+    () => format(initialDefaultValueRef.current) ?? "",
+  );
 
   // update the input text when the user types in the input
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,6 +123,7 @@ export const DateTimeInput = ({
     }
     const target = event.target;
     const newValue = target.value;
+    setDisplayValue(newValue);
     const isNewValueValid =
       newValue === "" || !isNaN(new Date(target.value).getTime());
 
@@ -135,16 +142,19 @@ export const DateTimeInput = ({
       onFocus(event);
     }
     hasFocus.current = true;
+    setFocused(true);
   };
 
   const handleBlur = () => {
     hasFocus.current = false;
+    setFocused(false);
 
     if (!localInputRef.current) {
       return;
     }
 
     const newValue = localInputRef.current.value;
+    setDisplayValue(newValue);
     // To ensure users can clear the input, we check its value on blur
     // and submit it to react-hook-form
     const isNewValueValid =
@@ -163,39 +173,70 @@ export const DateTimeInput = ({
   const { ref, name } = field;
   const inputRef = useForkRef(ref, localInputRef);
 
+  React.useEffect(() => {
+    setDisplayValue(format(field.value) ?? "");
+  }, [field.value, format, inputKey]);
+
+  const useFloating = labelVariant === "floating" && label !== false;
+  const hasValue = String(displayValue ?? "").length > 0;
+  const floatingActive = focused || hasValue;
+  const labelNode =
+    label !== false ? (
+      <FieldTitle
+        label={label}
+        source={source}
+        resource={resource}
+        isRequired={useFloating ? false : isRequired}
+      />
+    ) : null;
+
+  const inputEl = (
+    <FormControl>
+      <Input
+        id={id}
+        ref={inputRef}
+        name={name}
+        defaultValue={format(initialDefaultValueRef.current)}
+        key={inputKey}
+        type="datetime-local"
+        onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        className={cn(
+          "ra-input",
+          `ra-input-${source}`,
+          "scheme-light dark:scheme-dark relative [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:opacity-100 appearance-none",
+          useFloating &&
+            "h-9 border-0 bg-transparent px-3 shadow-none focus-visible:ring-0",
+          className,
+        )}
+        disabled={disabled || readOnly}
+        readOnly={readOnly}
+      />
+    </FormControl>
+  );
+
+  if (useFloating) {
+    return (
+      <FormField id={id} className={cn("gap-1.5", className)} name={field.name}>
+        <FloatingFieldShell
+          active={floatingActive}
+          label={labelNode}
+          htmlFor={id}
+          required={isRequired}
+        >
+          {inputEl}
+        </FloatingFieldShell>
+        <InputHelperText helperText={helperText} />
+        <FormError />
+      </FormField>
+    );
+  }
+
   return (
     <FormField id={id} className={className} name={field.name}>
-      {label !== false && (
-        <FormLabel>
-          <FieldTitle
-            label={label}
-            source={source}
-            resource={resource}
-            isRequired={isRequired}
-          />
-        </FormLabel>
-      )}
-      <FormControl>
-        <Input
-          id={id}
-          ref={inputRef}
-          name={name}
-          defaultValue={format(initialDefaultValueRef.current)}
-          key={inputKey}
-          type="datetime-local"
-          onChange={handleChange}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          className={clsx(
-            "ra-input",
-            `ra-input-${source}`,
-            "scheme-light dark:scheme-dark relative [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:opacity-100 appearance-none",
-            className,
-          )}
-          disabled={disabled || readOnly}
-          readOnly={readOnly}
-        />
-      </FormControl>
+      {labelNode ? <FormLabel>{labelNode}</FormLabel> : null}
+      {inputEl}
       <InputHelperText helperText={helperText} />
       <FormError />
     </FormField>
@@ -204,6 +245,7 @@ export const DateTimeInput = ({
 
 export type DateTimeInputProps = Omit<InputProps, "defaultValue"> & {
   defaultValue?: string | number | Date;
+  labelVariant?: "default" | "floating";
 } & Omit<React.ComponentProps<"input">, "defaultValue" | "type">;
 
 const leftPad =

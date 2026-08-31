@@ -380,6 +380,7 @@ export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
                     : false
                 }
                 filterToQuery={(searchText) => ({ q: searchText })}
+                labelVariant="floating"
               />
             </ReferenceInput>
             <AutocompleteInput
@@ -393,6 +394,7 @@ export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
               create
               placeholder="Select or type a service"
               helperText={false}
+              labelVariant="floating"
             />
           </div>
         </FormSection>
@@ -409,6 +411,7 @@ export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
               optionValue="value"
               helperText={false}
               validate={required()}
+              labelVariant="floating"
             />
             <SelectInput
               source="priority"
@@ -417,16 +420,19 @@ export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
               optionText="label"
               optionValue="value"
               helperText={false}
+              labelVariant="floating"
             />
             <DateInput
               source="start_date"
               label="Start date"
               helperText={false}
+              labelVariant="floating"
             />
             <DateInput
               source="expected_end_date"
               label="Delivery date"
               helperText={false}
+              labelVariant="floating"
             />
             {!canViewAmounts ? null : !proposalBudgetLocked ? (
               <NumberInput
@@ -436,6 +442,7 @@ export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
                 validate={optionalPositiveCurrency}
                 min={0}
                 step={0.01}
+                labelVariant="floating"
               />
             ) : (
               <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
@@ -453,6 +460,7 @@ export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
               helperText="owner/repo or full github.com URL"
               placeholder="lbs-web/acme-roofing"
               validate={optionalGithubRepo}
+              labelVariant="floating"
             />
             <div className={isMobile ? undefined : "md:col-span-2"}>
               {isCreateFlow ? (
@@ -512,6 +520,7 @@ export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
                 rows={3}
                 helperText="The full brief is filled out separately in the project's Brief tab or sent to the client as a web form."
                 placeholder="Discovery notes, client requests, or next steps"
+                labelVariant="floating"
               />
             </div>
           </div>

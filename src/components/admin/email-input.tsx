@@ -14,15 +14,20 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { FloatingFieldShell } from "@/components/ui/floating-field";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverAnchor,
   PopoverContent,
 } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { getEmailDomainSuggestions, isValidEmail } from "@/utils/email";
 
-export type EmailInputProps = InputProps & React.ComponentProps<"input">;
+export type EmailInputProps = InputProps &
+  React.ComponentProps<"input"> & {
+    labelVariant?: "default" | "floating";
+  };
 
 const validateEmail: Validator = (value) => {
   if (value == null || value === "") {
@@ -42,6 +47,8 @@ export const EmailInput = (props: EmailInputProps) => {
     validate,
     onBlur,
     onChange,
+    labelVariant = "default",
+    placeholder,
     ...rest
   } = props;
 
@@ -87,82 +94,111 @@ export const EmailInput = (props: EmailInputProps) => {
     setOpen(false);
   };
 
+  const useFloating = labelVariant === "floating" && label !== false;
+  const floatingActive = isInputFocused || String(inputValue).length > 0;
+  const labelNode =
+    label !== false ? (
+      <FieldTitle
+        label={label}
+        source={source}
+        resource={resource}
+        isRequired={useFloating ? false : isRequired}
+      />
+    ) : null;
+
+  const inputControl = (
+    <Popover open={open}>
+      <PopoverAnchor asChild>
+        <div>
+          <FormControl>
+            <Input
+              {...rest}
+              {...field}
+              id={id}
+              autoComplete="email"
+              value={inputValue}
+              placeholder={useFloating ? (placeholder ?? " ") : placeholder}
+              className={cn(
+                useFloating &&
+                  "h-9 border-0 bg-transparent px-3 shadow-none focus-visible:ring-0",
+              )}
+              onFocus={() => {
+                setIsInputFocused(true);
+              }}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setInputValue(nextValue);
+                field.onChange(nextValue);
+                onChange?.(event);
+              }}
+              onBlur={(event) => {
+                const trimmedValue = event.target.value.trim();
+                setInputValue(trimmedValue);
+                field.onChange(trimmedValue);
+                field.onBlur();
+                onBlur?.(event);
+                window.setTimeout(() => {
+                  setIsInputFocused(false);
+                }, 250);
+              }}
+            />
+          </FormControl>
+        </div>
+      </PopoverAnchor>
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] p-0"
+        align="start"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+        }}
+      >
+        <Command>
+          <CommandList>
+            <CommandGroup heading="Suggested domains">
+              {suggestions.map((domain) => (
+                <CommandItem
+                  key={domain}
+                  value={domain}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    completeDomain(domain);
+                  }}
+                  onSelect={() => completeDomain(domain)}
+                >
+                  @{domain}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+
+  if (useFloating) {
+    return (
+      <FormField id={id} className={cn("gap-1.5", className)} name={field.name}>
+        <FloatingFieldShell
+          active={floatingActive}
+          label={labelNode}
+          htmlFor={id}
+          required={isRequired}
+        >
+          {inputControl}
+        </FloatingFieldShell>
+        <InputHelperText helperText={helperText} />
+        <FormError />
+      </FormField>
+    );
+  }
+
   return (
     <FormField id={id} className={className} name={field.name}>
-      {label !== false && (
-        <FormLabel>
-          <FieldTitle
-            label={label}
-            source={source}
-            resource={resource}
-            isRequired={isRequired}
-          />
-        </FormLabel>
-      )}
-      <Popover open={open}>
-        <PopoverAnchor asChild>
-          <div>
-            <FormControl>
-              <Input
-                {...rest}
-                {...field}
-                autoComplete="email"
-                value={inputValue}
-                onFocus={() => {
-                  setIsInputFocused(true);
-                }}
-                onChange={(event) => {
-                  const nextValue = event.target.value;
-                  setInputValue(nextValue);
-                  field.onChange(nextValue);
-                  onChange?.(event);
-                }}
-                onBlur={(event) => {
-                  const trimmedValue = event.target.value.trim();
-                  setInputValue(trimmedValue);
-                  field.onChange(trimmedValue);
-                  field.onBlur();
-                  onBlur?.(event);
-                  window.setTimeout(() => {
-                    setIsInputFocused(false);
-                  }, 250);
-                }}
-              />
-            </FormControl>
-          </div>
-        </PopoverAnchor>
-        <PopoverContent
-          className="w-[var(--radix-popover-trigger-width)] p-0"
-          align="start"
-          onOpenAutoFocus={(event) => {
-            // Keep typing focus on the email input when suggestions open.
-            event.preventDefault();
-          }}
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-          }}
-        >
-          <Command>
-            <CommandList>
-              <CommandGroup heading="Suggested domains">
-                {suggestions.map((domain) => (
-                  <CommandItem
-                    key={domain}
-                    value={domain}
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                      completeDomain(domain);
-                    }}
-                    onSelect={() => completeDomain(domain)}
-                  >
-                    @{domain}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      {labelNode ? <FormLabel>{labelNode}</FormLabel> : null}
+      {inputControl}
       <InputHelperText helperText={helperText} />
       <FormError />
     </FormField>

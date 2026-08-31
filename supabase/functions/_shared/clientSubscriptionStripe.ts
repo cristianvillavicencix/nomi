@@ -51,6 +51,7 @@ export type ClientSubscriptionRow = {
   cancel_at_period_end: boolean;
   canceled_at: string | null;
   paused_at: string | null;
+  pause_resumes_at?: string | null;
   setup_checkout_url: string | null;
   setup_share_url?: string | null;
   subscription_number?: string | null;
@@ -422,6 +423,8 @@ export async function createStripeSubscriptionWithCard(
     customer: params.customerId,
     default_payment_method: params.paymentMethodId,
     collection_method: "charge_automatically",
+    // Fail loudly on SCA / card decline instead of leaving an incomplete Stripe sub.
+    payment_behavior: "error_if_incomplete",
     ...subscriptionStatementDescriptorSettings(params.name),
     items,
     metadata: params.metadata,
@@ -652,6 +655,12 @@ export async function applyStripeSubscriptionSnapshot(
   const status = mapStripeSubscriptionStatus(stripeSub.status, paused);
   const pm = readPaymentMethodFromStripe(stripeSub.default_payment_method);
   const now = new Date().toISOString();
+  const resumesAtUnix =
+    stripeSub.pause_collection &&
+    typeof stripeSub.pause_collection === "object" &&
+    typeof stripeSub.pause_collection.resumes_at === "number"
+      ? stripeSub.pause_collection.resumes_at
+      : null;
 
   const { data: existing } = await supabase
     .from("client_subscriptions")
@@ -680,6 +689,9 @@ export async function applyStripeSubscriptionSnapshot(
       ? new Date(stripeSub.canceled_at * 1000).toISOString()
       : null,
     paused_at: paused ? now : null,
+    pause_resumes_at: resumesAtUnix
+      ? new Date(resumesAtUnix * 1000).toISOString()
+      : null,
     payment_method_brand: pm.brand,
     payment_method_last4: pm.last4,
     stripe_payment_method_id: pm.id,
@@ -721,7 +733,11 @@ export async function persistSetupCheckoutPaymentMethod(
   params: {
     subscription: Pick<
       ClientSubscriptionRow,
-      "id" | "org_id" | "stripe_customer_id"
+      | "id"
+      | "org_id"
+      | "status"
+      | "stripe_customer_id"
+      | "stripe_subscription_id"
     >;
     session: Stripe.Checkout.Session;
   },
@@ -760,17 +776,32 @@ export async function persistSetupCheckoutPaymentMethod(
     });
   }
 
+  const stripeSubId = params.subscription.stripe_subscription_id?.trim();
+  const isPendingSetup = params.subscription.status === "pending_setup";
+
+  // Card-update on an already-billing subscription: switch Stripe renewals now.
+  if (stripeSubId && !isPendingSetup) {
+    await stripe.subscriptions.update(stripeSubId, {
+      default_payment_method: pmInfo.id,
+    });
+  }
+
   const now = new Date().toISOString();
+  const update: Record<string, unknown> = {
+    stripe_customer_id: customerId,
+    stripe_payment_method_id: pmInfo.id,
+    payment_method_brand: pmInfo.brand,
+    payment_method_last4: pmInfo.last4,
+    updated_at: now,
+  };
+  // Only keep pending_setup when we were waiting to activate — never demote active.
+  if (isPendingSetup) {
+    update.status = "pending_setup";
+  }
+
   await supabase
     .from("client_subscriptions")
-    .update({
-      stripe_customer_id: customerId,
-      stripe_payment_method_id: pmInfo.id,
-      payment_method_brand: pmInfo.brand,
-      payment_method_last4: pmInfo.last4,
-      status: "pending_setup",
-      updated_at: now,
-    })
+    .update(update)
     .eq("id", params.subscription.id)
     .eq("org_id", params.subscription.org_id);
 
@@ -779,7 +810,136 @@ export async function persistSetupCheckoutPaymentMethod(
     payment_method_id: pmInfo.id,
     brand: pmInfo.brand,
     last4: pmInfo.last4,
+    applied_to_subscription: Boolean(stripeSubId && !isPendingSetup),
   };
+}
+
+/** Set the card used for future automatic charges on an existing Stripe subscription. */
+export async function setClientSubscriptionPaymentMethod(
+  stripe: Stripe,
+  supabase: SupabaseClient,
+  params: {
+    subscription: ClientSubscriptionRow;
+    paymentMethodId: string;
+  },
+) {
+  const paymentMethodId = params.paymentMethodId.trim();
+  if (!paymentMethodId) {
+    throw new Error("Select a payment method");
+  }
+
+  const customerId =
+    params.subscription.stripe_customer_id?.trim() ||
+    (await ensureSubscriptionStripeCustomer(stripe, supabase, {
+      orgId: params.subscription.org_id,
+      subscription: params.subscription,
+    }));
+
+  try {
+    await stripe.paymentMethods.attach(paymentMethodId, {
+      customer: customerId,
+    });
+  } catch {
+    // Already attached is fine.
+  }
+
+  await stripe.customers.update(customerId, {
+    invoice_settings: { default_payment_method: paymentMethodId },
+  });
+
+  const stripeSubId = params.subscription.stripe_subscription_id?.trim();
+  if (stripeSubId) {
+    await stripe.subscriptions.update(stripeSubId, {
+      default_payment_method: paymentMethodId,
+    });
+  }
+
+  const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+  const brand = pm.card?.brand ?? null;
+  const last4 = pm.card?.last4 ?? null;
+  const now = new Date().toISOString();
+
+  await supabase
+    .from("client_subscriptions")
+    .update({
+      stripe_customer_id: customerId,
+      stripe_payment_method_id: paymentMethodId,
+      payment_method_brand: brand,
+      payment_method_last4: last4,
+      updated_at: now,
+    })
+    .eq("id", params.subscription.id)
+    .eq("org_id", params.subscription.org_id);
+
+  const { data: fresh } = await supabase
+    .from("client_subscriptions")
+    .select("*")
+    .eq("id", params.subscription.id)
+    .single();
+
+  return {
+    subscription: fresh as ClientSubscriptionRow,
+    payment_method_id: paymentMethodId,
+    brand,
+    last4,
+  };
+}
+
+export async function listClientSubscriptionPaymentMethods(
+  stripe: Stripe,
+  subscription: ClientSubscriptionRow,
+) {
+  const customerId = subscription.stripe_customer_id?.trim();
+  if (!customerId) {
+    return { payment_methods: [] as Array<{
+      id: string;
+      brand: string | null;
+      last4: string;
+      exp_month: number | null;
+      exp_year: number | null;
+    }> };
+  }
+
+  const list = await stripe.paymentMethods.list({
+    customer: customerId,
+    type: "card",
+    limit: 20,
+  });
+
+  return {
+    payment_methods: list.data.map((pm) => ({
+      id: pm.id,
+      brand: pm.card?.brand ?? null,
+      last4: pm.card?.last4 ?? "",
+      exp_month: pm.card?.exp_month ?? null,
+      exp_year: pm.card?.exp_year ?? null,
+    })),
+  };
+}
+
+export async function detachClientSubscriptionPaymentMethod(
+  stripe: Stripe,
+  supabase: SupabaseClient,
+  params: {
+    subscription: ClientSubscriptionRow;
+    paymentMethodId: string;
+  },
+) {
+  const paymentMethodId = params.paymentMethodId.trim();
+  if (!paymentMethodId) {
+    throw new Error("Select a payment method to remove");
+  }
+
+  const currentId = params.subscription.stripe_payment_method_id?.trim();
+  if (currentId && currentId === paymentMethodId) {
+    throw new Error(
+      "This card is used for billing. Choose another card for billing first, then remove it.",
+    );
+  }
+
+  await stripe.paymentMethods.detach(paymentMethodId);
+
+  return { detached: true as const, payment_method_id: paymentMethodId };
 }
 
 const subscriptionMatchesSigmaRecord = (
@@ -900,21 +1060,14 @@ export async function syncClientSubscriptionFromStripe(
       expand: ["data.default_payment_method"],
     });
 
-    const preferredStatuses = new Set([
-      "active",
-      "trialing",
-      "past_due",
-      "unpaid",
-    ]);
+    // Only attach a Stripe sub that clearly belongs to this CRM row (metadata id
+    // or matching gross amount). Never grab "any active sub on this customer".
+    const metadataOrAmountMatch = list.data.find((stripeSub) =>
+      subscriptionMatchesSigmaRecord(stripeSub, subscription),
+    );
 
-    const match =
-      list.data.find((stripeSub) =>
-        subscriptionMatchesSigmaRecord(stripeSub, subscription)
-      ) ??
-      list.data.find((stripeSub) => preferredStatuses.has(stripeSub.status));
-
-    if (match) {
-      return applyAndReturn(match, "customer_subscriptions");
+    if (metadataOrAmountMatch) {
+      return applyAndReturn(metadataOrAmountMatch, "customer_subscriptions");
     }
   }
 
@@ -1032,24 +1185,39 @@ export async function mirrorSubscriptionInvoiceToSigma(
     : [];
 
   if (lineItems.length > 0) {
-    await supabase.from("client_invoice_line_items").insert(
-      lineItems.map((line, index) => {
-        const quantity = Number(line.quantity) || 1;
-        const unitPrice = Number(line.unit_price) || amountPaid;
-        return {
-          org_id: params.orgId,
-          invoice_id: invoice.id,
-          description: String(line.description ?? params.subscription.name),
-          quantity,
-          unit: String(line.unit ?? "ea"),
-          unit_price: unitPrice,
-          line_total: Math.round(quantity * unitPrice * 100) / 100,
-          package_id: line.package_id ?? null,
-          addon_id: line.addon_id ?? null,
-          sort_order: index,
-        };
-      }),
-    );
+    const netLines = lineItems.map((line, index) => {
+      const quantity = Number(line.quantity) || 1;
+      const unitPrice = Number(line.unit_price) || 0;
+      return {
+        org_id: params.orgId,
+        invoice_id: invoice.id,
+        description: String(line.description ?? params.subscription.name),
+        quantity,
+        unit: String(line.unit ?? "ea"),
+        unit_price: unitPrice,
+        line_total: Math.round(quantity * unitPrice * 100) / 100,
+        package_id: line.package_id ?? null,
+        addon_id: line.addon_id ?? null,
+        sort_order: index,
+      };
+    });
+    const netTotal = netLines.reduce((sum, line) => sum + line.line_total, 0);
+    const feeAmount = Math.round((amountPaid - netTotal) * 100) / 100;
+    if (feeAmount > 0.001) {
+      netLines.push({
+        org_id: params.orgId,
+        invoice_id: invoice.id,
+        description: "Processing fee",
+        quantity: 1,
+        unit: "ea",
+        unit_price: feeAmount,
+        line_total: feeAmount,
+        package_id: null,
+        addon_id: null,
+        sort_order: netLines.length,
+      });
+    }
+    await supabase.from("client_invoice_line_items").insert(netLines);
   } else {
     await supabase.from("client_invoice_line_items").insert({
       org_id: params.orgId,

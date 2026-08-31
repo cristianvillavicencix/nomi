@@ -21,6 +21,7 @@ export const CompanyInlineDraftFields = () => {
         mode="business"
         helperText={false}
         placeholder="e.g. Acme Landscaping"
+        labelVariant="floating"
         onPlaceDetails={(details) =>
           applyGoogleBusinessToLeadForm(setValue, details)
         }
@@ -30,17 +31,20 @@ export const CompanyInlineDraftFields = () => {
         label="Website"
         helperText={false}
         placeholder="www.example.com"
+        labelVariant="floating"
       />
       <PhoneInput
         source="company_draft_phone"
         label="Company phone"
         helperText={false}
+        labelVariant="floating"
       />
       <GooglePlacesAutocompleteInput
         source="company_draft_address"
         label="Address"
         mode="address"
         helperText={false}
+        labelVariant="floating"
         onPlaceDetails={(details) =>
           applyGoogleAddressToLeadForm(setValue, details)
         }
@@ -52,6 +56,7 @@ export const CompanyInlineDraftFields = () => {
         optionText="name"
         helperText={false}
         emptyText="Select industry"
+        labelVariant="floating"
       />
     </div>
   );

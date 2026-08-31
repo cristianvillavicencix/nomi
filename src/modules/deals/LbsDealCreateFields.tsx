@@ -332,6 +332,7 @@ export const LbsDealCreateFields = ({
         helperText={false}
         validate={required()}
         placeholder="e.g. Acme Roofing — Website"
+        labelVariant="floating"
       />
 
       <CreateFormFieldRow>
@@ -343,6 +344,7 @@ export const LbsDealCreateFields = ({
           optionValue="value"
           helperText={false}
           validate={required()}
+          labelVariant="floating"
         />
         <AutocompleteInput
           source="project_type"
@@ -355,6 +357,7 @@ export const LbsDealCreateFields = ({
           create
           placeholder="Select or type"
           helperText={false}
+          labelVariant="floating"
         />
       </CreateFormFieldRow>
 
@@ -367,12 +370,14 @@ export const LbsDealCreateFields = ({
             validate={optionalPositiveCurrency}
             min={0}
             step={0.01}
+            labelVariant="floating"
           />
         ) : null}
         <DateInput
           source="expected_closing_date"
           label="Expected close"
           helperText={false}
+          labelVariant="floating"
         />
       </CreateFormFieldRow>
 
@@ -387,6 +392,7 @@ export const LbsDealCreateFields = ({
           helperText={false}
           validate={required()}
           filterToQuery={(searchText) => ({ q: searchText })}
+          labelVariant="floating"
         />
       </ReferenceInput>
     </div>

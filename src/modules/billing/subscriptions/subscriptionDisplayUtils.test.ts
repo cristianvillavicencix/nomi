@@ -8,6 +8,7 @@ import {
   formatSubscriptionNextBillingLabel,
   hasSubscriptionSetupLink,
   isSubscriptionExpired,
+  resolveSubscriptionListRibbon,
   subscriptionMatchesStatusFilter,
   subscriptionStatusLabel,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
@@ -34,6 +35,24 @@ describe("subscriptionDisplayUtils", () => {
   it("returns English status labels", () => {
     expect(subscriptionStatusLabel("pending_setup")).toBe("Pending setup");
     expect(subscriptionStatusLabel("past_due")).toBe("Past due");
+  });
+
+  it("maps subscription list ribbons by status", () => {
+    expect(
+      resolveSubscriptionListRibbon({ status: "active", ends_at: null }).label,
+    ).toBe("Active");
+    expect(
+      resolveSubscriptionListRibbon({
+        status: "pending_setup",
+        ends_at: null,
+      }).label,
+    ).toBe("Pending");
+    expect(
+      resolveSubscriptionListRibbon({
+        status: "active",
+        ends_at: "2020-01-01T00:00:00.000Z",
+      }).label,
+    ).toBe("Expired");
   });
 
   it("formats amount labels with interval suffix", () => {

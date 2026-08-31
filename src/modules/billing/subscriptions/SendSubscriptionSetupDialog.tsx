@@ -42,13 +42,17 @@ type SendSubscriptionSetupDialogProps = {
   subscription: ClientSubscription;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** First-time setup vs update card on an already-billing subscription. */
+  mode?: "setup" | "card_update";
 };
 
 export const SendSubscriptionSetupDialog = ({
   subscription,
   open,
   onOpenChange,
+  mode = "setup",
 }: SendSubscriptionSetupDialogProps) => {
+  const isCardUpdate = mode === "card_update";
   const notify = useNotify();
   const refresh = useRefresh();
   const { title: orgTitle } = useConfigurationContext();
@@ -126,7 +130,9 @@ export const SendSubscriptionSetupDialog = ({
   );
 
   const deliveryMessage = messageEdited ? message.trim() : defaultMessage;
-  const subject = `${orgTitle ?? "Latino Business Support"}: Set up ${subscription.name}`;
+  const subject = isCardUpdate
+    ? `${orgTitle ?? "Latino Business Support"}: Update card for ${subscription.name}`
+    : `${orgTitle ?? "Latino Business Support"}: Set up ${subscription.name}`;
 
   useEffect(() => {
     if (!open) return;
@@ -142,7 +148,7 @@ export const SendSubscriptionSetupDialog = ({
     mutationFn: () =>
       dataProvider.manageClientSubscription({
         subscriptionId: subscription.id,
-        action: "send_setup",
+        action: isCardUpdate ? "request_card_update" : "send_setup",
         email_to: emailTo.trim() || null,
         sms_to: smsTo.trim() || null,
         send_email: sendEmail,
@@ -154,10 +160,18 @@ export const SendSubscriptionSetupDialog = ({
     onSuccess: () => {
       refresh();
       onOpenChange(false);
-      notify("Setup link sent", { type: "success" });
+      notify(isCardUpdate ? "Card update link sent" : "Setup link sent", {
+        type: "success",
+      });
     },
     onError: (error: Error) => {
-      notify(error.message || "Could not send setup link", { type: "error" });
+      notify(
+        error.message ||
+          (isCardUpdate
+            ? "Could not send card update link"
+            : "Could not send setup link"),
+        { type: "error" },
+      );
     },
   });
 
@@ -169,10 +183,13 @@ export const SendSubscriptionSetupDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Send setup link</DialogTitle>
+          <DialogTitle>
+            {isCardUpdate ? "Request new card" : "Send setup link"}
+          </DialogTitle>
           <DialogDescription>
-            Email or text a secure short link so the client can save a card for{" "}
-            {subscription.name}.
+            {isCardUpdate
+              ? `Email or text a secure link so the client can add or replace the card used for ${subscription.name}.`
+              : `Email or text a secure short link so the client can save a card for ${subscription.name}.`}
           </DialogDescription>
         </DialogHeader>
 

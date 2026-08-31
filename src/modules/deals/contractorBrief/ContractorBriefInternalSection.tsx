@@ -200,6 +200,7 @@ export const ContractorBriefInternalSection = ({
             source="website_brief.company_founded_year"
             label="Year the company was founded"
             helperText={false}
+            labelVariant="floating"
           />
         </div>
         {section.fields
@@ -248,6 +249,7 @@ export const ContractorBriefInternalSection = ({
             source="website_brief.primary_service"
             label="Primary / most profitable service"
             helperText="Pick one of the services you added above."
+            labelVariant="floating"
           />
         </div>
         <YesNoToggleField

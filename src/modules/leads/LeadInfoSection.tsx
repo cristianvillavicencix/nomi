@@ -36,6 +36,7 @@ export const LeadInfoSection = () => (
       }))}
       validate={required()}
       helperText={false}
+      labelVariant="floating"
     />
     <LeadReferrerInputs />
 

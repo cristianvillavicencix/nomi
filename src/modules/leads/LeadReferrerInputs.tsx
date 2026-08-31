@@ -13,17 +13,9 @@ import {
 
 /**
  * Conditional fields for the lead form:
- *  - When source = "Referido" → show 2 pickers (contact OR company) so the
- *    user can attribute the referral to an existing person/company; the
- *    company picker also supports inline creation.
- *  - When source = "Otro" → show a free-text field to capture the actual
- *    origin.
- *  - Otherwise → render nothing.
- *
- * On every change to lead_source we also clear the now-irrelevant fields so
- * stale values cannot survive the form submit (e.g. user picks "Referido",
- * selects a referrer, switches to "Sitio web", and we must not persist the
- * referrer id any more).
+ *  - When source = "Referral" → show contact OR company pickers
+ *  - When source = "Other" → free-text origin
+ *  - Otherwise → render nothing
  */
 export const LeadReferrerInputs = ({
   sourceField = "lead_source",
@@ -75,7 +67,7 @@ export const LeadReferrerInputs = ({
       );
       return created;
     } catch {
-      notify("No pude crear el contacto referidor", { type: "error" });
+      notify("Could not create referrer contact", { type: "error" });
     }
   };
 
@@ -83,8 +75,8 @@ export const LeadReferrerInputs = ({
     return (
       <div className="flex flex-col gap-3 rounded-md border border-dashed border-border bg-muted/40 p-3">
         <p className="text-xs font-medium text-muted-foreground">
-          ¿Quién refirió este lead? Selecciona la persona o la empresa que ya
-          existe en el CRM (o crea la empresa al vuelo).
+          Who referred this lead? Pick an existing person or company (or create
+          a company on the fly).
         </p>
         <ReferenceInput
           source="referred_by_contact_id"
@@ -93,16 +85,17 @@ export const LeadReferrerInputs = ({
           sort={{ field: "last_name", order: "ASC" }}
         >
           <AutocompleteInput
-            label="Referrer (persona)"
+            label="Referrer (person)"
             optionText={(record) =>
               `${record?.first_name ?? ""} ${record?.last_name ?? ""}`.trim() ||
               "Unnamed"
             }
             onCreate={handleCreateReferrerContact}
-            createLabel="Empieza a escribir para crear un nuevo contacto"
+            createLabel="Start typing to create a new contact"
             createItemLabel="Create %{item}"
             helperText={false}
             modal={isMobile}
+            labelVariant="floating"
           />
         </ReferenceInput>
         <ReferenceInput
@@ -111,7 +104,7 @@ export const LeadReferrerInputs = ({
           perPage={20}
           sort={{ field: "name", order: "ASC" }}
         >
-          <AutocompleteCompanyInput />
+          <AutocompleteCompanyInput labelVariant="floating" />
         </ReferenceInput>
       </div>
     );
@@ -121,9 +114,10 @@ export const LeadReferrerInputs = ({
     return (
       <TextInput
         source="lead_source_other"
-        label="¿De dónde vino? Especifica"
+        label="Where did they come from?"
         helperText={false}
-        placeholder="Por ejemplo: evento X, podcast Y, etc."
+        placeholder="e.g. event X, podcast Y"
+        labelVariant="floating"
       />
     );
   }

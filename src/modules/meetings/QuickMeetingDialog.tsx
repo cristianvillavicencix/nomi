@@ -33,11 +33,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import type { Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { prepareCalendarEventWriteData } from "@/modules/calendar/calendarEventWriteData";
+import { CreateFormFieldRow } from "@/modules/shared/createForm/CreateFormLayout";
 import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone/usTimezone";
 import {
   DEFAULT_MEETING_DURATION_MINUTES,
@@ -404,78 +404,68 @@ const QuickMeetingFormBody = ({
             }}
           />
         ) : (
-          <div className="space-y-2">
-            <Label>Contact</Label>
-            <ReferenceInput source="contact_id" reference="contacts_summary">
-              <AutocompleteInput
-                label={false}
-                optionText={contactOptionText}
-                inputText={contactOptionText}
-                helperText={false}
-                modal
-                autoFocus
-                placeholder="Search contact…"
-                validate={(value) => (value ? undefined : "Required")}
-                filterToQuery={(searchText) => ({ q: searchText })}
-                createItemLabel={(filter) => `Add "${filter}" as new contact`}
-                onCreate={(filter) => {
-                  openCreateContact(filter);
-                  return undefined;
-                }}
-              />
-            </ReferenceInput>
-          </div>
-        )}
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Duration</Label>
-            <SelectInput
-              source="duration_minutes"
-              label={false}
-              choices={[...DURATION_CHOICES]}
-              format={formatDuration}
-              parse={parseDuration}
-              helperText={false}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Reminder</Label>
-            <SelectInput
-              source="remind_before_minutes"
-              label={false}
-              choices={[...REMIND_BEFORE_CHOICES]}
-              format={formatRemindBefore}
-              parse={parseRemindBefore}
-              helperText={false}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Project (optional)</Label>
-          <ReferenceInput source="deal_id" reference="deals">
+          <ReferenceInput source="contact_id" reference="contacts_summary">
             <AutocompleteInput
-              label={false}
-              optionText={dealOptionText}
+              label="Contact"
+              labelVariant="floating"
+              optionText={contactOptionText}
+              inputText={contactOptionText}
               helperText={false}
               modal
-              placeholder="Search project…"
+              autoFocus
+              placeholder="Search contact…"
+              validate={(value) => (value ? undefined : "Required")}
               filterToQuery={(searchText) => ({ q: searchText })}
+              createItemLabel={(filter) => `Add "${filter}" as new contact`}
+              onCreate={(filter) => {
+                openCreateContact(filter);
+                return undefined;
+              }}
             />
           </ReferenceInput>
-        </div>
+        )}
 
-        <div className="space-y-2">
-          <Label>Notes</Label>
-          <TextInput
-            source="description"
-            label={false}
-            multiline
+        <CreateFormFieldRow>
+          <SelectInput
+            source="duration_minutes"
+            label="Duration"
+            labelVariant="floating"
+            choices={[...DURATION_CHOICES]}
+            format={formatDuration}
+            parse={parseDuration}
             helperText={false}
-            placeholder="Agenda, context…"
           />
-        </div>
+          <SelectInput
+            source="remind_before_minutes"
+            label="Reminder"
+            labelVariant="floating"
+            choices={[...REMIND_BEFORE_CHOICES]}
+            format={formatRemindBefore}
+            parse={parseRemindBefore}
+            helperText={false}
+          />
+        </CreateFormFieldRow>
+
+        <ReferenceInput source="deal_id" reference="deals">
+          <AutocompleteInput
+            label="Project (optional)"
+            labelVariant="floating"
+            optionText={dealOptionText}
+            helperText={false}
+            modal
+            placeholder="Search project…"
+            filterToQuery={(searchText) => ({ q: searchText })}
+          />
+        </ReferenceInput>
+
+        <TextInput
+          source="description"
+          label="Notes"
+          labelVariant="floating"
+          multiline
+          helperText={false}
+          placeholder="Agenda, context…"
+        />
 
         {contact ? (
           <div className="rounded-xl border bg-muted/20 p-4">

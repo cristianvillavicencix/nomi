@@ -238,6 +238,7 @@ export type ClientSubscription = {
   cancel_at_period_end?: boolean;
   canceled_at?: string | null;
   paused_at?: string | null;
+  pause_resumes_at?: string | null;
   setup_checkout_url?: string | null;
   setup_share_url?: string | null;
   setup_short_code?: string | null;

@@ -8,6 +8,7 @@ import {
   FormLabel,
 } from "@/components/admin/form";
 import { Input } from "@/components/ui/input";
+import { FloatingFieldShell } from "@/components/ui/floating-field";
 import { InputHelperText } from "@/components/admin/input-helper-text";
 import { cn } from "@/lib/utils";
 
@@ -75,6 +76,7 @@ export const DateInput = (props: DateInputProps) => {
     validate,
     disabled,
     readOnly,
+    labelVariant = "default",
     ...rest
   } = props;
 
@@ -129,6 +131,10 @@ export const DateInput = (props: DateInputProps) => {
 
   const { onBlur: onBlurFromField } = field;
   const hasFocus = React.useRef(false);
+  const [focused, setFocused] = React.useState(false);
+  const [displayValue, setDisplayValue] = React.useState(
+    () => format(initialDefaultValueRef.current) ?? "",
+  );
 
   // Update the input text when the user types in the input.
   // Also, update the react-hook-form value if the input value is a valid date string.
@@ -145,6 +151,7 @@ export const DateInput = (props: DateInputProps) => {
       }
       const target = event.target;
       const newValue = target.value;
+      setDisplayValue(newValue);
       const isNewValueValid =
         newValue === "" ||
         (target.valueAsDate != null &&
@@ -166,16 +173,19 @@ export const DateInput = (props: DateInputProps) => {
       onFocus(event);
     }
     hasFocus.current = true;
+    setFocused(true);
   });
 
   const handleBlur = useEvent(() => {
     hasFocus.current = false;
+    setFocused(false);
 
     if (!localInputRef.current) {
       return;
     }
 
     const newValue = localInputRef.current.value;
+    setDisplayValue(newValue);
     // To ensure users can clear the input, we check its value on blur
     // and submit it to react-hook-form
     const isNewValueValid =
@@ -205,38 +215,69 @@ export const DateInput = (props: DateInputProps) => {
     [ref],
   );
 
+  React.useEffect(() => {
+    setDisplayValue(format(field.value) ?? "");
+  }, [field.value, format, inputKey]);
+
+  const useFloating = labelVariant === "floating" && label !== false;
+  const hasValue = String(displayValue ?? "").length > 0;
+  const floatingActive = focused || hasValue;
+  const labelNode =
+    label !== false ? (
+      <FieldTitle
+        label={label}
+        source={source}
+        resource={resource}
+        isRequired={useFloating ? false : isRequired}
+      />
+    ) : null;
+
+  const inputEl = (
+    <FormControl>
+      <Input
+        ref={inputRef}
+        defaultValue={format(initialDefaultValueRef.current) ?? ""}
+        key={inputKey}
+        type="date"
+        onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        className={cn(
+          "ra-input",
+          `ra-input-${source}`,
+          "scheme-light dark:scheme-dark relative [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:opacity-100 appearance-none",
+          useFloating &&
+            "h-9 border-0 bg-transparent px-3 shadow-none focus-visible:ring-0",
+          inputClassName,
+        )}
+        disabled={disabled || readOnly}
+        readOnly={readOnly}
+        {...rest}
+      />
+    </FormControl>
+  );
+
+  if (useFloating) {
+    return (
+      <FormField id={id} className={cn("gap-1.5", className)} name={name}>
+        <FloatingFieldShell
+          active={floatingActive}
+          label={labelNode}
+          htmlFor={id}
+          required={isRequired}
+        >
+          {inputEl}
+        </FloatingFieldShell>
+        <InputHelperText helperText={helperText} />
+        <FormError />
+      </FormField>
+    );
+  }
+
   return (
     <FormField id={id} className={className} name={name}>
-      {label !== false && (
-        <FormLabel>
-          <FieldTitle
-            label={label}
-            source={source}
-            resource={resource}
-            isRequired={isRequired}
-          />
-        </FormLabel>
-      )}
-      <FormControl>
-        <Input
-          ref={inputRef}
-          defaultValue={format(initialDefaultValueRef.current) ?? ""}
-          key={inputKey}
-          type="date"
-          onChange={handleChange}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          className={cn(
-            "ra-input",
-            `ra-input-${source}`,
-            "scheme-light dark:scheme-dark relative [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:opacity-100 appearance-none",
-            inputClassName,
-          )}
-          disabled={disabled || readOnly}
-          readOnly={readOnly}
-          {...rest}
-        />
-      </FormControl>
+      {labelNode ? <FormLabel>{labelNode}</FormLabel> : null}
+      {inputEl}
       <InputHelperText helperText={helperText} />
       <FormError />
     </FormField>
@@ -245,6 +286,7 @@ export const DateInput = (props: DateInputProps) => {
 
 export type DateInputProps = InputProps & {
   inputClassName?: string;
+  labelVariant?: "default" | "floating";
 } & Omit<React.ComponentProps<"input">, "label" | "defaultValue">;
 
 /**

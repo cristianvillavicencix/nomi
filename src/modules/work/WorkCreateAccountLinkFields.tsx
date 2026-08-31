@@ -60,6 +60,7 @@ export const WorkCreateAccountLinkFields = ({
           helperText={false}
           disabled={!companyId}
           emptyText="None"
+          labelVariant={hideFieldLabels ? undefined : "floating"}
           validate={
             requireContact
               ? (value) => (value ? undefined : "Required")
@@ -86,6 +87,7 @@ export const WorkCreateAccountLinkFields = ({
       <AutocompleteCompanyInput
         label={hideFieldLabels ? false : "Account"}
         emptyText="None"
+        labelVariant={hideFieldLabels ? undefined : "floating"}
       />
     </ReferenceInput>
   );
@@ -107,6 +109,7 @@ export const WorkCreateAccountLinkFields = ({
         disabled={!companyId}
         emptyText="None"
         filterToQuery={(searchText) => ({ q: searchText })}
+        labelVariant={hideFieldLabels ? undefined : "floating"}
       />
     </ReferenceInput>
   );

@@ -94,9 +94,20 @@ const CalendarEventForm = ({
       <DialogTitle>{isEdit ? "Edit event" : "New event"}</DialogTitle>
     </DialogHeader>
 
-    <TextInput source="title" label="Title" validate={required()} autoFocus />
+    <TextInput
+      source="title"
+      label="Title"
+      validate={required()}
+      autoFocus
+      labelVariant="floating"
+    />
     <div className="grid gap-4 sm:grid-cols-2">
-      <DateInput source="event_date" label="Date" validate={required()} />
+      <DateInput
+        source="event_date"
+        label="Date"
+        validate={required()}
+        labelVariant="floating"
+      />
       <CalendarTimeInput
         source="event_time"
         label="Start time"
@@ -110,6 +121,7 @@ const CalendarEventForm = ({
       format={formatDuration}
       parse={parseDuration}
       helperText="How long the meeting or event lasts"
+      labelVariant="floating"
     />
     <CalendarReminderOffsetsInput />
     <TextInput
@@ -117,6 +129,7 @@ const CalendarEventForm = ({
       label="Notes"
       multiline
       helperText={false}
+      labelVariant="floating"
     />
 
     <div className="space-y-3 rounded-md border p-3">
@@ -127,6 +140,7 @@ const CalendarEventForm = ({
       <ReferenceInput source="contact_id" reference="contacts_summary">
         <AutocompleteInput
           label="Contact"
+          labelVariant="floating"
           optionText={contactOptionText}
           inputText={contactOptionText}
           helperText={false}
@@ -137,6 +151,7 @@ const CalendarEventForm = ({
       <ReferenceInput source="deal_id" reference="deals">
         <AutocompleteInput
           label="Project"
+          labelVariant="floating"
           optionText={dealOptionText}
           helperText={false}
           modal

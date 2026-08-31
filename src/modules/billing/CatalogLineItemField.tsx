@@ -11,6 +11,10 @@ import {
 import type { ServiceAddon, ServicePackage } from "@/modules/types";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  FloatingFieldShell,
+  floatingFieldControlClassName,
+} from "@/components/ui/floating-field";
 import { cn } from "@/lib/utils";
 
 type CatalogSuggestion = {
@@ -34,6 +38,17 @@ type CatalogLineItemFieldProps = {
   billingTypeFilter?: "one_time" | "recurring" | "all";
   defaultBillingInterval?: "weekly" | "monthly" | "yearly";
   suggestionMinWidth?: number;
+  labelVariant?: "default" | "floating";
+  /** Persistent searcher: pick/create appends via onAddItem and clears the field. */
+  mode?: "edit" | "add";
+  onAddItem?: (item: {
+    title: string;
+    item_detail: string;
+    unit_price: number;
+    package_id: number | null;
+    addon_id: number | null;
+    billing_interval?: "weekly" | "monthly" | "yearly" | null;
+  }) => void;
   onCatalogPick?: (item: {
     billing_interval?: "weekly" | "monthly" | "yearly" | null;
   }) => void;
@@ -71,6 +86,9 @@ export const CatalogLineItemField = ({
   billingTypeFilter = "all",
   defaultBillingInterval = "monthly",
   suggestionMinWidth = DROPDOWN_MIN_WIDTH,
+  labelVariant = "default",
+  mode = "edit",
+  onAddItem,
   onCatalogPick,
 }: CatalogLineItemFieldProps) => {
   const notify = useNotify();
@@ -78,10 +96,13 @@ export const CatalogLineItemField = ({
   const { identity } = useGetIdentity();
   const orgId = Number(identity?.org_id ?? 1);
   const [createPackage] = useCreate();
+  const isAddMode = mode === "add";
 
-  const [query, setQuery] = useState(line.title);
+  const [query, setQuery] = useState(isAddMode ? "" : line.title);
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [titleFocused, setTitleFocused] = useState(false);
+  const [detailFocused, setDetailFocused] = useState(false);
   const [position, setPosition] = useState<DropdownPosition | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -89,12 +110,13 @@ export const CatalogLineItemField = ({
   const lastPickIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (isAddMode) return;
     if (pickingRef.current) {
       pickingRef.current = false;
       return;
     }
     setQuery(line.title);
-  }, [line.title]);
+  }, [line.title, isAddMode]);
 
   const updatePosition = () => {
     const anchor = rootRef.current;
@@ -284,15 +306,30 @@ export const CatalogLineItemField = ({
     },
     onSuccess: async (record) => {
       await queryClient.invalidateQueries({ queryKey: ["service_packages"] });
-      onChange({
+      const next = {
         title: record.name,
         item_detail: record.description?.trim() ?? "",
         unit_price: Number(record.suggested_price) || 0,
         package_id: Number(record.id),
-        addon_id: null,
-      });
-      setQuery(record.name);
-      setOpen(false);
+        addon_id: null as number | null,
+        billing_interval: (record.billing_interval ??
+          null) as "weekly" | "monthly" | "yearly" | null,
+      };
+      if (isAddMode && onAddItem) {
+        onAddItem(next);
+        setQuery("");
+        setOpen(false);
+      } else {
+        onChange({
+          title: next.title,
+          item_detail: next.item_detail,
+          unit_price: next.unit_price,
+          package_id: next.package_id,
+          addon_id: null,
+        });
+        setQuery(record.name);
+        setOpen(false);
+      }
       notify("Catalog item created", { type: "success" });
     },
     onError: () => {
@@ -304,19 +341,56 @@ export const CatalogLineItemField = ({
     if (lastPickIdRef.current === item.id) return;
     lastPickIdRef.current = item.id;
     pickingRef.current = true;
-    onChange({
+    const next = {
       title: item.title,
       item_detail: item.item_detail ?? "",
       unit_price: Number(item.unit_price) || 0,
       package_id: item.package_id ?? null,
       addon_id: item.addon_id ?? null,
-    });
+      billing_interval: item.billing_interval ?? null,
+    };
+    if (isAddMode && onAddItem) {
+      onAddItem(next);
+      setQuery("");
+      setOpen(false);
+    } else {
+      onChange({
+        title: next.title,
+        item_detail: next.item_detail,
+        unit_price: next.unit_price,
+        package_id: next.package_id,
+        addon_id: next.addon_id,
+      });
+      setQuery(item.title);
+      setOpen(false);
+    }
     onCatalogPick?.({ billing_interval: item.billing_interval ?? null });
-    setQuery(item.title);
-    setOpen(false);
     window.setTimeout(() => {
       lastPickIdRef.current = null;
     }, 0);
+  };
+
+  const commitCustomAdd = () => {
+    if (!isAddMode || !onAddItem) return;
+    const title = trimmedQuery;
+    if (!title) return;
+    const exact = allSuggestions.find(
+      (item) => item.title.toLowerCase() === title.toLowerCase(),
+    );
+    if (exact) {
+      pick(exact);
+      return;
+    }
+    onAddItem({
+      title,
+      item_detail: "",
+      unit_price: 0,
+      package_id: null,
+      addon_id: null,
+      billing_interval: null,
+    });
+    setQuery("");
+    setOpen(false);
   };
 
   const handleSuggestionPointerDown = (
@@ -446,42 +520,100 @@ export const CatalogLineItemField = ({
       0,
     ) + 1;
 
+  const useFloating = labelVariant === "floating";
+  const titleActive =
+    titleFocused || open || String(query ?? "").trim().length > 0;
+  const detailActive =
+    detailFocused || String(line.item_detail ?? "").trim().length > 0;
+  const searchLabel = isAddMode ? "Add item" : "Item";
+
+  const handleQueryChange = (next: string) => {
+    setQuery(next);
+    setOpen(true);
+    if (!isAddMode) {
+      onChange({
+        title: next,
+        package_id: null,
+        addon_id: null,
+      });
+    }
+  };
+
   return (
     <>
-      <div ref={rootRef} className={cn("space-y-2", className)}>
-        <Input
-          ref={inputRef}
-          value={query}
-          onChange={(event) => {
-            const next = event.target.value;
-            setQuery(next);
-            setOpen(true);
-            onChange({
-              title: next,
-              package_id: null,
-              addon_id: null,
-            });
-          }}
-          onFocus={() => setOpen(true)}
-          placeholder="Search or type item…"
-          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm focus-visible:ring-1 focus-visible:ring-ring"
-        />
-        {selectedSuggestionId ? (
-          <p className="text-xs text-muted-foreground">
-            Selected:{" "}
-            <span className="font-medium text-foreground">{line.title}</span>
-            {" · "}
-            {formatSuggestionPrice(Number(line.unit_price) || 0)}
-          </p>
-        ) : null}
+      <div ref={rootRef} className={cn(useFloating ? "space-y-2.5" : "space-y-2", className)}>
+        {useFloating ? (
+          <FloatingFieldShell active={titleActive} label={searchLabel}>
+            <Input
+              ref={inputRef}
+              value={query}
+              onChange={(event) => handleQueryChange(event.target.value)}
+              onFocus={() => {
+                setTitleFocused(true);
+                setOpen(true);
+              }}
+              onBlur={() => setTitleFocused(false)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  if (isAddMode) commitCustomAdd();
+                }
+              }}
+              placeholder=" "
+              className={cn(
+                floatingFieldControlClassName,
+                "font-medium",
+              )}
+            />
+          </FloatingFieldShell>
+        ) : (
+          <Input
+            ref={inputRef}
+            value={query}
+            onChange={(event) => handleQueryChange(event.target.value)}
+            onFocus={() => setOpen(true)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                if (isAddMode) commitCustomAdd();
+              }
+            }}
+            placeholder={isAddMode ? "Search catalog or type a custom item…" : "Search or type item…"}
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        )}
         {suggestionsMenu}
-        <Textarea
-          value={line.item_detail ?? ""}
-          onChange={(event) => onChange({ item_detail: event.target.value })}
-          placeholder="Description (optional)"
-          rows={Math.max(2, line.item_detail?.split("\n").length ?? 1)}
-          className="min-h-[2.75rem] w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground shadow-sm focus-visible:ring-1 focus-visible:ring-ring"
-        />
+        {!isAddMode && useFloating ? (
+          <FloatingFieldShell
+            active={detailActive}
+            label="Description"
+            className="min-h-[2.75rem] items-stretch"
+          >
+            <Textarea
+              value={line.item_detail ?? ""}
+              onChange={(event) =>
+                onChange({ item_detail: event.target.value })
+              }
+              onFocus={() => setDetailFocused(true)}
+              onBlur={() => setDetailFocused(false)}
+              placeholder=" "
+              rows={Math.max(2, line.item_detail?.split("\n").length ?? 1)}
+              className={cn(
+                floatingFieldControlClassName,
+                "h-auto min-h-[2.75rem] resize-y py-2 leading-relaxed whitespace-pre-wrap text-muted-foreground",
+              )}
+            />
+          </FloatingFieldShell>
+        ) : null}
+        {!isAddMode && !useFloating ? (
+          <Textarea
+            value={line.item_detail ?? ""}
+            onChange={(event) => onChange({ item_detail: event.target.value })}
+            placeholder="Description (optional)"
+            rows={Math.max(2, line.item_detail?.split("\n").length ?? 1)}
+            className="min-h-[2.75rem] w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground shadow-sm focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        ) : null}
       </div>
 
       <ServiceCatalogItemDialog

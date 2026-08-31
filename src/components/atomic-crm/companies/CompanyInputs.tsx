@@ -21,6 +21,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Company, OrganizationMember } from "../types";
 import { getCompanyAvatarFallback } from "./CompanyAvatar";
 import { sizes } from "./sizes";
+import { CreateFormSection } from "@/modules/shared/createForm/CreateFormLayout";
 
 const isUrl = (url: string) => {
   if (!url) return;
@@ -85,10 +86,12 @@ const CompanyDisplayInputs = () => {
       ) : (
         <TextInput
           source="name"
+          label="Company name"
           className="w-full h-fit"
           validate={required()}
           helperText={false}
           placeholder="Company name"
+          labelVariant="floating"
         />
       )}
     </div>
@@ -97,35 +100,53 @@ const CompanyDisplayInputs = () => {
 
 const CompanyContactInputs = () => {
   return (
-    <div className="flex flex-col gap-4">
-      <h6 className="text-lg font-semibold">Contact</h6>
-      <TextInput source="website" helperText={false} validate={isUrl} />
+    <CreateFormSection title="Contact">
+      <TextInput
+        source="website"
+        helperText={false}
+        validate={isUrl}
+        labelVariant="floating"
+      />
       <TextInput
         source="linkedin_url"
         helperText={false}
         validate={isLinkedinUrl}
+        labelVariant="floating"
       />
-      <PhoneInput source="phone_number" helperText={false} />
-    </div>
+      <PhoneInput
+        source="phone_number"
+        helperText={false}
+        labelVariant="floating"
+      />
+    </CreateFormSection>
   );
 };
 
 const CompanyContextInputs = () => {
   const { companySectors } = useConfigurationContext();
   return (
-    <div className="flex flex-col gap-4">
-      <h6 className="text-lg font-semibold">Context</h6>
+    <CreateFormSection title="Context">
       <SelectInput
         source="sector"
         choices={companySectors}
         optionText="label"
         optionValue="value"
         helperText={false}
+        labelVariant="floating"
       />
-      <SelectInput source="size" choices={sizes} helperText={false} />
-      <TextInput source="revenue" helperText={false} />
-      <TextInput source="tax_identifier" helperText={false} />
-    </div>
+      <SelectInput
+        source="size"
+        choices={sizes}
+        helperText={false}
+        labelVariant="floating"
+      />
+      <TextInput source="revenue" helperText={false} labelVariant="floating" />
+      <TextInput
+        source="tax_identifier"
+        helperText={false}
+        labelVariant="floating"
+      />
+    </CreateFormSection>
   );
 };
 
@@ -134,35 +155,47 @@ const CompanyAddressInputs = () => {
   const placesEnabled = isGooglePlacesEnabled();
 
   return (
-    <div className="flex flex-col gap-4">
-      <h6 className="text-lg font-semibold">Address</h6>
+    <CreateFormSection title="Address">
       {placesEnabled ? (
         <GooglePlacesAutocompleteInput
           source="address"
-          label={false}
+          label="Street"
           mode="address"
           multiline
           helperText={false}
+          labelVariant="floating"
           onPlaceDetails={(details) =>
             applyGoogleAddressToCompanyForm(setValue, details)
           }
         />
       ) : (
-        <TextInput source="address" helperText={false} />
+        <TextInput
+          source="address"
+          helperText={false}
+          labelVariant="floating"
+        />
       )}
-      <TextInput source="city" helperText={false} />
-      <TextInput source="zipcode" helperText={false} />
-      <TextInput source="state_abbr" helperText={false} />
-      <TextInput source="country" helperText={false} />
-    </div>
+      <TextInput source="city" helperText={false} labelVariant="floating" />
+      <TextInput source="zipcode" helperText={false} labelVariant="floating" />
+      <TextInput
+        source="state_abbr"
+        helperText={false}
+        labelVariant="floating"
+      />
+      <TextInput source="country" helperText={false} labelVariant="floating" />
+    </CreateFormSection>
   );
 };
 
 const CompanyAdditionalInformationInputs = () => {
   return (
-    <div className="flex flex-col gap-4">
-      <h6 className="text-lg font-semibold">Additional information</h6>
-      <TextInput source="description" multiline helperText={false} />
+    <CreateFormSection title="Additional information">
+      <TextInput
+        source="description"
+        multiline
+        helperText={false}
+        labelVariant="floating"
+      />
       <ArrayInput source="context_links" helperText={false}>
         <SimpleFormIterator disableReordering fullWidth getItemLabel={false}>
           <TextInput
@@ -173,14 +206,13 @@ const CompanyAdditionalInformationInputs = () => {
           />
         </SimpleFormIterator>
       </ArrayInput>
-    </div>
+    </CreateFormSection>
   );
 };
 
 const CompanyAccountManagerInput = () => {
   return (
-    <div className="flex flex-col gap-4">
-      <h6 className="text-lg font-semibold">Account manager</h6>
+    <CreateFormSection title="Account manager">
       <ReferenceInput
         source="organization_member_id"
         reference="organization_members"
@@ -192,9 +224,10 @@ const CompanyAccountManagerInput = () => {
           label="Account manager"
           helperText={false}
           optionText={saleOptionRenderer}
+          labelVariant="floating"
         />
       </ReferenceInput>
-    </div>
+    </CreateFormSection>
   );
 };
 

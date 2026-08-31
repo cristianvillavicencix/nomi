@@ -57,6 +57,7 @@ import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import { CONTACT_STATUS_FILTER } from "@/modules/shared/relatedFilters";
 import type { Ticket } from "@/modules/types";
 import { patchTicketInQueryCache } from "@/modules/tickets/ticketsRealtimeCache";
+import { CreateFormFieldRow } from "@/modules/shared/createForm/CreateFormLayout";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -535,6 +536,7 @@ const EditTicketDialogBody = ({
             mode="address"
             placeholder="Job site address or search on Google…"
             helperText="Pick a Google address suggestion, or type any subject."
+            labelVariant="floating"
             validate={(value) =>
               typeof value === "string" && value.trim().length > 0
                 ? undefined
@@ -549,24 +551,29 @@ const EditTicketDialogBody = ({
             }}
           />
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <CreateFormFieldRow>
             <SelectInput
               source="priority"
               label="Priority"
               choices={priorityChoices}
               helperText={false}
+              labelVariant="floating"
             />
             <SelectInput
               source="status"
               label="Status"
               choices={statusChoices}
               helperText={false}
+              labelVariant="floating"
             />
-          </div>
+          </CreateFormFieldRow>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <CreateFormFieldRow>
             <ReferenceInput source="company_id" reference="companies">
-              <AutocompleteCompanyInput label="Account" />
+              <AutocompleteCompanyInput
+                label="Account"
+                labelVariant="floating"
+              />
             </ReferenceInput>
             <SelectInput
               source="contact_id"
@@ -577,8 +584,9 @@ const EditTicketDialogBody = ({
               helperText={false}
               disabled={!companyId}
               emptyText={contactEmptyText}
+              labelVariant="floating"
             />
-          </div>
+          </CreateFormFieldRow>
 
           {activeContact || company ? (
             <TicketClientSummaryCard
@@ -632,11 +640,13 @@ const EditTicketDialogBody = ({
                   source="requester_name"
                   label="Recipient name"
                   helperText={false}
+                  labelVariant="floating"
                 />
                 <TextInput
                   source="requester_email"
                   label="Recipient email"
                   helperText={false}
+                  labelVariant="floating"
                 />
               </div>
             </div>

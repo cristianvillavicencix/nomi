@@ -376,14 +376,21 @@ const UserFormFields = ({
           source="first_name"
           validate={required()}
           helperText={false}
+          labelVariant="floating"
         />
         <TextInput
           source="last_name"
           validate={required()}
           helperText={false}
+          labelVariant="floating"
         />
       </div>
-      <EmailInput source="email" validate={required()} helperText={false} />
+      <EmailInput
+        source="email"
+        validate={required()}
+        helperText={false}
+        labelVariant="floating"
+      />
       {mode === "create" ? (
         <p className="text-xs text-muted-foreground">
           We&apos;ll email them an invitation link so they can choose their own

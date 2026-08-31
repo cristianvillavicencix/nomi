@@ -270,23 +270,27 @@ const NewDealDialogBody = ({
                 ? undefined
                 : "Deal name is required"
             }
+            labelVariant="floating"
           />
           <SelectInput
             source="stage"
             label="Stage"
             choices={stageChoices}
             helperText={false}
+            labelVariant="floating"
           />
           <NumberInput
             source="amount"
             label="Amount"
             helperText={false}
             min={0}
+            labelVariant="floating"
           />
           <DateInput
             source="expected_closing_date"
             label="Expected close date"
             helperText={false}
+            labelVariant="floating"
           />
           <SelectInput
             source="contact_id"
@@ -296,6 +300,7 @@ const NewDealDialogBody = ({
             optionValue="id"
             helperText={false}
             emptyText="No contacts for this company"
+            labelVariant="floating"
           />
           <ReferenceInput
             source="organization_member_id"
@@ -307,6 +312,7 @@ const NewDealDialogBody = ({
               optionText={getMemberOptionText}
               helperText={false}
               validate={(value) => (value ? undefined : "Owner is required")}
+              labelVariant="floating"
             />
           </ReferenceInput>
           <TextInput
@@ -315,6 +321,7 @@ const NewDealDialogBody = ({
             multiline
             rows={3}
             helperText={false}
+            labelVariant="floating"
           />
         </div>
       </div>

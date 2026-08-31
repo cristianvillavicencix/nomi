@@ -21,6 +21,9 @@ import {
   normalizeSubscriptionLineItems,
   reactivateStripeSubscription,
   resolveSubscriptionBillingEmail,
+  setClientSubscriptionPaymentMethod,
+  listClientSubscriptionPaymentMethods,
+  detachClientSubscriptionPaymentMethod,
   sumSubscriptionLineItemsAmount,
   updateStripeSubscriptionBilling,
   type BillingInterval,
@@ -39,6 +42,10 @@ type ManageBody = {
     | "undo_cancel"
     | "reactivate"
     | "send_setup"
+    | "request_card_update"
+    | "update_payment_method"
+    | "list_payment_methods"
+    | "detach_payment_method"
     | "update"
     | "apply_payment"
     | "sync_stripe";
@@ -59,6 +66,8 @@ type ManageBody = {
   message?: string | null;
   subject?: string | null;
   base_url?: string | null;
+  /** Days until Stripe auto-resumes a pause. Null/omit = until manual resume. */
+  pause_days?: number | null;
 };
 
 const loadSubscription = async (orgId: number, subscriptionId: number) => {
@@ -155,7 +164,21 @@ Deno.serve(
           );
         }
 
-        if (action === "send_setup") {
+        if (action === "send_setup" || action === "request_card_update") {
+          const isCardUpdate = action === "request_card_update";
+          if (
+            isCardUpdate &&
+            (subscription.status === "canceled" ||
+              subscription.status === "pending_setup")
+          ) {
+            return createErrorResponse(
+              400,
+              subscription.status === "pending_setup"
+                ? "Use Finish setup to collect the first card for this subscription"
+                : "Cannot update the card on a canceled subscription",
+            );
+          }
+
           const stripeCustomerId = await ensureSubscriptionStripeCustomer(
             stripe,
             supabaseAdmin,
@@ -188,14 +211,19 @@ Deno.serve(
             return createErrorResponse(500, "Stripe did not return a checkout URL");
           }
 
+          const checkoutPatch: Record<string, unknown> = {
+            stripe_checkout_session_id: session.id,
+            setup_checkout_url: checkoutUrl,
+            updated_at: new Date().toISOString(),
+          };
+          // First-time setup only — never demote an active/paused/past_due sub.
+          if (!isCardUpdate) {
+            checkoutPatch.status = "pending_setup";
+          }
+
           await supabaseAdmin
             .from("client_subscriptions")
-            .update({
-              stripe_checkout_session_id: session.id,
-              setup_checkout_url: checkoutUrl,
-              status: "pending_setup",
-              updated_at: new Date().toISOString(),
-            })
+            .update(checkoutPatch)
             .eq("id", subscription.id);
 
           let recipientEmail = await resolveSubscriptionBillingEmail(
@@ -222,7 +250,11 @@ Deno.serve(
             baseUrl,
             emailTo: recipientEmail,
             smsTo: body.sms_to,
-            subject: body.subject,
+            subject:
+              body.subject ??
+              (isCardUpdate
+                ? `${org?.name ?? "Latino Business Support"}: Update card for ${subscription.name}`
+                : undefined),
             message: body.message,
             sendEmail: body.send_email,
             sendSms: body.send_sms,
@@ -245,6 +277,68 @@ Deno.serve(
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
+        }
+
+        if (action === "update_payment_method") {
+          const paymentMethodId = body.payment_method_id?.trim();
+          if (!paymentMethodId) {
+            return createErrorResponse(400, "payment_method_id is required");
+          }
+          if (
+            subscription.status === "canceled" ||
+            subscription.status === "pending_setup"
+          ) {
+            return createErrorResponse(
+              400,
+              subscription.status === "pending_setup"
+                ? "Finish setup before changing the billing card"
+                : "Cannot update the card on a canceled subscription",
+            );
+          }
+
+          const result = await setClientSubscriptionPaymentMethod(
+            stripe,
+            supabaseAdmin,
+            {
+              subscription,
+              paymentMethodId,
+            },
+          );
+
+          return new Response(JSON.stringify(result), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (action === "list_payment_methods") {
+          const result = await listClientSubscriptionPaymentMethods(
+            stripe,
+            subscription,
+          );
+          return new Response(JSON.stringify(result), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (action === "detach_payment_method") {
+          const paymentMethodId = body.payment_method_id?.trim();
+          if (!paymentMethodId) {
+            return createErrorResponse(400, "payment_method_id is required");
+          }
+          const result = await detachClientSubscriptionPaymentMethod(
+            stripe,
+            supabaseAdmin,
+            {
+              subscription,
+              paymentMethodId,
+            },
+          );
+          return new Response(JSON.stringify(result), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
 
         if (action === "apply_payment") {
@@ -543,9 +637,27 @@ Deno.serve(
         const now = new Date().toISOString();
 
         switch (action) {
-          case "pause":
+          case "pause": {
+            const pauseDaysRaw = body.pause_days;
+            const pauseDays =
+              pauseDaysRaw == null || pauseDaysRaw === undefined
+                ? null
+                : Number(pauseDaysRaw);
+            const pauseCollection: {
+              behavior: "mark_uncollectible";
+              resumes_at?: number;
+            } = { behavior: "mark_uncollectible" };
+            if (
+              pauseDays != null &&
+              Number.isFinite(pauseDays) &&
+              pauseDays > 0
+            ) {
+              pauseCollection.resumes_at = Math.floor(
+                (Date.now() + pauseDays * 24 * 60 * 60 * 1000) / 1000,
+              );
+            }
             updatedSub = await stripe.subscriptions.update(stripeSubId, {
-              pause_collection: { behavior: "mark_uncollectible" },
+              pause_collection: pauseCollection,
             });
             await applyStripeSubscriptionSnapshot(
               supabaseAdmin,
@@ -553,6 +665,7 @@ Deno.serve(
               updatedSub,
             );
             break;
+          }
           case "resume":
             updatedSub = await stripe.subscriptions.update(stripeSubId, {
               pause_collection: "",

@@ -118,18 +118,44 @@ export const PersonMoreOptionsSection = ({
             label="Street"
             mode="address"
             helperText={false}
+            labelVariant="floating"
             onPlaceDetails={handlePlaceDetails}
           />
         ) : (
-          <TextInput source="address" label="Street" helperText={false} />
+          <TextInput
+            source="address"
+            label="Street"
+            helperText={false}
+            labelVariant="floating"
+          />
         )}
         <div className="grid gap-4 md:grid-cols-2">
-          <TextInput source="city" label="City" helperText={false} />
-          <TextInput source="zipcode" label="Zip code" helperText={false} />
+          <TextInput
+            source="city"
+            label="City"
+            helperText={false}
+            labelVariant="floating"
+          />
+          <TextInput
+            source="zipcode"
+            label="Zip code"
+            helperText={false}
+            labelVariant="floating"
+          />
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          <TextInput source="state_abbr" label="State" helperText={false} />
-          <TextInput source="country" label="Country" helperText={false} />
+          <TextInput
+            source="state_abbr"
+            label="State"
+            helperText={false}
+            labelVariant="floating"
+          />
+          <TextInput
+            source="country"
+            label="Country"
+            helperText={false}
+            labelVariant="floating"
+          />
         </div>
 
         {leadType === "business" ? (
@@ -140,6 +166,7 @@ export const PersonMoreOptionsSection = ({
             optionText="name"
             helperText={false}
             emptyText="Select role"
+            labelVariant="floating"
           />
         ) : (
           <TextInput
@@ -147,6 +174,7 @@ export const PersonMoreOptionsSection = ({
             label="Title / role"
             helperText={false}
             placeholder="Owner, Office manager, Estimator…"
+            labelVariant="floating"
           />
         )}
 
@@ -155,6 +183,7 @@ export const PersonMoreOptionsSection = ({
           label="Notes"
           multiline
           helperText={false}
+          labelVariant="floating"
         />
 
         {showInactiveDirectoryStatus ? (
@@ -167,6 +196,7 @@ export const PersonMoreOptionsSection = ({
               name: entry.label,
             }))}
             validate={required()}
+            labelVariant="floating"
           />
         ) : null}
       </div>
