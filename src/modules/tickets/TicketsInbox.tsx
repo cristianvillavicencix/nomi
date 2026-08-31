@@ -467,7 +467,7 @@ const TicketsInboxLayout = ({
               <ModuleSearchField
                 value={searchQuery}
                 onChange={handleSearch}
-                basePlaceholder="Search tickets, claims, clients"
+                basePlaceholder="Search tickets, emails, clients"
                 total={counts.all}
                 itemSingular="ticket"
               />
