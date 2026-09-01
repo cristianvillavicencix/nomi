@@ -2,10 +2,17 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
+import {
+  buildSubscriptionContractVariables,
+  mergeContractTerms,
+} from "../_shared/subscriptionContractTerms.ts";
 
 type GetBody = {
   short_code?: string;
 };
+
+const hasPlaceholders = (body?: string | null) =>
+  /\{\{\w+\}\}/.test(body ?? "");
 
 Deno.serve(
   OptionsMiddleware(async (req) => {
@@ -34,7 +41,7 @@ Deno.serve(
       const { data: subscription } = await supabaseAdmin
         .from("client_subscriptions")
         .select(
-          "id, name, amount, currency, billing_interval, line_items, status, subscription_number, enrollment_mode, agreement_terms_markdown, agreement_terms_version, agreement_contract_terms_id, agreement_signed_at, agreement_signatory_name, payment_method_last4, stripe_subscription_id, contact_id, company_id",
+          "id, name, amount, currency, billing_interval, line_items, status, subscription_number, description, enrollment_mode, agreement_terms_markdown, agreement_terms_version, agreement_contract_terms_id, agreement_signed_at, agreement_signatory_name, agreement_signed_ip, payment_method_last4, stripe_subscription_id, contact_id, company_id, created_by_member_id",
         )
         .eq("id", tokenRow.subscription_id)
         .eq("org_id", tokenRow.org_id)
@@ -44,7 +51,7 @@ Deno.serve(
         return createErrorResponse(404, "Invalid or expired link");
       }
 
-      const [{ data: org }, { data: contact }, { data: company }, { data: terms }] =
+      const [{ data: org }, { data: contact }, { data: company }, { data: terms }, { data: creator }] =
         await Promise.all([
           supabaseAdmin
             .from("organizations")
@@ -72,15 +79,26 @@ Deno.serve(
                 .eq("id", subscription.agreement_contract_terms_id)
                 .maybeSingle()
             : Promise.resolve({ data: null }),
+          subscription.created_by_member_id
+            ? supabaseAdmin
+                .from("organization_members")
+                .select("first_name, last_name")
+                .eq("id", subscription.created_by_member_id)
+                .maybeSingle()
+            : Promise.resolve({ data: null }),
         ]);
 
       const contactName = contact
         ? [contact.first_name, contact.last_name].filter(Boolean).join(" ").trim()
         : "";
-      const clientName =
-        contactName ||
-        (typeof company?.name === "string" ? company.name.trim() : "") ||
-        "Client";
+      const companyName =
+        typeof company?.name === "string" ? company.name.trim() : "";
+      const clientName = companyName || contactName || "Client";
+      const clientRepresentative = contactName || null;
+      const providerRepresentative = creator
+        ? [creator.first_name, creator.last_name].filter(Boolean).join(" ").trim() ||
+          null
+        : null;
       const clientAddress = [
         company?.address,
         company?.city,
@@ -90,6 +108,46 @@ Deno.serve(
         .map((part) => (typeof part === "string" ? part.trim() : ""))
         .filter(Boolean)
         .join(", ") || "—";
+
+      let termsMarkdown = String(subscription.agreement_terms_markdown ?? "");
+      if (hasPlaceholders(termsMarkdown)) {
+        const lineItems = Array.isArray(subscription.line_items)
+          ? subscription.line_items
+          : [];
+        const vars = buildSubscriptionContractVariables({
+          clientName,
+          clientAddress,
+          clientRepresentative,
+          providerRepresentative,
+          subscriptionDescription: subscription.description ?? null,
+          subscriptionName: subscription.name ?? "Subscription",
+          subscriptionNumber: subscription.subscription_number ?? null,
+          amount: Number(subscription.amount) || 0,
+          currency: subscription.currency ?? "USD",
+          billingInterval: subscription.billing_interval ?? "monthly",
+          lineItems,
+          termsVersion:
+            subscription.agreement_terms_version ?? terms?.version ?? "1.0",
+        });
+        const signedAt = subscription.agreement_signed_at?.slice(0, 10);
+        if (signedAt) {
+          vars.signed_at = signedAt;
+          vars.accepted_at = signedAt;
+          vars.contract_date = signedAt;
+        }
+        if (subscription.agreement_signed_ip?.trim()) {
+          vars.signed_ip = subscription.agreement_signed_ip.trim();
+        }
+        termsMarkdown = mergeContractTerms(termsMarkdown, vars);
+        // Persist repair so staff overview and future opens stay filled.
+        await supabaseAdmin
+          .from("client_subscriptions")
+          .update({
+            agreement_terms_markdown: termsMarkdown,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", subscription.id);
+      }
 
       const alreadyActive =
         subscription.status === "active" ||
@@ -104,17 +162,20 @@ Deno.serve(
           subscription_id: subscription.id,
           subscription_name: subscription.name,
           subscription_number: subscription.subscription_number ?? null,
+          subscription_description: subscription.description ?? null,
           amount: Number(subscription.amount),
           currency: subscription.currency ?? "USD",
           billing_interval: subscription.billing_interval,
           line_items: Array.isArray(subscription.line_items)
             ? subscription.line_items
             : [],
-          terms_markdown: subscription.agreement_terms_markdown ?? "",
+          terms_markdown: termsMarkdown,
           terms_version: subscription.agreement_terms_version ?? terms?.version ?? null,
           contract_title: terms?.title ?? null,
           organization_name: org?.name ?? null,
           client_name: clientName,
+          client_representative: clientRepresentative,
+          provider_representative: providerRepresentative,
           client_address: clientAddress,
           status: subscription.status,
           already_active: alreadyActive,

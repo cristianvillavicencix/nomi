@@ -271,6 +271,46 @@ const chooseBestInboundHtmlBody = (rawHtml: string, strippedHtml: string) => {
   return stripped;
 };
 
+const attachmentReferenceName = (file: Attachment) => {
+  const ref = file.path?.trim() || file.src?.trim() || file.title?.trim() || "";
+  return ref.split(/[/\\]/).pop()?.toLowerCase() ?? "";
+};
+
+/** Match cid: tokens to MIME Content-ID or Gmail-style filename references. */
+export const findAttachmentForCidReference = (
+  attachments: Attachment[],
+  cidValue: string,
+): Attachment | undefined => {
+  const bareCid = String(cidValue)
+    .replace(/^<|>$/g, "")
+    .replace(/^cid:/i, "")
+    .toLowerCase();
+  if (!bareCid) return undefined;
+
+  return attachments.find((file) => {
+    const id = file.contentId?.trim();
+    if (id) {
+      const bare = id.replace(/^<|>$/g, "").replace(/^cid:/i, "");
+      const bareLower = bare.toLowerCase();
+      if (
+        id.toLowerCase() === bareCid ||
+        bareLower === bareCid ||
+        bareCid.startsWith(bareLower) ||
+        bareLower.startsWith(bareCid)
+      ) {
+        return true;
+      }
+    }
+
+    const fileName = attachmentReferenceName(file);
+    const ref = (file.path?.trim() || file.src?.trim() || "").toLowerCase();
+    return bareCid === fileName || bareCid === ref;
+  });
+};
+
+const htmlHasUnresolvedInlineImages = (html: string) =>
+  /src=(["']?)cid:/i.test(html);
+
 /** Replace cid: inline image references with uploaded attachment URLs. */
 export const rewriteInlineAttachmentImages = (
   htmlBody: string | null | undefined,
@@ -293,18 +333,7 @@ export const rewriteInlineAttachmentImages = (
   result = result.replace(
     /src=(["']?)cid:([^"'\s>]+)\1/gi,
     (_match, quote, cidValue) => {
-      const bareCid = String(cidValue).replace(/^<|>$/g, "");
-      const attachment = attachments.find((file) => {
-        const id = file.contentId?.trim();
-        if (!id) return false;
-        const bare = id.replace(/^<|>$/g, "").replace(/^cid:/i, "");
-        return (
-          id === bareCid ||
-          bare === bareCid ||
-          bareCid.startsWith(bare) ||
-          bare.startsWith(bareCid)
-        );
-      });
+      const attachment = findAttachmentForCidReference(attachments, cidValue);
       return attachment ? `src=${quote}${attachment.src}${quote}` : _match;
     },
   );
@@ -327,7 +356,9 @@ const mergeHtmlWithInlineImages = (
 
   const block = `<div>${inline}</div>`;
   if (!htmlBody?.trim()) return block;
-  if (/<img\b/i.test(htmlBody)) return htmlBody;
+  if (/<img\b/i.test(htmlBody) && !htmlHasUnresolvedInlineImages(htmlBody)) {
+    return htmlBody;
+  }
   if (htmlBody.includes(inline.slice(0, 40))) return htmlBody;
   return `${htmlBody}${block}`;
 };

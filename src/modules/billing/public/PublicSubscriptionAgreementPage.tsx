@@ -115,6 +115,7 @@ export const PublicSubscriptionAgreementPage = () => {
   const model = {
     subscription_name: payload.subscription_name,
     subscription_number: payload.subscription_number,
+    subscription_description: payload.subscription_description,
     amount: payload.amount,
     currency: payload.currency,
     billing_interval: payload.billing_interval,
@@ -123,7 +124,9 @@ export const PublicSubscriptionAgreementPage = () => {
     contract_title: payload.contract_title,
     terms_version: payload.terms_version,
     organization_name: payload.organization_name,
+    provider_representative: payload.provider_representative,
     client_name: payload.client_name,
+    client_representative: payload.client_representative,
     client_address: payload.client_address,
   };
 

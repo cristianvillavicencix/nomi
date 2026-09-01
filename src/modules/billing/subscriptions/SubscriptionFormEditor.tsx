@@ -90,9 +90,11 @@ import { SubscriptionAgreementClientView } from "@/modules/billing/subscriptions
 import { SignedSubscriptionAgreementDialog } from "@/modules/billing/subscriptions/SignedSubscriptionAgreementDialog";
 import {
   buildSubscriptionContractVariables,
+  fillAgreementTermsMarkdown,
   mergeSubscriptionContractTerms,
   resolveDefaultContractTermsIdFromPackages,
 } from "@/modules/billing/subscriptions/subscriptionAgreementMerge";
+import { resolveFilledAgreementTermsMarkdown } from "@/modules/billing/subscriptions/resolveFilledAgreementTermsMarkdown";
 import type {
   OrganizationContractTerms,
   ServicePackage,
@@ -353,17 +355,25 @@ export const SubscriptionFormEditor = forwardRef<
     [contractTemplates, selectedContractTermsId],
   );
 
-  const clientDisplayName = useMemo(() => {
+  const clientCompanyName = useMemo(
+    () => billTo?.company?.name?.trim() || "",
+    [billTo],
+  );
+
+  const clientRepresentativeName = useMemo(() => {
     const contact = billTo?.contact;
-    if (contact) {
-      const name = [contact.first_name, contact.last_name]
-        .filter(Boolean)
-        .join(" ")
-        .trim();
-      if (name) return name;
-    }
-    return billTo?.company?.name?.trim() || "Client";
+    if (!contact) return "";
+    return [contact.first_name, contact.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
   }, [billTo]);
+
+  /** Legal client = company when available; otherwise the contact. */
+  const clientDisplayName = useMemo(
+    () => clientCompanyName || clientRepresentativeName || "Client",
+    [clientCompanyName, clientRepresentativeName],
+  );
 
   const clientAddress = useMemo(() => {
     const company = billTo?.company as
@@ -428,6 +438,9 @@ export const SubscriptionFormEditor = forwardRef<
     const vars = buildSubscriptionContractVariables({
       clientName: clientDisplayName,
       clientAddress,
+      clientRepresentative: clientRepresentativeName,
+      providerRepresentative: identity?.fullName?.trim() || null,
+      subscriptionDescription: null,
       subscriptionName: subscriptionNameFromLines(lines) || "Subscription",
       subscriptionNumber: null,
       amount: sumSubscriptionLinesAmount(lines),
@@ -446,7 +459,9 @@ export const SubscriptionFormEditor = forwardRef<
     termsEditMode,
     selectedTemplate,
     clientDisplayName,
+    clientRepresentativeName,
     clientAddress,
+    identity?.fullName,
     lines,
     billingInterval,
   ]);
@@ -652,6 +667,24 @@ export const SubscriptionFormEditor = forwardRef<
           if (!agreementTermsMarkdown.trim()) {
             throw new Error("Add terms before sending the agreement link");
           }
+          const filledTerms = fillAgreementTermsMarkdown(
+            agreementTermsMarkdown.trim(),
+            buildSubscriptionContractVariables({
+              clientName: clientDisplayName,
+              clientAddress,
+              clientRepresentative: clientRepresentativeName,
+              providerRepresentative: identity?.fullName?.trim() || null,
+              subscriptionDescription: null,
+              subscriptionName: subscriptionName || "Subscription",
+              subscriptionNumber: null,
+              amount,
+              currency: "USD",
+              billingInterval,
+              lineItems: lineItemsPayload,
+              termsVersion: selectedTemplate?.version || "1.0",
+              defaultVariables: selectedTemplate?.default_variables ?? null,
+            }),
+          );
           return dataProvider.createClientSubscription({
             company_id: billTo?.companyId ?? null,
             contact_id: billTo?.contactId ?? null,
@@ -664,7 +697,7 @@ export const SubscriptionFormEditor = forwardRef<
             ends_at: endsAtIso,
             enrollment_mode: "agreement",
             agreement_contract_terms_id: selectedContractTermsId,
-            agreement_terms_markdown: agreementTermsMarkdown.trim(),
+            agreement_terms_markdown: filledTerms,
             line_items: lineItemsPayload,
             send_email: sendEmail,
             send_sms: sendSms,
@@ -1675,7 +1708,9 @@ export const SubscriptionFormEditor = forwardRef<
                   contract_title: selectedTemplate?.title ?? null,
                   terms_version: selectedTemplate?.version ?? null,
                   organization_name: orgTitle || "Provider",
+                  provider_representative: identity?.fullName?.trim() || null,
                   client_name: clientDisplayName,
+                  client_representative: clientRepresentativeName || null,
                   client_address: clientAddress,
                 }}
               />
@@ -1687,10 +1722,31 @@ export const SubscriptionFormEditor = forwardRef<
       <SignedSubscriptionAgreementDialog
         open={signedAgreementOpen}
         onOpenChange={setSignedAgreementOpen}
-        termsMarkdown={subscription?.agreement_terms_markdown}
+        termsMarkdown={
+          subscription
+            ? resolveFilledAgreementTermsMarkdown({
+                markdown: subscription.agreement_terms_markdown,
+                subscription,
+                clientName: clientDisplayName,
+                clientAddress,
+                clientRepresentative: clientRepresentativeName,
+                providerRepresentative: identity?.fullName?.trim() || null,
+              })
+            : null
+        }
         signatoryName={subscription?.agreement_signatory_name}
         signedAt={subscription?.agreement_signed_at}
         signaturePng={subscription?.agreement_signature_png}
+        clientCompany={clientDisplayName}
+        clientRepresentative={
+          clientRepresentativeName ||
+          subscription?.agreement_signatory_name ||
+          null
+        }
+        providerRepresentative={identity?.fullName?.trim() || null}
+        clientAddress={clientAddress}
+        subscriptionName={subscription?.name ?? subscriptionName}
+        subscriptionDescription={subscription?.description ?? null}
       />
     </div>
   );

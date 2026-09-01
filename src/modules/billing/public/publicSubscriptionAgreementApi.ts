@@ -37,6 +37,7 @@ export type PublicSubscriptionAgreementPayload = {
   subscription_id: number;
   subscription_name: string;
   subscription_number?: string | null;
+  subscription_description?: string | null;
   amount: number;
   currency: string;
   billing_interval: "weekly" | "monthly" | "yearly";
@@ -46,6 +47,8 @@ export type PublicSubscriptionAgreementPayload = {
   contract_title?: string | null;
   organization_name?: string | null;
   client_name?: string | null;
+  client_representative?: string | null;
+  provider_representative?: string | null;
   client_address?: string | null;
   status?: string | null;
   already_active?: boolean;

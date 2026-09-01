@@ -14,6 +14,28 @@ describe("mergeSubscriptionContractTerms", () => {
       ),
     ).toBe("Hello Acme LLC — .");
   });
+
+  it("fills leftovers when staff pasted an unmerged template", () => {
+    const raw =
+      "Client {{client_name}} at {{client_address}}. Total {{total_amount}}.";
+    expect(
+      mergeSubscriptionContractTerms(raw, {
+        client_name: "Acme",
+        client_address: "1 Main",
+        total_amount: "$10.00",
+      }),
+    ).toBe("Client Acme at 1 Main. Total $10.00.");
+  });
+});
+
+describe("hasUnmergedContractPlaceholders", () => {
+  it("detects brace placeholders", async () => {
+    const { hasUnmergedContractPlaceholders } = await import(
+      "./subscriptionAgreementMerge"
+    );
+    expect(hasUnmergedContractPlaceholders("Hi {{client_name}}")).toBe(true);
+    expect(hasUnmergedContractPlaceholders("Hi Acme")).toBe(false);
+  });
 });
 
 describe("buildSubscriptionContractVariables", () => {
@@ -30,10 +52,28 @@ describe("buildSubscriptionContractVariables", () => {
       termsVersion: "1.0",
     });
     expect(vars.client_name).toBe("Jane Doe");
+    expect(vars.client_company).toBe("Jane Doe");
+    expect(vars.client_representative).toBe("—");
     expect(vars.total_amount).toContain("99");
     expect(vars.line_items).toContain("Care plan");
     expect(vars.subscription_number_line).toBe(" (SUB-1)");
     expect(vars.proposal_number).toBe("SUB-1");
+  });
+
+  it("keeps company and representative distinct", () => {
+    const vars = buildSubscriptionContractVariables({
+      clientName: "Acme LLC",
+      clientRepresentative: "Jane Doe",
+      subscriptionDescription: "Monthly ads support",
+      subscriptionName: "Ads",
+      amount: 50,
+      billingInterval: "monthly",
+      lineItems: [],
+      termsVersion: "1.0",
+    });
+    expect(vars.client_name).toBe("Acme LLC");
+    expect(vars.client_representative).toBe("Jane Doe");
+    expect(vars.subscription_description_line).toContain("Monthly ads support");
   });
 });
 

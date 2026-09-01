@@ -1,8 +1,9 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { ExternalLink, FileText } from "lucide-react";
-import { useGetList, useGetMany } from "ra-core";
+import { useGetIdentity, useGetList, useGetMany } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
+import type { OrganizationMember } from "@/modules/types";
 import { getClientShowPath } from "@/app/routing";
 import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
 import {
@@ -31,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SignedSubscriptionAgreementDialog } from "@/modules/billing/subscriptions/SignedSubscriptionAgreementDialog";
+import { resolveFilledAgreementTermsMarkdown } from "@/modules/billing/subscriptions/resolveFilledAgreementTermsMarkdown";
 
 type SubscriptionOverviewTabProps = {
   subscription: ClientSubscription;
@@ -85,6 +87,7 @@ export const SubscriptionOverviewTab = ({
   subscription,
 }: SubscriptionOverviewTabProps) => {
   const [signedAgreementOpen, setSignedAgreementOpen] = useState(false);
+  const { identity } = useGetIdentity();
   const { data: companies = [] } = useGetMany<Company>(
     "companies",
     { ids: subscription.company_id ? [subscription.company_id] : [] },
@@ -95,11 +98,32 @@ export const SubscriptionOverviewTab = ({
     { ids: subscription.contact_id ? [subscription.contact_id] : [] },
     { enabled: Boolean(subscription.contact_id) },
   );
+  const { data: creators = [] } = useGetMany<OrganizationMember>(
+    "organization_members",
+    {
+      ids: subscription.created_by_member_id
+        ? [subscription.created_by_member_id]
+        : [],
+    },
+    { enabled: Boolean(subscription.created_by_member_id) },
+  );
 
   const company = companies[0];
   const contact = contacts[0];
+  const clientCompanyLabel = company?.name?.trim() || null;
+  const clientRepresentativeLabel =
+    formatContactName(contact)?.trim() ||
+    subscription.agreement_signatory_name?.trim() ||
+    null;
+  const providerRepresentativeLabel =
+    [creators[0]?.first_name, creators[0]?.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim() ||
+    identity?.fullName?.trim() ||
+    null;
   const clientLabel =
-    company?.name ?? formatContactName(contact) ?? "No customer";
+    clientCompanyLabel ?? clientRepresentativeLabel ?? "No customer";
   const email = resolveBillingRecipientEmail({ company, contact });
   const phone = resolveBillingRecipientPhone({ company, contact });
   const address = company ? resolveCompanyAddressForDisplay(company) : "—";
@@ -110,6 +134,25 @@ export const SubscriptionOverviewTab = ({
   const lineItems = useMemo(
     () => parseLineItems(subscription),
     [subscription],
+  );
+
+  const filledAgreementMarkdown = useMemo(
+    () =>
+      resolveFilledAgreementTermsMarkdown({
+        markdown: subscription.agreement_terms_markdown,
+        subscription,
+        clientName: clientLabel,
+        clientAddress: address === "—" ? null : address,
+        clientRepresentative: clientRepresentativeLabel,
+        providerRepresentative: providerRepresentativeLabel,
+      }),
+    [
+      subscription,
+      clientLabel,
+      clientRepresentativeLabel,
+      providerRepresentativeLabel,
+      address,
+    ],
   );
 
   const { data: relatedInvoices = [] } = useGetList<ClientInvoice>(
@@ -377,10 +420,16 @@ export const SubscriptionOverviewTab = ({
       <SignedSubscriptionAgreementDialog
         open={signedAgreementOpen}
         onOpenChange={setSignedAgreementOpen}
-        termsMarkdown={subscription.agreement_terms_markdown}
+        termsMarkdown={filledAgreementMarkdown}
         signatoryName={subscription.agreement_signatory_name}
         signedAt={subscription.agreement_signed_at}
         signaturePng={subscription.agreement_signature_png}
+        clientCompany={clientCompanyLabel ?? clientLabel}
+        clientRepresentative={clientRepresentativeLabel}
+        providerRepresentative={providerRepresentativeLabel}
+        clientAddress={address === "—" ? null : address}
+        subscriptionName={subscription.name}
+        subscriptionDescription={subscription.description}
       />
     </div>
   );

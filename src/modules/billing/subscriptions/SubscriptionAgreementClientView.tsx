@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 export type SubscriptionAgreementClientViewModel = {
   subscription_name: string;
   subscription_number?: string | null;
+  subscription_description?: string | null;
   amount: number;
   currency?: string;
   billing_interval: "weekly" | "monthly" | "yearly";
@@ -18,7 +19,9 @@ export type SubscriptionAgreementClientViewModel = {
   contract_title?: string | null;
   terms_version?: string | null;
   organization_name?: string | null;
+  provider_representative?: string | null;
   client_name?: string | null;
+  client_representative?: string | null;
   client_address?: string | null;
 };
 
@@ -50,7 +53,8 @@ export const SubscriptionAgreementClientView = ({
   const lines = Array.isArray(model.line_items) ? model.line_items : [];
   const currency = model.currency || "USD";
   const provider = model.organization_name?.trim() || "Provider";
-  const client = model.client_name?.trim() || "Client";
+  const clientCompany = model.client_name?.trim() || "Client";
+  const clientRepresentative = model.client_representative?.trim() || null;
 
   return (
     <div className={cn("flex w-full flex-col gap-5", className)}>
@@ -68,6 +72,11 @@ export const SubscriptionAgreementClientView = ({
         <h1 className="text-xl font-semibold tracking-tight">
           {model.subscription_name || "Subscription"}
         </h1>
+        {model.subscription_description?.trim() ? (
+          <p className="text-sm text-muted-foreground">
+            {model.subscription_description.trim()}
+          </p>
+        ) : null}
         {model.subscription_number ? (
           <p className="text-sm text-muted-foreground">
             {model.subscription_number}
@@ -87,12 +96,22 @@ export const SubscriptionAgreementClientView = ({
             Provider
           </p>
           <p className="text-sm font-medium">{provider}</p>
+          {model.provider_representative?.trim() ? (
+            <p className="text-xs text-muted-foreground">
+              Representative: {model.provider_representative.trim()}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-1">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Client
+            Client company
           </p>
-          <p className="text-sm font-medium">{client}</p>
+          <p className="text-sm font-medium">{clientCompany}</p>
+          {clientRepresentative ? (
+            <p className="text-xs text-muted-foreground">
+              Representative: {clientRepresentative}
+            </p>
+          ) : null}
           {model.client_address?.trim() ? (
             <p className="text-xs text-muted-foreground">
               {model.client_address}

@@ -10,9 +10,12 @@ export const LBS_DEFAULT_CONTRACT_TERMS_BODY = `# Términos y Condiciones del Se
 
 ## 1. Partes del Acuerdo
 
-Este Acuerdo de Servicios ("Acuerdo") se celebra entre **Latinos Business Support LLC** ("LBS", "nosotros", "el Proveedor"), con domicilio en Stamford, Connecticut, y **{{client_name}}** ("el Cliente", "usted"), con domicilio en {{client_address}}, con fecha de **{{contract_date}}**.
+Este Acuerdo de Servicios ("Acuerdo") se celebra entre **Latinos Business Support LLC** ("LBS", representado(a) por **{{provider_representative}}**, "nosotros", "el Proveedor"), con domicilio en Stamford, Connecticut, y **{{client_name}}** ("el Cliente", "usted"), con domicilio en {{client_address}}, representado(a) por **{{client_representative}}**, con fecha de **{{contract_date}}**.
 
-Este Acuerdo se basa en la Propuesta N.º **{{proposal_number}}** aceptada por el Cliente el **{{accepted_at}}**, la cual se incorpora por referencia.
+Suscripción: **{{subscription_name}}**{{subscription_number_line}}.
+{{subscription_description_line}}
+
+Este Acuerdo se basa en la suscripción / propuesta N.º **{{proposal_number}}** aceptada por el Cliente el **{{accepted_at}}**, la cual se incorpora por referencia.
 
 ## 2. Alcance del Servicio (Scope)
 

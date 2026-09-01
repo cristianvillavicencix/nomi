@@ -10,6 +10,10 @@ import {
   type ClientSubscriptionRow,
 } from "../_shared/clientSubscriptionStripe.ts";
 import { ensureSubscriptionAgreementShareLink } from "../_shared/clientSubscriptionSetupLink.ts";
+import {
+  buildSubscriptionContractVariables,
+  mergeContractTerms,
+} from "../_shared/subscriptionContractTerms.ts";
 
 type SignBody = {
   short_code?: string;
@@ -20,8 +24,74 @@ type SignBody = {
 
 const clientIp = (req: Request) =>
   req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-  req.headers.get("x-real-ip") ??
+  req.headers.get("x-real-ip")?.trim() ??
   null;
+
+const resolveClientLabel = async (params: {
+  orgId: number;
+  companyId?: number | null;
+  contactId?: number | null;
+}) => {
+  let companyName = "";
+  let address = "—";
+  let representative = "";
+
+  if (params.companyId) {
+    const { data: company } = await supabaseAdmin
+      .from("companies")
+      .select("name, address, city, state_abbr, zipcode")
+      .eq("id", params.companyId)
+      .eq("org_id", params.orgId)
+      .maybeSingle();
+    if (company?.name?.trim()) {
+      companyName = company.name.trim();
+    }
+    const parts = [
+      company?.address,
+      company?.city,
+      company?.state_abbr,
+      company?.zipcode,
+    ]
+      .map((part) => (typeof part === "string" ? part.trim() : ""))
+      .filter(Boolean);
+    if (parts.length) address = parts.join(", ");
+  }
+  if (params.contactId) {
+    const { data: contact } = await supabaseAdmin
+      .from("contacts")
+      .select("first_name, last_name")
+      .eq("id", params.contactId)
+      .eq("org_id", params.orgId)
+      .maybeSingle();
+    representative = [contact?.first_name, contact?.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+  }
+  return {
+    name: companyName || representative || "Client",
+    address,
+    representative: representative || null,
+  };
+};
+
+const resolveProviderRepresentative = async (
+  orgId: number,
+  memberId?: number | null,
+) => {
+  if (!memberId) return null;
+  const { data: member } = await supabaseAdmin
+    .from("organization_members")
+    .select("first_name, last_name")
+    .eq("id", memberId)
+    .eq("org_id", orgId)
+    .maybeSingle();
+  const name = [member?.first_name, member?.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return name || null;
+};
 
 Deno.serve(
   OptionsMiddleware(async (req) => {
@@ -87,16 +157,58 @@ Deno.serve(
         }
 
         const now = new Date().toISOString();
+        const ip = clientIp(req);
+        const client = await resolveClientLabel({
+          orgId: tokenRow.org_id,
+          companyId: subscription.company_id,
+          contactId: subscription.contact_id,
+        });
+        const lineItems = Array.isArray(subscription.line_items)
+          ? subscription.line_items
+          : [];
+        const vars = buildSubscriptionContractVariables({
+          clientName: client.name,
+          clientAddress: client.address,
+          clientRepresentative: client.representative,
+          providerRepresentative: await resolveProviderRepresentative(
+            tokenRow.org_id,
+            subscription.created_by_member_id,
+          ),
+          subscriptionDescription: subscription.description ?? null,
+          subscriptionName: subscription.name ?? "Subscription",
+          subscriptionNumber: subscription.subscription_number ?? null,
+          amount: Number(subscription.amount) || 0,
+          currency: subscription.currency ?? "USD",
+          billingInterval: subscription.billing_interval ?? "monthly",
+          lineItems,
+          termsVersion: subscription.agreement_terms_version ?? "1.0",
+        });
+        vars.signed_at = now.slice(0, 10);
+        vars.accepted_at = now.slice(0, 10);
+        vars.signed_ip = ip ?? "—";
+        vars.contract_date = now.slice(0, 10);
+
+        const filledTerms = mergeContractTerms(
+          String(subscription.agreement_terms_markdown ?? ""),
+          vars,
+        );
+
         await supabaseAdmin
           .from("client_subscriptions")
           .update({
             agreement_signed_at: now,
             agreement_signatory_name: signatoryName,
             agreement_signature_png: signaturePng,
-            agreement_signed_ip: clientIp(req),
+            agreement_signed_ip: ip,
+            agreement_terms_markdown: filledTerms || null,
             updated_at: now,
           })
           .eq("id", subscription.id);
+
+        subscription.agreement_terms_markdown = filledTerms;
+        subscription.agreement_signed_at = now;
+        subscription.agreement_signatory_name = signatoryName;
+        subscription.agreement_signed_ip = ip;
       }
 
       const customerId = subscription.stripe_customer_id?.trim();

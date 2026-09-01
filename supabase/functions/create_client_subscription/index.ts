@@ -229,12 +229,16 @@ Deno.serve(
           }
 
           let clientAddress = "—";
+          let companyName = "";
           if (resolvedCompanyId) {
             const { data: company } = await supabaseAdmin
               .from("companies")
-              .select("address, city, state_abbr, zipcode")
+              .select("name, address, city, state_abbr, zipcode")
               .eq("id", resolvedCompanyId)
               .maybeSingle();
+            if (typeof company?.name === "string" && company.name.trim()) {
+              companyName = company.name.trim();
+            }
             const parts = [
               company?.address,
               company?.city,
@@ -248,33 +252,55 @@ Deno.serve(
             if (parts.length > 0) clientAddress = parts.join(", ");
           }
 
+          let representativeName = "";
+          if (contactId) {
+            const { data: contact } = await supabaseAdmin
+              .from("contacts")
+              .select("first_name, last_name")
+              .eq("id", contactId)
+              .maybeSingle();
+            representativeName = [contact?.first_name, contact?.last_name]
+              .filter(Boolean)
+              .join(" ")
+              .trim();
+          }
+
           const templateBody = picked?.body_markdown?.trim() || "";
           const defaults =
             (picked?.default_variables as Record<string, string> | null) ?? {};
 
-          // Staff-sent body (already merged or manually edited) wins; else merge template.
-          if (!agreementTermsMarkdown && templateBody) {
-            const vars = buildSubscriptionContractVariables({
-              clientName: clientInfo.name ?? "Client",
-              clientAddress,
-              subscriptionName: name,
-              subscriptionNumber: null,
-              amount,
-              currency: (body.currency ?? "USD").toUpperCase(),
-              billingInterval,
-              lineItems: normalizedLines,
-              termsVersion: agreementTermsVersion ?? "1.0",
-              defaultVariables: defaults,
-            });
-            agreementTermsMarkdown = mergeContractTerms(templateBody, vars);
-          }
-
-          if (!agreementTermsMarkdown) {
+          const sourceBody = agreementTermsMarkdown || templateBody;
+          if (!sourceBody) {
             return createErrorResponse(
               400,
               "Add subscription terms (or publish a contract template) before sending for signature",
             );
           }
+
+          // Always merge so leftover {{placeholders}} (or a raw template paste) get filled.
+          const vars = buildSubscriptionContractVariables({
+            clientName:
+              companyName ||
+              representativeName ||
+              clientInfo.name ||
+              "Client",
+            clientAddress,
+            clientRepresentative: representativeName || null,
+            providerRepresentative: [member.first_name, member.last_name]
+              .filter(Boolean)
+              .join(" ")
+              .trim() || null,
+            subscriptionDescription: body.description?.trim() || null,
+            subscriptionName: name,
+            subscriptionNumber: null,
+            amount,
+            currency: (body.currency ?? "USD").toUpperCase(),
+            billingInterval,
+            lineItems: normalizedLines,
+            termsVersion: agreementTermsVersion ?? "1.0",
+            defaultVariables: defaults,
+          });
+          agreementTermsMarkdown = mergeContractTerms(sourceBody, vars);
         }
 
         const { data: subscriptionNumber, error: numberError } =

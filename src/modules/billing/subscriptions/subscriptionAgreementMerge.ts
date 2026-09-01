@@ -6,6 +6,15 @@ export const mergeSubscriptionContractTerms = (
 ) =>
   body.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => variables[key] ?? "");
 
+export const hasUnmergedContractPlaceholders = (body?: string | null) =>
+  /\{\{\w+\}\}/.test(body ?? "");
+
+/** Merge again so leftover {{vars}} (or staff-pasted templates) get filled. */
+export const fillAgreementTermsMarkdown = (
+  body: string,
+  variables: Record<string, string>,
+) => mergeSubscriptionContractTerms(body, variables);
+
 export const formatSubscriptionContractMoney = (
   amount: number,
   currency = "USD",
@@ -64,6 +73,12 @@ export const resolveDefaultContractTermsIdFromPackages = (params: {
 export const buildSubscriptionContractVariables = (params: {
   clientName: string;
   clientAddress?: string | null;
+  /** Contact / signer acting for the client company. */
+  clientRepresentative?: string | null;
+  /** Staff member representing the provider (LBS). */
+  providerRepresentative?: string | null;
+  /** Optional notes from the subscription record. */
+  subscriptionDescription?: string | null;
   subscriptionName: string;
   subscriptionNumber?: string | null;
   amount: number;
@@ -77,17 +92,25 @@ export const buildSubscriptionContractVariables = (params: {
   const interval = params.billingInterval || "monthly";
   const number = params.subscriptionNumber?.trim() || "";
   const defaults = params.defaultVariables ?? {};
+  const company = params.clientName.trim() || "Client";
+  const representative = params.clientRepresentative?.trim() || "";
+  const providerRep =
+    params.providerRepresentative?.trim() || "Latinos Business Support LLC";
+  const description = params.subscriptionDescription?.trim() || "";
 
   return {
     ...defaults,
-    client_name: params.clientName.trim() || "Client",
+    client_name: company,
+    client_company: company,
+    client_representative: representative || "—",
     client_address: params.clientAddress?.trim() || "—",
+    provider_representative: providerRep,
     contract_date: new Date().toISOString().slice(0, 10),
     proposal_number: number || params.subscriptionName,
     accepted_at: new Date().toISOString().slice(0, 10),
     signed_at: "",
     signed_ip: "",
-    lbs_signatory: "Latinos Business Support LLC",
+    lbs_signatory: providerRep,
     line_items: buildSubscriptionLineItemsText(params.lineItems, currency),
     total_amount: formatSubscriptionContractMoney(params.amount, currency),
     deposit_amount: formatSubscriptionContractMoney(0, currency),
@@ -97,6 +120,10 @@ export const buildSubscriptionContractVariables = (params: {
     recurring_terms: `${formatSubscriptionContractMoney(params.amount, currency)} / ${interval}`,
     billing_interval: interval,
     subscription_name: params.subscriptionName.trim() || "Subscription",
+    subscription_description: description || "—",
+    subscription_description_line: description
+      ? `Descripción: **${description}**.\n`
+      : "",
     subscription_number: number,
     subscription_number_line: number ? ` (${number})` : "",
     proposal_validity_days: "30",
@@ -108,5 +135,6 @@ export const buildSubscriptionContractVariables = (params: {
     late_days: defaults.late_days ?? "15",
     late_fee: defaults.late_fee ?? "1.5% monthly",
     warranty_days: defaults.warranty_days ?? "30",
+    termination_notice_days: defaults.termination_notice_days ?? "30",
   };
 };

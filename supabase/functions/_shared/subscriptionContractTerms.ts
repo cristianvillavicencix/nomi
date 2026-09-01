@@ -30,6 +30,9 @@ export const buildSubscriptionLineItemsText = (
 export const buildSubscriptionContractVariables = (params: {
   clientName: string;
   clientAddress?: string | null;
+  clientRepresentative?: string | null;
+  providerRepresentative?: string | null;
+  subscriptionDescription?: string | null;
   subscriptionName: string;
   subscriptionNumber?: string | null;
   amount: number;
@@ -43,17 +46,25 @@ export const buildSubscriptionContractVariables = (params: {
   const interval = params.billingInterval || "monthly";
   const number = params.subscriptionNumber?.trim() || "";
   const defaults = params.defaultVariables ?? {};
+  const company = params.clientName.trim() || "Client";
+  const representative = params.clientRepresentative?.trim() || "";
+  const providerRep =
+    params.providerRepresentative?.trim() || "Latinos Business Support LLC";
+  const description = params.subscriptionDescription?.trim() || "";
 
   return {
     ...defaults,
-    client_name: params.clientName.trim() || "Client",
+    client_name: company,
+    client_company: company,
+    client_representative: representative || "—",
     client_address: params.clientAddress?.trim() || "—",
+    provider_representative: providerRep,
     contract_date: new Date().toISOString().slice(0, 10),
     proposal_number: number || params.subscriptionName,
     accepted_at: new Date().toISOString().slice(0, 10),
     signed_at: "",
     signed_ip: "",
-    lbs_signatory: "Latinos Business Support LLC",
+    lbs_signatory: providerRep,
     line_items: buildSubscriptionLineItemsText(params.lineItems, currency),
     total_amount: formatMoney(params.amount, currency),
     deposit_amount: formatMoney(0, currency),
@@ -63,6 +74,10 @@ export const buildSubscriptionContractVariables = (params: {
     recurring_terms: `${formatMoney(params.amount, currency)} / ${interval}`,
     billing_interval: interval,
     subscription_name: params.subscriptionName.trim() || "Subscription",
+    subscription_description: description || "—",
+    subscription_description_line: description
+      ? `Descripción: **${description}**.\n`
+      : "",
     subscription_number: number,
     subscription_number_line: number ? ` (${number})` : "",
     proposal_validity_days: "30",
@@ -74,6 +89,7 @@ export const buildSubscriptionContractVariables = (params: {
     late_days: String(defaults.late_days ?? "15"),
     late_fee: String(defaults.late_fee ?? "1.5% monthly"),
     warranty_days: String(defaults.warranty_days ?? "30"),
+    termination_notice_days: String(defaults.termination_notice_days ?? "30"),
   };
 };
 

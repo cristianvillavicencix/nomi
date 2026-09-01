@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Save, Star } from "lucide-react";
+import { Loader2, Pencil, Plus, Save, Star, Trash2 } from "lucide-react";
 import {
   useCreate,
   useGetIdentity,
@@ -13,9 +13,18 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,10 +34,6 @@ import {
   getDefaultContractTermsSeed,
   LBS_DEFAULT_CONTRACT_TERMS_VERSION,
 } from "@/modules/proposals/defaultContractTerms";
-import {
-  getWebMaintenanceContractTermsSeed,
-  WEB_MAINTENANCE_CONTRACT_SLUG,
-} from "@/modules/contracts/webMaintenanceContractTerms";
 
 const slugify = (value: string) =>
   value
@@ -37,6 +42,8 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 64) || "template";
+
+type EditorMode = "closed" | "new" | "edit";
 
 export const ContractTermsSettings = ({
   embedded = false,
@@ -62,35 +69,56 @@ export const ContractTermsSettings = ({
     [termsRows],
   );
 
-  const [selectedId, setSelectedId] = useState<string | number | null>(null);
-  const selected =
-    activeTemplates.find((row) => String(row.id) === String(selectedId)) ??
-    activeTemplates[0] ??
-    null;
-
-  useEffect(() => {
-    if (!selectedId && activeTemplates[0]) {
-      setSelectedId(activeTemplates[0].id);
-    }
-  }, [activeTemplates, selectedId]);
+  const [editorMode, setEditorMode] = useState<EditorMode>("closed");
+  const [editingId, setEditingId] = useState<string | number | null>(null);
+  const editingRow =
+    editorMode === "edit"
+      ? (activeTemplates.find((row) => String(row.id) === String(editingId)) ??
+        null)
+      : null;
 
   const [slug, setSlug] = useState("general");
   const [version, setVersion] = useState(LBS_DEFAULT_CONTRACT_TERMS_VERSION);
   const [title, setTitle] = useState(getDefaultContractTermsSeed().title);
   const [body, setBody] = useState(getDefaultContractTermsSeed().body_markdown);
 
+  const dialogOpen = editorMode !== "closed";
+
   useEffect(() => {
-    if (!selected) return;
-    setSlug(selected.slug ?? "general");
-    setVersion(selected.version);
-    setTitle(selected.title);
-    setBody(selected.body_markdown);
-  }, [selected]);
+    if (editorMode === "new") {
+      setSlug("new-template");
+      setVersion("1.0");
+      setTitle("New contract template");
+      setBody("# Contract\n\n**Client:** {{client_name}}\n\n{{line_items}}\n");
+      return;
+    }
+    if (editorMode === "edit" && editingRow) {
+      setSlug(editingRow.slug ?? "general");
+      setVersion(editingRow.version);
+      setTitle(editingRow.title);
+      setBody(editingRow.body_markdown);
+    }
+  }, [editorMode, editingRow]);
 
   const invalidate = async () => {
     await queryClient.invalidateQueries({
       queryKey: ["organization_contract_terms"],
     });
+  };
+
+  const closeEditor = () => {
+    setEditorMode("closed");
+    setEditingId(null);
+  };
+
+  const openNew = () => {
+    setEditingId(null);
+    setEditorMode("new");
+  };
+
+  const openEdit = (row: OrganizationContractTerms) => {
+    setEditingId(row.id);
+    setEditorMode("edit");
   };
 
   const saveMutation = useMutation({
@@ -102,13 +130,13 @@ export const ContractTermsSettings = ({
         slug: slugify(slug),
         is_active: true,
       };
-      if (selected) {
+      if (editorMode === "edit" && editingRow) {
         return update(
           "organization_contract_terms",
           {
-            id: selected.id,
+            id: editingRow.id,
             data: payload,
-            previousData: selected,
+            previousData: editingRow,
           },
           { returnPromise: true },
         );
@@ -129,6 +157,7 @@ export const ContractTermsSettings = ({
     },
     onSuccess: async () => {
       await invalidate();
+      closeEditor();
       notify("Contract template saved", { type: "success" });
     },
     onError: (error) =>
@@ -186,7 +215,7 @@ export const ContractTermsSettings = ({
       );
     },
     onSuccess: async () => {
-      setSelectedId(null);
+      if (editingId != null) closeEditor();
       await invalidate();
       notify("Template deactivated", { type: "success" });
     },
@@ -197,211 +226,190 @@ export const ContractTermsSettings = ({
       ),
   });
 
-  const addWebMaintenanceMutation = useMutation({
-    mutationFn: async () => {
-      const existing = termsRows.find(
-        (row) => row.slug === WEB_MAINTENANCE_CONTRACT_SLUG,
-      );
-      if (existing) {
-        if (!existing.is_active) {
-          await update(
-            "organization_contract_terms",
-            {
-              id: existing.id,
-              data: { is_active: true },
-              previousData: existing,
-            },
-            { returnPromise: true },
-          );
-        }
-        return existing;
-      }
-      const seed = getWebMaintenanceContractTermsSeed();
-      return create(
-        "organization_contract_terms",
-        {
-          data: {
-            org_id: orgId,
-            ...seed,
-            published_at: new Date().toISOString(),
-          },
-        },
-        { returnPromise: true },
-      );
-    },
-    onSuccess: async (row) => {
-      await invalidate();
-      if (row && typeof row === "object" && "id" in row) {
-        setSelectedId((row as OrganizationContractTerms).id);
-      }
-      notify("Web Maintenance template ready", { type: "success" });
-    },
-    onError: (error) =>
-      notify(
-        error instanceof Error ? error.message : "Failed to add template",
-        { type: "error" },
-      ),
-  });
-
-  const startNew = () => {
-    setSelectedId("__new__");
-    setSlug("new-template");
-    setVersion("1.0");
-    setTitle("New contract template");
-    setBody("# Contract\n\n**Client:** {{client_name}}\n\n{{line_items}}\n");
-  };
-
-  const editingNew = selectedId === "__new__";
-
   if (isPending) {
     return <p className="text-sm text-muted-foreground">Loading templates…</p>;
   }
 
-  const fields = (
-    <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <div className="space-y-2">
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="secondary" onClick={startNew}>
-            <Plus className="size-3.5" />
-            New
+  const editorDialog = (
+    <Dialog
+      open={dialogOpen}
+      onOpenChange={(open) => {
+        if (!open) closeEditor();
+      }}
+    >
+      <DialogContent className="flex max-h-[min(92vh,820px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 space-y-1 border-b px-5 py-4 pr-12 text-left">
+          <DialogTitle>
+            {editorMode === "new" ? "New contract template" : "Configure contract"}
+          </DialogTitle>
+          <DialogDescription>
+            {editorMode === "edit" && editingRow
+              ? `${editingRow.slug ?? "—"} · v${editingRow.version}`
+              : "Slug, version, title, and markdown body for this agreement."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Slug</Label>
+              <Input
+                value={slug}
+                onChange={(event) => setSlug(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Version</Label>
+              <Input
+                value={version}
+                onChange={(event) => setVersion(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Title</Label>
+              <Input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Body (Markdown)</Label>
+            <Textarea
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              rows={14}
+              className="min-h-[240px] w-full font-mono text-xs"
+            />
+          </div>
+          {editorMode === "new" ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const seed = getDefaultContractTermsSeed();
+                setSlug("general");
+                setVersion(LBS_DEFAULT_CONTRACT_TERMS_VERSION);
+                setTitle(seed.title);
+                setBody(seed.body_markdown);
+              }}
+            >
+              Load default LBS terms
+            </Button>
+          ) : null}
+        </div>
+
+        <DialogFooter className="shrink-0 border-t px-5 py-3">
+          <Button type="button" variant="outline" onClick={closeEditor}>
+            Cancel
           </Button>
           <Button
             type="button"
-            size="sm"
-            variant="outline"
-            disabled={addWebMaintenanceMutation.isPending}
-            onClick={() => addWebMaintenanceMutation.mutate()}
+            onClick={() => saveMutation.mutate()}
+            disabled={saveMutation.isPending}
           >
-            {addWebMaintenanceMutation.isPending ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : null}
-            Web Maintenance
+            {saveMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Save className="size-4" />
+            )}
+            Save template
           </Button>
-        </div>
-        <ul className="space-y-1 rounded-md border p-1">
-          {activeTemplates.map((row) => (
-            <li key={String(row.id)}>
-              <button
-                type="button"
-                className={cn(
-                  "flex w-full items-start gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted",
-                  String(selected?.id) === String(row.id) && "bg-muted",
-                )}
-                onClick={() => setSelectedId(row.id)}
-              >
-                <span className="min-w-0 flex-1 truncate">
-                  {row.title}
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    {row.slug ?? "—"} · v{row.version}
-                  </span>
-                </span>
-                {row.is_default ? (
-                  <Star className="mt-0.5 size-3.5 shrink-0 fill-amber-400 text-amber-500" />
-                ) : null}
-              </button>
-            </li>
-          ))}
-          {activeTemplates.length === 0 ? (
-            <li className="px-2 py-3 text-xs text-muted-foreground">
-              No templates yet.
-            </li>
-          ) : null}
-        </ul>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const fields = (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          {activeTemplates.length} template
+          {activeTemplates.length === 1 ? "" : "s"}
+        </p>
+        <Button type="button" size="sm" variant="secondary" onClick={openNew}>
+          <Plus className="size-3.5" />
+          New
+        </Button>
       </div>
 
-      <div className="space-y-4">
-        {!selected && !editingNew ? (
-          <Button type="button" variant="secondary" onClick={startNew}>
+      {activeTemplates.length === 0 ? (
+        <div className="rounded-md border border-dashed px-4 py-8 text-center">
+          <p className="text-sm text-muted-foreground">No templates yet.</p>
+          <Button
+            type="button"
+            className="mt-3"
+            variant="secondary"
+            onClick={openNew}
+          >
             Create first template
           </Button>
-        ) : (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-2">
-                <Label>Slug</Label>
-                <Input
-                  value={slug}
-                  onChange={(event) => setSlug(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Version</Label>
-                <Input
-                  value={version}
-                  onChange={(event) => setVersion(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2 sm:col-span-2 lg:col-span-1">
-                <Label>Title</Label>
-                <Input
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Body (Markdown)</Label>
-              <Textarea
-                value={body}
-                onChange={(event) => setBody(event.target.value)}
-                rows={16}
-                className="min-h-[280px] w-full font-mono text-xs"
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                onClick={() => saveMutation.mutate()}
-                disabled={saveMutation.isPending}
-              >
-                {saveMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Save className="size-4" />
-                )}
-                Save template
-              </Button>
-              {selected && !editingNew ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={
-                      selected.is_default || setDefaultMutation.isPending
-                    }
-                    onClick={() => setDefaultMutation.mutate(selected)}
-                  >
-                    Set as default
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={deactivateMutation.isPending}
-                    onClick={() => deactivateMutation.mutate(selected)}
-                  >
-                    Deactivate
-                  </Button>
-                </>
-              ) : null}
-              {!selected || editingNew ? (
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {activeTemplates.map((row) => (
+            <Card
+              key={String(row.id)}
+              className={cn(
+                "flex flex-col",
+                row.is_default && "border-amber-400/60",
+              )}
+            >
+              <CardHeader className="space-y-1 pb-2">
+                <CardTitle className="flex items-start gap-2 text-sm leading-snug">
+                  <span className="min-w-0 flex-1">{row.title}</span>
+                  {row.is_default ? (
+                    <Star className="mt-0.5 size-3.5 shrink-0 fill-amber-400 text-amber-500" />
+                  ) : null}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {row.slug ?? "—"} · v{row.version}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 pb-2">
+                <p className="line-clamp-3 text-xs text-muted-foreground whitespace-pre-wrap">
+                  {row.body_markdown.replace(/^#+\s*/gm, "").slice(0, 180) ||
+                    "No body yet."}
+                </p>
+              </CardContent>
+              <CardFooter className="flex flex-wrap gap-2 border-t pt-3">
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => {
-                    const seed = getDefaultContractTermsSeed();
-                    setSlug("general");
-                    setVersion(LBS_DEFAULT_CONTRACT_TERMS_VERSION);
-                    setTitle(seed.title);
-                    setBody(seed.body_markdown);
-                  }}
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => openEdit(row)}
                 >
-                  Load default LBS terms
+                  <Pencil className="size-3.5" />
+                  Configure
                 </Button>
-              ) : null}
-            </div>
-          </>
-        )}
-      </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={row.is_default || setDefaultMutation.isPending}
+                  onClick={() => setDefaultMutation.mutate(row)}
+                >
+                  <Star className="size-3.5" />
+                  Default
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={deactivateMutation.isPending}
+                  onClick={() => deactivateMutation.mutate(row)}
+                >
+                  <Trash2 className="size-3.5" />
+                  Deactivate
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {editorDialog}
     </div>
   );
 
