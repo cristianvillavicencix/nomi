@@ -79,8 +79,18 @@ describe("mail render pipeline", () => {
   it("forces responsive image rules after sender CSS", () => {
     const srcdoc = buildMailIframeSrcDoc(MAIL_RENDER_FIXTURES.googleNewsletter);
     const senderMarker = srcdoc.indexOf(".cta-button");
-    const imgGuard = srcdoc.indexOf("height: auto !important");
+    const imgGuard = srcdoc.indexOf("max-height: 480px !important");
     expect(imgGuard).toBeGreaterThan(senderMarker);
+  });
+
+  it("clamps oversized svg logos and hero images", () => {
+    const { body } = sanitizeMailHtmlParts(MAIL_RENDER_FIXTURES.oversizedSvgLogo);
+    expect(body).toContain("<svg");
+    expect(body).toMatch(/width="680"/);
+    expect(body).toMatch(/width="680"|max-width:\s*100%/);
+    const srcdoc = buildMailIframeSrcDoc(MAIL_RENDER_FIXTURES.oversizedSvgLogo);
+    expect(srcdoc).toContain("max-height: 480px !important");
+    expect(srcdoc).toContain("mail-body-root svg");
   });
 
   it("embeds Hostinger logo SVG for transactional emails", () => {

@@ -46,4 +46,11 @@ export const MAIL_RENDER_FIXTURES = {
 <p style="margin: 0px; margin-block: 0px;">Gracias por tu tiempo.</p>
 <p style="margin: 0px; margin-block: 0px;">Saludos,</p>
 </body></html>`,
+
+  oversizedSvgLogo: `<body><table width="600"><tr><td align="center">
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 64 64">
+<circle cx="32" cy="32" r="28" fill="#eee"/><text x="32" y="38" text-anchor="middle" font-size="24">!</text>
+</svg>
+<img src="https://example.com/logo.png" alt="Logo" width="900" height="900" />
+</td></tr></table></body>`,
 } as const;

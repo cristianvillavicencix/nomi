@@ -196,6 +196,28 @@ export function sanitizeMailHtml(html: string): string {
   return sanitizeMailHtmlParts(html).body;
 }
 
+const clampOversizedDimensionAttr = (
+  node: HTMLElement,
+  attr: "width" | "height",
+  max: number,
+) => {
+  const raw = node.getAttribute(attr)?.trim() ?? "";
+  const px = Number.parseInt(raw, 10);
+  if (Number.isFinite(px) && px > max) {
+    node.setAttribute(attr, String(max));
+    return;
+  }
+  if (/%/.test(raw) && Number.parseInt(raw, 10) > 100) {
+    node.removeAttribute(attr);
+  }
+};
+
+const applyResponsiveMediaStyles = (node: HTMLElement) => {
+  node.style.setProperty("max-width", "100%", "important");
+  node.style.setProperty("height", "auto", "important");
+  node.style.setProperty("object-fit", "contain");
+};
+
 const installMailSanitizeHooks = () => {
   if (mailSanitizeHookInstalled) return;
   mailSanitizeHookInstalled = true;
@@ -209,14 +231,16 @@ const installMailSanitizeHooks = () => {
         node.remove();
         return;
       }
-      // Prevent newsletter logos from stretching when senders set fixed height.
-      node.style.setProperty("max-width", "100%", "important");
-      node.style.setProperty("height", "auto", "important");
-      node.style.setProperty("object-fit", "contain");
-      const widthAttr = Number.parseInt(node.getAttribute("width") ?? "", 10);
-      if (Number.isFinite(widthAttr) && widthAttr > 680) {
-        node.setAttribute("width", "680");
-      }
+      applyResponsiveMediaStyles(node);
+      clampOversizedDimensionAttr(node, "width", 680);
+      clampOversizedDimensionAttr(node, "height", 480);
+    }
+
+    if (node.tagName === "SVG") {
+      applyResponsiveMediaStyles(node);
+      node.style.setProperty("max-height", "480px", "important");
+      clampOversizedDimensionAttr(node, "width", 680);
+      clampOversizedDimensionAttr(node, "height", 480);
     }
 
     if (node.tagName === "A") {
