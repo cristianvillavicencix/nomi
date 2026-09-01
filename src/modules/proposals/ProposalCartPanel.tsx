@@ -8,6 +8,10 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { isClientBillingSkipped } from "@/modules/billing/clientBillingProvider";
 import type { OnlinePaymentSetup } from "@/modules/billing/onlinePaymentSetupBridge";
+import {
+  isLegacyAddonLine,
+  primaryOneTimePackageLine,
+} from "@/modules/proposals/proposalCatalogUtils";
 import type {
   ProposalLineDraft,
   ProposalTotals,
@@ -120,6 +124,7 @@ export const ProposalCartPanel = ({
 
   const stripeSkipped = isClientBillingSkipped();
   const hasLines = lines.length > 0;
+  const primaryOneTimeKey = primaryOneTimePackageLine(lines)?.key ?? null;
 
   return (
     <Card className="w-full min-w-0 overflow-hidden shadow-sm lg:sticky lg:top-4">
@@ -141,7 +146,7 @@ export const ProposalCartPanel = ({
         <div className="space-y-3 px-3 py-2.5">
           {!hasLines ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
-              Choose a base package to start building.
+              Add catalog items from the list to build this proposal.
             </p>
           ) : null}
 
@@ -154,7 +159,7 @@ export const ProposalCartPanel = ({
                     key={line.key}
                     line={line}
                     isBasePackage={
-                      line.package_id != null && line.addon_id == null
+                      line.key === primaryOneTimeKey && !isLegacyAddonLine(line)
                     }
                     onChange={(patch) => updateLine(line.key, patch)}
                     onRemove={() => removeLine(line.key)}

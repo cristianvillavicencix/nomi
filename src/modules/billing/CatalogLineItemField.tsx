@@ -8,7 +8,7 @@ import {
   ServiceCatalogItemDialog,
   type CatalogItemDraft,
 } from "@/modules/settings/ServiceCatalogItemDialog";
-import type { ServiceAddon, ServicePackage } from "@/modules/types";
+import type { ServicePackage } from "@/modules/types";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 
 type CatalogSuggestion = {
   id: string;
-  kind: "package" | "addon";
   title: string;
   item_detail?: string;
   unit_price: number;
@@ -187,12 +186,6 @@ export const CatalogLineItemField = ({
     { staleTime: 60_000 },
   );
 
-  const { data: addons = [] } = useGetList<ServiceAddon>("service_addons", {
-    filter: { "active@eq": true },
-    pagination: { page: 1, perPage: 500 },
-    sort: { field: "sort_order", order: "ASC" },
-  });
-
   const eligiblePackages = useMemo(
     () =>
       packages.filter(
@@ -202,21 +195,10 @@ export const CatalogLineItemField = ({
     [packages, billingTypeFilter],
   );
 
-  const eligibleAddons = useMemo(
-    () =>
-      addons.filter(
-        (addon) =>
-          billingTypeFilter === "all" ||
-          addon.billing_type === billingTypeFilter,
-      ),
-    [addons, billingTypeFilter],
-  );
-
   const packageSuggestions = useMemo<CatalogSuggestion[]>(
     () =>
       eligiblePackages.map((pkg) => ({
         id: `pkg-${pkg.id}`,
-        kind: "package" as const,
         title: pkg.name,
         item_detail: pkg.description?.trim() || undefined,
         unit_price: pkg.suggested_price,
@@ -227,25 +209,7 @@ export const CatalogLineItemField = ({
     [eligiblePackages],
   );
 
-  const addonSuggestions = useMemo<CatalogSuggestion[]>(
-    () =>
-      eligibleAddons.map((addon) => ({
-        id: `addon-${addon.id}`,
-        kind: "addon" as const,
-        title: addon.name,
-        item_detail: addon.description?.trim() || undefined,
-        unit_price: addon.suggested_price,
-        package_id: addon.package_id ? Number(addon.package_id) : null,
-        addon_id: Number(addon.id),
-        billing_interval: addon.billing_interval ?? null,
-      })),
-    [eligibleAddons],
-  );
-
-  const allSuggestions = useMemo(
-    () => [...packageSuggestions, ...addonSuggestions],
-    [packageSuggestions, addonSuggestions],
-  );
+  const allSuggestions = packageSuggestions;
 
   const trimmedQuery = query.trim();
 
@@ -255,12 +219,7 @@ export const CatalogLineItemField = ({
     [packageSuggestions, query],
   );
 
-  const filteredAddons = useMemo(
-    () => filterSuggestions(addonSuggestions, query).slice(0, SUGGESTION_LIMIT),
-    [addonSuggestions, query],
-  );
-
-  const hasResults = filteredPackages.length > 0 || filteredAddons.length > 0;
+  const hasResults = filteredPackages.length > 0;
 
   const hasExactMatch = useMemo(
     () =>
@@ -403,10 +362,10 @@ export const CatalogLineItemField = ({
   };
 
   const selectedSuggestionId =
-    line.addon_id != null
-      ? `addon-${line.addon_id}`
-      : line.package_id != null
-        ? `pkg-${line.package_id}`
+    line.package_id != null
+      ? `pkg-${line.package_id}`
+      : line.addon_id != null
+        ? `addon-${line.addon_id}`
         : null;
 
   const renderSuggestion = (item: CatalogSuggestion) => {
@@ -437,7 +396,7 @@ export const CatalogLineItemField = ({
             {formatSuggestionPrice(item.unit_price)}
           </span>
           <span className="mt-0.5 block text-[10px] uppercase tracking-wide text-muted-foreground">
-            {item.kind === "package" ? "Package" : "Add-on"}
+            Catalog
           </span>
         </div>
       </button>
@@ -459,24 +418,7 @@ export const CatalogLineItemField = ({
             }}
           >
             {hasResults ? (
-              <>
-                {filteredPackages.length > 0 ? (
-                  <>
-                    <li className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Packages
-                    </li>
-                    {filteredPackages.map(renderSuggestion)}
-                  </>
-                ) : null}
-                {filteredAddons.length > 0 ? (
-                  <>
-                    <li className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Add-ons
-                    </li>
-                    {filteredAddons.map(renderSuggestion)}
-                  </>
-                ) : null}
-              </>
+              filteredPackages.map(renderSuggestion)
             ) : null}
             {showCreateOption ? (
               <li>

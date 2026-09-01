@@ -4,6 +4,7 @@ type LineForPreset = {
   package_id?: number | null;
   addon_id?: number | null;
   description?: string;
+  billing_type?: string | null;
 };
 
 type PackageForPreset = {
@@ -19,14 +20,18 @@ const descriptionHints = (description: string): ProposalDeckPresetId | null => {
   return null;
 };
 
-/** Map builder cart (package line) → formal proposal deck preset. */
+/** Map builder cart → formal proposal deck preset (first one-time package line). */
 export const inferProposalDeckPresetFromLines = (
   lines: LineForPreset[],
   packagesById?: Map<number, PackageForPreset>,
 ): ProposalDeckPresetId => {
-  const packageLine = lines.find(
-    (line) => line.package_id != null && line.addon_id == null,
-  );
+  const packageLine =
+    lines.find(
+      (line) =>
+        line.package_id != null &&
+        line.addon_id == null &&
+        line.billing_type !== "recurring",
+    ) ?? lines.find((line) => line.package_id != null && line.addon_id == null);
 
   if (!packageLine?.package_id) {
     return "website-contractor";

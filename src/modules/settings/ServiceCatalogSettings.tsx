@@ -35,15 +35,12 @@ import {
   billingTypeLabel,
   categoryLabel,
 } from "@/modules/catalog/catalogConstants";
-import {
-  LBS_SERVICE_ADDONS,
-  LBS_SERVICE_PACKAGES,
-} from "@/modules/catalog/serviceCatalogSeed";
+import { LBS_SERVICE_PACKAGES } from "@/modules/catalog/serviceCatalogSeed";
 import {
   ServiceCatalogItemDialog,
   type CatalogItemDraft,
 } from "@/modules/settings/ServiceCatalogItemDialog";
-import type { ServiceAddon, ServicePackage } from "@/modules/types";
+import type { ServicePackage } from "@/modules/types";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 
 const toPackageDraft = (pkg: ServicePackage): Partial<CatalogItemDraft> => ({
@@ -66,18 +63,6 @@ const toPackageDraft = (pkg: ServicePackage): Partial<CatalogItemDraft> => ({
       : null,
 });
 
-const toAddonDraft = (addon: ServiceAddon): Partial<CatalogItemDraft> => ({
-  name: addon.name,
-  description: addon.description ?? "",
-  category: addon.category ?? "web",
-  suggested_price: addon.suggested_price,
-  currency: addon.currency ?? "USD",
-  billing_type: addon.billing_type,
-  billing_interval: addon.billing_interval ?? null,
-  active: addon.active ?? true,
-  sort_order: addon.sort_order ?? 0,
-});
-
 export const ServiceCatalogSettings = () => {
   const notify = useNotify();
   const queryClient = useQueryClient();
@@ -85,31 +70,18 @@ export const ServiceCatalogSettings = () => {
   const orgId = Number(identity?.org_id ?? 1);
   const [createPackage] = useCreate();
   const [updatePackage] = useUpdate();
-  const [createAddon] = useCreate();
-  const [updateAddon] = useUpdate();
   const [deleteOne] = useDelete();
-  const [deleteTarget, setDeleteTarget] = useState<
-    | { resource: "service_packages"; record: ServicePackage }
-    | { resource: "service_addons"; record: ServiceAddon }
-    | null
-  >(null);
+  const [deleteTarget, setDeleteTarget] = useState<ServicePackage | null>(null);
 
   const [packageDialog, setPackageDialog] = useState<
-    { mode: "create" } | { mode: "edit"; record: ServicePackage } | null
-  >(null);
-  const [addonDialog, setAddonDialog] = useState<
-    { mode: "create" } | { mode: "edit"; record: ServiceAddon } | null
+    | { mode: "create"; billingType: "one_time" | "recurring" }
+    | { mode: "edit"; record: ServicePackage }
+    | null
   >(null);
 
   const { data: packages = [], isPending: isPackagesPending } =
     useGetList<ServicePackage>("service_packages", {
       pagination: { page: 1, perPage: 200 },
-      sort: { field: "sort_order", order: "ASC" },
-    });
-
-  const { data: addons = [], isPending: isAddonsPending } =
-    useGetList<ServiceAddon>("service_addons", {
-      pagination: { page: 1, perPage: 500 },
       sort: { field: "sort_order", order: "ASC" },
     });
 
@@ -122,36 +94,36 @@ export const ServiceCatalogSettings = () => {
           { returnPromise: true },
         );
       }
-      for (const addon of LBS_SERVICE_ADDONS) {
-        await createAddon(
-          "service_addons",
-          { data: { ...addon, org_id: orgId } },
-          { returnPromise: true },
-        );
-      }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["service_packages"] });
-      await queryClient.invalidateQueries({ queryKey: ["service_addons"] });
       notify("LBS + SKOP catalog loaded", { type: "success" });
     },
     onError: () => notify("Failed to load catalog", { type: "error" }),
   });
 
-  const activePackages = useMemo(
-    () => packages.filter((pkg) => pkg.active !== false),
+  const oneTimePackages = useMemo(
+    () => packages.filter((pkg) => pkg.billing_type !== "recurring"),
     [packages],
   );
-  const activeAddons = useMemo(
-    () => addons.filter((addon) => addon.active !== false),
-    [addons],
+  const recurringPackages = useMemo(
+    () => packages.filter((pkg) => pkg.billing_type === "recurring"),
+    [packages],
+  );
+  const activeOneTimePackages = useMemo(
+    () => oneTimePackages.filter((pkg) => pkg.active !== false),
+    [oneTimePackages],
+  );
+  const activeRecurringPackages = useMemo(
+    () => recurringPackages.filter((pkg) => pkg.active !== false),
+    [recurringPackages],
   );
 
-  if (isPackagesPending || isAddonsPending) {
+  if (isPackagesPending) {
     return <p className="text-sm text-muted-foreground">Loading catalog…</p>;
   }
 
-  const catalogEmpty = packages.length === 0 && addons.length === 0;
+  const catalogEmpty = packages.length === 0;
 
   return (
     <div className="w-full space-y-4">
@@ -172,35 +144,43 @@ export const ServiceCatalogSettings = () => {
         ) : null}
       </div>
 
-      <Tabs defaultValue="packages">
+      <Tabs defaultValue="one-time">
         <TabsList>
-          <TabsTrigger value="packages">
-            Packages ({packages.length})
+          <TabsTrigger value="one-time">
+            One-time ({oneTimePackages.length})
           </TabsTrigger>
-          <TabsTrigger value="addons">Add-ons ({addons.length})</TabsTrigger>
+          <TabsTrigger value="subscriptions">
+            Subscriptions ({recurringPackages.length})
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="packages" className="mt-4">
+        <TabsContent value="one-time" className="mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <div>
-                <CardTitle className="text-base">Base packages</CardTitle>
+                <CardTitle className="text-base">
+                  One-time products & services
+                </CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  One package per proposal. {activePackages.length} active.
+                  For proposals and invoices. {activeOneTimePackages.length}{" "}
+                  active.
                 </p>
               </div>
               <Button
                 type="button"
                 size="sm"
-                onClick={() => setPackageDialog({ mode: "create" })}
+                onClick={() =>
+                  setPackageDialog({ mode: "create", billingType: "one_time" })
+                }
               >
                 <Plus className="size-4" />
-                New package
+                New one-time item
               </Button>
             </CardHeader>
             <CardContent>
               <CatalogTable
-                rows={packages}
+                rows={oneTimePackages}
+                usageContext="one_time"
                 showUsageBadges
                 onToggleActive={(row, active) =>
                   updatePackage("service_packages", {
@@ -212,46 +192,49 @@ export const ServiceCatalogSettings = () => {
                 onEdit={(row) =>
                   setPackageDialog({ mode: "edit", record: row })
                 }
-                onDelete={(row) =>
-                  setDeleteTarget({ resource: "service_packages", record: row })
-                }
+                onDelete={setDeleteTarget}
               />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="addons" className="mt-4">
+        <TabsContent value="subscriptions" className="mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <div>
-                <CardTitle className="text-base">Add-ons</CardTitle>
+                <CardTitle className="text-base">Subscription services</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Stack on a base package. {activeAddons.length} active.
+                  Recurring items for subscriptions and contract templates.{" "}
+                  {activeRecurringPackages.length} active.
                 </p>
               </div>
               <Button
                 type="button"
                 size="sm"
-                onClick={() => setAddonDialog({ mode: "create" })}
+                onClick={() =>
+                  setPackageDialog({ mode: "create", billingType: "recurring" })
+                }
               >
                 <Plus className="size-4" />
-                New add-on
+                New subscription item
               </Button>
             </CardHeader>
             <CardContent>
               <CatalogTable
-                rows={addons}
+                rows={recurringPackages}
+                usageContext="recurring"
+                showUsageBadges
                 onToggleActive={(row, active) =>
-                  updateAddon("service_addons", {
+                  updatePackage("service_packages", {
                     id: row.id,
                     data: { active },
                     previousData: row,
                   })
                 }
-                onEdit={(row) => setAddonDialog({ mode: "edit", record: row })}
-                onDelete={(row) =>
-                  setDeleteTarget({ resource: "service_addons", record: row })
+                onEdit={(row) =>
+                  setPackageDialog({ mode: "edit", record: row })
                 }
+                onDelete={setDeleteTarget}
               />
             </CardContent>
           </Card>
@@ -262,12 +245,25 @@ export const ServiceCatalogSettings = () => {
         open={packageDialog != null}
         onOpenChange={(open) => !open && setPackageDialog(null)}
         variant="package"
-        title={packageDialog?.mode === "edit" ? "Edit package" : "New package"}
+        title={
+          packageDialog?.mode === "edit"
+            ? "Edit catalog item"
+            : packageDialog?.billingType === "recurring"
+              ? "New subscription item"
+              : "New one-time item"
+        }
         sortOrder={packages.length + 1}
         initial={
           packageDialog?.mode === "edit"
             ? toPackageDraft(packageDialog.record)
-            : undefined
+            : packageDialog?.mode === "create"
+              ? packageDialog.billingType === "recurring"
+                ? {
+                    billing_type: "recurring",
+                    billing_interval: "monthly",
+                  }
+                : { billing_type: "one_time", billing_interval: null }
+              : undefined
         }
         onSave={async (draft) => {
           if (packageDialog?.mode === "edit") {
@@ -280,48 +276,14 @@ export const ServiceCatalogSettings = () => {
               },
               { returnPromise: true },
             );
-            notify("Package updated", { type: "success" });
+            notify("Catalog item updated", { type: "success" });
           } else {
             await createPackage(
               "service_packages",
               { data: { ...draft, org_id: orgId } },
               { returnPromise: true },
             );
-            notify("Package created", { type: "success" });
-          }
-        }}
-      />
-
-      <ServiceCatalogItemDialog
-        open={addonDialog != null}
-        onOpenChange={(open) => !open && setAddonDialog(null)}
-        variant="addon"
-        title={addonDialog?.mode === "edit" ? "Edit add-on" : "New add-on"}
-        sortOrder={addons.length + 1}
-        initial={
-          addonDialog?.mode === "edit"
-            ? toAddonDraft(addonDialog.record)
-            : undefined
-        }
-        onSave={async (draft) => {
-          if (addonDialog?.mode === "edit") {
-            await updateAddon(
-              "service_addons",
-              {
-                id: addonDialog.record.id,
-                data: draft,
-                previousData: addonDialog.record,
-              },
-              { returnPromise: true },
-            );
-            notify("Add-on updated", { type: "success" });
-          } else {
-            await createAddon(
-              "service_addons",
-              { data: { ...draft, org_id: orgId, package_id: null } },
-              { returnPromise: true },
-            );
-            notify("Add-on created", { type: "success" });
+            notify("Catalog item created", { type: "success" });
           }
         }}
       />
@@ -333,7 +295,7 @@ export const ServiceCatalogSettings = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Delete {deleteTarget?.record.name ?? "item"}?
+              Delete {deleteTarget?.name ?? "item"}?
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
@@ -355,10 +317,10 @@ export const ServiceCatalogSettings = () => {
                 if (!deleteTarget) return;
                 try {
                   await deleteOne(
-                    deleteTarget.resource,
+                    "service_packages",
                     {
-                      id: deleteTarget.record.id,
-                      previousData: deleteTarget.record,
+                      id: deleteTarget.id,
+                      previousData: deleteTarget,
                     },
                     { returnPromise: true },
                   );
@@ -378,38 +340,33 @@ export const ServiceCatalogSettings = () => {
   );
 };
 
-const CatalogTable = <
-  T extends {
-    id: unknown;
-    name: string;
-    category?: string | null;
-    suggested_price: number;
-    billing_type: "one_time" | "recurring";
-    billing_interval?: string | null;
-    active?: boolean;
-    booking_enabled?: boolean;
-    ticket_billing_enabled?: boolean;
-  },
->({
+const CatalogTable = ({
   rows,
+  usageContext = "one_time",
   showUsageBadges = false,
   onToggleActive,
   onEdit,
   onDelete,
 }: {
-  rows: T[];
+  rows: ServicePackage[];
+  usageContext?: "one_time" | "recurring";
   showUsageBadges?: boolean;
-  onToggleActive: (row: T, active: boolean) => void;
-  onEdit: (row: T) => void;
-  onDelete: (row: T) => void;
+  onToggleActive: (row: ServicePackage, active: boolean) => void;
+  onEdit: (row: ServicePackage) => void;
+  onDelete: (row: ServicePackage) => void;
 }) => {
   if (rows.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-6 text-center">
-        No items yet.
+        {usageContext === "recurring"
+          ? "No subscription items yet. Add recurring services like website maintenance."
+          : "No one-time items yet."}
       </p>
     );
   }
+
+  const defaultUsageLabel =
+    usageContext === "recurring" ? "Subscriptions" : "Proposals · Invoices";
 
   return (
     <div className="overflow-x-auto rounded-md border">
@@ -447,13 +404,13 @@ const CatalogTable = <
                     ) : null}
                     {!row.ticket_billing_enabled && !row.booking_enabled ? (
                       <span className="text-xs text-muted-foreground">
-                        Proposals
+                        {defaultUsageLabel}
                       </span>
                     ) : null}
                   </div>
                 ) : (
                   <span className="text-xs text-muted-foreground">
-                    Proposals
+                    {defaultUsageLabel}
                   </span>
                 )}
               </TableCell>

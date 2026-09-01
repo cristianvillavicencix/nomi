@@ -8,7 +8,6 @@ import { generateOrganizationMembers } from "./organizationMembers";
 import { generateTags } from "./tags";
 import { generateTasks } from "./tasks";
 import {
-  LBS_SERVICE_ADDONS,
   LBS_SERVICE_PACKAGES,
 } from "@/modules/catalog/serviceCatalogSeed";
 import { DEFAULT_PROPOSAL_TEMPLATES } from "@/modules/proposals/document/proposalTemplateDefaults";
@@ -56,11 +55,7 @@ export default (): Db => {
     id: index + 1,
     org_id: 1,
   }));
-  db.service_addons = LBS_SERVICE_ADDONS.map((addon, index) => ({
-    ...addon,
-    id: index + 1,
-    org_id: 1,
-  }));
+  db.service_addons = [];
   db.organization_contract_terms = [];
   db.contracts = [];
   db.public_proposal_tokens = [];

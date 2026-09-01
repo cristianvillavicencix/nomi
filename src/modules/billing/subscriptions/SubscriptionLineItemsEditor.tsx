@@ -72,7 +72,7 @@ export const SubscriptionLineItemsEditor = ({
         item_detail: item.item_detail,
         unit_price: item.unit_price,
         package_id: item.package_id,
-        addon_id: item.addon_id,
+        addon_id: null,
         quantity: 1,
         sort_order: lines.length,
       },

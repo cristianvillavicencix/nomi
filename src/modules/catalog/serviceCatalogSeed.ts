@@ -108,9 +108,7 @@ export const LBS_SERVICE_PACKAGES: CatalogPackageSeed[] = [
     active: true,
     sort_order: 21,
   },
-];
-
-export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
+  // Former add-ons — unified catalog (one-time extras)
   {
     name: "Logo design",
     description:
@@ -120,9 +118,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: null,
     suggested_price: 350,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 1,
+    sort_order: 101,
   },
   {
     name: "Brand identity",
@@ -133,9 +130,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: null,
     suggested_price: 700,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 2,
+    sort_order: 102,
   },
   {
     name: "Business card / stationery design",
@@ -145,9 +141,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: null,
     suggested_price: 180,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 3,
+    sort_order: 103,
   },
   {
     name: "Additional page",
@@ -157,9 +152,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: null,
     suggested_price: 150,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 10,
+    sort_order: 110,
   },
   {
     name: "Blog / news section",
@@ -169,9 +163,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: null,
     suggested_price: 400,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 11,
+    sort_order: 111,
   },
   {
     name: "Bilingual site (ES/EN)",
@@ -181,9 +174,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: null,
     suggested_price: 500,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 12,
+    sort_order: 112,
   },
   {
     name: "Payment integration",
@@ -193,9 +185,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: null,
     suggested_price: 450,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 13,
+    sort_order: 113,
   },
   {
     name: "Booking / scheduling",
@@ -205,9 +196,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: null,
     suggested_price: 400,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 14,
+    sort_order: 114,
   },
   {
     name: "Extra client dashboard",
@@ -217,9 +207,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: null,
     suggested_price: 600,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 15,
+    sort_order: 115,
   },
   {
     name: "On-page SEO (setup)",
@@ -230,9 +219,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: null,
     suggested_price: 500,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 20,
+    sort_order: 120,
   },
   {
     name: "Professional copywriting",
@@ -242,9 +230,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: null,
     suggested_price: 300,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 21,
+    sort_order: 121,
   },
   {
     name: "Google Business Profile",
@@ -254,9 +241,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: null,
     suggested_price: 200,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 22,
+    sort_order: 122,
   },
   {
     name: "Photography / stock images",
@@ -266,10 +252,21 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: null,
     suggested_price: 250,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 23,
+    sort_order: 123,
   },
+  {
+    name: "SKOP — Onboarding / training",
+    description: "Initial training session to get started with SKOP.",
+    category: "skop",
+    billing_type: "one_time",
+    billing_interval: null,
+    suggested_price: 200,
+    currency: "USD",
+    active: true,
+    sort_order: 141,
+  },
+  // Former add-ons — unified catalog (recurring / subscriptions)
   {
     name: "Managed hosting",
     description: "Hosting, domain, SSL, and monitoring managed by LBS.",
@@ -278,9 +275,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: "monthly",
     suggested_price: 25,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 30,
+    sort_order: 130,
   },
   {
     name: "Website maintenance",
@@ -291,9 +287,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: "monthly",
     suggested_price: 80,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 31,
+    sort_order: 131,
   },
   {
     name: "Maintenance + priority support",
@@ -304,9 +299,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: "monthly",
     suggested_price: 150,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 32,
+    sort_order: 132,
   },
   {
     name: "Monthly web audit report",
@@ -317,9 +311,8 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: "monthly",
     suggested_price: 40,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 33,
+    sort_order: 133,
   },
   {
     name: "SKOP — Additional user",
@@ -329,20 +322,10 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
     billing_interval: "monthly",
     suggested_price: 49,
     currency: "USD",
-    package_id: null,
     active: true,
-    sort_order: 40,
-  },
-  {
-    name: "SKOP — Onboarding / training",
-    description: "Initial training session to get started with SKOP.",
-    category: "skop",
-    billing_type: "one_time",
-    billing_interval: null,
-    suggested_price: 200,
-    currency: "USD",
-    package_id: null,
-    active: true,
-    sort_order: 41,
+    sort_order: 140,
   },
 ];
+
+/** @deprecated Add-ons merged into LBS_SERVICE_PACKAGES. Kept empty for imports. */
+export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [];

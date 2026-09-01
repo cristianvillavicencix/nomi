@@ -7,20 +7,82 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
-  ADDON_CATALOG_GROUPS,
   billingIntervalSuffix,
   categoryLabel,
 } from "@/modules/catalog/catalogConstants";
 import {
-  addonAlreadyInCart,
-  findAddonLine,
-  isPackageLine,
   newLineKey,
-  selectedPackageId,
+  packageAlreadyInCart,
+  findPackageLine,
 } from "@/modules/proposals/proposalCatalogUtils";
 import type { ProposalLineDraft } from "@/modules/proposals/proposalCommercialUtils";
-import type { ServiceAddon, ServicePackage } from "@/modules/types";
+import type { ServicePackage } from "@/modules/types";
 import { MoneyText } from "@/lib/permissions/MoneyText";
+
+const CatalogPackageGrid = ({
+  packages,
+  lines,
+  onToggle,
+  emptyMessage,
+}: {
+  packages: ServicePackage[];
+  lines: ProposalLineDraft[];
+  onToggle: (pkg: ServicePackage) => void;
+  emptyMessage: string;
+}) => {
+  if (packages.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+    );
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {packages.map((pkg) => {
+        const inCart = packageAlreadyInCart(lines, Number(pkg.id));
+        return (
+          <div
+            key={String(pkg.id)}
+            className={cn(
+              "flex items-center justify-between gap-2 rounded-lg border p-3 transition-colors",
+              inCart && "border-success/40 bg-success/5",
+            )}
+          >
+            <div className="min-w-0 flex-1">
+              <Badge variant="secondary" className="text-[10px] uppercase">
+                {categoryLabel(pkg.category)}
+              </Badge>
+              <p className="mt-2 text-sm font-medium leading-snug">{pkg.name}</p>
+              {pkg.description ? (
+                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                  {pkg.description}
+                </p>
+              ) : null}
+              <p className="mt-2 text-sm font-semibold tabular-nums">
+                <MoneyText value={pkg.suggested_price} />
+                {billingIntervalSuffix(
+                  pkg.billing_type,
+                  pkg.billing_interval,
+                )}
+              </p>
+            </div>
+            <IconButton
+              variant={inCart ? "primary" : "secondary"}
+              className={cn(
+                "shrink-0",
+                inCart && "bg-success hover:bg-success/90",
+              )}
+              onClick={() => onToggle(pkg)}
+              aria-label={inCart ? `Remove ${pkg.name}` : `Add ${pkg.name}`}
+            >
+              {inCart ? <Check className="size-4" /> : <Plus className="size-4" />}
+            </IconButton>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 export const ProposalCatalogPanel = ({
   lines,
@@ -39,38 +101,18 @@ export const ProposalCatalogPanel = ({
     { staleTime: 60_000 },
   );
 
-  const { data: addons = [] } = useGetList<ServiceAddon>("service_addons", {
-    filter: { "active@eq": true },
-    pagination: { page: 1, perPage: 500 },
-    sort: { field: "sort_order", order: "ASC" },
-  });
+  const oneTimePackages = useMemo(
+    () => packages.filter((pkg) => pkg.billing_type !== "recurring"),
+    [packages],
+  );
+  const recurringPackages = useMemo(
+    () => packages.filter((pkg) => pkg.billing_type === "recurring"),
+    [packages],
+  );
 
-  const activePackageId = selectedPackageId(lines);
-
-  const selectPackage = (pkg: ServicePackage) => {
+  const togglePackage = (pkg: ServicePackage) => {
     const pkgId = Number(pkg.id);
-    const withoutPackages = lines.filter((line) => !isPackageLine(line));
-    const packageLine: ProposalLineDraft = {
-      key: newLineKey(),
-      description: pkg.name,
-      quantity: 1,
-      unit_price: pkg.suggested_price,
-      billing_type: pkg.billing_type,
-      billing_interval: pkg.billing_interval ?? null,
-      package_id: pkgId,
-      addon_id: null,
-      sort_order: 0,
-    };
-    const reordered = [packageLine, ...withoutPackages].map((line, index) => ({
-      ...line,
-      sort_order: index,
-    }));
-    onChange(reordered);
-  };
-
-  const toggleAddon = (addon: ServiceAddon) => {
-    const addonId = Number(addon.id);
-    const existing = findAddonLine(lines, addonId);
+    const existing = findPackageLine(lines, pkgId);
     if (existing) {
       onChange(lines.filter((line) => line.key !== existing.key));
       return;
@@ -79,174 +121,57 @@ export const ProposalCatalogPanel = ({
       ...lines,
       {
         key: newLineKey(),
-        description: addon.name,
+        description: pkg.name,
         quantity: 1,
-        unit_price: addon.suggested_price,
-        billing_type: addon.billing_type,
-        billing_interval: addon.billing_interval ?? null,
-        package_id: addon.package_id ? Number(addon.package_id) : null,
-        addon_id: addonId,
+        unit_price: pkg.suggested_price,
+        billing_type: pkg.billing_type,
+        billing_interval: pkg.billing_interval ?? null,
+        package_id: pkgId,
+        addon_id: null,
         sort_order: lines.length,
       },
     ]);
   };
-
-  const groupedAddons = useMemo(
-    () =>
-      ADDON_CATALOG_GROUPS.map((group) => ({
-        ...group,
-        items: addons.filter((addon) =>
-          (group.categories as readonly string[]).includes(
-            addon.category ?? "web",
-          ),
-        ),
-      })).filter((group) => group.items.length > 0),
-    [addons],
-  );
 
   return (
     <div className="w-full min-w-0 space-y-4">
       <Card>
         <CardHeader className="pb-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-            Step 1
+            One-time
           </p>
-          <CardTitle className="text-base">Choose a base package</CardTitle>
+          <CardTitle className="text-base">Products & project services</CardTitle>
           <p className="text-sm text-muted-foreground">
-            One base per proposal. Selecting another replaces the current one.
+            Tap + to add lines to the proposal. Tap again to remove.
           </p>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {packages.map((pkg) => {
-              const isSelected = activePackageId === Number(pkg.id);
-              return (
-                <button
-                  key={String(pkg.id)}
-                  type="button"
-                  onClick={() => selectPackage(pkg)}
-                  className={cn(
-                    "rounded-lg border p-3 text-left transition-colors hover:bg-muted/50",
-                    isSelected &&
-                      "border-primary bg-primary/5 ring-2 ring-primary",
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] uppercase"
-                    >
-                      {categoryLabel(pkg.category)}
-                    </Badge>
-                    {isSelected ? (
-                      <Check className="size-4 shrink-0 text-primary" />
-                    ) : null}
-                  </div>
-                  <p className="mt-2 font-medium text-sm leading-snug">
-                    {pkg.name}
-                  </p>
-                  {pkg.description ? (
-                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                      {pkg.description}
-                    </p>
-                  ) : null}
-                  <p className="mt-2 text-sm font-semibold tabular-nums">
-                    <MoneyText value={pkg.suggested_price} />
-                    {billingIntervalSuffix(
-                      pkg.billing_type,
-                      pkg.billing_interval,
-                    )}
-                    {pkg.billing_type === "one_time" ? (
-                      <span className="text-xs font-normal text-muted-foreground">
-                        {" "}
-                        one-time
-                      </span>
-                    ) : null}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-          {packages.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No packages in catalog. Add them in Settings → Commercial.
-            </p>
-          ) : null}
+          <CatalogPackageGrid
+            packages={oneTimePackages}
+            lines={lines}
+            onToggle={togglePackage}
+            emptyMessage="No one-time catalog items. Add them under Billing → Products & services."
+          />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-            Step 2
+            Subscriptions
           </p>
-          <CardTitle className="text-base">Add services</CardTitle>
+          <CardTitle className="text-base">Recurring services</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Tap + to add. Tap again to remove from the cart.
+            Monthly or recurring lines (maintenance, hosting, marketing retainers).
           </p>
         </CardHeader>
-        <CardContent className="space-y-5">
-          {groupedAddons.map((group) => (
-            <section key={group.key} className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {group.label}
-              </h3>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {group.items.map((addon) => {
-                  const inCart = addonAlreadyInCart(lines, Number(addon.id));
-                  return (
-                    <div
-                      key={String(addon.id)}
-                      className={cn(
-                        "flex items-center justify-between gap-2 rounded-lg border p-3 transition-colors",
-                        inCart && "border-success/40 bg-success/5",
-                      )}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium leading-snug">
-                          {addon.name}
-                        </p>
-                        {addon.description ? (
-                          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                            {addon.description}
-                          </p>
-                        ) : null}
-                        <p className="mt-1 text-xs font-medium tabular-nums text-muted-foreground">
-                          <MoneyText value={addon.suggested_price} />
-                          {billingIntervalSuffix(
-                            addon.billing_type,
-                            addon.billing_interval,
-                          )}
-                        </p>
-                      </div>
-                      <IconButton
-                        variant={inCart ? "primary" : "secondary"}
-                        className={cn(
-                          "shrink-0",
-                          inCart && "bg-success hover:bg-success/90",
-                        )}
-                        onClick={() => toggleAddon(addon)}
-                        aria-label={
-                          inCart ? `Remove ${addon.name}` : `Add ${addon.name}`
-                        }
-                      >
-                        {inCart ? (
-                          <Check className="size-4" />
-                        ) : (
-                          <Plus className="size-4" />
-                        )}
-                      </IconButton>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-          {groupedAddons.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No add-ons in catalog yet.
-            </p>
-          ) : null}
+        <CardContent>
+          <CatalogPackageGrid
+            packages={recurringPackages}
+            lines={lines}
+            onToggle={togglePackage}
+            emptyMessage="No subscription catalog items. Add them under Billing → Products & services."
+          />
         </CardContent>
       </Card>
     </div>
