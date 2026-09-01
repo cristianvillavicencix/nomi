@@ -20,6 +20,7 @@ import type { ClientCreateFormValues } from "@/modules/clients/ClientCreateForm"
 import { CreateFormDialogShell } from "@/modules/shared/createForm/CreateFormDialogShell";
 import { useCompanyNameDuplicateCheck } from "@/modules/clients/useCompanyNameDuplicateCheck";
 import { CompanyNameDuplicateAlert } from "@/modules/clients/CompanyNameDuplicateAlert";
+import type { PrimaryContactDraft } from "@/modules/clients/primaryContactDraft";
 
 const COMPANY_CREATE_FORM_ID = "lbs-company-create-form";
 
@@ -39,6 +40,8 @@ export type CompanyCreateDialogProps = {
   initialCompanyName?: string;
   /** Prefill primary contact name when creating from a people search. */
   initialPrimaryContactName?: string;
+  /** In-progress contact from a parent create form — preview only, not saved with the company. */
+  linkingContactDraft?: PrimaryContactDraft | null;
   title?: string;
   description?: string;
   submitLabel?: string;
@@ -55,8 +58,9 @@ export const CompanyCreateDialog = ({
   onOpenChange,
   initialCompanyName = "",
   initialPrimaryContactName = "",
+  linkingContactDraft = null,
   title = "New account",
-  description = "Create the account record. Add a primary contact later or from the People form.",
+  description,
   submitLabel = "Create account",
   onCreated,
   onUseExistingCompany,
@@ -67,6 +71,11 @@ export const CompanyCreateDialog = ({
   const navigate = useNavigate();
   const { identity } = useGetIdentity();
   const { submitClientCreate, isSaving } = useCreateClientSubmit();
+  const resolvedDescription =
+    description ??
+    (linkingContactDraft
+      ? "Create the account record. The contact you're creating will be linked when you save the contact form."
+      : "Create the account record. Add a primary contact later or from the People form.");
 
   const handleSubmit = async (values: ClientCreateFormValues) => {
     const result = await submitClientCreate(values);
@@ -113,12 +122,14 @@ export const CompanyCreateDialog = ({
       >
         <Form
           id={COMPANY_CREATE_FORM_ID}
-          key={`${open}-${initialCompanyName}-${initialPrimaryContactName}`}
+          key={`${open}-${initialCompanyName}-${initialPrimaryContactName}-${linkingContactDraft?.fullName ?? ""}`}
           className="flex min-h-0 flex-1 flex-col"
           defaultValues={{
             ...emptyClientFormValues(),
             company_name: initialCompanyName,
-            primary_full_name: initialPrimaryContactName,
+            primary_full_name: linkingContactDraft
+              ? ""
+              : initialPrimaryContactName,
             organization_member_id: identity?.id ?? null,
           }}
           onSubmit={handleSubmit}
@@ -128,10 +139,11 @@ export const CompanyCreateDialog = ({
               isMobile={isMobile}
               isSaving={isSaving}
               title={title}
-              description={description}
+              description={resolvedDescription}
               submitLabel={submitLabel}
               onOpenChange={onOpenChange}
               onUseExistingCompany={onUseExistingCompany}
+              linkingContactPreview={linkingContactDraft}
             />
           </FormGuardProvider>
         </Form>
@@ -148,6 +160,7 @@ const CompanyCreateDialogBody = ({
   submitLabel,
   onOpenChange,
   onUseExistingCompany,
+  linkingContactPreview,
 }: {
   isMobile: boolean;
   isSaving: boolean;
@@ -156,6 +169,7 @@ const CompanyCreateDialogBody = ({
   submitLabel: string;
   onOpenChange: (open: boolean) => void;
   onUseExistingCompany?: (company: Company) => void;
+  linkingContactPreview?: PrimaryContactDraft | null;
 }) => {
   const guardedClose = useGuardedDialogClose(onOpenChange);
   const companyName = useWatch<ClientCreateFormValues, "company_name">({
@@ -182,6 +196,7 @@ const CompanyCreateDialogBody = ({
       submitDisabled={Boolean(duplicateCompany)}
     >
       <ClientCreateStreamlinedFields
+        linkingContactPreview={linkingContactPreview}
         duplicateNotice={
           duplicateCompany ? (
             <CompanyNameDuplicateAlert

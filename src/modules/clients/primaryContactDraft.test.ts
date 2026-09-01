@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { hasPrimaryContactInput } from "./lbsClientUpsert";
 import {
+  getLinkingContactDraftFromPersonForm,
   getPrimaryContactDraftFromFormValues,
   hasPendingPrimaryOnCreate,
   resolveCreatePrimaryUpsertOptions,
@@ -83,5 +84,33 @@ describe("primaryContactDraft (deferred create on new company)", () => {
       primaryContactId: 42,
       linkPrimaryContactOnly: true,
     });
+  });
+});
+
+describe("getLinkingContactDraftFromPersonForm", () => {
+  it("builds a draft from in-progress person form values", () => {
+    expect(
+      getLinkingContactDraftFromPersonForm({
+        first_name: "Jane",
+        last_name: "Doe",
+        email_jsonb: [{ email: "jane@example.com", type: "Work" }],
+        phone_jsonb: [{ number: "(646) 546-1427", type: "Work" }],
+      }),
+    ).toEqual({
+      fullName: "Jane Doe",
+      email: "jane@example.com",
+      phone: "(646) 546-1427",
+    });
+  });
+
+  it("returns null when the person form has no identity yet", () => {
+    expect(
+      getLinkingContactDraftFromPersonForm({
+        first_name: "",
+        last_name: "",
+        email_jsonb: [{ email: "", type: "Work" }],
+        phone_jsonb: [{ number: "", type: "Work" }],
+      }),
+    ).toBeNull();
   });
 });

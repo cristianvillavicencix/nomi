@@ -126,6 +126,7 @@ export const ProgressiveMultiChannelInput = <T extends FieldValues>({
   }, [append, fields.length, typeChoices, valueKey]);
 
   const multi = fields.length > 1;
+  const showPrimaryToggle = valueKey === "value";
 
   const appendRow = () => {
     append(createEmptyRow(valueKey, defaultType(typeChoices)) as never);
@@ -165,23 +166,25 @@ export const ProgressiveMultiChannelInput = <T extends FieldValues>({
               />
             </div>
 
-            <IconButton
-              type="button"
-              className={cn(
-                "size-9 shrink-0",
-                isPrimary
-                  ? "text-amber-500"
-                  : "text-muted-foreground hover:text-amber-500",
-              )}
-              aria-label={isPrimary ? "Primary" : "Set as primary"}
-              title={isPrimary ? "Primary" : "Set as primary"}
-              disabled={isPrimary && !multi}
-              onClick={() => makePrimary(index)}
-            >
-              <Star
-                className={cn("size-4", isPrimary && "fill-current")}
-              />
-            </IconButton>
+            {showPrimaryToggle ? (
+              <IconButton
+                type="button"
+                className={cn(
+                  "size-9 shrink-0",
+                  isPrimary
+                    ? "text-amber-500"
+                    : "text-muted-foreground hover:text-amber-500",
+                )}
+                aria-label={isPrimary ? "Primary" : "Set as primary"}
+                title={isPrimary ? "Primary" : "Set as primary"}
+                disabled={isPrimary && !multi}
+                onClick={() => makePrimary(index)}
+              >
+                <Star
+                  className={cn("size-4", isPrimary && "fill-current")}
+                />
+              </IconButton>
+            ) : null}
 
             {multi ? (
               <IconButton

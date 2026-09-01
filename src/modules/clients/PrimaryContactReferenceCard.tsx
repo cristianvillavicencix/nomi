@@ -77,6 +77,8 @@ type PrimaryContactReferenceCardProps = {
   primaryContact?: Contact | null;
   /** Local-only primary contact draft (create mode — not persisted until company save). */
   draftPrimaryContact?: PrimaryContactDraft | null;
+  /** Read-only preview from a parent contact create form (company nested in contact flow). */
+  linkingContactPreview?: PrimaryContactDraft | null;
   onSelectContact: (contactId: Identifier) => void;
   onSelectDraftContact?: (draft: PrimaryContactDraft) => void;
   onClearContact?: () => void;
@@ -101,6 +103,26 @@ const SelectedPrimaryContactRow = ({
     onRemove={onRemove}
     removeAriaLabel="Remove primary contact"
   />
+);
+
+const LinkingContactPreview = ({
+  draft,
+}: {
+  draft: PrimaryContactDraft;
+}) => (
+  <div className="space-y-3">
+    <div className="rounded-lg border bg-muted/20 p-4">
+      <p className="font-medium leading-tight">{draft.fullName}</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {[draft.email, draft.phone].filter(Boolean).join(" · ") ||
+          "No email or phone yet"}
+      </p>
+    </div>
+    <p className="text-xs text-muted-foreground">
+      Finish creating the contact in the previous form — this account will be
+      linked when you save.
+    </p>
+  </div>
 );
 
 const CreatePrimaryContactPicker = ({
@@ -272,6 +294,7 @@ export const PrimaryContactReferenceCard = ({
   savedPrimaryContactId,
   primaryContact,
   draftPrimaryContact,
+  linkingContactPreview,
   onSelectContact,
   onSelectDraftContact,
   onClearContact}: PrimaryContactReferenceCardProps) => {
@@ -344,6 +367,10 @@ export const PrimaryContactReferenceCard = ({
   ]);
 
   if (isCreate) {
+    if (linkingContactPreview) {
+      return <LinkingContactPreview draft={linkingContactPreview} />;
+    }
+
     return (
       <CreatePrimaryContactPicker
         selectedContactId={selectedContactId}

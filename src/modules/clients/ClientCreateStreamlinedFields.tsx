@@ -61,8 +61,10 @@ const COMPANY_SIZE_CHOICES = [
 /** Streamlined company create layout with floating labels and sections. */
 export const ClientCreateStreamlinedFields = ({
   duplicateNotice,
+  linkingContactPreview,
 }: {
   duplicateNotice?: ReactNode;
+  linkingContactPreview?: PrimaryContactDraft | null;
 } = {}) => {
   const { identity } = useGetIdentity();
   const { setValue, getValues } = useFormContext<ClientCreateFormValues>();
@@ -224,12 +226,17 @@ export const ClientCreateStreamlinedFields = ({
 
       <CreateFormSection
         title="Primary contact"
-        description="Who we reach first for this account."
+        description={
+          linkingContactPreview
+            ? "The contact you're creating will be linked to this account."
+            : "Who we reach first for this account."
+        }
       >
         <PrimaryContactReferenceCard
           mode="create"
           selectedContactId={selectedPrimaryId}
           draftPrimaryContact={draftPrimaryContact}
+          linkingContactPreview={linkingContactPreview}
           onSelectContact={applyExistingPrimary}
           onSelectDraftContact={applyDraftPrimary}
           onClearContact={clearPrimarySelection}

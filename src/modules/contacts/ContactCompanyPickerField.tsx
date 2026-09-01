@@ -23,6 +23,7 @@ import {
   getCompanyDraftFromFormValues,
 } from "@/modules/contacts/companyDraft";
 import { getClientShowPath } from "@/app/routing";
+import { getLinkingContactDraftFromPersonForm } from "@/modules/clients/primaryContactDraft";
 import {
   EntitySearchGroup,
   EntitySearchOption,
@@ -69,6 +70,25 @@ export const ContactCompanyPickerField = ({
   const moveConfirmed = useWatch({ name: PRIMARY_MOVE_CONFIRMED_FIELD }) as
     | boolean
     | undefined;
+  const firstName = useWatch({ name: "first_name" }) as string | undefined;
+  const lastName = useWatch({ name: "last_name" }) as string | undefined;
+  const emailJsonb = useWatch({ name: "email_jsonb" }) as
+    | { email?: string }[]
+    | undefined;
+  const phoneJsonb = useWatch({ name: "phone_jsonb" }) as
+    | { number?: string }[]
+    | undefined;
+
+  const linkingContactDraft = useMemo(
+    () =>
+      getLinkingContactDraftFromPersonForm({
+        first_name: firstName,
+        last_name: lastName,
+        email_jsonb: emailJsonb,
+        phone_jsonb: phoneJsonb,
+      }),
+    [emailJsonb, firstName, lastName, phoneJsonb],
+  );
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -242,6 +262,7 @@ export const ContactCompanyPickerField = ({
         open={companyCreateOpen}
         onOpenChange={setCompanyCreateOpen}
         initialCompanyName={companyCreateInitialName}
+        linkingContactDraft={linkingContactDraft}
         enableDraft={false}
         onUseExistingCompany={selectCompany}
         onCreated={({ company, companyId, name, sector }) =>

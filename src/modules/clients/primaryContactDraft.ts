@@ -7,6 +7,37 @@ export type PrimaryContactDraft = {
   phone: string;
 };
 
+type PersonChannelRow = { email?: string; number?: string };
+
+/** Build a display draft from an in-progress person/contact create form. */
+export const getLinkingContactDraftFromPersonForm = (values: {
+  first_name?: string;
+  last_name?: string;
+  email_jsonb?: PersonChannelRow[];
+  phone_jsonb?: PersonChannelRow[];
+}): PrimaryContactDraft | null => {
+  const fullName = [values.first_name, values.last_name]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ");
+  const email =
+    values.email_jsonb
+      ?.map((row) => row.email?.trim())
+      .find(Boolean) ?? "";
+  const phone =
+    values.phone_jsonb
+      ?.map((row) => row.number?.trim())
+      .find(Boolean) ?? "";
+
+  if (!fullName && !email && !phone) return null;
+
+  return {
+    fullName: fullName || "This contact",
+    email,
+    phone,
+  };
+};
+
 export const getPrimaryContactDraftFromFormValues = (
   values: Pick<
     ClientCreateFormValues,
