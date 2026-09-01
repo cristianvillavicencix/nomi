@@ -10,12 +10,24 @@ import { SubscriptionFormEditor } from "@/modules/billing/subscriptions/Subscrip
 type CreateClientSubscriptionDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Pre-select agreement enrollment and contract template (e.g. from Templates → Send). */
+  initialContractTermsId?: number | null;
+  initialPackageId?: number | null;
+  initialEnrollmentMode?: "agreement" | "direct";
 };
 
 export const CreateClientSubscriptionDialog = ({
   open,
   onOpenChange,
+  initialContractTermsId = null,
+  initialPackageId = null,
+  initialEnrollmentMode = "direct",
 }: CreateClientSubscriptionDialogProps) => {
+  const editorKey = [
+    initialContractTermsId ?? "none",
+    initialPackageId ?? "none",
+    initialEnrollmentMode,
+  ].join("-");
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
       <DialogContent
@@ -48,7 +60,9 @@ export const CreateClientSubscriptionDialog = ({
           <DialogHeader>
             <DialogTitle>New subscription</DialogTitle>
             <DialogDescription>
-              Create a recurring plan with automatic Stripe billing.
+              {initialEnrollmentMode === "agreement"
+                ? "Send a subscription agreement for the client to review and sign."
+                : "Create a recurring plan with automatic Stripe billing."}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -56,9 +70,12 @@ export const CreateClientSubscriptionDialog = ({
         {open ? (
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <SubscriptionFormEditor
-              key="new-subscription"
+              key={`new-subscription-${editorKey}`}
               mode="create"
               scrollContainer="parent"
+              initialEnrollmentMode={initialEnrollmentMode}
+              initialContractTermsId={initialContractTermsId}
+              initialPackageId={initialPackageId}
               onSaved={() => onOpenChange(false)}
               onCancel={() => onOpenChange(false)}
             />

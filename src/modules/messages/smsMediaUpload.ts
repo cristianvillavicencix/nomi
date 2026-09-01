@@ -60,10 +60,16 @@ export const getMediaFileName = (urlOrPath: string) => {
 export const downloadMediaUrl = async (urlOrPath: string) => {
   const fileName = getMediaFileName(urlOrPath);
   if (isLegacyPublicMediaUrl(urlOrPath)) {
-    await downloadPrivateStorageFile({
-      reference: urlOrPath,
-      filename: fileName,
-    });
+    try {
+      await downloadPrivateStorageFile({
+        reference: urlOrPath,
+        filename: fileName,
+      });
+    } catch {
+      throw new Error(
+        "Could not download this attachment. Ask the sender to resend the image.",
+      );
+    }
     return;
   }
   await downloadPrivateStorageFile({

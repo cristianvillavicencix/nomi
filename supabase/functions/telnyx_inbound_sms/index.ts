@@ -25,6 +25,7 @@ import {
   SMS_OPT_OUT_CONFIRMATION,
 } from "../_shared/marketingOptOut.ts";
 import { recordSmsMarketingOptOut } from "../_shared/marketingAudience.ts";
+import { mirrorTelnyxMediaToStorage } from "../_shared/telnyxMedia.ts";
 
 const okResponse = () =>
   new Response(JSON.stringify({ received: true }), {
@@ -130,12 +131,31 @@ Deno.serve(async (req) => {
           ? "Attachment"
           : "");
 
+    let storedMediaUrls: string[] = [];
+    if (mediaUrls.length > 0) {
+      const mirrored = await Promise.all(
+        mediaUrls.map((mediaUrl) =>
+          mirrorTelnyxMediaToStorage({
+            mediaUrl,
+            orgId,
+            conversationId: Number(conversation.id),
+          }).catch((mirrorError) => {
+            console.error("Failed to mirror inbound Telnyx MMS", mirrorError);
+            return null;
+          }),
+        ),
+      );
+      storedMediaUrls = mirrored.filter(
+        (url): url is string => typeof url === "string" && url.length > 0,
+      );
+    }
+
     await insertSmsMessage({
       conversationId: Number(conversation.id),
       body: messageBody || "Message",
       direction: "inbound",
       externalId: messageId ?? null,
-      mediaUrls,
+      mediaUrls: storedMediaUrls.length > 0 ? storedMediaUrls : mediaUrls,
       smsDeliveryStatus: normalizeTelnyxDeliveryStatus("delivered"),
     });
 

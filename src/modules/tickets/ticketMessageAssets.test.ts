@@ -92,7 +92,7 @@ describe("inline image display helpers", () => {
 });
 
 describe("filterDownloadableMessageAssets", () => {
-  it("hides inline signature images from the attachment bar once rendered", () => {
+  it("keeps photo files downloadable even when rendered inline in html", () => {
     const html = '<img src="https://signed.example/0.abc123.png" alt="logo" />';
     const filtered = filterDownloadableMessageAssets(
       [signatureLogo, pdfAttachment],
@@ -100,7 +100,7 @@ describe("filterDownloadableMessageAssets", () => {
       html,
     );
 
-    expect(filtered).toEqual([pdfAttachment]);
+    expect(filtered).toEqual([signatureLogo, pdfAttachment]);
   });
 
   it("keeps inline images in the bar when they cannot render in html yet", () => {

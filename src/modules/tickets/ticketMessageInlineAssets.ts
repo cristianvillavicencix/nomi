@@ -28,6 +28,10 @@ export const filterDownloadableMessageAssets = (
   displayHtml?: string | null,
 ) =>
   assets.filter((asset) => {
+    // Photo files always get a download row — even when also shown inline in HTML.
+    if (asset.category === "photo" && asset.source === "file") {
+      return true;
+    }
     if (!isInlineTicketAttachment(asset, htmlBody ?? displayHtml)) {
       return true;
     }

@@ -13,6 +13,7 @@ import {
   useGetIdentity,
   useGetList,
   useGetMany,
+  useGetOne,
   useNotify,
   useRefresh,
 } from "ra-core";
@@ -32,6 +33,7 @@ import type { InvoiceLineDraft } from "@/modules/billing/invoiceLineUtils";
 import { SubscriptionCreateReviewPanel } from "@/modules/billing/subscriptions/SubscriptionCreateReviewPanel";
 import { SubscriptionLineItemsEditor } from "@/modules/billing/subscriptions/SubscriptionLineItemsEditor";
 import {
+  subscriptionLineFromServicePackage,
   subscriptionLinesFromRecord,
   subscriptionLinesToPayload,
   subscriptionNameFromLines,
@@ -158,6 +160,9 @@ type SubscriptionFormEditorProps = {
   scrollContainer?: "self" | "parent";
   /** Pre-select payment option when opening Edit from the toolbar. */
   initialPaymentMode?: SubscriptionPaymentMode | null;
+  initialEnrollmentMode?: SubscriptionEnrollmentMode;
+  initialContractTermsId?: number | null;
+  initialPackageId?: number | null;
   onSaved?: (result?: {
     setup_link_stale?: boolean;
     used_saved_card?: boolean;
@@ -181,6 +186,9 @@ export const SubscriptionFormEditor = forwardRef<
     onCancel,
     onStateChange,
     initialPaymentMode = null,
+    initialEnrollmentMode = "direct",
+    initialContractTermsId = null,
+    initialPackageId = null,
   },
   ref,
 ) {
@@ -222,13 +230,15 @@ export const SubscriptionFormEditor = forwardRef<
   const [paymentMode, setPaymentMode] =
     useState<SubscriptionPaymentMode>("request_setup");
   const [enrollmentMode, setEnrollmentMode] =
-    useState<SubscriptionEnrollmentMode>("direct");
+    useState<SubscriptionEnrollmentMode>(initialEnrollmentMode);
   const [agreementTermsMarkdown, setAgreementTermsMarkdown] = useState("");
   const [agreementTermsEdited, setAgreementTermsEdited] = useState(false);
   const [selectedContractTermsId, setSelectedContractTermsId] = useState<
     number | null
-  >(null);
-  const [contractPickedManually, setContractPickedManually] = useState(false);
+  >(initialContractTermsId);
+  const [contractPickedManually, setContractPickedManually] = useState(
+    initialContractTermsId != null,
+  );
   const [termsEditMode, setTermsEditMode] = useState(false);
   const [changeContractOpen, setChangeContractOpen] = useState(false);
   const [agreementPreviewOpen, setAgreementPreviewOpen] = useState(false);
@@ -319,8 +329,33 @@ export const SubscriptionFormEditor = forwardRef<
         sort: { field: "title", order: "ASC" },
         filter: { "is_active@eq": true },
       },
-      { enabled: mode === "create" && enrollmentMode === "agreement" },
+      {
+        enabled:
+          mode === "create" &&
+          (enrollmentMode === "agreement" || initialContractTermsId != null),
+      },
     );
+
+  const { data: initialPackage } = useGetOne<ServicePackage>(
+    "service_packages",
+    { id: initialPackageId! },
+    { enabled: mode === "create" && initialPackageId != null },
+  );
+
+  useEffect(() => {
+    if (mode !== "create" || initialPackageId == null || !initialPackage) return;
+    setLines((current) => {
+      if (current.some((line) => line.title.trim())) return current;
+      return [subscriptionLineFromServicePackage(initialPackage)];
+    });
+    if (
+      initialPackage.billing_interval === "weekly" ||
+      initialPackage.billing_interval === "monthly" ||
+      initialPackage.billing_interval === "yearly"
+    ) {
+      setBillingInterval(initialPackage.billing_interval);
+    }
+  }, [initialPackage, initialPackageId, mode]);
 
   const packageIdsOnLines = useMemo(
     () =>

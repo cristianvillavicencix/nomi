@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Paperclip } from "lucide-react";
+import { useNotify } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { PhotoLightboxGrid } from "@/components/ui/photo-lightbox-grid";
 import { isLegacyPublicMediaUrl } from "@/modules/messages/messagingStorage";
@@ -45,9 +46,11 @@ const useResolvedMediaUrls = (paths: string[]) => {
 const NonImageAttachment = ({
   storagePath,
   alt,
+  onDownload,
 }: {
   storagePath: string;
   alt?: string;
+  onDownload: (path: string) => void;
 }) => {
   const fileName = getMediaFileName(storagePath);
 
@@ -60,7 +63,7 @@ const NonImageAttachment = ({
         variant="secondary"
         size="sm"
         className="h-7 shrink-0 rounded-full px-2 text-xs"
-        onClick={() => void downloadMediaUrl(storagePath)}
+        onClick={() => onDownload(storagePath)}
       >
         Download
       </Button>
@@ -75,8 +78,20 @@ export const SmsMessageMedia = ({
   urls: string[];
   alt?: string;
 }) => {
+  const notify = useNotify();
   const resolvedUrls = useResolvedMediaUrls(urls);
   const loading = resolvedUrls.length < urls.length;
+
+  const handleDownload = async (storagePath: string) => {
+    try {
+      await downloadMediaUrl(storagePath);
+    } catch (error) {
+      notify(
+        error instanceof Error ? error.message : "Could not download attachment",
+        { type: "error" },
+      );
+    }
+  };
 
   const photoItems = useMemo(() => {
     const items: { id: string; src: string; alt: string }[] = [];
@@ -110,7 +125,7 @@ export const SmsMessageMedia = ({
         <PhotoLightboxGrid
           items={photoItems}
           variant="compact"
-          onDownloadItem={(item) => void downloadMediaUrl(item.id)}
+          onDownloadItem={(item) => void handleDownload(item.id)}
         />
       ) : null}
       {nonImagePaths.map((storagePath) => (
@@ -118,6 +133,7 @@ export const SmsMessageMedia = ({
           key={storagePath}
           storagePath={storagePath}
           alt={alt}
+          onDownload={(path) => void handleDownload(path)}
         />
       ))}
     </div>

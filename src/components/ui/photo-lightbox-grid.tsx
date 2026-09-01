@@ -108,10 +108,9 @@ export const PhotoLightboxGrid = ({
               <IconButton
                 variant="secondary"
                 className={cn(
-                  "absolute bottom-1.5 right-1.5 size-7 rounded-full shadow-sm",
-                  variant === "compact"
-                    ? "bg-background/90 hover:bg-background"
-                    : "opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+                  "absolute bottom-1.5 right-1.5 size-7 rounded-full bg-background/90 shadow-sm hover:bg-background",
+                  variant === "gallery" &&
+                    "sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:focus:opacity-100",
                 )}
                 aria-label={`Download ${item.title ?? item.alt ?? "image"}`}
                 onClick={(event) => {

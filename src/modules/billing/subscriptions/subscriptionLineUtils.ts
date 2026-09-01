@@ -1,5 +1,5 @@
 import type { InvoiceLineDraft } from "@/modules/billing/invoiceLineUtils";
-import type { ClientSubscription } from "@/modules/types";
+import type { ClientSubscription, ServicePackage } from "@/modules/types";
 
 export type SubscriptionLinePayload = {
   description: string;
@@ -19,6 +19,19 @@ export const emptySubscriptionLine = (): InvoiceLineDraft => ({
   unit: "ea",
   unit_price: 0,
   sort_order: 0,
+});
+
+export const subscriptionLineFromServicePackage = (
+  pkg: Pick<
+    ServicePackage,
+    "id" | "name" | "description" | "suggested_price"
+  >,
+): InvoiceLineDraft => ({
+  ...emptySubscriptionLine(),
+  title: pkg.name,
+  item_detail: pkg.description?.trim() ?? "",
+  unit_price: Number(pkg.suggested_price) || 0,
+  package_id: Number(pkg.id),
 });
 
 export const subscriptionLinesFromRecord = (
