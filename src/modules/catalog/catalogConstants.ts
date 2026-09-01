@@ -44,3 +44,103 @@ export const billingIntervalSuffix = (
   if (interval === "yearly") return "/yr";
   return "/mo";
 };
+
+/** Catalog list filter keys — `group:*` for category groups, `usage:*` for Book now / Tickets. */
+export type CatalogListFilterKey =
+  | "all"
+  | `group:${(typeof ADDON_CATALOG_GROUPS)[number]["key"]}`
+  | "usage:book_now"
+  | "usage:tickets";
+
+type CatalogRowLike = {
+  name: string;
+  description?: string | null;
+  category?: string | null;
+  booking_enabled?: boolean | null;
+  ticket_billing_enabled?: boolean | null;
+};
+
+const catalogGroup = (filterKey: CatalogListFilterKey) => {
+  if (!filterKey.startsWith("group:")) return null;
+  const key = filterKey.slice("group:".length);
+  return ADDON_CATALOG_GROUPS.find((entry) => entry.key === key) ?? null;
+};
+
+export const catalogRowMatchesFilter = (
+  row: CatalogRowLike,
+  filterKey: CatalogListFilterKey,
+) => {
+  if (filterKey === "all") return true;
+  if (filterKey === "usage:book_now") return row.booking_enabled === true;
+  if (filterKey === "usage:tickets") return row.ticket_billing_enabled === true;
+  const group = catalogGroup(filterKey);
+  if (!group) return true;
+  return group.categories.includes(
+    (row.category ?? "") as (typeof group.categories)[number],
+  );
+};
+
+export const filterCatalogPackages = <T extends CatalogRowLike>(
+  rows: T[],
+  filterKey: CatalogListFilterKey,
+  search: string,
+): T[] => {
+  const query = search.trim().toLowerCase();
+  return rows.filter((row) => {
+    if (!catalogRowMatchesFilter(row, filterKey)) return false;
+    if (!query) return true;
+    return (
+      row.name.toLowerCase().includes(query) ||
+      (row.description ?? "").toLowerCase().includes(query) ||
+      categoryLabel(row.category).toLowerCase().includes(query)
+    );
+  });
+};
+
+export const catalogFilterOptionsForRows = (
+  rows: CatalogRowLike[],
+  options?: { includeUsageFilters?: boolean },
+) => {
+  const includeUsageFilters = options?.includeUsageFilters ?? true;
+  const chips: { key: CatalogListFilterKey; label: string; count: number }[] = [
+    { key: "all", label: "All", count: rows.length },
+  ];
+
+  for (const group of ADDON_CATALOG_GROUPS) {
+    const count = rows.filter((row) =>
+      group.categories.includes(
+        (row.category ?? "") as (typeof group.categories)[number],
+      ),
+    ).length;
+    if (count > 0) {
+      chips.push({
+        key: `group:${group.key}`,
+        label: group.label,
+        count,
+      });
+    }
+  }
+
+  if (includeUsageFilters) {
+    const bookNowCount = rows.filter((row) => row.booking_enabled).length;
+    if (bookNowCount > 0) {
+      chips.push({
+        key: "usage:book_now",
+        label: "Book now",
+        count: bookNowCount,
+      });
+    }
+    const ticketsCount = rows.filter(
+      (row) => row.ticket_billing_enabled,
+    ).length;
+    if (ticketsCount > 0) {
+      chips.push({
+        key: "usage:tickets",
+        label: "Tickets",
+        count: ticketsCount,
+      });
+    }
+  }
+
+  return chips;
+};

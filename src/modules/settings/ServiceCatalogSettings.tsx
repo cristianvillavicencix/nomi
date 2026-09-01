@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import {
   useCreate,
   useDelete,
@@ -8,7 +8,7 @@ import {
   useNotify,
   useUpdate,
 } from "ra-core";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -33,7 +34,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   billingIntervalSuffix,
   billingTypeLabel,
+  catalogFilterOptionsForRows,
   categoryLabel,
+  filterCatalogPackages,
+  type CatalogListFilterKey,
 } from "@/modules/catalog/catalogConstants";
 import { LBS_SERVICE_PACKAGES } from "@/modules/catalog/serviceCatalogSeed";
 import {
@@ -42,6 +46,7 @@ import {
 } from "@/modules/settings/ServiceCatalogItemDialog";
 import type { ServicePackage } from "@/modules/types";
 import { MoneyText } from "@/lib/permissions/MoneyText";
+import { cn } from "@/lib/utils";
 
 const toPackageDraft = (pkg: ServicePackage): Partial<CatalogItemDraft> => ({
   name: pkg.name,
@@ -178,7 +183,7 @@ export const ServiceCatalogSettings = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <CatalogTable
+              <CatalogListPanel
                 rows={oneTimePackages}
                 usageContext="one_time"
                 showUsageBadges
@@ -220,7 +225,7 @@ export const ServiceCatalogSettings = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <CatalogTable
+              <CatalogListPanel
                 rows={recurringPackages}
                 usageContext="recurring"
                 showUsageBadges
@@ -340,7 +345,78 @@ export const ServiceCatalogSettings = () => {
   );
 };
 
-const CatalogTable = ({
+const CatalogFilterChip = ({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active?: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={cn(
+      "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors",
+      active
+        ? "border-primary bg-primary text-primary-foreground"
+        : "bg-background hover:bg-muted/60",
+    )}
+  >
+    <span>{label}</span>
+    <span
+      className={cn(
+        "tabular-nums",
+        active ? "text-primary-foreground/80" : "text-muted-foreground",
+      )}
+    >
+      {count}
+    </span>
+  </button>
+);
+
+const CatalogFilterBar = ({
+  filter,
+  onFilterChange,
+  search,
+  onSearchChange,
+  options,
+}: {
+  filter: CatalogListFilterKey;
+  onFilterChange: (value: CatalogListFilterKey) => void;
+  search: string;
+  onSearchChange: (value: string) => void;
+  options: ReturnType<typeof catalogFilterOptionsForRows>;
+}) => (
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-wrap gap-2">
+      {options.map((option) => (
+        <CatalogFilterChip
+          key={option.key}
+          label={option.label}
+          count={option.count}
+          active={filter === option.key}
+          onClick={() => onFilterChange(option.key)}
+        />
+      ))}
+    </div>
+    <div className="relative w-full sm:max-w-xs">
+      <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        value={search}
+        onChange={(event) => onSearchChange(event.target.value)}
+        placeholder="Search catalog…"
+        className="pl-8"
+        aria-label="Search catalog"
+      />
+    </div>
+  </div>
+);
+
+const CatalogListPanel = ({
   rows,
   usageContext = "one_time",
   showUsageBadges = false,
@@ -355,12 +431,83 @@ const CatalogTable = ({
   onEdit: (row: ServicePackage) => void;
   onDelete: (row: ServicePackage) => void;
 }) => {
+  const [filter, setFilter] = useState<CatalogListFilterKey>("all");
+  const [search, setSearch] = useState("");
+
+  const filterOptions = useMemo(
+    () =>
+      catalogFilterOptionsForRows(rows, {
+        includeUsageFilters: usageContext === "one_time",
+      }),
+    [rows, usageContext],
+  );
+
+  useEffect(() => {
+    if (!filterOptions.some((option) => option.key === filter)) {
+      setFilter("all");
+    }
+  }, [filter, filterOptions]);
+
+  const filteredRows = useMemo(
+    () => filterCatalogPackages(rows, filter, search),
+    [rows, filter, search],
+  );
+
+  const emptyMessage =
+    rows.length === 0
+      ? undefined
+      : filteredRows.length === 0
+        ? "No items match this filter."
+        : undefined;
+
+  return (
+    <div className="space-y-3">
+      {rows.length > 0 ? (
+        <CatalogFilterBar
+          filter={filter}
+          onFilterChange={setFilter}
+          search={search}
+          onSearchChange={setSearch}
+          options={filterOptions}
+        />
+      ) : null}
+      <CatalogTable
+        rows={filteredRows}
+        usageContext={usageContext}
+        showUsageBadges={showUsageBadges}
+        emptyMessage={emptyMessage}
+        onToggleActive={onToggleActive}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
+    </div>
+  );
+};
+
+const CatalogTable = ({
+  rows,
+  usageContext = "one_time",
+  showUsageBadges = false,
+  emptyMessage,
+  onToggleActive,
+  onEdit,
+  onDelete,
+}: {
+  rows: ServicePackage[];
+  usageContext?: "one_time" | "recurring";
+  showUsageBadges?: boolean;
+  emptyMessage?: string;
+  onToggleActive: (row: ServicePackage, active: boolean) => void;
+  onEdit: (row: ServicePackage) => void;
+  onDelete: (row: ServicePackage) => void;
+}) => {
   if (rows.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-6 text-center">
-        {usageContext === "recurring"
-          ? "No subscription items yet. Add recurring services like website maintenance."
-          : "No one-time items yet."}
+        {emptyMessage ??
+          (usageContext === "recurring"
+            ? "No subscription items yet. Add recurring services like website maintenance."
+            : "No one-time items yet.")}
       </p>
     );
   }
