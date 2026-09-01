@@ -75,6 +75,9 @@ export const buildSubscriptionContractVariables = (params: {
   clientAddress?: string | null;
   /** Contact / signer acting for the client company. */
   clientRepresentative?: string | null;
+  clientEmail?: string | null;
+  clientPhone?: string | null;
+  clientCityStateZip?: string | null;
   /** Staff member representing the provider (LBS). */
   providerRepresentative?: string | null;
   /** Optional notes from the subscription record. */
@@ -104,6 +107,12 @@ export const buildSubscriptionContractVariables = (params: {
     client_company: company,
     client_representative: representative || "—",
     client_address: params.clientAddress?.trim() || "—",
+    client_city_state_zip:
+      params.clientCityStateZip?.trim() ||
+      defaults.client_city_state_zip ||
+      "—",
+    client_email: params.clientEmail?.trim() || defaults.client_email || "—",
+    client_phone: params.clientPhone?.trim() || defaults.client_phone || "—",
     provider_representative: providerRep,
     contract_date: new Date().toISOString().slice(0, 10),
     proposal_number: number || params.subscriptionName,

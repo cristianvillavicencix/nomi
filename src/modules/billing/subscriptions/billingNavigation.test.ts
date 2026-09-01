@@ -46,6 +46,21 @@ describe("billingNavigation", () => {
     );
   });
 
+  it("resolves catalog tab from search params", () => {
+    expect(resolveBillingTab(new URLSearchParams("tab=catalog"))).toBe(
+      "catalog",
+    );
+  });
+
+  it("builds catalog tab params without invoice workspace noise", () => {
+    const params = buildBillingTabSearchParams(
+      "catalog",
+      new URLSearchParams("tab=invoices&invoice=99"),
+    );
+    expect(params.get("tab")).toBe("catalog");
+    expect(params.get("invoice")).toBeNull();
+  });
+
   it("preserves report params when switching to reports tab", () => {
     const params = buildBillingTabSearchParams(
       "reports",

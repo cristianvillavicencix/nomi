@@ -7,6 +7,7 @@ import {
 } from "@/components/atomic-crm/layout/PageActions";
 import { MobilePageChrome } from "@/components/atomic-crm/layout/MobilePageChrome";
 import { IconButton } from "@/components/ui/icon-button";
+import { ClientBillingCatalogTab } from "@/modules/billing/ClientBillingCatalogTab";
 import { ClientInvoicesTab } from "@/modules/billing/ClientInvoicesTab";
 import { ClientBillingReportsTab } from "@/modules/billing/reports/ClientBillingReportsTab";
 import { isBillingInvoiceWorkspace } from "@/modules/billing/billingWorkspaceMode";
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils";
 const billingTabTitle = (tab: BillingTabId) => {
   if (tab === "subscriptions") return "Subscriptions";
   if (tab === "reports") return "Reports";
+  if (tab === "catalog") return "Products & services";
   return "Invoices";
 };
 
@@ -63,6 +65,8 @@ export const ClientBillingPage = () => {
       <ClientSubscriptionsTab />
     ) : activeTab === "reports" ? (
       <ClientBillingReportsTab />
+    ) : activeTab === "catalog" ? (
+      <ClientBillingCatalogTab />
     ) : (
       <ClientInvoicesTab />
     );
@@ -128,9 +132,13 @@ export const ClientBillingPage = () => {
         value={activeTab}
         onValueChange={handleTabChange}
         items={BILLING_TABS}
-        fillHeight={fillHeight && activeTab !== "reports"}
+        fillHeight={
+          fillHeight && activeTab !== "reports" && activeTab !== "catalog"
+        }
         className={
-          fillHeight && activeTab !== "reports" ? "min-h-0 flex-1" : undefined
+          fillHeight && activeTab !== "reports" && activeTab !== "catalog"
+            ? "min-h-0 flex-1"
+            : undefined
         }
         content={tabContent}
       />

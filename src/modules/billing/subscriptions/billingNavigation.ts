@@ -1,6 +1,10 @@
 import type { SubscriptionPaymentMode } from "@/modules/billing/subscriptions/subscriptionScheduleUtils";
 
-export type BillingTabId = "invoices" | "subscriptions" | "reports";
+export type BillingTabId =
+  | "invoices"
+  | "subscriptions"
+  | "reports"
+  | "catalog";
 
 export type { SubscriptionPaymentMode };
 
@@ -21,6 +25,7 @@ export const BILLING_TABS: Array<{ id: BillingTabId; label: string }> = [
   { id: "invoices", label: "Invoices" },
   { id: "subscriptions", label: "Subscriptions" },
   { id: "reports", label: "Reports" },
+  { id: "catalog", label: "Products & services" },
 ];
 
 export const resolveBillingTab = (
@@ -29,6 +34,7 @@ export const resolveBillingTab = (
   const tab = params.get("tab");
   if (tab === "subscriptions") return "subscriptions";
   if (tab === "reports") return "reports";
+  if (tab === "catalog") return "catalog";
   return "invoices";
 };
 
@@ -120,6 +126,11 @@ export const buildBillingTabSearchParams = (
     if (newMrr) next.set("new_mrr", newMrr);
     const compare = current.get("compare");
     if (compare) next.set("compare", compare);
+    return next;
+  }
+
+  if (tab === "catalog") {
+    next.set("tab", "catalog");
     return next;
   }
 

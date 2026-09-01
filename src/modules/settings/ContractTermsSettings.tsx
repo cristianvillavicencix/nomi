@@ -8,6 +8,7 @@ import {
   useUpdate,
 } from "ra-core";
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -47,6 +48,7 @@ import {
   getDefaultContractTermsSeed,
   LBS_DEFAULT_CONTRACT_TERMS_VERSION,
 } from "@/modules/proposals/defaultContractTerms";
+import { getWebMaintenanceContractTermsSeed } from "@/modules/proposals/maintenanceContractTerms";
 import type { OrganizationContractTerms, ServicePackage } from "@/modules/types";
 
 const slugify = (value: string) =>
@@ -183,6 +185,9 @@ export const ContractTermsSettings = ({
   const [version, setVersion] = useState(LBS_DEFAULT_CONTRACT_TERMS_VERSION);
   const [title, setTitle] = useState(getDefaultContractTermsSeed().title);
   const [body, setBody] = useState(getDefaultContractTermsSeed().body_markdown);
+  const [defaultVariables, setDefaultVariables] = useState<
+    Record<string, string>
+  >({ ...getDefaultContractTermsSeed().default_variables });
   const [linkedPackageId, setLinkedPackageId] = useState<number | null>(null);
 
   const dialogOpen = editorMode !== "closed";
@@ -193,6 +198,7 @@ export const ContractTermsSettings = ({
       setVersion("1.0");
       setTitle("New contract template");
       setBody("# Contract\n\n**Client:** {{client_name}}\n\n{{line_items}}\n");
+      setDefaultVariables({ ...getDefaultContractTermsSeed().default_variables });
       setLinkedPackageId(null);
       return;
     }
@@ -201,6 +207,9 @@ export const ContractTermsSettings = ({
       setVersion(editingRow.version);
       setTitle(editingRow.title);
       setBody(editingRow.body_markdown);
+      setDefaultVariables({
+        ...(editingRow.default_variables ?? getDefaultContractTermsSeed().default_variables),
+      });
       const linked = packageByTermsId.get(Number(editingRow.id));
       setLinkedPackageId(linked ? Number(linked.id) : null);
     }
@@ -303,7 +312,7 @@ export const ContractTermsSettings = ({
           data: {
             org_id: orgId,
             ...payload,
-            default_variables: getDefaultContractTermsSeed().default_variables,
+            default_variables: defaultVariables,
             is_default: activeTemplates.length === 0,
             published_at: new Date().toISOString(),
           },
@@ -456,8 +465,34 @@ export const ContractTermsSettings = ({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              When this subscription catalog item is added to an agreement, this
-              template loads automatically (e.g. website maintenance).
+              Only <strong>recurring</strong> catalog items appear here (
+              {recurringPackages.length} active). One-time packages (e.g. Website
+              Starter) are for invoices and proposals, not subscription agreements.
+              {recurringPackages.length === 0 ? (
+                <>
+                  {" "}
+                  <Link
+                    to="/billing?tab=catalog"
+                    className="text-primary underline-offset-2 hover:underline"
+                  >
+                    Add a recurring item
+                  </Link>{" "}
+                  under Billing → Products & services (billing type: Recurring,
+                  e.g. Website maintenance).
+                </>
+              ) : (
+                <>
+                  {" "}
+                  Need web maintenance?{" "}
+                  <Link
+                    to="/billing?tab=catalog"
+                    className="text-primary underline-offset-2 hover:underline"
+                  >
+                    Create one in Products & services
+                  </Link>{" "}
+                  with billing type Recurring, then link it here.
+                </>
+              )}
             </p>
           </div>
 
@@ -471,20 +506,46 @@ export const ContractTermsSettings = ({
             />
           </div>
           {editorMode === "new" ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const seed = getDefaultContractTermsSeed();
-                setSlug("general");
-                setVersion(LBS_DEFAULT_CONTRACT_TERMS_VERSION);
-                setTitle(seed.title);
-                setBody(seed.body_markdown);
-              }}
-            >
-              Load default LBS terms
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const seed = getDefaultContractTermsSeed();
+                  setSlug("general");
+                  setVersion(LBS_DEFAULT_CONTRACT_TERMS_VERSION);
+                  setTitle(seed.title);
+                  setBody(seed.body_markdown);
+                  setDefaultVariables({ ...seed.default_variables });
+                }}
+              >
+                Load default LBS terms
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const seed = getWebMaintenanceContractTermsSeed();
+                  setSlug(seed.slug);
+                  setVersion(seed.version);
+                  setTitle(seed.title);
+                  setBody(seed.body_markdown);
+                  setDefaultVariables({ ...seed.default_variables });
+                  const maintenancePackage = recurringPackages.find((pkg) =>
+                    /maintenance/i.test(pkg.name),
+                  );
+                  setLinkedPackageId(
+                    maintenancePackage?.id != null
+                      ? Number(maintenancePackage.id)
+                      : null,
+                  );
+                }}
+              >
+                Load web maintenance contract
+              </Button>
+            </div>
           ) : null}
         </div>
 

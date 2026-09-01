@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getWebMaintenanceContractTermsSeed } from "@/modules/proposals/maintenanceContractTerms";
 import {
   buildSubscriptionContractVariables,
   mergeSubscriptionContractTerms,
@@ -74,6 +75,28 @@ describe("buildSubscriptionContractVariables", () => {
     expect(vars.client_name).toBe("Acme LLC");
     expect(vars.client_representative).toBe("Jane Doe");
     expect(vars.subscription_description_line).toContain("Monthly ads support");
+  });
+
+  it("merges the web maintenance contract template", () => {
+    const seed = getWebMaintenanceContractTermsSeed();
+    const vars = buildSubscriptionContractVariables({
+      clientName: "Acme LLC",
+      clientAddress: "320 Ocean Pkwy",
+      clientRepresentative: "Jane Doe",
+      subscriptionName: "Website maintenance",
+      subscriptionNumber: "SUB-2026-0042",
+      amount: 80,
+      billingInterval: "monthly",
+      lineItems: [{ description: "Website maintenance", quantity: 1, unit_price: 80 }],
+      termsVersion: seed.version,
+      defaultVariables: seed.default_variables,
+    });
+    const merged = mergeSubscriptionContractTerms(seed.body_markdown, vars);
+    expect(merged).toContain("Acme LLC");
+    expect(merged).toContain("Jane Doe");
+    expect(merged).toContain("Website maintenance");
+    expect(merged).not.toMatch(/\{\{client_name\}\}/);
+    expect(merged).toContain("Latino Business Support");
   });
 });
 
