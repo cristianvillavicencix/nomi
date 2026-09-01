@@ -154,14 +154,16 @@ export const ProgressiveMultiChannelInput = <T extends FieldValues>({
         const isPrimary = index === 0;
 
         return (
-          <div key={field.id} className="flex items-center gap-1">
-            <ChannelValueInput
-              kind={kind}
-              source={valueSource}
-              label={label}
-              onFirstEmailBlur={index === 0 ? onFirstEmailBlur : undefined}
-              onFirstEmailPaste={index === 0 ? onFirstEmailPaste : undefined}
-            />
+          <div key={field.id} className="flex min-w-0 items-center gap-1">
+            <div className="min-w-0 flex-1">
+              <ChannelValueInput
+                kind={kind}
+                source={valueSource}
+                label={label}
+                onFirstEmailBlur={index === 0 ? onFirstEmailBlur : undefined}
+                onFirstEmailPaste={index === 0 ? onFirstEmailPaste : undefined}
+              />
+            </div>
 
             <IconButton
               type="button"

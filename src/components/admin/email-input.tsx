@@ -109,7 +109,7 @@ export const EmailInput = (props: EmailInputProps) => {
   const inputControl = (
     <Popover open={open}>
       <PopoverAnchor asChild>
-        <div>
+        <div className="relative min-w-0 w-full">
           <FormControl>
             <Input
               {...rest}
@@ -186,6 +186,7 @@ export const EmailInput = (props: EmailInputProps) => {
           label={labelNode}
           htmlFor={id}
           required={isRequired}
+          className="min-w-0"
         >
           {inputControl}
         </FloatingFieldShell>

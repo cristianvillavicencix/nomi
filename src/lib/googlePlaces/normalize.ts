@@ -44,6 +44,24 @@ const pickComponent = (
   return (useShort ? match.shortText : match.longText) ?? "";
 };
 
+const CITY_COMPONENT_TYPES = [
+  "locality",
+  "postal_town",
+  "sublocality",
+  "sublocality_level_1",
+  "neighborhood",
+] as const;
+
+const resolveCityFromComponents = (
+  pick: (type: string) => string,
+): string => {
+  for (const type of CITY_COMPONENT_TYPES) {
+    const value = pick(type).trim();
+    if (value) return value;
+  }
+  return "";
+};
+
 type LegacyAddressComponent = {
   types?: string[];
   long_name?: string;
@@ -81,7 +99,9 @@ export const mapPlaceDetailsFromLegacyApi = (
     phone: String(payload.formatted_phone_number ?? "").trim(),
     website: stripWebsiteForDisplay(String(payload.website ?? "")),
     googleMapsUri: String(payload.url ?? "").trim(),
-    city: pickLegacyComponent(components, "locality"),
+    city: resolveCityFromComponents((type) =>
+      pickLegacyComponent(components, type),
+    ),
     stateAbbr: pickLegacyComponent(components, "administrative_area_level_1", true),
     zipcode: pickLegacyComponent(components, "postal_code"),
     country: pickLegacyComponent(components, "country", true),
@@ -109,7 +129,9 @@ export const mapPlaceDetailsFromApi = (
     ).trim(),
     website: stripWebsiteForDisplay(String(payload.websiteUri ?? "")),
     googleMapsUri: String(payload.googleMapsUri ?? "").trim(),
-    city: pickComponent(components, "locality"),
+    city: resolveCityFromComponents((type) =>
+      pickComponent(components, type),
+    ),
     stateAbbr: pickComponent(components, "administrative_area_level_1", true),
     zipcode: pickComponent(components, "postal_code"),
     country: pickComponent(components, "country", true),

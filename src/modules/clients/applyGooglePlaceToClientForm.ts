@@ -1,22 +1,7 @@
 import type { UseFormSetValue } from "react-hook-form";
 import type { GooglePlaceDetails } from "@/lib/googlePlaces";
+import { resolveStreetLine } from "@/lib/googlePlaces/normalize";
 import type { ClientCreateFormValues } from "@/modules/clients/ClientCreateForm";
-
-const streetFromFormattedAddress = (
-  formattedAddress: string,
-  details: GooglePlaceDetails,
-) => {
-  const firstLine =
-    formattedAddress.split("\n")[0]?.trim() ?? formattedAddress.trim();
-  if (!details.city?.trim()) return firstLine;
-  const cityIndex = firstLine
-    .toLowerCase()
-    .indexOf(details.city.trim().toLowerCase());
-  if (cityIndex > 0) {
-    return firstLine.slice(0, cityIndex).replace(/,\s*$/, "").trim();
-  }
-  return firstLine;
-};
 
 export const applyGoogleBusinessToClientForm = (
   setValue: UseFormSetValue<ClientCreateFormValues>,
@@ -43,12 +28,9 @@ export const applyGoogleAddressToClientForm = (
   details: GooglePlaceDetails,
   prefix: "company" | "billing" = "company",
 ) => {
-  if (details.formattedAddress) {
-    setValue(
-      `${prefix}_address`,
-      streetFromFormattedAddress(details.formattedAddress, details),
-      { shouldDirty: true },
-    );
+  const street = resolveStreetLine(details);
+  if (street) {
+    setValue(`${prefix}_address`, street, { shouldDirty: true });
   }
   if (details.city) {
     setValue(`${prefix}_city`, details.city, { shouldDirty: true });
