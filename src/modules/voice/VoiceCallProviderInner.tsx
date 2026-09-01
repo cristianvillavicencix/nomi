@@ -44,6 +44,10 @@ import {
   type TelnyxCall,
   type TelnyxRTC,
 } from "@/modules/voice/telnyxVoiceClient";
+import {
+  attachTelnyxRemoteElement,
+  getTelnyxRemoteAudioElement,
+} from "@/modules/voice/telnyxRemoteAudio";
 
 /** US East primary edge (Stamford CT / Ashburn); roaming fallback if unreachable. */
 const VOICE_DEVICE_EDGE: string[] = ["ashburn", "roaming"];
@@ -541,6 +545,7 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     });
 
     telnyxClientRef.current = client;
+    attachTelnyxRemoteElement(client);
     await connectTelnyxClient(client);
     void unlockVoiceCallAudio();
     setIsRegistered(true);
@@ -787,9 +792,11 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
       if (isTelnyx) {
         const client = await ensureTelnyxClient();
         const callerNumber = telnyxCallerIdRef.current || undefined;
+        void unlockVoiceCallAudio();
         const call = client.newCall({
           destinationNumber: normalizedTo,
           callerNumber,
+          remoteElement: getTelnyxRemoteAudioElement(),
         });
         activeTelnyxCallRef.current = call;
         return;
@@ -848,13 +855,16 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
       setIsMuted(false);
       setCallState("connecting");
       activeTelnyxCallRef.current = call;
-      void call.answer().catch((error) => {
-        console.error("[VoiceCallProvider] telnyx answer failed", error);
-        setErrorMessage(
-          error instanceof Error ? error.message : "Could not answer call",
-        );
-        setCallState("error");
-      });
+      void unlockVoiceCallAudio();
+      void call
+        .answer({ remoteElement: getTelnyxRemoteAudioElement() })
+        .catch((error) => {
+          console.error("[VoiceCallProvider] telnyx answer failed", error);
+          setErrorMessage(
+            error instanceof Error ? error.message : "Could not answer call",
+          );
+          setCallState("error");
+        });
       return;
     }
 
