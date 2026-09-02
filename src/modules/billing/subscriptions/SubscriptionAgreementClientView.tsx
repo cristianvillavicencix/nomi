@@ -1,8 +1,10 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SignaturePad } from "@/components/ui/signature-pad";
+import { Button } from "@/components/ui/button";
 import { ContractDocumentMarkdown } from "@/modules/billing/subscriptions/ContractDocumentMarkdown";
 import { applyLiveClientSignatureFields } from "@/modules/billing/subscriptions/applyLiveClientSignatureFields";
 import { formatSubscriptionAmountLabel } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
@@ -47,6 +49,7 @@ export const SubscriptionAgreementClientView = ({
   /** Live drawn signature PNG (updates contract body). */
   liveSignaturePng?: string;
 }) => {
+  const [agreementExpanded, setAgreementExpanded] = useState(false);
   const amountLabel = formatSubscriptionAmountLabel(
     model.amount,
     model.currency ?? "USD",
@@ -107,7 +110,7 @@ export const SubscriptionAgreementClientView = ({
         ) : null}
       </header>
 
-      <section className="space-y-4">
+      <section className="space-y-3">
         {!liveTerms ? (
           <p className="text-sm text-destructive">
             {preview
@@ -115,9 +118,51 @@ export const SubscriptionAgreementClientView = ({
               : "Terms are missing. Contact the sender."}
           </p>
         ) : (
-          <ContractDocumentMarkdown page portal>
-            {liveTerms}
-          </ContractDocumentMarkdown>
+          <>
+            <div
+              className={cn(
+                "contract-preview-shell relative",
+                !agreementExpanded && "contract-preview-shell--collapsed",
+              )}
+            >
+              <div
+                className={cn(
+                  !agreementExpanded && "max-h-[22rem] overflow-hidden",
+                )}
+              >
+                <ContractDocumentMarkdown page portal>
+                  {liveTerms}
+                </ContractDocumentMarkdown>
+              </div>
+              {!agreementExpanded ? (
+                <div
+                  className="contract-preview-fade pointer-events-none absolute inset-x-0 bottom-0 h-28"
+                  aria-hidden
+                />
+              ) : null}
+            </div>
+            <div className="flex justify-center pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setAgreementExpanded((open) => !open)}
+              >
+                {agreementExpanded ? (
+                  <>
+                    <ChevronUp className="size-4" />
+                    Show less
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="size-4" />
+                    View full agreement
+                  </>
+                )}
+              </Button>
+            </div>
+          </>
         )}
         <p className="text-sm text-neutral-500">
           Name and company details are already filled. Sign below to continue.

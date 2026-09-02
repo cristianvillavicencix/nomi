@@ -917,6 +917,25 @@ html.nomi-form-embed body {
   letter-spacing: 0.08em;
 }
 
+/* Collapsed agreement preview: soft white fade + light blur at the bottom */
+.contract-preview-shell--truncated {
+  isolation: isolate;
+}
+
+.contract-preview-fade {
+  background: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0) 0%,
+    rgb(255 255 255 / 0.72) 42%,
+    rgb(255 255 255 / 0.96) 78%,
+    #fff 100%
+  );
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 55%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 55%);
+}
+
 @media (max-width: 640px) {
   .contract-document-stage {
     padding: 0.75rem 0.5rem 1.25rem;
