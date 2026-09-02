@@ -57,7 +57,7 @@ export function SignedSubscriptionAgreementDialog({
               <header className="space-y-3 border-b pb-4">
                 {subscriptionName ? (
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[#4a8a3c]">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
                       Subscription
                     </p>
                     <p className="text-base font-semibold text-foreground">

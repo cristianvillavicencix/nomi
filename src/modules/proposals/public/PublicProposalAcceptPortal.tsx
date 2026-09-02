@@ -259,8 +259,8 @@ export const PublicProposalAcceptPortal = ({
               ) : (
                 <>
                   <p className="text-sm font-medium">{copy.termsHeading}</p>
-                  <div className="max-h-56 overflow-y-auto rounded-lg border bg-white p-3 text-sm sm:p-4">
-                    <ContractDocumentMarkdown>
+                  <div className="max-h-72 overflow-y-auto rounded-lg border bg-[#e5e7eb]">
+                    <ContractDocumentMarkdown page className="!py-3">
                       {termsMarkdown}
                     </ContractDocumentMarkdown>
                   </div>

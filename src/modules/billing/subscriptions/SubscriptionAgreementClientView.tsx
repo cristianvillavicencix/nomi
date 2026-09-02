@@ -156,8 +156,8 @@ export const SubscriptionAgreementClientView = ({
       ) : null}
 
       <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
-        <div className="border-b bg-[#4a8a3c]/[0.06] px-4 py-2.5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#4a8a3c]">
+        <div className="border-b bg-neutral-100 px-4 py-2.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600">
             Agreement
           </p>
         </div>
@@ -168,8 +168,8 @@ export const SubscriptionAgreementClientView = ({
               : "Terms are missing. Contact the sender."}
           </p>
         ) : (
-          <div className="max-h-[min(28rem,55vh)] overflow-y-auto px-4 py-4 sm:px-5">
-            <ContractDocumentMarkdown>
+          <div className="max-h-[min(36rem,62vh)] overflow-y-auto bg-[#e5e7eb]">
+            <ContractDocumentMarkdown page>
               {model.terms_markdown}
             </ContractDocumentMarkdown>
           </div>

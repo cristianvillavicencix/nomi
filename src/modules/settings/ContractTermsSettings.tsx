@@ -743,16 +743,16 @@ export const ContractTermsSettings = ({
 
   const previewDialog = previewRow ? (
     <Dialog open onOpenChange={() => setPreviewRow(null)}>
-      <DialogContent className="flex max-h-[min(92vh,820px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+      <DialogContent className="flex max-h-[min(94vh,960px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(100vw-2rem,920px)]">
         <DialogHeader className="shrink-0 border-b px-5 py-4 pr-12 text-left">
           <DialogTitle>Preview — {previewRow.title}</DialogTitle>
           <DialogDescription>
-            Sample client and line items; {"{{variables}}"} are filled for preview
-            only.
+            A4-style layout with sample client data. Placeholders are filled for
+            preview only.
           </DialogDescription>
         </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto bg-white px-5 py-4">
-          <ContractDocumentMarkdown>
+        <div className="min-h-0 flex-1 overflow-y-auto bg-[#e5e7eb]">
+          <ContractDocumentMarkdown page>
             {buildPreviewMarkdown(
               previewRow,
               packageByTermsId.get(Number(previewRow.id)) ?? null,

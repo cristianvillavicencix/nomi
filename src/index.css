@@ -613,15 +613,22 @@ html.nomi-form-embed body {
 }
 
 /*
- * Contract / subscription agreement document typography.
- * Green section headings + checkmark lists (client-facing legal docs).
+ * Contract / subscription agreement — print-like legal document.
+ * Charcoal headings, gray body, A4 page frame (not green marketing accents).
  */
 .contract-document {
-  --contract-accent: #4a8a3c;
+  --contract-ink: #1f2937;
+  --contract-heading: #374151;
   --contract-body: #4b5563;
+  --contract-muted: #6b7280;
+  --contract-rule: #d1d5db;
+  --contract-rule-soft: #e5e7eb;
   color: var(--contract-body);
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   line-height: 1.65;
+  letter-spacing: 0.01em;
+  text-align: left;
+  -webkit-font-smoothing: antialiased;
 }
 
 .contract-document > *:first-child {
@@ -636,99 +643,219 @@ html.nomi-form-embed body {
 .contract-document h2,
 .contract-document h3,
 .contract-document h4 {
-  color: var(--contract-accent);
+  color: var(--contract-heading);
   font-weight: 700;
-  letter-spacing: 0.02em;
-  line-height: 1.3;
-  margin: 1.35em 0 0.55em;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  margin: 1.6em 0 0.65em;
 }
 
 .contract-document h1 {
-  font-size: 1.15rem;
+  color: var(--contract-ink);
+  font-size: 1.2rem;
+  text-align: center;
   text-transform: uppercase;
+  margin-top: 0;
+  margin-bottom: 1.35em;
+  padding-bottom: 0.85em;
+  border-bottom: 1.5px solid var(--contract-rule);
 }
 
 .contract-document h2 {
-  font-size: 1rem;
+  font-size: 0.8125rem;
   text-transform: uppercase;
+  padding-bottom: 0.4em;
+  border-bottom: 1px solid var(--contract-rule-soft);
+  margin-top: 1.85em;
 }
 
 .contract-document h3 {
-  font-size: 0.95rem;
+  font-size: 0.8125rem;
   text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-top: 1.35em;
+  margin-bottom: 0.45em;
+}
+
+.contract-document h4 {
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  margin-top: 1.1em;
 }
 
 .contract-document p {
-  margin: 0.65em 0;
+  margin: 0.7em 0;
+  orphans: 3;
+  widows: 3;
 }
 
 .contract-document strong,
 .contract-document b {
-  color: var(--contract-accent);
+  color: var(--contract-ink);
   font-weight: 700;
 }
 
 .contract-document a {
-  color: var(--contract-accent);
+  color: var(--contract-heading);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 .contract-document ul {
   list-style: none;
-  margin: 0.75em 0;
+  margin: 0.85em 0;
   padding: 0;
 }
 
 .contract-document ul > li {
   position: relative;
-  margin: 0.45em 0;
-  padding-left: 1.75rem;
+  margin: 0.4em 0;
+  padding-left: 1.15rem;
 }
 
 .contract-document ul > li::before {
-  content: "";
+  content: "•";
   position: absolute;
-  top: 0.2em;
   left: 0;
-  width: 1.1rem;
-  height: 1.1rem;
-  border-radius: 9999px;
-  background-color: var(--contract-accent);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 8.2l2.4 2.4L12 5' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 0.7rem 0.7rem;
+  top: 0;
+  color: var(--contract-muted);
+  font-weight: 700;
+  line-height: inherit;
 }
 
 .contract-document ol {
-  margin: 0.75em 0;
+  margin: 0.85em 0;
   padding-left: 1.35rem;
 }
 
 .contract-document ol > li {
   margin: 0.4em 0;
-  padding-left: 0.25rem;
+  padding-left: 0.35rem;
 }
 
 .contract-document ol > li::marker {
-  color: var(--contract-accent);
+  color: var(--contract-heading);
   font-weight: 700;
 }
 
 .contract-document hr {
   border: 0;
-  border-top: 1px solid color-mix(in oklab, var(--contract-accent) 25%, transparent);
-  margin: 1.25em 0;
+  border-top: 1px solid var(--contract-rule);
+  margin: 1.75em 0;
 }
 
 .contract-document em,
 .contract-document i {
-  color: color-mix(in oklab, var(--contract-body) 85%, black);
+  color: var(--contract-muted);
+  font-style: italic;
+}
+
+.contract-document table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0 1.25em;
+  font-size: 0.8125rem;
+}
+
+.contract-document thead th,
+.contract-document th {
+  background: #f3f4f6;
+  color: var(--contract-ink);
+  font-weight: 650;
+  text-align: left;
+  padding: 0.55em 0.65em;
+  border: 1px solid var(--contract-rule);
+}
+
+.contract-document td {
+  padding: 0.5em 0.65em;
+  border: 1px solid var(--contract-rule-soft);
+  vertical-align: top;
+}
+
+.contract-document tr:nth-child(even) td {
+  background: #fafafa;
+}
+
+.contract-document blockquote {
+  margin: 1em 0;
+  padding: 0.65em 0 0.65em 1em;
+  border-left: 3px solid var(--contract-rule);
+  color: var(--contract-muted);
+}
+
+/* A4 sheet stage for preview / print-like reading */
+.contract-document-stage {
+  display: flex;
+  justify-content: center;
+  background: #e5e7eb;
+  padding: 1.25rem 0.75rem 2rem;
+}
+
+.contract-document-page {
+  box-sizing: border-box;
+  width: 210mm;
+  max-width: 100%;
+  min-height: 297mm;
+  background: #fff;
+  color: inherit;
+  padding: 18mm 16mm 22mm;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.06),
+    0 12px 28px rgb(0 0 0 / 0.1);
+}
+
+@media (max-width: 640px) {
+  .contract-document-stage {
+    padding: 0.75rem 0.5rem 1.25rem;
+    background: #f3f4f6;
+  }
+
+  .contract-document-page {
+    min-height: auto;
+    padding: 1.25rem 1rem 1.75rem;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+  }
+}
+
+@media print {
+  .contract-document-stage {
+    background: none;
+    padding: 0;
+    display: block;
+  }
+
+  .contract-document-page {
+    width: auto;
+    min-height: auto;
+    box-shadow: none;
+    padding: 0;
+  }
 }
 
 .dark .contract-document {
-  --contract-accent: #6bb35a;
+  --contract-ink: #f3f4f6;
+  --contract-heading: #e5e7eb;
   --contract-body: #cbd5e1;
+  --contract-muted: #94a3b8;
+  --contract-rule: #475569;
+  --contract-rule-soft: #334155;
 }
 
+.dark .contract-document thead th,
+.dark .contract-document th {
+  background: #1e293b;
+}
+
+.dark .contract-document tr:nth-child(even) td {
+  background: #0f172a;
+}
+
+.dark .contract-document-stage {
+  background: #0f172a;
+}
+
+.dark .contract-document-page {
+  background: #111827;
+}

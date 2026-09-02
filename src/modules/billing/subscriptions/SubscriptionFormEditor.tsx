@@ -1430,13 +1430,13 @@ export const SubscriptionFormEditor = forwardRef<
                       placeholder="Markdown terms shown to the client before signature"
                     />
                   ) : (
-                    <div className="max-h-48 overflow-y-auto rounded-md border bg-white p-3 text-sm">
+                    <div className="max-h-56 overflow-y-auto rounded-md border bg-[#e5e7eb]">
                       {agreementTermsMarkdown.trim() ? (
-                        <ContractDocumentMarkdown>
+                        <ContractDocumentMarkdown page className="!py-3">
                           {agreementTermsMarkdown}
                         </ContractDocumentMarkdown>
                       ) : (
-                        <p className="text-muted-foreground">
+                        <p className="bg-white p-3 text-muted-foreground">
                           Select a package with a linked contract, or choose a
                           template with Change contract.
                         </p>
