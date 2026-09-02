@@ -421,15 +421,23 @@ export const SubscriptionFormEditor = forwardRef<
         })
       | undefined;
     if (!company) return "—";
-    const parts = [
-      company.address,
-      company.city,
-      company.state_abbr,
-      company.zipcode,
-    ]
+    const street = company.address?.trim() || "";
+    return street || "—";
+  }, [billTo]);
+
+  const clientCityStateZip = useMemo(() => {
+    const company = billTo?.company as
+      | (Company & {
+          city?: string | null;
+          state_abbr?: string | null;
+          zipcode?: string | null;
+        })
+      | undefined;
+    if (!company) return "";
+    return [company.city, company.state_abbr, company.zipcode]
       .map((part) => (typeof part === "string" ? part.trim() : ""))
-      .filter(Boolean);
-    return parts.join(", ") || "—";
+      .filter(Boolean)
+      .join(", ");
   }, [billTo]);
 
   useEffect(() => {
@@ -474,13 +482,15 @@ export const SubscriptionFormEditor = forwardRef<
     const vars = buildSubscriptionContractVariables({
       clientName: clientDisplayName,
       clientAddress,
+      clientCityStateZip: clientCityStateZip || null,
       clientRepresentative: clientRepresentativeName,
       clientEmail: recipientEmail || null,
       clientPhone: recipientPhone || null,
       providerRepresentative: identity?.fullName?.trim() || null,
       subscriptionDescription: null,
       subscriptionName: subscriptionNameFromLines(lines) || "Subscription",
-      subscriptionNumber: null,
+      subscriptionNumber:
+        subscription?.subscription_number?.trim() || null,
       amount: sumSubscriptionLinesAmount(lines),
       currency: "USD",
       billingInterval,
@@ -499,11 +509,13 @@ export const SubscriptionFormEditor = forwardRef<
     clientDisplayName,
     clientRepresentativeName,
     clientAddress,
+    clientCityStateZip,
     recipientEmail,
     recipientPhone,
     identity?.fullName,
     lines,
     billingInterval,
+    subscription?.subscription_number,
   ]);
 
   useEffect(() => {

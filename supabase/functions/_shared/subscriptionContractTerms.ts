@@ -87,7 +87,7 @@ export const buildSubscriptionContractVariables = (params: {
     subscription_description_line: description
       ? `Descripción: **${description}**.\n`
       : "",
-    subscription_number: number,
+    subscription_number: number || "Se asignará al enviar",
     subscription_number_line: number ? ` (${number})` : "",
     proposal_validity_days: "30",
     terms_version: params.termsVersion,

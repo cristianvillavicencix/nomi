@@ -77,6 +77,18 @@ describe("buildSubscriptionContractVariables", () => {
     expect(vars.subscription_description_line).toContain("Monthly ads support");
   });
 
+  it("shows pending contract number when none assigned yet", () => {
+    const vars = buildSubscriptionContractVariables({
+      clientName: "Acme",
+      subscriptionName: "Plan",
+      amount: 10,
+      billingInterval: "monthly",
+      lineItems: [],
+      termsVersion: "1.0",
+    });
+    expect(vars.subscription_number).toBe("Se asignará al enviar");
+  });
+
   it("merges the web maintenance contract template", () => {
     const seed = getWebMaintenanceContractTermsSeed();
     const vars = buildSubscriptionContractVariables({

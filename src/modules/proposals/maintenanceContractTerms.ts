@@ -3,7 +3,7 @@ import {
   MAINTENANCE_CONTRACT_VARIABLES,
 } from "@/modules/proposals/proposalCommercialConstants";
 
-export const LBS_WEB_MAINTENANCE_CONTRACT_VERSION = "1.0";
+export const LBS_WEB_MAINTENANCE_CONTRACT_VERSION = "1.1";
 
 export const LBS_WEB_MAINTENANCE_CONTRACT_TITLE =
   "Contrato de Mantenimiento y Soporte Web";
@@ -11,9 +11,13 @@ export const LBS_WEB_MAINTENANCE_CONTRACT_TITLE =
 /** Spanish legal body for recurring website maintenance subscriptions. */
 export const LBS_WEB_MAINTENANCE_CONTRACT_BODY = `# CONTRATO DE MANTENIMIENTO Y SOPORTE WEB
 
-**Fecha de efecto:** {{contract_date}}
+| Campo | Detalle |
+| :--- | :--- |
+| Fecha de efecto | {{contract_date}} |
+| Número de contrato | {{subscription_number}} |
+| Versión del documento | {{terms_version}} |
 
-**Número de contrato:** {{subscription_number}}
+El presente documento constituye un **Acuerdo de Mantenimiento y Soporte Web** (el “Acuerdo” o el “Contrato”) celebrado entre las partes identificadas a continuación. Al firmar o aceptar este Acuerdo, cada parte confirma que ha leído, comprendido y aceptado todos sus términos.
 
 ## PARTES
 
@@ -21,26 +25,30 @@ export const LBS_WEB_MAINTENANCE_CONTRACT_BODY = `# CONTRATO DE MANTENIMIENTO Y 
 
 **{{provider_name}}**
 
-- Sitio web: {{provider_website}}
-- Dirección: {{provider_address}}
-- Estado de incorporación: {{provider_incorporation_state}}
-- EIN / Número de identificación fiscal: {{provider_ein}}
-- Representante: {{provider_representative}}
-- Correo electrónico: {{provider_email}}
-- Teléfono: {{provider_phone}}
+| Campo | Detalle |
+| :--- | :--- |
+| Sitio web | {{provider_website}} |
+| Dirección | {{provider_address}} |
+| Estado de incorporación | {{provider_incorporation_state}} |
+| EIN / ID fiscal | {{provider_ein}} |
+| Representante | {{provider_representative}} |
+| Correo electrónico | {{provider_email}} |
+| Teléfono | {{provider_phone}} |
 
-*(En adelante, "EL PROVEEDOR" o "LBS")*
+*(En adelante, “EL PROVEEDOR” o “LBS”)*
 
 ### CLIENTE
 
-- **Nombre / Empresa:** {{client_name}}
-- **Dirección:** {{client_address}}
-- **Ciudad, Estado, ZIP:** {{client_city_state_zip}}
-- **Representante:** {{client_representative}}
-- **Correo electrónico:** {{client_email}}
-- **Teléfono:** {{client_phone}}
+| Campo | Detalle |
+| :--- | :--- |
+| Nombre / Empresa | {{client_name}} |
+| Dirección | {{client_address}} |
+| Ciudad, Estado, ZIP | {{client_city_state_zip}} |
+| Representante | {{client_representative}} |
+| Correo electrónico | {{client_email}} |
+| Teléfono | {{client_phone}} |
 
-*(En adelante, "EL CLIENTE")*
+*(En adelante, “EL CLIENTE”)*
 
 ---
 
@@ -225,17 +233,21 @@ Al firmar, ambas partes reconocen que han leído, entendido y aceptado todos los
 
 **{{provider_name}}** · {{provider_website}}
 
-- Nombre: {{lbs_signatory}}
-- Cargo: {{provider_signatory_title}}
-- Firma: _________________________
-- Fecha: {{signed_at}}
+| Campo | Detalle |
+| :--- | :--- |
+| Nombre | {{lbs_signatory}} |
+| Cargo | {{provider_signatory_title}} |
+| Firma | _________________________ |
+| Fecha | {{signed_at}} |
 
 ### POR EL CLIENTE
 
-- Nombre: {{client_representative}}
-- Cargo: {{client_signatory_title}}
-- Firma: _________________________
-- Fecha: {{signed_at}}
+| Campo | Detalle |
+| :--- | :--- |
+| Nombre | {{client_representative}} |
+| Cargo | {{client_signatory_title}} |
+| Firma | _________________________ |
+| Fecha | {{signed_at}} |
 
 *Versión del documento: {{terms_version}} · {{provider_name}}*`;
 

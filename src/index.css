@@ -754,7 +754,7 @@ html.nomi-form-embed body {
 .contract-document table {
   width: 100%;
   border-collapse: collapse;
-  margin: 1em 0 1.25em;
+  margin: 1em 0 1.35em;
   font-size: 0.8125rem;
 }
 
@@ -774,8 +774,19 @@ html.nomi-form-embed body {
   vertical-align: top;
 }
 
-.contract-document tr:nth-child(even) td {
+.contract-document td:first-child {
+  width: 36%;
+  color: var(--contract-ink);
+  font-weight: 600;
+  background: #f9fafb;
+}
+
+.contract-document tr:nth-child(even) td:last-child {
   background: #fafafa;
+}
+
+.contract-document tr:nth-child(even) td:first-child {
+  background: #f3f4f6;
 }
 
 .contract-document blockquote {
@@ -848,8 +859,16 @@ html.nomi-form-embed body {
   background: #1e293b;
 }
 
-.dark .contract-document tr:nth-child(even) td {
+.dark .contract-document td:first-child {
+  background: #1e293b;
+}
+
+.dark .contract-document tr:nth-child(even) td:last-child {
   background: #0f172a;
+}
+
+.dark .contract-document tr:nth-child(even) td:first-child {
+  background: #1e293b;
 }
 
 .dark .contract-document-stage {
