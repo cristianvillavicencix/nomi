@@ -68,6 +68,7 @@ export type ClientSubscriptionRow = {
   activated_at?: string | null;
   stripe_payment_method_id?: string | null;
   subscription_number?: string | null;
+  created_by_member_id?: number | null;
   starts_at: string | null;
   ends_at: string | null;
 };
@@ -1705,6 +1706,8 @@ export async function deliverSubscriptionSetupLink(
     sendEmail: params.sendEmail,
     sendSms: params.sendSms,
     contactId: params.subscription.contact_id,
+    subscriptionId: params.subscription.id,
+    purpose: "setup_link",
   });
 }
 
@@ -1722,6 +1725,7 @@ export async function deliverSubscriptionAgreementLink(
     message?: string | null;
     sendEmail?: boolean;
     sendSms?: boolean;
+    clientName?: string | null;
   },
 ) {
   const { shareUrl } = await ensureSubscriptionAgreementShareLink(supabase, {
@@ -1744,15 +1748,14 @@ export async function deliverSubscriptionAgreementLink(
     shareUrl,
     emailTo: params.emailTo,
     smsTo: params.smsTo,
-    subject:
-      params.subject?.trim() ||
-      `Review and sign: ${params.subscription.name}`,
-    message:
-      params.message?.trim() ||
-      `Please review the subscription terms, sign, and add your card to start billing.\n\n${shareUrl}`,
+    subject: params.subject,
+    message: params.message,
     sendEmail: params.sendEmail,
     sendSms: params.sendSms,
     contactId: params.subscription.contact_id,
+    clientName: params.clientName,
+    subscriptionId: params.subscription.id,
+    purpose: "agreement_invite",
   });
 }
 

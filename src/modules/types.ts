@@ -238,6 +238,8 @@ export type ClientSubscription = {
   agreement_signatory_name?: string | null;
   agreement_signature_png?: string | null;
   agreement_signed_ip?: string | null;
+  agreement_invite_sent_at?: string | null;
+  agreement_completion_emailed_at?: string | null;
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
   stripe_checkout_session_id?: string | null;

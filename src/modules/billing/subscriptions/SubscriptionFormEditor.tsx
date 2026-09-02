@@ -50,7 +50,13 @@ import {
   type SubscriptionStaffCardFormHandle,
 } from "@/modules/billing/subscriptions/SubscriptionStaffCardForm";
 import { resolvePublicAppBaseUrl, resolveSubscriptionSetupShareUrl } from "@/lib/publicAppUrl";
-import { buildDefaultSubscriptionSetupMessage, formatSubscriptionAmountLabel } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
+import {
+  buildDefaultAgreementInviteEmailHtml,
+  buildDefaultAgreementInviteMessage,
+  buildDefaultAgreementInviteSubject,
+  buildDefaultSubscriptionSetupMessage,
+  formatSubscriptionAmountLabel,
+} from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
 import {
   computeSubscriptionEndsAt,
   inferSubscriptionPaymentMode,
@@ -592,32 +598,80 @@ export const SubscriptionFormEditor = forwardRef<
     enrollment_mode: subscription?.enrollment_mode ?? enrollmentMode,
   });
 
-  const defaultMessage = useMemo(
-    () =>
-      buildDefaultSubscriptionSetupMessage({
-        orgLabel: orgTitle ?? "Latino Business Support",
-        subscriptionName,
-        subscriptionNumber: (subscription?.subscription_number ?? referenceNumber) || null,
-        amountLabel: formatSubscriptionAmountLabel(
-          amount,
-          subscription?.currency ?? "USD",
-          billingInterval,
-        ),
-        shareUrl: previewShareUrl,
-      }),
-    [
-      orgTitle,
+  const defaultMessage = useMemo(() => {
+    const shared = {
+      orgLabel: orgTitle ?? "Latino Business Support",
       subscriptionName,
-      subscription?.subscription_number,
-      referenceNumber,
-      amount,
-      subscription?.currency,
-      billingInterval,
-      previewShareUrl,
-    ],
-  );
+      subscriptionNumber:
+        (subscription?.subscription_number ?? referenceNumber) || null,
+      amountLabel: formatSubscriptionAmountLabel(
+        amount,
+        subscription?.currency ?? "USD",
+        billingInterval,
+      ),
+      shareUrl: previewShareUrl,
+    };
+    if (enrollmentMode === "agreement") {
+      return buildDefaultAgreementInviteMessage(shared);
+    }
+    return buildDefaultSubscriptionSetupMessage(shared);
+  }, [
+    enrollmentMode,
+    orgTitle,
+    subscriptionName,
+    subscription?.subscription_number,
+    referenceNumber,
+    amount,
+    subscription?.currency,
+    billingInterval,
+    previewShareUrl,
+  ]);
 
-  const deliveryMessage = messageEdited ? message.trim() || defaultMessage : defaultMessage;
+  const deliveryMessage = messageEdited
+    ? message.trim() || defaultMessage
+    : defaultMessage;
+
+  const deliveryEmailHtml = useMemo(() => {
+    if (enrollmentMode !== "agreement") {
+      return deliveryMessage.replace(/\n/g, "<br/>");
+    }
+    if (messageEdited) {
+      return deliveryMessage.replace(/\n/g, "<br/>");
+    }
+    return buildDefaultAgreementInviteEmailHtml({
+      orgLabel: orgTitle ?? "Latino Business Support",
+      clientName: clientDisplayName !== "Client" ? clientDisplayName : null,
+      subscriptionName,
+      subscriptionNumber:
+        (subscription?.subscription_number ?? referenceNumber) || null,
+      amountLabel: formatSubscriptionAmountLabel(
+        amount,
+        subscription?.currency ?? "USD",
+        billingInterval,
+      ),
+      shareUrl: previewShareUrl,
+    });
+  }, [
+    enrollmentMode,
+    messageEdited,
+    deliveryMessage,
+    orgTitle,
+    clientDisplayName,
+    subscriptionName,
+    subscription?.subscription_number,
+    referenceNumber,
+    amount,
+    subscription?.currency,
+    billingInterval,
+    previewShareUrl,
+  ]);
+
+  const deliveryEmailSubject = useMemo(() => {
+    if (enrollmentMode === "agreement") {
+      return buildDefaultAgreementInviteSubject(subscriptionName);
+    }
+    return `${orgTitle ?? "Latino Business Support"}: Set up ${subscriptionName}`;
+  }, [enrollmentMode, orgTitle, subscriptionName]);
 
   const endsAtIso = useMemo(() => {
     const startDate = new Date(`${startsAt}T00:00:00`);
@@ -1382,7 +1436,7 @@ export const SubscriptionFormEditor = forwardRef<
                     onClick={() => {
                       setEnrollmentMode("agreement");
                       setSendEmail(Boolean(recipientEmail));
-                      setSendSms(false);
+                      setSendSms(Boolean(recipientPhone));
                     }}
                   >
                     Agreement
@@ -1563,6 +1617,33 @@ export const SubscriptionFormEditor = forwardRef<
                     })}
                   </div>
                 </div>
+                <FloatingFieldShell
+                  active={
+                    messageFocused ||
+                    Boolean((messageEdited ? message : defaultMessage).trim())
+                  }
+                  label="Message"
+                  htmlFor="subscription-agreement-message"
+                  className="min-h-[4.5rem] items-stretch"
+                >
+                  <Textarea
+                    id="subscription-agreement-message"
+                    rows={3}
+                    value={messageEdited ? message : ""}
+                    onChange={(event) => {
+                      setMessageEdited(true);
+                      setMessage(event.target.value);
+                    }}
+                    onFocus={() => setMessageFocused(true)}
+                    onBlur={() => setMessageFocused(false)}
+                    placeholder={defaultMessage}
+                    disabled={fieldsLocked}
+                    className={cn(
+                      floatingFieldControlClassName,
+                      "min-h-[4.5rem] resize-y py-2",
+                    )}
+                  />
+                </FloatingFieldShell>
               </div>
             ) : null}
 
@@ -1750,6 +1831,9 @@ export const SubscriptionFormEditor = forwardRef<
           sendEmail={sendEmail}
           sendSms={sendSms}
           deliveryMessage={deliveryMessage}
+          deliveryEmailHtml={deliveryEmailHtml}
+          deliveryEmailSubject={deliveryEmailSubject}
+          enrollmentMode={enrollmentMode}
           orgTitle={orgTitle ?? "Latino Business Support"}
           canSubmit={canSubmit}
           isPending={saveMutation.isPending}

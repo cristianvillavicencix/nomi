@@ -6,6 +6,7 @@ import {
   buildSubscriptionContractVariables,
   mergeContractTerms,
 } from "../_shared/subscriptionContractTerms.ts";
+import { resolvePublicAppBaseUrl } from "../_shared/publicAppUrl.ts";
 
 type GetBody = {
   short_code?: string;
@@ -41,7 +42,7 @@ Deno.serve(
       const { data: subscription } = await supabaseAdmin
         .from("client_subscriptions")
         .select(
-          "id, name, amount, currency, billing_interval, line_items, status, subscription_number, description, enrollment_mode, agreement_terms_markdown, agreement_terms_version, agreement_contract_terms_id, agreement_signed_at, agreement_signatory_name, agreement_signed_ip, payment_method_last4, stripe_subscription_id, contact_id, company_id, created_by_member_id",
+          "id, name, amount, currency, billing_interval, line_items, status, subscription_number, description, enrollment_mode, agreement_terms_markdown, agreement_terms_version, agreement_contract_terms_id, agreement_signed_at, agreement_signatory_name, agreement_signature_png, agreement_signed_ip, payment_method_last4, stripe_subscription_id, contact_id, company_id, created_by_member_id",
         )
         .eq("id", tokenRow.subscription_id)
         .eq("org_id", tokenRow.org_id)
@@ -177,6 +178,29 @@ Deno.serve(
           vars.signed_ip = subscription.agreement_signed_ip.trim();
         }
         termsMarkdown = mergeContractTerms(termsMarkdown, vars);
+        if (
+          subscription.agreement_signed_at &&
+          subscription.agreement_signature_png?.startsWith("data:image/")
+        ) {
+          const sigMark = buildSubscriptionContractVariables({
+            clientName,
+            clientRepresentative:
+              subscription.agreement_signatory_name ?? clientRepresentative,
+            subscriptionName: subscription.name ?? "Subscription",
+            amount: Number(subscription.amount) || 0,
+            billingInterval: subscription.billing_interval ?? "monthly",
+            lineItems: [],
+            termsVersion: "1.0",
+            clientSignatureImage: subscription.agreement_signature_png,
+          }).client_signature_mark;
+          termsMarkdown = mergeContractTerms(termsMarkdown, {
+            client_representative:
+              subscription.agreement_signatory_name?.trim() ||
+              clientRepresentative ||
+              "—",
+            client_signature_mark: sigMark,
+          });
+        }
         // Persist repair so staff overview and future opens stay filled.
         await supabaseAdmin
           .from("client_subscriptions")
@@ -193,6 +217,7 @@ Deno.serve(
         Boolean(subscription.stripe_subscription_id?.trim());
       const alreadySigned = Boolean(subscription.agreement_signed_at);
       const cardOnFile = Boolean(subscription.payment_method_last4?.trim());
+      const organizationLogoUrl = `${resolvePublicAppBaseUrl()}/logos/sigma.png`;
 
       return new Response(
         JSON.stringify({
@@ -211,6 +236,7 @@ Deno.serve(
           terms_version: subscription.agreement_terms_version ?? terms?.version ?? null,
           contract_title: terms?.title ?? null,
           organization_name: org?.name ?? null,
+          organization_logo_url: organizationLogoUrl,
           client_name: clientName,
           client_representative: clientRepresentative,
           provider_representative: providerRepresentative,

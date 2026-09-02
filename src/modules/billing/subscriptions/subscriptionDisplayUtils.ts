@@ -339,14 +339,58 @@ export const buildDefaultSubscriptionSetupMessage = (params: {
   const planLabel = params.amountLabel
     ? `${params.subscriptionName} (${params.amountLabel})`
     : params.subscriptionName;
-  const lines = [
-    `${params.orgLabel}: Set up your ${planLabel} subscription and save your card for automatic billing:`,
-  ];
-  if (params.subscriptionNumber?.trim()) {
-    lines.push(`Reference: ${params.subscriptionNumber.trim()}`);
-  }
-  lines.push("", params.shareUrl.trim());
-  return lines.join("\n");
+  const ref = params.subscriptionNumber?.trim()
+    ? ` Reference: ${params.subscriptionNumber.trim()}.`
+    : "";
+  return `${params.orgLabel}: Set up your ${planLabel} subscription and save your card for automatic billing.${ref} ${params.shareUrl.trim()}`;
+};
+
+/** Compact agreement invite SMS / plain preview (single paragraph). */
+export const buildDefaultAgreementInviteMessage = (params: {
+  orgLabel: string;
+  subscriptionName: string;
+  subscriptionNumber?: string | null;
+  amountLabel?: string | null;
+  shareUrl: string;
+}) => {
+  const plan = params.amountLabel
+    ? `${params.subscriptionName} (${params.amountLabel})`
+    : params.subscriptionName;
+  const ref = params.subscriptionNumber?.trim()
+    ? ` Ref ${params.subscriptionNumber.trim()}.`
+    : "";
+  return `${params.orgLabel}: Please review, sign, and add your card for ${plan}.${ref} ${params.shareUrl.trim()}`;
+};
+
+export const buildDefaultAgreementInviteSubject = (subscriptionName: string) =>
+  `Please review and sign: ${subscriptionName}`;
+
+export const buildDefaultAgreementInviteEmailHtml = (params: {
+  orgLabel: string;
+  clientName?: string | null;
+  subscriptionName: string;
+  subscriptionNumber?: string | null;
+  amountLabel?: string | null;
+  shareUrl: string;
+}) => {
+  const greeting = params.clientName?.trim()
+    ? `Hello ${params.clientName.trim()},`
+    : "Hello,";
+  const plan = params.amountLabel
+    ? `${params.subscriptionName} (${params.amountLabel})`
+    : params.subscriptionName;
+  const ref = params.subscriptionNumber?.trim()
+    ? `<p style="margin:0 0 12px;color:#6b7280;font-size:13px;">Reference: ${params.subscriptionNumber.trim()}</p>`
+    : "";
+  return `<div style="font-family:Georgia,serif;color:#1f2937;line-height:1.55;max-width:560px;">
+<p>${greeting}</p>
+<p><strong>${params.orgLabel}</strong> invited you to review and sign the agreement for <strong>${plan}</strong>.</p>
+${ref}
+<p>Review the terms, sign, and add your payment card. Billing starts after you finish.</p>
+<p style="margin:20px 0;"><a href="${params.shareUrl}" style="display:inline-block;background:#111827;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;font-family:system-ui,sans-serif;font-weight:600;">Review &amp; sign agreement</a></p>
+<p style="font-size:12px;color:#9ca3af;word-break:break-all;">${params.shareUrl}</p>
+<p style="color:#6b7280;font-size:13px;">— ${params.orgLabel}</p>
+</div>`;
 };
 
 const STRIPE_SUFFIX_MAX = 22;

@@ -46,6 +46,7 @@ export type PublicSubscriptionAgreementPayload = {
   terms_version?: string | null;
   contract_title?: string | null;
   organization_name?: string | null;
+  organization_logo_url?: string | null;
   client_name?: string | null;
   client_representative?: string | null;
   provider_representative?: string | null;

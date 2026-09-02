@@ -44,6 +44,7 @@ export const buildSubscriptionContractVariables = (params: {
   lineItems: SubscriptionContractLine[];
   termsVersion: string;
   defaultVariables?: Record<string, string> | null;
+  clientSignatureImage?: string | null;
 }): Record<string, string> => {
   const currency = (params.currency ?? "USD").toUpperCase();
   const interval = params.billingInterval || "monthly";
@@ -56,6 +57,7 @@ export const buildSubscriptionContractVariables = (params: {
   const description = params.subscriptionDescription?.trim() || "";
 
   const providerSig = String(defaults.provider_signature_image ?? "").trim();
+  const clientSig = String(params.clientSignatureImage ?? "").trim();
   const isSafeImage = (value: string) =>
     value.startsWith("data:image/") ||
     value.startsWith("https://") ||
@@ -63,8 +65,9 @@ export const buildSubscriptionContractVariables = (params: {
   const provider_signature_mark = isSafeImage(providerSig)
     ? `<img src="${providerSig}" alt="Provider signature" class="contract-signature-img" />`
     : `<span class="contract-signature-line" aria-hidden="true"></span>`;
-  const client_signature_mark =
-    `<span class="contract-signature-line" aria-hidden="true"></span>`;
+  const client_signature_mark = isSafeImage(clientSig)
+    ? `<img src="${clientSig}" alt="Client signature" class="contract-signature-img" />`
+    : `<span class="contract-signature-line" aria-hidden="true"></span>`;
 
   return {
     ...defaults,

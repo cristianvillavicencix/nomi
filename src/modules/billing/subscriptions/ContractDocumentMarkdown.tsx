@@ -53,10 +53,16 @@ export function ContractDocumentMarkdown({
   className,
   /** Wrap in an A4 sheet (gray stage + white page margins). */
   page = false,
+  /**
+   * Client portal: full-width readable sheet, no gray stage / card chrome.
+   * Staff previews keep the framed A4 stage when portal is false.
+   */
+  portal = false,
 }: {
   children: string;
   className?: string;
   page?: boolean;
+  portal?: boolean;
 }) {
   const html = contractMarked.parse(children) as string;
 
@@ -70,8 +76,21 @@ export function ContractDocumentMarkdown({
   if (!page) return body;
 
   return (
-    <div className={cn("contract-document-stage", className)}>
-      <article className="contract-document-page">{body}</article>
+    <div
+      className={cn(
+        "contract-document-stage",
+        portal && "contract-document-stage--portal",
+        className,
+      )}
+    >
+      <article
+        className={cn(
+          "contract-document-page",
+          portal && "contract-document-page--portal",
+        )}
+      >
+        {body}
+      </article>
     </div>
   );
 }

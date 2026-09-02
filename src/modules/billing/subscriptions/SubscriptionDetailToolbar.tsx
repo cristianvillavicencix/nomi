@@ -492,7 +492,9 @@ export const SubscriptionDetailToolbar = ({
             />
           ) : null}
 
-          {canSendSetup && status !== "pending_setup" ? (
+          {canSendSetup &&
+          (status !== "pending_setup" ||
+            subscription.enrollment_mode === "agreement") ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <ToolbarButton disabled={busy}>
@@ -504,11 +506,15 @@ export const SubscriptionDetailToolbar = ({
               <DropdownMenuContent align="start">
                 <DropdownMenuItem onSelect={() => setSendOpen(true)}>
                   <Mail className="size-4" />
-                  Send setup link by email
+                  {subscription.enrollment_mode === "agreement"
+                    ? "Resend agreement by email"
+                    : "Send setup link by email"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setSendOpen(true)}>
                   <MessageSquare className="size-4" />
-                  Send setup link by SMS
+                  {subscription.enrollment_mode === "agreement"
+                    ? "Resend agreement by SMS"
+                    : "Send setup link by SMS"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setSendOpen(true)}>
                   <Send className="size-4" />

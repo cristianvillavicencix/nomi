@@ -7,6 +7,7 @@ type SignaturePadProps = {
   onChange: (dataUrl: string) => void;
   disabled?: boolean;
   className?: string;
+  canvasClassName?: string;
   width?: number;
   height?: number;
 };
@@ -17,6 +18,7 @@ export const SignaturePad = ({
   onChange,
   disabled = false,
   className,
+  canvasClassName,
   width = 480,
   height = 120,
 }: SignaturePadProps) => {
@@ -93,6 +95,7 @@ export const SignaturePad = ({
           "w-full rounded-md border bg-white touch-none",
           disabled && "pointer-events-none opacity-60",
           value ? "ring-1 ring-primary/20" : null,
+          canvasClassName,
         )}
         onMouseDown={startDraw}
         onMouseMove={draw}

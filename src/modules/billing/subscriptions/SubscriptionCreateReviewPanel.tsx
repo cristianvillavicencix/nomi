@@ -32,6 +32,7 @@ type SubscriptionCreateReviewPanelProps = {
   startsAtDate: string | null;
   endsAtDate: string | null;
   paymentMode: SubscriptionPaymentMode;
+  enrollmentMode?: "direct" | "agreement";
   cardOnFile?: {
     brand?: string | null;
     last4?: string | null;
@@ -42,6 +43,8 @@ type SubscriptionCreateReviewPanelProps = {
   sendEmail: boolean;
   sendSms: boolean;
   deliveryMessage: string;
+  deliveryEmailHtml?: string;
+  deliveryEmailSubject?: string;
   orgTitle: string;
   canSubmit: boolean;
   isPending: boolean;
@@ -74,6 +77,7 @@ export const SubscriptionCreateReviewPanel = ({
   startsAtDate,
   endsAtDate,
   paymentMode,
+  enrollmentMode = "direct",
   cardOnFile,
   savedCards = [],
   recipientEmail,
@@ -81,6 +85,8 @@ export const SubscriptionCreateReviewPanel = ({
   sendEmail,
   sendSms,
   deliveryMessage,
+  deliveryEmailHtml,
+  deliveryEmailSubject,
   orgTitle,
   canSubmit,
   isPending,
@@ -203,7 +209,8 @@ export const SubscriptionCreateReviewPanel = ({
         </div>
       ) : null}
 
-      {paymentMode === "request_setup" && (sendEmail || sendSms) ? (
+      {((enrollmentMode === "agreement" || paymentMode === "request_setup") &&
+        (sendEmail || sendSms)) ? (
         <div className="mt-3 min-w-0 space-y-2 border-t pt-3">
           <div className="flex flex-wrap gap-2">
             {sendEmail && recipientEmail ? (
@@ -214,8 +221,13 @@ export const SubscriptionCreateReviewPanel = ({
             ) : null}
           </div>
           <InvoiceSendDeliveryPreview
-            subject={`${orgTitle}: Set up ${subscriptionName}`}
-            emailHtml={deliveryMessage.replace(/\n/g, "<br/>")}
+            subject={
+              deliveryEmailSubject ??
+              `${orgTitle}: Set up ${subscriptionName}`
+            }
+            emailHtml={
+              deliveryEmailHtml ?? deliveryMessage.replace(/\n/g, "<br/>")
+            }
             smsText={deliveryMessage}
             emailTo={recipientEmail}
             smsTo={recipientPhone}

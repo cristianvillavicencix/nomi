@@ -883,6 +883,28 @@ html.nomi-form-embed body {
     0 12px 28px rgb(0 0 0 / 0.1);
 }
 
+/* Client /sub-agree portal: normal readable sheet, no framed card chrome */
+.contract-document-stage--portal {
+  background: transparent;
+  padding: 0;
+  justify-content: stretch;
+}
+
+.contract-document-page--portal {
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  padding: 1.75rem 1.5rem 2rem;
+  border-radius: 2px;
+}
+
+.contract-document-page--portal .contract-document {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+
 @media (max-width: 640px) {
   .contract-document-stage {
     padding: 0.75rem 0.5rem 1.25rem;
@@ -893,6 +915,17 @@ html.nomi-form-embed body {
     min-height: auto;
     padding: 1.25rem 1rem 1.75rem;
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+  }
+
+  .contract-document-stage--portal {
+    background: transparent;
+    padding: 0;
+  }
+
+  .contract-document-page--portal {
+    padding: 1.25rem 1rem 1.5rem;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+    background: #fff;
   }
 }
 
@@ -943,4 +976,13 @@ html.nomi-form-embed body {
 
 .dark .contract-document-page {
   background: #111827;
+}
+
+.dark .contract-document-stage--portal {
+  background: transparent;
+}
+
+.dark .contract-document-page--portal {
+  background: #fff;
+  color: #1f2937;
 }

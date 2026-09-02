@@ -249,42 +249,53 @@ export async function sendTicketInvoiceSms(
     body,
   });
 
-  if (params.contactId) {
-    const { data: contact } = await supabase
-      .from("contacts")
-      .select("id, first_name, last_name")
-      .eq("id", params.contactId)
-      .eq("org_id", params.orgId)
-      .maybeSingle();
+  // Always log outbound SMS into Messages (phone thread), even without contact_id.
+  try {
+    let contactId = params.contactId ?? null;
+    let title: string | null = null;
 
-    if (contact?.id) {
-      const conversation = await ensureClientConversation({
-        orgId: params.orgId,
-        externalPhone: normalizedPhone,
-        contactId: contact.id,
-        dealId: null,
-        createdByMemberId: params.memberId,
-        title:
+    if (contactId) {
+      const { data: contact } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name")
+        .eq("id", contactId)
+        .eq("org_id", params.orgId)
+        .maybeSingle();
+      if (contact?.id) {
+        title =
           `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
-          normalizedPhone,
-      });
-
-      const message = await insertSmsMessage({
-        conversationId: Number(conversation.id),
-        body,
-        direction: "outbound",
-        authorMemberId: params.memberId,
-        externalId: twilioResponse.sid ?? null,
-        mediaUrl: null,
-        isInternalNote: false,
-        replyToMessageId: null,
-      });
-
-      await touchConversationFirstResponse(
-        Number(conversation.id),
-        message.created_at ?? new Date().toISOString(),
-      );
+          null;
+      } else {
+        contactId = null;
+      }
     }
+
+    const conversation = await ensureClientConversation({
+      orgId: params.orgId,
+      externalPhone: normalizedPhone,
+      contactId,
+      dealId: null,
+      createdByMemberId: params.memberId,
+      title: title || normalizedPhone,
+    });
+
+    const message = await insertSmsMessage({
+      conversationId: Number(conversation.id),
+      body,
+      direction: "outbound",
+      authorMemberId: params.memberId,
+      externalId: twilioResponse.sid ?? null,
+      mediaUrl: null,
+      isInternalNote: false,
+      replyToMessageId: null,
+    });
+
+    await touchConversationFirstResponse(
+      Number(conversation.id),
+      message.created_at ?? new Date().toISOString(),
+    );
+  } catch (error) {
+    console.warn("sendTicketInvoiceSms.messages_log_error", error);
   }
 
   return { sent: true, skipped: false, reason: null };

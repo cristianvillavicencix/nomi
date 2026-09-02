@@ -53,7 +53,8 @@ const SETUP_OPTIONS: Array<{
   {
     action: "request_setup",
     icon: Link2,
-    description: "Email or text a secure Stripe checkout link",
+    description:
+      "Email or text a secure link for the client to finish setup",
   },
 ];
 

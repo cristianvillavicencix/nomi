@@ -680,6 +680,7 @@ export const billingProvider = {
       | "undo_cancel"
       | "reactivate"
       | "send_setup"
+      | "send_agreement"
       | "request_card_update"
       | "update_payment_method"
       | "list_payment_methods"

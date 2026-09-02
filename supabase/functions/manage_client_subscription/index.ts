@@ -16,6 +16,7 @@ import {
   applySubscriptionPayment,
   buildSubscriptionMetadata,
   createStripeSubscriptionSetupCheckout,
+  deliverSubscriptionAgreementLink,
   deliverSubscriptionSetupLink,
   ensureSubscriptionStripeCustomer,
   normalizeSubscriptionLineItems,
@@ -42,6 +43,7 @@ type ManageBody = {
     | "undo_cancel"
     | "reactivate"
     | "send_setup"
+    | "send_agreement"
     | "request_card_update"
     | "update_payment_method"
     | "list_payment_methods"
@@ -156,6 +158,104 @@ Deno.serve(
             JSON.stringify({
               subscription: fresh,
               ...syncResult,
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        if (action === "send_agreement") {
+          if ((subscription.enrollment_mode ?? "direct") !== "agreement") {
+            return createErrorResponse(
+              400,
+              "This subscription is not an agreement enrollment",
+            );
+          }
+          if (subscription.status === "canceled") {
+            return createErrorResponse(
+              400,
+              "Cannot resend agreement on a canceled subscription",
+            );
+          }
+
+          await ensureSubscriptionStripeCustomer(
+            stripe,
+            supabaseAdmin,
+            {
+              orgId: member.org_id,
+              subscription,
+              emailTo: body.email_to,
+            },
+          );
+
+          const baseUrl = resolveClientAppBaseUrl(body.base_url);
+          let recipientEmail = await resolveSubscriptionBillingEmail(
+            supabaseAdmin,
+            {
+              companyId: subscription.company_id,
+              contactId: subscription.contact_id,
+              emailTo: body.email_to,
+            },
+          );
+
+          const { data: org } = await supabaseAdmin
+            .from("organizations")
+            .select("name")
+            .eq("id", member.org_id)
+            .maybeSingle();
+
+          let clientLabel: string | null = null;
+          if (subscription.contact_id) {
+            const { data: contactRow } = await supabaseAdmin
+              .from("contacts")
+              .select("first_name, last_name")
+              .eq("id", subscription.contact_id)
+              .maybeSingle();
+            clientLabel = [contactRow?.first_name, contactRow?.last_name]
+              .filter(Boolean)
+              .join(" ")
+              .trim() || null;
+          }
+          if (!clientLabel && subscription.company_id) {
+            const { data: companyRow } = await supabaseAdmin
+              .from("companies")
+              .select("name")
+              .eq("id", subscription.company_id)
+              .maybeSingle();
+            clientLabel = companyRow?.name?.trim() || null;
+          }
+
+          const delivery = await deliverSubscriptionAgreementLink(
+            supabaseAdmin,
+            {
+              orgId: member.org_id,
+              memberId: Number(member.id),
+              orgName: org?.name ?? null,
+              subscription,
+              baseUrl,
+              emailTo: recipientEmail,
+              smsTo: body.sms_to,
+              subject: body.subject,
+              message: body.message,
+              sendEmail: body.send_email,
+              sendSms: body.send_sms,
+              clientName: clientLabel,
+            },
+          );
+
+          const { data: fresh } = await supabaseAdmin
+            .from("client_subscriptions")
+            .select("*")
+            .eq("id", subscription.id)
+            .single();
+
+          return new Response(
+            JSON.stringify({
+              subscription: fresh,
+              agreement_share_url: fresh?.setup_share_url ?? null,
+              ...delivery,
             }),
             {
               status: 200,

@@ -34,6 +34,16 @@ import {
 import { SignedSubscriptionAgreementDialog } from "@/modules/billing/subscriptions/SignedSubscriptionAgreementDialog";
 import { resolveFilledAgreementTermsMarkdown } from "@/modules/billing/subscriptions/resolveFilledAgreementTermsMarkdown";
 
+type SubscriptionDeliveryLog = {
+  id: number | string;
+  channel: "email" | "sms";
+  purpose: string;
+  to_address: string;
+  subject?: string | null;
+  status: string;
+  created_at?: string;
+};
+
 type SubscriptionOverviewTabProps = {
   subscription: ClientSubscription;
 };
@@ -106,6 +116,14 @@ export const SubscriptionOverviewTab = ({
         : [],
     },
     { enabled: Boolean(subscription.created_by_member_id) },
+  );
+  const { data: deliveryLogs = [] } = useGetList<SubscriptionDeliveryLog>(
+    "client_subscription_delivery_logs",
+    {
+      pagination: { page: 1, perPage: 20 },
+      sort: { field: "created_at", order: "DESC" },
+      filter: { subscription_id: subscription.id },
+    },
   );
 
   const company = companies[0];
@@ -308,6 +326,61 @@ export const SubscriptionOverviewTab = ({
                 </Button>
               ) : null}
             </div>
+          </OverviewCard>
+        ) : null}
+
+        {deliveryLogs.length > 0 ||
+        subscription.agreement_invite_sent_at ||
+        subscription.agreement_completion_emailed_at ? (
+          <OverviewCard title="Delivery">
+            {subscription.agreement_invite_sent_at ? (
+              <SummaryRow
+                label="Invite sent"
+                value={formatBillingDate(
+                  subscription.agreement_invite_sent_at.slice(0, 10),
+                )}
+              />
+            ) : null}
+            {subscription.agreement_completion_emailed_at ? (
+              <SummaryRow
+                label="Docs emailed"
+                value={formatBillingDate(
+                  subscription.agreement_completion_emailed_at.slice(0, 10),
+                )}
+              />
+            ) : null}
+            {deliveryLogs.length > 0 ? (
+              <ul className="mt-2 space-y-2">
+                {deliveryLogs.map((log) => {
+                  const purposeLabel =
+                    log.purpose === "agreement_invite"
+                      ? "Agreement invite"
+                      : log.purpose === "agreement_completion"
+                        ? "Completion docs"
+                        : "Setup link";
+                  const when = log.created_at
+                    ? new Date(log.created_at).toLocaleString()
+                    : "";
+                  return (
+                    <li
+                      key={String(log.id)}
+                      className="rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed"
+                    >
+                      <span className="font-medium text-foreground">
+                        {purposeLabel} · {log.channel.toUpperCase()}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        → {log.to_address} ({log.status})
+                      </span>
+                      {when ? (
+                        <p className="mt-0.5 text-muted-foreground">{when}</p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
           </OverviewCard>
         ) : null}
 

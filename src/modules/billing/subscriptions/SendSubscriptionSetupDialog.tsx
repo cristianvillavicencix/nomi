@@ -20,6 +20,9 @@ import {
   resolveSubscriptionSetupShareUrl,
 } from "@/lib/publicAppUrl";
 import {
+  buildDefaultAgreementInviteEmailHtml,
+  buildDefaultAgreementInviteMessage,
+  buildDefaultAgreementInviteSubject,
   buildDefaultSubscriptionSetupMessage,
   formatSubscriptionAmountLabel,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
@@ -53,6 +56,10 @@ export const SendSubscriptionSetupDialog = ({
   mode = "setup",
 }: SendSubscriptionSetupDialogProps) => {
   const isCardUpdate = mode === "card_update";
+  const isAgreement =
+    !isCardUpdate &&
+    subscription.enrollment_mode === "agreement" &&
+    !subscription.agreement_signed_at;
   const notify = useNotify();
   const refresh = useRefresh();
   const { title: orgTitle } = useConfigurationContext();
@@ -116,28 +123,51 @@ export const SendSubscriptionSetupDialog = ({
     subscription.billing_interval,
   );
 
-  const defaultMessage = useMemo(
-    () =>
-      buildDefaultSubscriptionSetupMessage({
-        orgLabel: orgTitle ?? "Latino Business Support",
-        subscriptionName: subscription.name,
-        subscriptionNumber: subscription.subscription_number,
-        amountLabel,
-        shareUrl: previewShareUrl,
-      }),
-    [
-      orgTitle,
-      subscription.name,
-      subscription.subscription_number,
+  const orgLabel = orgTitle ?? "Latino Business Support";
+  const clientName = useMemo(() => {
+    if (contact) {
+      return [contact.first_name, contact.last_name].filter(Boolean).join(" ").trim();
+    }
+    return company?.name?.trim() || "";
+  }, [contact, company]);
+
+  const defaultMessage = useMemo(() => {
+    const shared = {
+      orgLabel,
+      subscriptionName: subscription.name,
+      subscriptionNumber: subscription.subscription_number,
       amountLabel,
-      previewShareUrl,
-    ],
-  );
+      shareUrl: previewShareUrl,
+    };
+    if (isAgreement) return buildDefaultAgreementInviteMessage(shared);
+    return buildDefaultSubscriptionSetupMessage(shared);
+  }, [
+    isAgreement,
+    orgLabel,
+    subscription.name,
+    subscription.subscription_number,
+    amountLabel,
+    previewShareUrl,
+  ]);
 
   const deliveryMessage = messageEdited ? message.trim() : defaultMessage;
   const subject = isCardUpdate
-    ? `${orgTitle ?? "Latino Business Support"}: Update card for ${subscription.name}`
-    : `${orgTitle ?? "Latino Business Support"}: Set up ${subscription.name}`;
+    ? `${orgLabel}: Update card for ${subscription.name}`
+    : isAgreement
+      ? buildDefaultAgreementInviteSubject(subscription.name)
+      : `${orgLabel}: Set up ${subscription.name}`;
+
+  const emailHtml =
+    isAgreement && !messageEdited
+      ? buildDefaultAgreementInviteEmailHtml({
+          orgLabel,
+          clientName: clientName || null,
+          subscriptionName: subscription.name,
+          subscriptionNumber: subscription.subscription_number,
+          amountLabel,
+          shareUrl: previewShareUrl,
+        })
+      : deliveryMessage.replace(/\n/g, "<br/>");
 
   useEffect(() => {
     if (!open) return;
@@ -153,7 +183,11 @@ export const SendSubscriptionSetupDialog = ({
     mutationFn: () =>
       dataProvider.manageClientSubscription({
         subscriptionId: subscription.id,
-        action: isCardUpdate ? "request_card_update" : "send_setup",
+        action: isCardUpdate
+          ? "request_card_update"
+          : isAgreement
+            ? "send_agreement"
+            : "send_setup",
         email_to: emailTo.trim() || null,
         sms_to: smsTo.trim() || null,
         send_email: sendEmail,
@@ -165,16 +199,23 @@ export const SendSubscriptionSetupDialog = ({
     onSuccess: () => {
       refresh();
       onOpenChange(false);
-      notify(isCardUpdate ? "Card update link sent" : "Setup link sent", {
-        type: "success",
-      });
+      notify(
+        isCardUpdate
+          ? "Card update link sent"
+          : isAgreement
+            ? "Agreement link sent"
+            : "Setup link sent",
+        { type: "success" },
+      );
     },
     onError: (error: Error) => {
       notify(
         error.message ||
           (isCardUpdate
             ? "Could not send card update link"
-            : "Could not send setup link"),
+            : isAgreement
+              ? "Could not send agreement link"
+              : "Could not send setup link"),
         { type: "error" },
       );
     },
@@ -189,12 +230,18 @@ export const SendSubscriptionSetupDialog = ({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isCardUpdate ? "Request new card" : "Send setup link"}
+            {isCardUpdate
+              ? "Request new card"
+              : isAgreement
+                ? "Resend agreement link"
+                : "Send setup link"}
           </DialogTitle>
           <DialogDescription>
             {isCardUpdate
               ? `Email or text a secure link so the client can add or replace the card used for ${subscription.name}.`
-              : `Email or text a secure short link so the client can save a card for ${subscription.name}.`}
+              : isAgreement
+                ? `Email or text the agreement link so the client can review, sign, and add a card for ${subscription.name}.`
+                : `Email or text a secure short link so the client can save a card for ${subscription.name}.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -253,7 +300,7 @@ export const SendSubscriptionSetupDialog = ({
           {(sendEmail || sendSms) && canSubmit ? (
             <InvoiceSendDeliveryPreview
               subject={subject}
-              emailHtml={deliveryMessage.replace(/\n/g, "<br/>")}
+              emailHtml={emailHtml}
               smsText={deliveryMessage}
               emailTo={emailTo}
               smsTo={smsTo}
@@ -282,7 +329,7 @@ export const SendSubscriptionSetupDialog = ({
             ) : (
               <>
                 <Send className="size-4" />
-                Send setup link
+                {isAgreement ? "Send agreement link" : "Send setup link"}
               </>
             )}
           </Button>

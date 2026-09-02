@@ -12,6 +12,13 @@ import {
   generateSubscriptionAgreementPdfBase64,
   generateSubscriptionSetupReceiptPdfBase64,
 } from "./subscriptionAgreementPdf.ts";
+import {
+  buildDefaultAgreementCompletionHtml,
+  buildDefaultAgreementCompletionSubject,
+  buildDefaultAgreementCompletionText,
+} from "./subscriptionAgreementInviteEmail.ts";
+import { logSubscriptionDelivery } from "./subscriptionDeliveryLog.ts";
+import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
 import { INVOICE_ORGANIZATION_NAME } from "./invoiceOrganizationInfo.ts";
 
 export type SubscriptionAgreementDocuments = {
@@ -142,20 +149,24 @@ export async function sendSubscriptionAgreementCompletionEmail(
     subscription.org_id,
     orgName,
   );
-  const subject = `${orgName}: Your signed agreement and receipt · ${
-    subscription.subscription_number?.trim() || subscription.name
-  }`;
-  const textBody = [
-    `Thank you for signing and adding your payment method for ${subscription.name}.`,
-    "",
-    "Attached:",
-    `- ${docs.contractFilename} (signed agreement)`,
-    `- ${docs.receiptFilename} (setup receipt)`,
-    "",
-    "Billing will continue automatically according to your plan.",
-    "",
+  const subject = buildDefaultAgreementCompletionSubject({
     orgName,
-  ].join("\n");
+    subscriptionName: subscription.name,
+    subscriptionNumber: subscription.subscription_number,
+  });
+  const textBody = buildDefaultAgreementCompletionText({
+    orgName,
+    subscriptionName: subscription.name,
+    contractFilename: docs.contractFilename,
+    receiptFilename: docs.receiptFilename,
+  });
+  const htmlBody = buildDefaultAgreementCompletionHtml({
+    orgName,
+    subscriptionName: subscription.name,
+    contractFilename: docs.contractFilename,
+    receiptFilename: docs.receiptFilename,
+    logoUrl: `${resolvePublicAppBaseUrl()}/logos/sigma.png`,
+  });
 
   await sendTransactionalEmail({
     orgId: subscription.org_id,
@@ -163,7 +174,7 @@ export async function sendSubscriptionAgreementCompletionEmail(
     to: [docs.clientEmail],
     subject,
     textBody,
-    htmlBody: textBody.replace(/\n/g, "<br/>"),
+    htmlBody,
     attachments: [
       {
         name: docs.contractFilename,
@@ -178,6 +189,20 @@ export async function sendSubscriptionAgreementCompletionEmail(
     ],
     ...invoiceEmail,
     emailChannel: "billing",
+  });
+
+  await logSubscriptionDelivery(supabase, {
+    orgId: subscription.org_id,
+    subscriptionId: subscription.id,
+    channel: "email",
+    purpose: "agreement_completion",
+    toAddress: docs.clientEmail,
+    subject,
+    bodyPreview: textBody,
+    status: "sent",
+    createdBy: subscription.created_by_member_id
+      ? Number(subscription.created_by_member_id)
+      : null,
   });
 
   await supabase

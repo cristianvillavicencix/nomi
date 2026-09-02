@@ -462,6 +462,26 @@ Deno.serve(
         if (enrollmentMode === "agreement") {
           const shouldSendEmail = body.send_email !== false;
           const shouldSendSms = body.send_sms === true;
+          let clientLabel: string | null = null;
+          if (contactId) {
+            const { data: contactRow } = await supabaseAdmin
+              .from("contacts")
+              .select("first_name, last_name")
+              .eq("id", contactId)
+              .maybeSingle();
+            clientLabel = [contactRow?.first_name, contactRow?.last_name]
+              .filter(Boolean)
+              .join(" ")
+              .trim() || null;
+          }
+          if (!clientLabel && resolvedCompanyId) {
+            const { data: companyRow } = await supabaseAdmin
+              .from("companies")
+              .select("name")
+              .eq("id", resolvedCompanyId)
+              .maybeSingle();
+            clientLabel = companyRow?.name?.trim() || null;
+          }
           const delivery = await deliverSubscriptionAgreementLink(
             supabaseAdmin,
             {
@@ -479,6 +499,7 @@ Deno.serve(
               message: body.message,
               sendEmail: shouldSendEmail,
               sendSms: shouldSendSms,
+              clientName: clientLabel,
             },
           );
           emailSent = delivery.emailSent;

@@ -17,7 +17,7 @@ import {
 import { SubscriptionAgreementClientView } from "@/modules/billing/subscriptions/SubscriptionAgreementClientView";
 
 const shellClassName =
-  "mx-auto flex min-h-[100dvh] w-full max-w-lg flex-col gap-5 bg-slate-50 px-4 py-8";
+  "mx-auto flex min-h-[100dvh] w-full max-w-[52rem] flex-col gap-8 bg-[#f6f5f2] px-5 py-10 sm:px-8 sm:py-14";
 
 const AgreementCompletePanel = ({
   shortCode,
@@ -65,16 +65,20 @@ const AgreementCompletePanel = ({
   const docs = documentsMutation.data;
 
   return (
-    <div className="rounded-lg border bg-white p-5 text-center">
-      <Check className="mx-auto mb-2 size-6 text-emerald-600" />
-      <p className="font-medium">You&apos;re all set</p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Signature and card received
-        {subscriptionName ? ` for ${subscriptionName}` : ""}. Billing will start
-        automatically.
-      </p>
+    <div className="space-y-5 py-6 text-center">
+      <Check className="mx-auto size-7 text-emerald-700" />
+      <div className="space-y-1.5">
+        <p className="text-lg font-semibold tracking-tight text-neutral-900">
+          You&apos;re all set
+        </p>
+        <p className="text-sm text-neutral-600">
+          Signature and card received
+          {subscriptionName ? ` for ${subscriptionName}` : ""}. Billing will start
+          automatically.
+        </p>
+      </div>
 
-      <div className="mt-5 grid gap-2 sm:grid-cols-2">
+      <div className="mx-auto grid max-w-md gap-2 sm:grid-cols-2">
         <Button
           type="button"
           variant="secondary"
@@ -110,21 +114,21 @@ const AgreementCompletePanel = ({
       </div>
 
       {documentsMutation.isPending ? (
-        <p className="mt-3 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+        <p className="flex items-center justify-center gap-2 text-xs text-neutral-500">
           <Loader2 className="size-3.5 animate-spin" />
           Preparing your PDFs…
         </p>
       ) : null}
 
       {emailHint ? (
-        <p className="mt-3 flex items-start justify-center gap-1.5 text-xs text-muted-foreground">
+        <p className="flex items-start justify-center gap-1.5 text-xs text-neutral-500">
           <Mail className="mt-0.5 size-3.5 shrink-0" />
           <span>{emailHint}</span>
         </p>
       ) : null}
 
       {documentsMutation.isError ? (
-        <p className="mt-3 text-sm text-destructive">
+        <p className="text-sm text-destructive">
           {(documentsMutation.error as Error).message}
         </p>
       ) : null}
@@ -239,6 +243,7 @@ export const PublicSubscriptionAgreementPage = () => {
     contract_title: payload.contract_title,
     terms_version: payload.terms_version,
     organization_name: payload.organization_name,
+    organization_logo_url: payload.organization_logo_url,
     provider_representative: payload.provider_representative,
     client_name: payload.client_name,
     client_representative: payload.client_representative,
@@ -249,15 +254,17 @@ export const PublicSubscriptionAgreementPage = () => {
     <div className={shellClassName}>
       <SubscriptionAgreementClientView
         model={model}
+        liveSignatoryName={signatoryName}
+        liveSignaturePng={signaturePng}
         footer={
           payload.already_signed ? (
-            <div className="space-y-3 rounded-lg border bg-white p-4">
-              <p className="text-sm text-muted-foreground">
+            <div className="space-y-4 border-t border-neutral-200/80 pt-8">
+              <p className="text-sm text-neutral-600">
                 Signed by {payload.signatory_name}. Continue to add your card.
               </p>
               <Button
                 type="button"
-                className="w-full"
+                className="w-full sm:w-auto sm:min-w-[14rem]"
                 disabled={signMutation.isPending}
                 onClick={() => signMutation.mutate()}
               >
@@ -277,14 +284,17 @@ export const PublicSubscriptionAgreementPage = () => {
               ) : null}
             </div>
           ) : (
-            <div className="space-y-4 rounded-lg border bg-white p-4">
+            <div className="space-y-5 border-t border-neutral-200/80 pt-8">
               <div className="flex items-start gap-2">
                 <Checkbox
                   id="agree-terms"
                   checked={agreed}
                   onCheckedChange={(value) => setAgreed(value === true)}
                 />
-                <Label htmlFor="agree-terms" className="text-sm leading-snug">
+                <Label
+                  htmlFor="agree-terms"
+                  className="text-sm leading-snug text-neutral-700"
+                >
                   I have read and agree to the terms. My signature starts this
                   subscription after I add a payment card.
                 </Label>
@@ -298,13 +308,19 @@ export const PublicSubscriptionAgreementPage = () => {
                   onChange={(event) => setSignatoryName(event.target.value)}
                   placeholder="e.g. J.D. or Jane Doe"
                   autoComplete="name"
+                  className="max-w-md border-neutral-300 bg-transparent shadow-none"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label>Signature</Label>
-                <SignaturePad value={signaturePng} onChange={setSignaturePng} />
-                <p className="text-xs text-muted-foreground">
+                <SignaturePad
+                  value={signaturePng}
+                  onChange={setSignaturePng}
+                  className="max-w-xl"
+                  canvasClassName="rounded-none border-0 border-b border-neutral-300 bg-transparent shadow-none ring-0"
+                />
+                <p className="text-xs text-neutral-500">
                   Draw with your finger or mouse. Name, date, time, and IP are
                   recorded with this signature.
                 </p>
@@ -312,7 +328,7 @@ export const PublicSubscriptionAgreementPage = () => {
 
               <Button
                 type="button"
-                className="w-full"
+                className="w-full sm:w-auto sm:min-w-[14rem]"
                 disabled={!canSubmit}
                 onClick={() => signMutation.mutate()}
               >

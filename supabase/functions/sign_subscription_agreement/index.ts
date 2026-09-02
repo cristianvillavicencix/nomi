@@ -169,7 +169,7 @@ Deno.serve(
         const vars = buildSubscriptionContractVariables({
           clientName: client.name,
           clientAddress: client.address,
-          clientRepresentative: client.representative,
+          clientRepresentative: signatoryName,
           providerRepresentative: await resolveProviderRepresentative(
             tokenRow.org_id,
             subscription.created_by_member_id,
@@ -182,11 +182,13 @@ Deno.serve(
           billingInterval: subscription.billing_interval ?? "monthly",
           lineItems,
           termsVersion: subscription.agreement_terms_version ?? "1.0",
+          clientSignatureImage: signaturePng,
         });
         vars.signed_at = now.slice(0, 10);
         vars.accepted_at = now.slice(0, 10);
         vars.signed_ip = ip ?? "—";
         vars.contract_date = now.slice(0, 10);
+        vars.client_representative = signatoryName;
 
         const filledTerms = mergeContractTerms(
           String(subscription.agreement_terms_markdown ?? ""),
