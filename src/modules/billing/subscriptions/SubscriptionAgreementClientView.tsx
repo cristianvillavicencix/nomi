@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, FileText } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,43 +49,38 @@ export const SubscriptionAgreementClientView = ({
   /** Live drawn signature PNG (updates contract body). */
   liveSignaturePng?: string;
 }) => {
-  const [agreementExpanded, setAgreementExpanded] = useState(false);
+  // Start closed so the first screen feels like a welcome, not a legal wall.
+  const [agreementOpen, setAgreementOpen] = useState(false);
   const amountLabel = formatSubscriptionAmountLabel(
     model.amount,
     model.currency ?? "USD",
     model.billing_interval,
   );
   const provider = model.organization_name?.trim() || "Provider";
+  const clientCompany = model.client_name?.trim() || null;
   const clientRepresentative = model.client_representative?.trim() || null;
   const logoUrl = model.organization_logo_url?.trim() || "/logos/sigma.png";
+  const greetingName =
+    liveSignatoryName?.trim() ||
+    (clientRepresentative &&
+    clientRepresentative !== "—" &&
+    clientRepresentative !== "-"
+      ? clientRepresentative
+      : "") ||
+    null;
+  const planName = model.subscription_name?.trim() || "your subscription";
 
   const liveTerms = useMemo(() => {
     const base = model.terms_markdown?.trim() || "";
     if (!base) return "";
     return applyLiveClientSignatureFields(base, {
-      signatoryName:
-        liveSignatoryName?.trim() ||
-        (clientRepresentative &&
-        clientRepresentative !== "—" &&
-        clientRepresentative !== "-"
-          ? clientRepresentative
-          : ""),
+      signatoryName: greetingName || "",
       signaturePng: liveSignaturePng,
     });
-  }, [
-    model.terms_markdown,
-    liveSignatoryName,
-    liveSignaturePng,
-    clientRepresentative,
-  ]);
-
-  const metaBits = [
-    model.subscription_number?.trim() || null,
-    amountLabel,
-  ].filter(Boolean);
+  }, [model.terms_markdown, greetingName, liveSignaturePng]);
 
   return (
-    <div className={cn("flex w-full flex-col gap-6", className)}>
+    <div className={cn("flex w-full flex-col gap-8", className)}>
       {preview ? (
         <p className="text-center text-xs text-muted-foreground">
           Preview only — signing is disabled here. After you send the link, use
@@ -93,20 +88,74 @@ export const SubscriptionAgreementClientView = ({
         </p>
       ) : null}
 
-      {/* Brand only — parties, plan, and title live inside the contract body. */}
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 pb-5">
-        <div className="flex min-w-0 items-center gap-3">
+      {/* Friendly first screen — not a wall of legalese */}
+      <header className="space-y-6">
+        <div className="flex items-center gap-3">
           <img
             src={logoUrl}
             alt={provider}
-            className="h-9 w-auto max-w-[140px] object-contain sm:h-10"
+            className="h-10 w-auto max-w-[148px] object-contain"
           />
-          <p className="truncate text-sm font-medium text-neutral-800">
-            {provider}
+        </div>
+
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-neutral-500">{provider}</p>
+          <h1 className="max-w-xl text-[1.75rem] font-semibold leading-tight tracking-tight text-neutral-900 sm:text-[2rem]">
+            {greetingName ? (
+              <>
+                Hi {greetingName},
+                <span className="mt-1 block text-[1.35rem] font-normal text-neutral-700 sm:text-[1.5rem]">
+                  ready to get started?
+                </span>
+              </>
+            ) : (
+              "You're almost set"
+            )}
+          </h1>
+          <p className="max-w-lg text-[0.95rem] leading-relaxed text-neutral-600">
+            {provider} invited you to review a short agreement for{" "}
+            <span className="font-medium text-neutral-800">{planName}</span>
+            {amountLabel ? (
+              <>
+                {" "}
+                ({amountLabel})
+              </>
+            ) : null}
+            {clientCompany ? (
+              <>
+                {" "}
+                for <span className="font-medium text-neutral-800">{clientCompany}</span>
+              </>
+            ) : null}
+            . Sign below, then add a card — billing starts after that.
           </p>
         </div>
-        {metaBits.length > 0 ? (
-          <p className="text-sm text-neutral-500">{metaBits.join(" · ")}</p>
+
+        <ol className="flex flex-col gap-2 text-sm text-neutral-600 sm:flex-row sm:flex-wrap sm:gap-x-5 sm:gap-y-1">
+          <li className="flex items-center gap-2">
+            <span className="flex size-5 items-center justify-center rounded-full bg-neutral-100 text-[11px] font-semibold text-neutral-700">
+              1
+            </span>
+            Review terms
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="flex size-5 items-center justify-center rounded-full bg-neutral-100 text-[11px] font-semibold text-neutral-700">
+              2
+            </span>
+            Sign
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="flex size-5 items-center justify-center rounded-full bg-neutral-100 text-[11px] font-semibold text-neutral-700">
+              3
+            </span>
+            Add your card
+          </li>
+        </ol>
+
+        {model.subscription_number?.trim() ? (
+          <p className="text-xs text-neutral-400">
+            Reference {model.subscription_number.trim()}
+          </p>
         ) : null}
       </header>
 
@@ -118,55 +167,64 @@ export const SubscriptionAgreementClientView = ({
               : "Terms are missing. Contact the sender."}
           </p>
         ) : (
-          <>
-            <div
-              className={cn(
-                "contract-preview-shell relative",
-                !agreementExpanded && "contract-preview-shell--collapsed",
-              )}
+          <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-neutral-50"
+              onClick={() => setAgreementOpen((open) => !open)}
+              aria-expanded={agreementOpen}
             >
-              <div
-                className={cn(
-                  !agreementExpanded && "max-h-[22rem] overflow-hidden",
-                )}
-              >
-                <ContractDocumentMarkdown page portal>
-                  {liveTerms}
-                </ContractDocumentMarkdown>
-              </div>
-              {!agreementExpanded ? (
-                <div
-                  className="contract-preview-fade pointer-events-none absolute inset-x-0 bottom-0 h-28"
-                  aria-hidden
-                />
-              ) : null}
-            </div>
-            <div className="flex justify-center pt-1">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => setAgreementExpanded((open) => !open)}
-              >
-                {agreementExpanded ? (
-                  <>
+              <span className="flex min-w-0 items-center gap-2.5">
+                <FileText className="size-4 shrink-0 text-neutral-500" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-neutral-900">
+                    {agreementOpen ? "Hide agreement" : "Review the agreement"}
+                  </span>
+                  <span className="block text-xs text-neutral-500">
+                    {model.contract_title?.trim() || "Subscription terms"}
+                    {model.terms_version
+                      ? ` · v${model.terms_version}`
+                      : ""}
+                  </span>
+                </span>
+              </span>
+              {agreementOpen ? (
+                <ChevronUp className="size-4 shrink-0 text-neutral-500" />
+              ) : (
+                <ChevronDown className="size-4 shrink-0 text-neutral-500" />
+              )}
+            </button>
+
+            {agreementOpen ? (
+              <div className="border-t border-neutral-200 px-4 pb-4 pt-2">
+                <div className="contract-preview-shell relative max-h-[min(70vh,36rem)] overflow-y-auto">
+                  <ContractDocumentMarkdown page portal>
+                    {liveTerms}
+                  </ContractDocumentMarkdown>
+                </div>
+                <div className="mt-3 flex justify-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-neutral-600"
+                    onClick={() => setAgreementOpen(false)}
+                  >
                     <ChevronUp className="size-4" />
-                    Show less
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="size-4" />
-                    View full agreement
-                  </>
-                )}
-              </Button>
-            </div>
-          </>
+                    Done reviewing
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="border-t border-neutral-100 px-4 py-5">
+                <p className="text-center text-xs leading-relaxed text-neutral-400">
+                  The full terms stay tucked away until you open them —
+                  nothing scary on the first screen.
+                </p>
+              </div>
+            )}
+          </div>
         )}
-        <p className="text-sm text-neutral-500">
-          Name and company details are already filled. Sign below to continue.
-        </p>
       </section>
 
       {footer !== undefined ? (
@@ -202,10 +260,6 @@ export const SubscriptionAgreementClientView = ({
           <div className="space-y-2">
             <Label>Signature</Label>
             <SignaturePad value="" onChange={() => undefined} disabled />
-            <p className="text-xs text-neutral-500">
-              Draw with your finger or mouse. Name, date, time, and IP are
-              recorded with this signature.
-            </p>
           </div>
         </div>
       )}

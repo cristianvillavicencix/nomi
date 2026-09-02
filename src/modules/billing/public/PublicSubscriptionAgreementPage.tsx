@@ -17,7 +17,7 @@ import {
 import { SubscriptionAgreementClientView } from "@/modules/billing/subscriptions/SubscriptionAgreementClientView";
 
 const shellClassName =
-  "mx-auto flex min-h-[100dvh] w-full max-w-[52rem] flex-col gap-8 bg-white px-5 py-10 sm:px-8 sm:py-14";
+  "mx-auto flex min-h-[100dvh] w-full max-w-[36rem] flex-col gap-8 bg-white px-5 py-10 sm:max-w-[40rem] sm:px-8 sm:py-14";
 
 const AgreementCompletePanel = ({
   shortCode,
@@ -349,7 +349,7 @@ export const PublicSubscriptionAgreementPage = () => {
                   Your signature
                 </Label>
                 <p className="text-sm text-neutral-600">
-                  Sign in the box below with your finger or mouse.
+                  Draw here — that&apos;s the main step.
                 </p>
                 <SignaturePad
                   value={signaturePng}
