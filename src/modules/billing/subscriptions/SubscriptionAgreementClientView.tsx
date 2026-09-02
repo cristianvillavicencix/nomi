@@ -221,7 +221,7 @@ export const SubscriptionAgreementClientView = ({
           </ContractDocumentMarkdown>
         )}
         <p className="text-sm text-neutral-500">
-          Review the agreement above, then sign below to continue.
+          Name and company details are already filled. Sign below to continue.
         </p>
       </section>
 

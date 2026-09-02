@@ -17,7 +17,7 @@ import {
 import { SubscriptionAgreementClientView } from "@/modules/billing/subscriptions/SubscriptionAgreementClientView";
 
 const shellClassName =
-  "mx-auto flex min-h-[100dvh] w-full max-w-[52rem] flex-col gap-8 bg-[#f6f5f2] px-5 py-10 sm:px-8 sm:py-14";
+  "mx-auto flex min-h-[100dvh] w-full max-w-[52rem] flex-col gap-8 bg-white px-5 py-10 sm:px-8 sm:py-14";
 
 const AgreementCompletePanel = ({
   shortCode,
@@ -298,7 +298,17 @@ export const PublicSubscriptionAgreementPage = () => {
               ) : null}
             </div>
           ) : (
-            <div className="space-y-5 border-t border-neutral-200/80 pt-8">
+            <div className="mt-2 space-y-6 rounded-lg border border-neutral-300 bg-white p-5 sm:p-6">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                  Sign to continue
+                </p>
+                <p className="mt-1 text-sm text-neutral-600">
+                  Your name is already filled from the client record. Draw your
+                  signature below to finish.
+                </p>
+              </div>
+
               <div className="flex items-start gap-2">
                 <Checkbox
                   id="agree-terms"
@@ -314,30 +324,49 @@ export const PublicSubscriptionAgreementPage = () => {
                 </Label>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="signatory">Initials / full name</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="signatory" className="text-neutral-700">
+                  Full name / initials
+                </Label>
                 <Input
                   id="signatory"
                   value={signatoryName || prefilledRep}
                   onChange={(event) => setSignatoryName(event.target.value)}
-                  placeholder="e.g. J.D. or Jane Doe"
+                  placeholder="Loaded from client contact"
                   autoComplete="name"
-                  className="max-w-md border-neutral-300 bg-transparent shadow-none"
+                  className="max-w-md border-neutral-300 bg-white"
                 />
+                {prefilledRep ? (
+                  <p className="text-xs text-neutral-500">
+                    Prefilled from the contact on this agreement. Edit only if
+                    needed.
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
-                <Label>Signature</Label>
+                <Label className="text-base font-semibold text-neutral-900">
+                  Your signature
+                </Label>
+                <p className="text-sm text-neutral-600">
+                  Sign in the box below with your finger or mouse.
+                </p>
                 <SignaturePad
                   value={signaturePng}
                   onChange={setSignaturePng}
-                  className="max-w-xl"
-                  canvasClassName="rounded-none border-0 border-b border-neutral-300 bg-transparent shadow-none ring-0"
+                  height={160}
+                  className="w-full max-w-xl"
+                  canvasClassName="min-h-[160px] rounded-md border-2 border-neutral-400 bg-neutral-50 shadow-none ring-0"
                 />
-                <p className="text-xs text-neutral-500">
-                  Draw with your finger or mouse. Name, date, time, and IP are
-                  recorded with this signature.
-                </p>
+                {!signaturePng ? (
+                  <p className="text-xs font-medium text-amber-700">
+                    Signature required to continue.
+                  </p>
+                ) : (
+                  <p className="text-xs text-neutral-500">
+                    Name, date, time, and IP are recorded with this signature.
+                  </p>
+                )}
               </div>
 
               <Button
