@@ -27,12 +27,6 @@ export type SubscriptionAgreementClientViewModel = {
   client_address?: string | null;
 };
 
-const lineTotal = (row: Record<string, unknown>) => {
-  const qty = Number(row.quantity ?? 1) || 1;
-  const unit = Number(row.unit_price ?? 0) || 0;
-  return qty * unit;
-};
-
 /** Shared client-facing agreement layout (live portal + staff preview). */
 export const SubscriptionAgreementClientView = ({
   model,
@@ -58,10 +52,7 @@ export const SubscriptionAgreementClientView = ({
     model.currency ?? "USD",
     model.billing_interval,
   );
-  const lines = Array.isArray(model.line_items) ? model.line_items : [];
-  const currency = model.currency || "USD";
   const provider = model.organization_name?.trim() || "Provider";
-  const clientCompany = model.client_name?.trim() || "Client";
   const clientRepresentative = model.client_representative?.trim() || null;
   const logoUrl = model.organization_logo_url?.trim() || "/logos/sigma.png";
 
@@ -85,8 +76,13 @@ export const SubscriptionAgreementClientView = ({
     clientRepresentative,
   ]);
 
+  const metaBits = [
+    model.subscription_number?.trim() || null,
+    amountLabel,
+  ].filter(Boolean);
+
   return (
-    <div className={cn("flex w-full flex-col gap-8", className)}>
+    <div className={cn("flex w-full flex-col gap-6", className)}>
       {preview ? (
         <p className="text-center text-xs text-muted-foreground">
           Preview only — signing is disabled here. After you send the link, use
@@ -94,121 +90,24 @@ export const SubscriptionAgreementClientView = ({
         </p>
       ) : null}
 
-      <header className="space-y-5">
-        <div className="flex flex-wrap items-center gap-4">
+      {/* Brand only — parties, plan, and title live inside the contract body. */}
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 pb-5">
+        <div className="flex min-w-0 items-center gap-3">
           <img
             src={logoUrl}
             alt={provider}
-            className="h-10 w-auto max-w-[160px] object-contain sm:h-12"
+            className="h-9 w-auto max-w-[140px] object-contain sm:h-10"
           />
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-neutral-800">{provider}</p>
-            {model.provider_representative?.trim() ? (
-              <p className="text-xs text-neutral-500">
-                {model.provider_representative.trim()}
-              </p>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="space-y-2 border-b border-neutral-200 pb-6">
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-500">
-            {model.contract_title?.trim() || "Subscription agreement"}
-          </p>
-          <h1 className="max-w-3xl text-[1.65rem] font-semibold leading-tight tracking-tight text-neutral-900 sm:text-[1.85rem]">
-            {model.subscription_name || "Subscription"}
-          </h1>
-          {model.subscription_description?.trim() ? (
-            <p className="max-w-2xl text-[0.95rem] leading-relaxed text-neutral-600">
-              {model.subscription_description.trim()}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 pt-1 text-sm text-neutral-500">
-            {model.subscription_number ? (
-              <span>{model.subscription_number}</span>
-            ) : null}
-            {model.terms_version ? (
-              <span>Version {model.terms_version}</span>
-            ) : null}
-            <span className="text-base font-medium text-neutral-900">
-              {amountLabel}
-            </span>
-          </div>
-        </div>
-      </header>
-
-      <section className="grid gap-8 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-            Provider
-          </p>
-          <p className="text-[0.95rem] font-medium text-neutral-900">
+          <p className="truncate text-sm font-medium text-neutral-800">
             {provider}
           </p>
-          {model.provider_representative?.trim() ? (
-            <p className="text-sm text-neutral-600">
-              Representative: {model.provider_representative.trim()}
-            </p>
-          ) : null}
         </div>
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-            Client
-          </p>
-          <p className="text-[0.95rem] font-medium text-neutral-900">
-            {clientCompany}
-          </p>
-          {(liveSignatoryName?.trim() || clientRepresentative) ? (
-            <p className="text-sm text-neutral-600">
-              Representative:{" "}
-              {liveSignatoryName?.trim() || clientRepresentative}
-            </p>
-          ) : null}
-          {model.client_address?.trim() ? (
-            <p className="text-sm text-neutral-600">{model.client_address}</p>
-          ) : null}
-        </div>
-      </section>
-
-      {lines.length > 0 ? (
-        <section className="space-y-4">
-          <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-            Plan
-          </p>
-          <ul className="divide-y divide-neutral-200/80">
-            {lines.map((line, index) => {
-              const description = String(
-                line.description ?? line.name ?? `Item ${index + 1}`,
-              );
-              const qty = Number(line.quantity ?? 1) || 1;
-              return (
-                <li
-                  key={`${description}-${index}`}
-                  className="flex items-start justify-between gap-4 py-3 text-[0.95rem] first:pt-0 last:pb-0"
-                >
-                  <span className="text-neutral-800">
-                    {description}
-                    {qty !== 1 ? (
-                      <span className="text-neutral-500"> × {qty}</span>
-                    ) : null}
-                  </span>
-                  <span className="shrink-0 font-medium tabular-nums text-neutral-900">
-                    {new Intl.NumberFormat("en-US", {
-                      style: "currency",
-                      currency,
-                    }).format(lineTotal(line))}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
+        {metaBits.length > 0 ? (
+          <p className="text-sm text-neutral-500">{metaBits.join(" · ")}</p>
+        ) : null}
+      </header>
 
       <section className="space-y-4">
-        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-          Agreement
-        </p>
         {!liveTerms ? (
           <p className="text-sm text-destructive">
             {preview
