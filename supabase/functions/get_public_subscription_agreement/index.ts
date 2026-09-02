@@ -61,7 +61,7 @@ Deno.serve(
           subscription.contact_id
             ? supabaseAdmin
                 .from("contacts")
-                .select("first_name, last_name")
+                .select("first_name, last_name, email_jsonb, phone_jsonb")
                 .eq("id", subscription.contact_id)
                 .maybeSingle()
             : Promise.resolve({ data: null }),
@@ -75,7 +75,7 @@ Deno.serve(
           subscription.agreement_contract_terms_id
             ? supabaseAdmin
                 .from("organization_contract_terms")
-                .select("title, version")
+                .select("title, version, default_variables")
                 .eq("id", subscription.agreement_contract_terms_id)
                 .maybeSingle()
             : Promise.resolve({ data: null }),
@@ -99,15 +99,48 @@ Deno.serve(
         ? [creator.first_name, creator.last_name].filter(Boolean).join(" ").trim() ||
           null
         : null;
+      const clientCity =
+        typeof company?.city === "string" ? company.city.trim() : "";
+      const clientState =
+        typeof company?.state_abbr === "string" ? company.state_abbr.trim() : "";
+      const clientZip =
+        typeof company?.zipcode === "string" ? company.zipcode.trim() : "";
+      const clientCityStateZip =
+        [clientCity, clientState, clientZip].filter(Boolean).join(", ") || null;
       const clientAddress = [
         company?.address,
-        company?.city,
-        company?.state_abbr,
-        company?.zipcode,
+        clientCity,
+        clientState,
+        clientZip,
       ]
         .map((part) => (typeof part === "string" ? part.trim() : ""))
         .filter(Boolean)
         .join(", ") || "—";
+
+      const contactEmails = Array.isArray(contact?.email_jsonb)
+        ? contact.email_jsonb
+        : [];
+      const contactPhones = Array.isArray(contact?.phone_jsonb)
+        ? contact.phone_jsonb
+        : [];
+      let clientEmail: string | null = null;
+      let clientPhone: string | null = null;
+      for (const entry of contactEmails) {
+        const value =
+          typeof entry?.email === "string" ? entry.email.trim() : "";
+        if (value) {
+          clientEmail = value;
+          break;
+        }
+      }
+      for (const entry of contactPhones) {
+        const value =
+          typeof entry?.number === "string" ? entry.number.trim() : "";
+        if (value) {
+          clientPhone = value;
+          break;
+        }
+      }
 
       let termsMarkdown = String(subscription.agreement_terms_markdown ?? "");
       if (hasPlaceholders(termsMarkdown)) {
@@ -117,6 +150,9 @@ Deno.serve(
         const vars = buildSubscriptionContractVariables({
           clientName,
           clientAddress,
+          clientCityStateZip,
+          clientEmail,
+          clientPhone,
           clientRepresentative,
           providerRepresentative,
           subscriptionDescription: subscription.description ?? null,
@@ -128,6 +164,8 @@ Deno.serve(
           lineItems,
           termsVersion:
             subscription.agreement_terms_version ?? terms?.version ?? "1.0",
+          defaultVariables:
+            (terms?.default_variables as Record<string, string> | null) ?? null,
         });
         const signedAt = subscription.agreement_signed_at?.slice(0, 10);
         if (signedAt) {

@@ -474,6 +474,8 @@ export const SubscriptionFormEditor = forwardRef<
       clientName: clientDisplayName,
       clientAddress,
       clientRepresentative: clientRepresentativeName,
+      clientEmail: recipientEmail || null,
+      clientPhone: recipientPhone || null,
       providerRepresentative: identity?.fullName?.trim() || null,
       subscriptionDescription: null,
       subscriptionName: subscriptionNameFromLines(lines) || "Subscription",
@@ -496,6 +498,8 @@ export const SubscriptionFormEditor = forwardRef<
     clientDisplayName,
     clientRepresentativeName,
     clientAddress,
+    recipientEmail,
+    recipientPhone,
     identity?.fullName,
     lines,
     billingInterval,
@@ -708,6 +712,8 @@ export const SubscriptionFormEditor = forwardRef<
               clientName: clientDisplayName,
               clientAddress,
               clientRepresentative: clientRepresentativeName,
+              clientEmail: recipientEmail || null,
+              clientPhone: recipientPhone || null,
               providerRepresentative: identity?.fullName?.trim() || null,
               subscriptionDescription: null,
               subscriptionName: subscriptionName || "Subscription",
@@ -1765,7 +1771,10 @@ export const SubscriptionFormEditor = forwardRef<
                 clientName: clientDisplayName,
                 clientAddress,
                 clientRepresentative: clientRepresentativeName,
+                clientEmail: recipientEmail || null,
+                clientPhone: recipientPhone || null,
                 providerRepresentative: identity?.fullName?.trim() || null,
+                defaultVariables: selectedTemplate?.default_variables ?? null,
               })
             : null
         }

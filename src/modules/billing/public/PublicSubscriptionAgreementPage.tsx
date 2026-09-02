@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Check, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,6 +35,12 @@ export const PublicSubscriptionAgreementPage = () => {
   });
 
   const payload = agreementQuery.data;
+
+  useEffect(() => {
+    const prefill = payload?.client_representative?.trim();
+    if (!prefill) return;
+    setSignatoryName((current) => (current.trim() ? current : prefill));
+  }, [payload?.client_representative]);
 
   const signMutation = useMutation({
     mutationFn: async () => {

@@ -176,6 +176,18 @@ Deno.serve(
           body.agreement_terms_markdown?.trim() || "";
         let agreementTermsVersion: string | null = null;
         let agreementContractTermsId: number | null = null;
+
+        const { data: subscriptionNumber, error: numberError } =
+          await supabaseAdmin.rpc("next_client_subscription_number", {
+            p_org_id: member.org_id,
+          });
+        if (numberError || !subscriptionNumber) {
+          return createErrorResponse(
+            500,
+            numberError?.message ?? "Could not generate subscription number",
+          );
+        }
+
         if (enrollmentMode === "agreement") {
           const { data: templates = [] } = await supabaseAdmin
             .from("organization_contract_terms")
@@ -230,6 +242,9 @@ Deno.serve(
 
           let clientAddress = "—";
           let companyName = "";
+          let companyCity = "";
+          let companyState = "";
+          let companyZip = "";
           if (resolvedCompanyId) {
             const { data: company } = await supabaseAdmin
               .from("companies")
@@ -239,11 +254,21 @@ Deno.serve(
             if (typeof company?.name === "string" && company.name.trim()) {
               companyName = company.name.trim();
             }
+            companyCity =
+              typeof company?.city === "string" ? company.city.trim() : "";
+            companyState =
+              typeof company?.state_abbr === "string"
+                ? company.state_abbr.trim()
+                : "";
+            companyZip =
+              typeof company?.zipcode === "string"
+                ? company.zipcode.trim()
+                : "";
             const parts = [
               company?.address,
-              company?.city,
-              company?.state_abbr,
-              company?.zipcode,
+              companyCity,
+              companyState,
+              companyZip,
             ]
               .map((part) =>
                 typeof part === "string" ? part.trim() : "",
@@ -253,17 +278,49 @@ Deno.serve(
           }
 
           let representativeName = "";
+          let clientEmail: string | null = null;
+          let clientPhone: string | null = null;
           if (contactId) {
             const { data: contact } = await supabaseAdmin
               .from("contacts")
-              .select("first_name, last_name")
+              .select("first_name, last_name, email_jsonb, phone_jsonb")
               .eq("id", contactId)
               .maybeSingle();
             representativeName = [contact?.first_name, contact?.last_name]
               .filter(Boolean)
               .join(" ")
               .trim();
+            const emails = Array.isArray(contact?.email_jsonb)
+              ? contact.email_jsonb
+              : [];
+            const phones = Array.isArray(contact?.phone_jsonb)
+              ? contact.phone_jsonb
+              : [];
+            for (const entry of emails) {
+              const value =
+                typeof entry?.email === "string" ? entry.email.trim() : "";
+              if (value) {
+                clientEmail = value;
+                break;
+              }
+            }
+            for (const entry of phones) {
+              const value =
+                typeof entry?.number === "string" ? entry.number.trim() : "";
+              if (value) {
+                clientPhone = value;
+                break;
+              }
+            }
           }
+
+          const clientCityStateZip = [
+            companyCity,
+            companyState,
+            companyZip,
+          ]
+            .filter(Boolean)
+            .join(", ") || null;
 
           const templateBody = picked?.body_markdown?.trim() || "";
           const defaults =
@@ -285,6 +342,9 @@ Deno.serve(
               clientInfo.name ||
               "Client",
             clientAddress,
+            clientCityStateZip,
+            clientEmail: clientEmail || clientInfo.email || null,
+            clientPhone,
             clientRepresentative: representativeName || null,
             providerRepresentative: [member.first_name, member.last_name]
               .filter(Boolean)
@@ -292,7 +352,7 @@ Deno.serve(
               .trim() || null,
             subscriptionDescription: body.description?.trim() || null,
             subscriptionName: name,
-            subscriptionNumber: null,
+            subscriptionNumber: String(subscriptionNumber),
             amount,
             currency: (body.currency ?? "USD").toUpperCase(),
             billingInterval,
@@ -301,17 +361,6 @@ Deno.serve(
             defaultVariables: defaults,
           });
           agreementTermsMarkdown = mergeContractTerms(sourceBody, vars);
-        }
-
-        const { data: subscriptionNumber, error: numberError } =
-          await supabaseAdmin.rpc("next_client_subscription_number", {
-            p_org_id: member.org_id,
-          });
-        if (numberError || !subscriptionNumber) {
-          return createErrorResponse(
-            500,
-            numberError?.message ?? "Could not generate subscription number",
-          );
         }
 
         const { data: subscription, error: insertError } = await supabaseAdmin

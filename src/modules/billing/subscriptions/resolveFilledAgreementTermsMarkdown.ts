@@ -25,7 +25,11 @@ export const resolveFilledAgreementTermsMarkdown = (params: {
   clientName: string;
   clientAddress?: string | null;
   clientRepresentative?: string | null;
+  clientEmail?: string | null;
+  clientPhone?: string | null;
+  clientCityStateZip?: string | null;
   providerRepresentative?: string | null;
+  defaultVariables?: Record<string, string> | null;
 }): string => {
   const raw = params.markdown?.trim() ?? "";
   if (!raw || !hasUnmergedContractPlaceholders(raw)) return raw;
@@ -41,6 +45,9 @@ export const resolveFilledAgreementTermsMarkdown = (params: {
     clientName: params.clientName,
     clientAddress: params.clientAddress,
     clientRepresentative: params.clientRepresentative,
+    clientEmail: params.clientEmail,
+    clientPhone: params.clientPhone,
+    clientCityStateZip: params.clientCityStateZip,
     providerRepresentative: params.providerRepresentative,
     subscriptionDescription: params.subscription.description,
     subscriptionName: params.subscription.name || "Subscription",
@@ -50,6 +57,7 @@ export const resolveFilledAgreementTermsMarkdown = (params: {
     billingInterval: params.subscription.billing_interval ?? "monthly",
     lineItems: lines,
     termsVersion: params.subscription.agreement_terms_version ?? "1.0",
+    defaultVariables: params.defaultVariables ?? null,
   });
   if (signedAt) {
     vars.signed_at = signedAt;

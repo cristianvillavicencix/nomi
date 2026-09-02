@@ -95,8 +95,10 @@ describe("buildSubscriptionContractVariables", () => {
     expect(merged).toContain("Acme LLC");
     expect(merged).toContain("Jane Doe");
     expect(merged).toContain("Website maintenance");
-    expect(merged).not.toMatch(/\{\{client_name\}\}/);
+    expect(merged).toContain("SUB-2026-0042");
     expect(merged).toContain("Latino Business Support");
+    expect(merged).toContain("2 horas/mes");
+    expect(merged).not.toMatch(/\{\{\w+\}\}/);
   });
 });
 
