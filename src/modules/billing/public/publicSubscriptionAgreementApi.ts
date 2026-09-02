@@ -74,3 +74,33 @@ export const signPublicSubscriptionAgreement = (input: {
     "sign_subscription_agreement",
     input,
   );
+
+export type PublicSubscriptionAgreementDocuments = {
+  contract_pdf_base64: string;
+  contract_filename: string;
+  receipt_pdf_base64: string;
+  receipt_filename: string;
+  email_sent?: boolean;
+  client_email?: string | null;
+};
+
+export const fetchPublicSubscriptionAgreementDocuments = (shortCode: string) =>
+  invokePublicFunction<PublicSubscriptionAgreementDocuments>(
+    "get_public_subscription_agreement_documents",
+    { short_code: shortCode },
+  );
+
+const downloadBase64Pdf = (base64: string, filename: string) => {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
+
+export const downloadPublicAgreementPdf = downloadBase64Pdf;

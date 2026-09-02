@@ -256,6 +256,9 @@ verify_jwt = false
 [functions.get_public_subscription_agreement]
 verify_jwt = false
 
+[functions.get_public_subscription_agreement_documents]
+verify_jwt = false
+
 [functions.sign_subscription_agreement]
 verify_jwt = false
 

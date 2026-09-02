@@ -64,6 +64,8 @@ export type ClientSubscriptionRow = {
   agreement_signed_ip?: string | null;
   agreement_terms_markdown?: string | null;
   agreement_terms_version?: string | null;
+  agreement_completion_emailed_at?: string | null;
+  activated_at?: string | null;
   stripe_payment_method_id?: string | null;
   subscription_number?: string | null;
   starts_at: string | null;
@@ -1809,5 +1811,29 @@ export async function maybeActivateAgreementAfterCardSaved(
   });
 
   await applyStripeSubscriptionSnapshot(supabase, subscription.id, stripeSub);
+
+  try {
+    const { data: refreshed } = await supabase
+      .from("client_subscriptions")
+      .select("*")
+      .eq("id", subscription.id)
+      .maybeSingle();
+    if (refreshed) {
+      const { sendSubscriptionAgreementCompletionEmail } = await import(
+        "./subscriptionAgreementCompletion.ts"
+      );
+      await sendSubscriptionAgreementCompletionEmail(
+        supabase,
+        refreshed as ClientSubscriptionRow,
+      );
+    }
+  } catch (error) {
+    console.error(
+      "subscription_agreement_completion_email.error",
+      subscription.id,
+      error,
+    );
+  }
+
   return { activated: true };
 }
