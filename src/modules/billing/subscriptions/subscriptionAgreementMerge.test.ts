@@ -89,6 +89,21 @@ describe("buildSubscriptionContractVariables", () => {
     expect(vars.subscription_number).toBe("Se asignará al enviar");
   });
 
+  it("keeps template default signatory name over staff provider rep", () => {
+    const vars = buildSubscriptionContractVariables({
+      clientName: "Acme",
+      providerRepresentative: "Staff Person",
+      subscriptionName: "Plan",
+      amount: 10,
+      billingInterval: "monthly",
+      lineItems: [],
+      termsVersion: "1.0",
+      defaultVariables: { lbs_signatory: "Configured Signatory" },
+    });
+    expect(vars.lbs_signatory).toBe("Configured Signatory");
+    expect(vars.provider_representative).toBe("Staff Person");
+  });
+
   it("merges the web maintenance contract template", () => {
     const seed = getWebMaintenanceContractTermsSeed();
     const vars = buildSubscriptionContractVariables({

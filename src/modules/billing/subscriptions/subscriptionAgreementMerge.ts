@@ -131,7 +131,8 @@ export const buildSubscriptionContractVariables = (params: {
     accepted_at: new Date().toISOString().slice(0, 10),
     signed_at: "",
     signed_ip: "",
-    lbs_signatory: providerRep,
+    // Prefer template default (Contracts → Configure); fall back to staff name.
+    lbs_signatory: defaults.lbs_signatory?.trim() || providerRep,
     line_items: buildSubscriptionLineItemsText(params.lineItems, currency),
     total_amount: formatSubscriptionContractMoney(params.amount, currency),
     deposit_amount: formatSubscriptionContractMoney(0, currency),
