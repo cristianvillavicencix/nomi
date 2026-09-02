@@ -334,16 +334,20 @@ export const ContractTermsSettings = ({
   }, [editorMode, editingRow, packageByTermsId]);
 
   const invalidate = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: ["organization_contract_terms"],
-        refetchType: "all",
-      }),
-      queryClient.invalidateQueries({
-        queryKey: ["service_packages"],
-        refetchType: "all",
-      }),
-    ]);
+    await queryClient.invalidateQueries({
+      predicate: (query) =>
+        Array.isArray(query.queryKey) &&
+        query.queryKey[0] === "organization_contract_terms",
+      refetchType: "all",
+    });
+    await queryClient.invalidateQueries({
+      predicate: (query) =>
+        Array.isArray(query.queryKey) &&
+        query.queryKey[0] === "service_packages",
+      refetchType: "all",
+    });
+    // Notify open subscription forms (and anything else listening) to refresh.
+    window.dispatchEvent(new CustomEvent("nomi:contract-terms-updated"));
   };
 
   const syncLinkedBillingPackage = async (termsId: number | string) => {

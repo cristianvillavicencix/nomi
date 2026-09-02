@@ -334,11 +334,26 @@ export const SubscriptionFormEditor = forwardRef<
         enabled:
           mode === "create" &&
           (enrollmentMode === "agreement" || initialContractTermsId != null),
-        // Always pick up Contracts → template edits (do not keep a stale list).
+        // Contracts → Templates is the live source of truth for create enrollment.
         staleTime: 0,
         refetchOnMount: "always",
+        refetchOnWindowFocus: "always",
       },
     );
+
+  // Live sync when Templates are saved (same tab) or the window is focused again.
+  useEffect(() => {
+    if (mode !== "create") return;
+    const pullLatest = () => {
+      void refetchContractTemplates();
+    };
+    window.addEventListener("focus", pullLatest);
+    window.addEventListener("nomi:contract-terms-updated", pullLatest);
+    return () => {
+      window.removeEventListener("focus", pullLatest);
+      window.removeEventListener("nomi:contract-terms-updated", pullLatest);
+    };
+  }, [mode, refetchContractTemplates]);
 
   const { data: initialPackage } = useGetOne<ServicePackage>(
     "service_packages",
@@ -475,16 +490,39 @@ export const SubscriptionFormEditor = forwardRef<
     contractTemplates,
   ]);
 
+  // Fingerprint of the selected Contracts template. When Templates are saved,
+  // this changes and we re-merge into the subscription preview automatically.
+  const selectedTemplateFingerprint = selectedTemplate
+    ? [
+        selectedTemplate.id,
+        selectedTemplate.version ?? "",
+        selectedTemplate.updated_at ?? "",
+        selectedTemplate.body_markdown ?? "",
+        JSON.stringify(selectedTemplate.default_variables ?? {}),
+      ].join("|")
+    : "";
+  const lastMergedTemplateFingerprintRef = useRef<string>("");
+
   useEffect(() => {
     if (enrollmentMode !== "agreement") return;
+    // Staff mid-edit of the textarea: keep their draft until they leave edit mode.
     if (termsEditMode) return;
     if (!selectedTemplate?.body_markdown?.trim()) {
       if (!agreementTermsEdited) setAgreementTermsMarkdown("");
       return;
     }
-    // When the published template changes (Contracts save), drop the stale
-    // filled preview and rebuild — unless staff is mid-edit of the terms box.
-    if (agreementTermsEdited) return;
+
+    const templateChanged =
+      lastMergedTemplateFingerprintRef.current !== "" &&
+      lastMergedTemplateFingerprintRef.current !== selectedTemplateFingerprint;
+
+    // Local subscription tweaks win — until the Contracts template itself changes.
+    if (agreementTermsEdited && !templateChanged) return;
+
+    if (templateChanged && agreementTermsEdited) {
+      setAgreementTermsEdited(false);
+    }
+
     const vars = buildSubscriptionContractVariables({
       clientName: clientDisplayName,
       clientAddress,
@@ -504,6 +542,7 @@ export const SubscriptionFormEditor = forwardRef<
       termsVersion: selectedTemplate.version || "1.0",
       defaultVariables: selectedTemplate.default_variables ?? null,
     });
+    lastMergedTemplateFingerprintRef.current = selectedTemplateFingerprint;
     setAgreementTermsMarkdown(
       mergeSubscriptionContractTerms(selectedTemplate.body_markdown, vars),
     );
@@ -511,10 +550,8 @@ export const SubscriptionFormEditor = forwardRef<
     enrollmentMode,
     agreementTermsEdited,
     termsEditMode,
-    selectedTemplate?.id,
-    selectedTemplate?.version,
-    selectedTemplate?.body_markdown,
-    selectedTemplate?.default_variables,
+    selectedTemplate,
+    selectedTemplateFingerprint,
     clientDisplayName,
     clientRepresentativeName,
     clientAddress,
