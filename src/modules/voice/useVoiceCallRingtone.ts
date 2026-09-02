@@ -45,14 +45,16 @@ export const useVoiceCallRingtone = ({
     if (incomingCall) return undefined;
 
     const isOutboundRinging =
-      callState === "ringing" && activeCallLabel != null && activeCallLabel !== "";
+      activeCallLabel != null &&
+      activeCallLabel !== "" &&
+      (callState === "ringing" || callState === "connecting");
 
     if (isOutboundRinging) {
       void startVoiceCallRingtone("outbound");
       return () => stopVoiceCallRingtone();
     }
 
-    if (callState !== "ringing") {
+    if (callState !== "ringing" && callState !== "connecting") {
       stopVoiceCallRingtone();
     }
     return undefined;

@@ -19,6 +19,9 @@ export type VoiceCallContextValue = {
   callConnectedAt: number | null;
   isMuted: boolean;
   setMuted: (muted: boolean) => void;
+  /** Selected microphone deviceId for the active / next call. */
+  selectedMicrophoneId: string | null;
+  setMicrophoneDevice: (deviceId: string) => Promise<void>;
   sendDigits: (digits: string) => void;
   callWorkspaceOpen: boolean;
   setCallWorkspaceOpen: (open: boolean) => void;

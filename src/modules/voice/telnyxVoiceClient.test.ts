@@ -7,6 +7,7 @@ describe("mapTelnyxCallState", () => {
     expect(mapTelnyxCallState("active")).toBe("open");
     expect(mapTelnyxCallState("held")).toBe("open");
     expect(mapTelnyxCallState("trying")).toBe("connecting");
+    expect(mapTelnyxCallState("early")).toBe("ringing");
     expect(mapTelnyxCallState("answering")).toBe("connecting");
     expect(mapTelnyxCallState("hangup")).toBe("ended");
     expect(mapTelnyxCallState("destroy")).toBe("ended");

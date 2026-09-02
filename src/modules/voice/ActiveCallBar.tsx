@@ -6,6 +6,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import {
+  Check,
+  ChevronDown,
   GripVertical,
   Grid3x3,
   Loader2,
@@ -33,13 +35,17 @@ import {
 } from "@/modules/voice/activeCallBarPosition";
 import { formatLiveCallTimer } from "@/modules/voice/voiceCallFormat";
 import { useVoiceCallContextOptional } from "@/modules/voice/voiceCallContext";
+import {
+  listVoiceAudioInputDevices,
+  type VoiceAudioInputDevice,
+} from "@/modules/voice/voiceMicrophoneDevices";
 
 const callStateLabel = (state: string, label: string | null) => {
   switch (state) {
     case "connecting":
       return "Connecting…";
     case "ringing":
-      return label ? `Calling ${label}…` : "Ringing…";
+      return label ? `Ringing ${label}…` : "Ringing…";
     case "open":
       return label ? `On call · ${label}` : "On call";
     default:
@@ -60,6 +66,9 @@ export const ActiveCallBar = () => {
   const [position, setPosition] = useState<ActiveCallBarPosition | null>(null);
   const [dragging, setDragging] = useState(false);
   const [keypadOpen, setKeypadOpen] = useState(false);
+  const [micMenuOpen, setMicMenuOpen] = useState(false);
+  const [microphones, setMicrophones] = useState<VoiceAudioInputDevice[]>([]);
+  const [microphonesLoading, setMicrophonesLoading] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [panelMaxHeight, setPanelMaxHeight] = useState(420);
 
@@ -74,6 +83,33 @@ export const ActiveCallBar = () => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, [voice?.callConnectedAt, voice?.callState]);
+
+  useEffect(() => {
+    if (!micMenuOpen) return;
+    let cancelled = false;
+    setMicrophonesLoading(true);
+    void listVoiceAudioInputDevices()
+      .then((devices) => {
+        if (!cancelled) setMicrophones(devices);
+      })
+      .finally(() => {
+        if (!cancelled) setMicrophonesLoading(false);
+      });
+
+    const onDeviceChange = () => {
+      void listVoiceAudioInputDevices().then((devices) => {
+        if (!cancelled) setMicrophones(devices);
+      });
+    };
+    navigator.mediaDevices?.addEventListener?.("devicechange", onDeviceChange);
+    return () => {
+      cancelled = true;
+      navigator.mediaDevices?.removeEventListener?.(
+        "devicechange",
+        onDeviceChange,
+      );
+    };
+  }, [micMenuOpen]);
 
   // Position anchors the control bar only. The notes/workspace panel expands
   // upward so mute / keypad / End never scroll off-screen.
@@ -253,26 +289,99 @@ export const ActiveCallBar = () => {
             <div className="flex shrink-0 items-center gap-0.5">
               {canUseMediaControls ? (
                 <>
-                  <button
-                    type="button"
-                    aria-label={voice.isMuted ? "Unmute" : "Mute"}
-                    aria-pressed={voice.isMuted}
-                    disabled={!onCall}
-                    className={cn(
-                      barIconClass,
-                      voice.isMuted && "bg-zinc-700 text-amber-300",
-                    )}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      voice.setMuted(!voice.isMuted);
-                    }}
-                  >
-                    {voice.isMuted ? (
-                      <MicOff className="size-4" />
-                    ) : (
-                      <Mic className="size-4" />
-                    )}
-                  </button>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      aria-label={voice.isMuted ? "Unmute" : "Mute"}
+                      aria-pressed={voice.isMuted}
+                      disabled={!onCall}
+                      className={cn(
+                        barIconClass,
+                        "rounded-r-none",
+                        voice.isMuted && "bg-zinc-700 text-amber-300",
+                      )}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        voice.setMuted(!voice.isMuted);
+                      }}
+                    >
+                      {voice.isMuted ? (
+                        <MicOff className="size-4" />
+                      ) : (
+                        <Mic className="size-4" />
+                      )}
+                    </button>
+                    <Popover open={micMenuOpen} onOpenChange={setMicMenuOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label="Choose microphone"
+                          aria-pressed={micMenuOpen}
+                          disabled={!onCall}
+                          className={cn(
+                            barIconClass,
+                            "w-6 rounded-l-none border-l border-zinc-700/80 px-0",
+                            micMenuOpen && "bg-zinc-700",
+                          )}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <ChevronDown className="size-3.5" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        side="top"
+                        align="end"
+                        className="z-[70] w-64 border-border/60 bg-background p-1 shadow-xl"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <p className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          Microphone
+                        </p>
+                        {microphonesLoading ? (
+                          <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
+                            <Loader2 className="size-3.5 animate-spin" />
+                            Loading devices…
+                          </div>
+                        ) : microphones.length === 0 ? (
+                          <p className="px-2 py-3 text-sm text-muted-foreground">
+                            No microphones found. Allow mic access and try again.
+                          </p>
+                        ) : (
+                          <div className="max-h-56 overflow-y-auto">
+                            {microphones.map((device) => {
+                              const selected =
+                                voice.selectedMicrophoneId === device.deviceId ||
+                                (!voice.selectedMicrophoneId &&
+                                  device.deviceId === microphones[0]?.deviceId);
+                              return (
+                                <button
+                                  key={device.deviceId}
+                                  type="button"
+                                  className={cn(
+                                    "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted",
+                                    selected && "bg-muted/70",
+                                  )}
+                                  onClick={() => {
+                                    void voice.setMicrophoneDevice(
+                                      device.deviceId,
+                                    );
+                                    setMicMenuOpen(false);
+                                  }}
+                                >
+                                  <span className="min-w-0 flex-1 truncate">
+                                    {device.label}
+                                  </span>
+                                  {selected ? (
+                                    <Check className="size-3.5 shrink-0 text-foreground" />
+                                  ) : null}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
                   <Popover open={keypadOpen} onOpenChange={setKeypadOpen}>
                     <PopoverTrigger asChild>

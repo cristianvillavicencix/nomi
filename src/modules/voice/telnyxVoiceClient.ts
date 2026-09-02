@@ -86,8 +86,10 @@ export function mapTelnyxCallState(
     case "requesting":
     case "recovering":
     case "answering":
-    case "early":
       return "connecting";
+    case "early":
+      // Early media = remote ringback while the callee's phone is ringing.
+      return "ringing";
     case "hangup":
     case "destroy":
     case "purge":

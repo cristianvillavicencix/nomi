@@ -120,6 +120,23 @@ const buildPreviewMarkdown = (
   return mergeSubscriptionContractTerms(row.body_markdown, variables);
 };
 
+const formatContractTermsSaveError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  if (
+    message.includes("organization_contract_terms_org_slug_idx") ||
+    message.includes("(org_id, slug)")
+  ) {
+    return "A template with this slug already exists. Edit the existing template or change the slug.";
+  }
+  if (message.includes("organization_contract_terms_org_slug_version_idx")) {
+    return "This slug and version already exist. Bump the version (e.g. 1.1) or edit the existing template.";
+  }
+  if (message.includes("organization_contract_terms_org_id_version_key")) {
+    return "Another template already uses this version number. Change the version field — each template slug can share v1.0 after the DB migration is applied.";
+  }
+  return message || "Failed to save template";
+};
+
 export const ContractTermsSettings = ({
   embedded = false,
 }: {
@@ -293,6 +310,16 @@ export const ContractTermsSettings = ({
         slug: slugify(slug),
         is_active: true,
       };
+      if (editorMode === "new") {
+        const existingSlug = termsRows.find(
+          (row) => row.slug === payload.slug,
+        );
+        if (existingSlug) {
+          throw new Error(
+            `Template slug "${payload.slug}" already exists. Edit that template instead of creating a duplicate.`,
+          );
+        }
+      }
       if (editorMode === "edit" && editingRow) {
         await update(
           "organization_contract_terms",
@@ -331,10 +358,7 @@ export const ContractTermsSettings = ({
       notify("Contract template saved", { type: "success" });
     },
     onError: (error) =>
-      notify(
-        error instanceof Error ? error.message : "Failed to save template",
-        { type: "error" },
-      ),
+      notify(formatContractTermsSaveError(error), { type: "error" }),
   });
 
   const setDefaultMutation = useMutation({

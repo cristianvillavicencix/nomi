@@ -68,6 +68,270 @@ const toPackageDraft = (pkg: ServicePackage): Partial<CatalogItemDraft> => ({
       : null,
 });
 
+function CatalogFilterChip({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+  <button
+    type="button"
+    onClick={onClick}
+    className={cn(
+      "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors",
+      active
+        ? "border-primary bg-primary text-primary-foreground"
+        : "bg-background hover:bg-muted/60",
+    )}
+  >
+    <span>{label}</span>
+    <span
+      className={cn(
+        "tabular-nums",
+        active ? "text-primary-foreground/80" : "text-muted-foreground",
+      )}
+    >
+      {count}
+    </span>
+  </button>
+  );
+}
+
+function CatalogFilterBar({
+  filter,
+  onFilterChange,
+  search,
+  onSearchChange,
+  options,
+}: {
+  filter: CatalogListFilterKey;
+  onFilterChange: (value: CatalogListFilterKey) => void;
+  search: string;
+  onSearchChange: (value: string) => void;
+  options: ReturnType<typeof catalogFilterOptionsForRows>;
+}) {
+  return (
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-wrap gap-2">
+      {options.map((option) => (
+        <CatalogFilterChip
+          key={option.key}
+          label={option.label}
+          count={option.count}
+          active={filter === option.key}
+          onClick={() => onFilterChange(option.key)}
+        />
+      ))}
+    </div>
+    <div className="relative w-full sm:max-w-xs">
+      <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        value={search}
+        onChange={(event) => onSearchChange(event.target.value)}
+        placeholder="Search catalog…"
+        className="pl-8"
+        aria-label="Search catalog"
+      />
+    </div>
+  </div>
+  );
+}
+
+function CatalogListPanel({
+  rows,
+  usageContext = "one_time",
+  showUsageBadges = false,
+  onToggleActive,
+  onEdit,
+  onDelete,
+}: {
+  rows: ServicePackage[];
+  usageContext?: "one_time" | "recurring";
+  showUsageBadges?: boolean;
+  onToggleActive: (row: ServicePackage, active: boolean) => void;
+  onEdit: (row: ServicePackage) => void;
+  onDelete: (row: ServicePackage) => void;
+}) {
+  const [filter, setFilter] = useState<CatalogListFilterKey>("all");
+  const [search, setSearch] = useState("");
+
+  const filterOptions = useMemo(
+    () =>
+      catalogFilterOptionsForRows(rows, {
+        includeUsageFilters: usageContext === "one_time",
+      }),
+    [rows, usageContext],
+  );
+
+  useEffect(() => {
+    if (!filterOptions.some((option) => option.key === filter)) {
+      setFilter("all");
+    }
+  }, [filter, filterOptions]);
+
+  const filteredRows = useMemo(
+    () => filterCatalogPackages(rows, filter, search),
+    [rows, filter, search],
+  );
+
+  const emptyMessage =
+    rows.length === 0
+      ? undefined
+      : filteredRows.length === 0
+        ? "No items match this filter."
+        : undefined;
+
+  return (
+    <div className="space-y-3">
+      {rows.length > 0 ? (
+        <CatalogFilterBar
+          filter={filter}
+          onFilterChange={setFilter}
+          search={search}
+          onSearchChange={setSearch}
+          options={filterOptions}
+        />
+      ) : null}
+      <CatalogTable
+        rows={filteredRows}
+        usageContext={usageContext}
+        showUsageBadges={showUsageBadges}
+        emptyMessage={emptyMessage}
+        onToggleActive={onToggleActive}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
+    </div>
+  );
+}
+
+function CatalogTable({
+  rows,
+  usageContext = "one_time",
+  showUsageBadges = false,
+  emptyMessage,
+  onToggleActive,
+  onEdit,
+  onDelete,
+}: {
+  rows: ServicePackage[];
+  usageContext?: "one_time" | "recurring";
+  showUsageBadges?: boolean;
+  emptyMessage?: string;
+  onToggleActive: (row: ServicePackage, active: boolean) => void;
+  onEdit: (row: ServicePackage) => void;
+  onDelete: (row: ServicePackage) => void;
+}) {
+  if (rows.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground py-6 text-center">
+        {emptyMessage ??
+          (usageContext === "recurring"
+            ? "No subscription items yet. Add recurring services like website maintenance."
+            : "No one-time items yet.")}
+      </p>
+    );
+  }
+
+  const defaultUsageLabel =
+    usageContext === "recurring" ? "Subscriptions" : "Proposals · Invoices";
+
+  return (
+    <div className="overflow-x-auto rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Category</TableHead>
+            <TableHead>Used in</TableHead>
+            <TableHead>Billing</TableHead>
+            <TableHead className="text-right">Suggested</TableHead>
+            <TableHead className="text-center">Active</TableHead>
+            <TableHead className="w-12" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow key={String(row.id)}>
+              <TableCell className="font-medium">{row.name}</TableCell>
+              <TableCell className="text-muted-foreground">
+                {categoryLabel(row.category)}
+              </TableCell>
+              <TableCell>
+                {showUsageBadges ? (
+                  <div className="flex flex-wrap gap-1">
+                    {row.ticket_billing_enabled ? (
+                      <Badge variant="outline" className="font-normal">
+                        Tickets
+                      </Badge>
+                    ) : null}
+                    {row.booking_enabled ? (
+                      <Badge variant="outline" className="font-normal">
+                        Book now
+                      </Badge>
+                    ) : null}
+                    {!row.ticket_billing_enabled && !row.booking_enabled ? (
+                      <span className="text-xs text-muted-foreground">
+                        {defaultUsageLabel}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    {defaultUsageLabel}
+                  </span>
+                )}
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline" className="font-normal">
+                  {billingTypeLabel(row.billing_type)}
+                  {billingIntervalSuffix(
+                    row.billing_type,
+                    row.billing_interval,
+                  )}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                <MoneyText value={row.suggested_price} />
+                {billingIntervalSuffix(row.billing_type, row.billing_interval)}
+              </TableCell>
+              <TableCell className="text-center">
+                <Switch
+                  checked={row.active !== false}
+                  onCheckedChange={(checked) => onToggleActive(row, checked)}
+                  aria-label={`Toggle ${row.name}`}
+                />
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center justify-end gap-0.5">
+                  <IconButton
+                    onClick={() => onEdit(row)}
+                    aria-label={`Edit ${row.name}`}
+                  >
+                    <Pencil className="size-4" />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => onDelete(row)}
+                    aria-label={`Delete ${row.name}`}
+                  >
+                    <Trash2 className="size-4" />
+                  </IconButton>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 export const ServiceCatalogSettings = () => {
   const notify = useNotify();
   const queryClient = useQueryClient();
@@ -341,266 +605,6 @@ export const ServiceCatalogSettings = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-};
-
-const CatalogFilterChip = ({
-  label,
-  count,
-  active,
-  onClick,
-}: {
-  label: string;
-  count: number;
-  active?: boolean;
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={cn(
-      "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors",
-      active
-        ? "border-primary bg-primary text-primary-foreground"
-        : "bg-background hover:bg-muted/60",
-    )}
-  >
-    <span>{label}</span>
-    <span
-      className={cn(
-        "tabular-nums",
-        active ? "text-primary-foreground/80" : "text-muted-foreground",
-      )}
-    >
-      {count}
-    </span>
-  </button>
-);
-
-const CatalogFilterBar = ({
-  filter,
-  onFilterChange,
-  search,
-  onSearchChange,
-  options,
-}: {
-  filter: CatalogListFilterKey;
-  onFilterChange: (value: CatalogListFilterKey) => void;
-  search: string;
-  onSearchChange: (value: string) => void;
-  options: ReturnType<typeof catalogFilterOptionsForRows>;
-}) => (
-  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-    <div className="flex flex-wrap gap-2">
-      {options.map((option) => (
-        <CatalogFilterChip
-          key={option.key}
-          label={option.label}
-          count={option.count}
-          active={filter === option.key}
-          onClick={() => onFilterChange(option.key)}
-        />
-      ))}
-    </div>
-    <div className="relative w-full sm:max-w-xs">
-      <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-      <Input
-        value={search}
-        onChange={(event) => onSearchChange(event.target.value)}
-        placeholder="Search catalog…"
-        className="pl-8"
-        aria-label="Search catalog"
-      />
-    </div>
-  </div>
-);
-
-const CatalogListPanel = ({
-  rows,
-  usageContext = "one_time",
-  showUsageBadges = false,
-  onToggleActive,
-  onEdit,
-  onDelete,
-}: {
-  rows: ServicePackage[];
-  usageContext?: "one_time" | "recurring";
-  showUsageBadges?: boolean;
-  onToggleActive: (row: ServicePackage, active: boolean) => void;
-  onEdit: (row: ServicePackage) => void;
-  onDelete: (row: ServicePackage) => void;
-}) => {
-  const [filter, setFilter] = useState<CatalogListFilterKey>("all");
-  const [search, setSearch] = useState("");
-
-  const filterOptions = useMemo(
-    () =>
-      catalogFilterOptionsForRows(rows, {
-        includeUsageFilters: usageContext === "one_time",
-      }),
-    [rows, usageContext],
-  );
-
-  useEffect(() => {
-    if (!filterOptions.some((option) => option.key === filter)) {
-      setFilter("all");
-    }
-  }, [filter, filterOptions]);
-
-  const filteredRows = useMemo(
-    () => filterCatalogPackages(rows, filter, search),
-    [rows, filter, search],
-  );
-
-  const emptyMessage =
-    rows.length === 0
-      ? undefined
-      : filteredRows.length === 0
-        ? "No items match this filter."
-        : undefined;
-
-  return (
-    <div className="space-y-3">
-      {rows.length > 0 ? (
-        <CatalogFilterBar
-          filter={filter}
-          onFilterChange={setFilter}
-          search={search}
-          onSearchChange={setSearch}
-          options={filterOptions}
-        />
-      ) : null}
-      <CatalogTable
-        rows={filteredRows}
-        usageContext={usageContext}
-        showUsageBadges={showUsageBadges}
-        emptyMessage={emptyMessage}
-        onToggleActive={onToggleActive}
-        onEdit={onEdit}
-        onDelete={onDelete}
-      />
-    </div>
-  );
-};
-
-const CatalogTable = ({
-  rows,
-  usageContext = "one_time",
-  showUsageBadges = false,
-  emptyMessage,
-  onToggleActive,
-  onEdit,
-  onDelete,
-}: {
-  rows: ServicePackage[];
-  usageContext?: "one_time" | "recurring";
-  showUsageBadges?: boolean;
-  emptyMessage?: string;
-  onToggleActive: (row: ServicePackage, active: boolean) => void;
-  onEdit: (row: ServicePackage) => void;
-  onDelete: (row: ServicePackage) => void;
-}) => {
-  if (rows.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground py-6 text-center">
-        {emptyMessage ??
-          (usageContext === "recurring"
-            ? "No subscription items yet. Add recurring services like website maintenance."
-            : "No one-time items yet.")}
-      </p>
-    );
-  }
-
-  const defaultUsageLabel =
-    usageContext === "recurring" ? "Subscriptions" : "Proposals · Invoices";
-
-  return (
-    <div className="overflow-x-auto rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Used in</TableHead>
-            <TableHead>Billing</TableHead>
-            <TableHead className="text-right">Suggested</TableHead>
-            <TableHead className="text-center">Active</TableHead>
-            <TableHead className="w-12" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row) => (
-            <TableRow key={String(row.id)}>
-              <TableCell className="font-medium">{row.name}</TableCell>
-              <TableCell className="text-muted-foreground">
-                {categoryLabel(row.category)}
-              </TableCell>
-              <TableCell>
-                {showUsageBadges ? (
-                  <div className="flex flex-wrap gap-1">
-                    {row.ticket_billing_enabled ? (
-                      <Badge variant="outline" className="font-normal">
-                        Tickets
-                      </Badge>
-                    ) : null}
-                    {row.booking_enabled ? (
-                      <Badge variant="outline" className="font-normal">
-                        Book now
-                      </Badge>
-                    ) : null}
-                    {!row.ticket_billing_enabled && !row.booking_enabled ? (
-                      <span className="text-xs text-muted-foreground">
-                        {defaultUsageLabel}
-                      </span>
-                    ) : null}
-                  </div>
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    {defaultUsageLabel}
-                  </span>
-                )}
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className="font-normal">
-                  {billingTypeLabel(row.billing_type)}
-                  {billingIntervalSuffix(
-                    row.billing_type,
-                    row.billing_interval,
-                  )}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                <MoneyText value={row.suggested_price} />
-                {billingIntervalSuffix(row.billing_type, row.billing_interval)}
-              </TableCell>
-              <TableCell className="text-center">
-                <Switch
-                  checked={row.active !== false}
-                  onCheckedChange={(checked) => onToggleActive(row, checked)}
-                  aria-label={`Toggle ${row.name}`}
-                />
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center justify-end gap-0.5">
-                  <IconButton
-                    onClick={() => onEdit(row)}
-                    aria-label={`Edit ${row.name}`}
-                  >
-                    <Pencil className="size-4" />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => onDelete(row)}
-                    aria-label={`Delete ${row.name}`}
-                  >
-                    <Trash2 className="size-4" />
-                  </IconButton>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
     </div>
   );
 };

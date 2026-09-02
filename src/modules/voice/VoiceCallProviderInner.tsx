@@ -48,6 +48,12 @@ import {
   attachTelnyxRemoteElement,
   getTelnyxRemoteAudioElement,
 } from "@/modules/voice/telnyxRemoteAudio";
+import {
+  listVoiceAudioInputDevices,
+  loadPreferredMicrophoneId,
+  resolvePreferredMicrophoneId,
+  savePreferredMicrophoneId,
+} from "@/modules/voice/voiceMicrophoneDevices";
 
 /** US East primary edge (Stamford CT / Ashburn); roaming fallback if unreachable. */
 const VOICE_DEVICE_EDGE: string[] = ["ashburn", "roaming"];
@@ -115,6 +121,9 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     useState<ActiveCallParty | null>(null);
   const [callConnectedAt, setCallConnectedAt] = useState<number | null>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [selectedMicrophoneId, setSelectedMicrophoneId] = useState<
+    string | null
+  >(() => loadPreferredMicrophoneId());
   const [callWorkspaceOpen, setCallWorkspaceOpen] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
 
@@ -425,6 +434,25 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     setIncomingUiMinimized(false);
   }, []);
 
+  const syncTelnyxCallUiFromCall = useCallback((call: TelnyxCall) => {
+    const mapped = mapTelnyxCallState(call.state);
+    if (mapped === "open") {
+      setErrorMessage(null);
+      setCallConnectedAt((current) => current ?? Date.now());
+      setIsMuted(Boolean(call.isAudioMuted));
+      setCallState("open");
+      return;
+    }
+    if (mapped === "ringing") {
+      setCallState("ringing");
+      setErrorMessage(null);
+      return;
+    }
+    if (mapped === "connecting") {
+      setCallState("connecting");
+    }
+  }, []);
+
   const handleTelnyxNotification = useCallback(
     (notification: INotification) => {
       if (!isTelnyxCallUpdate(notification)) return;
@@ -491,20 +519,10 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
       }
 
       if (activeTelnyxCallRef.current?.id === call.id || isActive) {
-        if (mapped === "open") {
-          setErrorMessage(null);
-          setCallConnectedAt((current) => current ?? Date.now());
-          setIsMuted(Boolean(call.isAudioMuted));
-          setCallState("open");
-        } else if (mapped === "ringing") {
-          setCallState("ringing");
-          setErrorMessage(null);
-        } else if (mapped === "connecting") {
-          setCallState("connecting");
-        }
+        syncTelnyxCallUiFromCall(call);
       }
     },
-    [clearIncomingUi, invalidateCallHistory, resolveIncomingCaller],
+    [clearIncomingUi, invalidateCallHistory, resolveIncomingCaller, syncTelnyxCallUiFromCall],
   );
 
   const ensureTelnyxClient = useCallback(async () => {
@@ -737,6 +755,56 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     }
   }, []);
 
+  const applyMicrophoneDevice = useCallback(
+    async (deviceId: string, muted?: boolean) => {
+      const telnyxCall = activeTelnyxCallRef.current;
+      if (telnyxCall) {
+        await telnyxCall.setAudioInDevice(deviceId, muted);
+        return;
+      }
+      const device = deviceRef.current;
+      if (device?.audio) {
+        await device.audio.setInputDevice(deviceId);
+      }
+    },
+    [],
+  );
+
+  const setMicrophoneDevice = useCallback(
+    async (deviceId: string) => {
+      const nextId = deviceId.trim();
+      if (!nextId) return;
+      savePreferredMicrophoneId(nextId);
+      setSelectedMicrophoneId(nextId);
+      try {
+        await applyMicrophoneDevice(nextId, isMuted);
+      } catch (error) {
+        console.error("[VoiceCallProvider] set microphone failed", error);
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Could not switch microphone",
+        );
+      }
+    },
+    [applyMicrophoneDevice, isMuted],
+  );
+
+  const ensurePreferredMicrophone = useCallback(async () => {
+    try {
+      const devices = await listVoiceAudioInputDevices();
+      const preferred = resolvePreferredMicrophoneId(
+        devices,
+        selectedMicrophoneId ?? loadPreferredMicrophoneId(),
+      );
+      if (!preferred) return;
+      setSelectedMicrophoneId(preferred);
+      await applyMicrophoneDevice(preferred, isMuted);
+    } catch (error) {
+      console.warn("[VoiceCallProvider] preferred microphone apply failed", error);
+    }
+  }, [applyMicrophoneDevice, isMuted, selectedMicrophoneId]);
+
   const sendDigits = useCallback((digits: string) => {
     if (!digits) return;
     const telnyxCall = activeTelnyxCallRef.current;
@@ -799,10 +867,14 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
           remoteElement: getTelnyxRemoteAudioElement(),
         });
         activeTelnyxCallRef.current = call;
+        syncTelnyxCallUiFromCall(call);
+        void ensurePreferredMicrophone();
         return;
       }
 
       const device = await ensureTwilioDevice();
+      void unlockVoiceCallAudio();
+      await ensurePreferredMicrophone();
       const connectParams: Record<string, string> = {
         To: normalizedTo,
         member_id: String(memberId),
@@ -823,11 +895,13 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     },
     [
       bindCallEvents,
+      ensurePreferredMicrophone,
       ensureTelnyxClient,
       ensureTwilioDevice,
       identity?.id,
       isTelnyx,
       shouldRegister,
+      syncTelnyxCallUiFromCall,
     ],
   );
 
@@ -858,6 +932,7 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
       void unlockVoiceCallAudio();
       void call
         .answer({ remoteElement: getTelnyxRemoteAudioElement() })
+        .then(() => ensurePreferredMicrophone())
         .catch((error) => {
           console.error("[VoiceCallProvider] telnyx answer failed", error);
           setErrorMessage(
@@ -895,16 +970,18 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     setCallState("connecting");
     activeCallRef.current = call;
     bindCallEvents(call);
-    call.accept();
-    // accept() can move the call to open before/without a late event.
-    if (call.status() === "open") {
-      setCallConnectedAt(Date.now());
-      setIsMuted(call.isMuted());
-      setCallState("open");
-    }
+    void ensurePreferredMicrophone().finally(() => {
+      call.accept();
+      if (call.status() === "open") {
+        setCallConnectedAt(Date.now());
+        setIsMuted(call.isMuted());
+        setCallState("open");
+      }
+    });
   }, [
     bindCallEvents,
     clearIncomingUi,
+    ensurePreferredMicrophone,
     incomingCallerInfo,
     incomingCallerLabel,
     isTelnyx,
@@ -948,6 +1025,8 @@ export const VoiceCallProviderInner = ({ children }: { children: ReactNode }) =>
     callConnectedAt,
     isMuted,
     setMuted,
+    selectedMicrophoneId,
+    setMicrophoneDevice,
     sendDigits,
     callWorkspaceOpen,
     setCallWorkspaceOpen,
