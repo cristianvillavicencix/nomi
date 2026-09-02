@@ -218,8 +218,8 @@ export const SubscriptionAgreementClientView = ({
             ) : (
               <div className="border-t border-neutral-100 px-4 py-5">
                 <p className="text-center text-xs leading-relaxed text-neutral-400">
-                  The full terms stay tucked away until you open them —
-                  nothing scary on the first screen.
+                  Open when you want to read the full terms — then come back
+                  here to sign.
                 </p>
               </div>
             )}
