@@ -51,9 +51,25 @@ export const buildSubscriptionListFilter = (
   return { "status@eq": statusFilter };
 };
 
+/** Stripe uses `trialing` when billing is deferred to a future starts_at. */
+export const isScheduledBillingStart = (
+  subscription?: Pick<ClientSubscription, "status" | "starts_at"> | null,
+) => {
+  if (!subscription || subscription.status !== "trialing") return false;
+  const startsAt = subscription.starts_at?.trim();
+  if (!startsAt) return false;
+  const startMs = Date.parse(
+    /^\d{4}-\d{2}-\d{2}$/.test(startsAt) ? `${startsAt}T00:00:00` : startsAt,
+  );
+  return Number.isFinite(startMs) && startMs > Date.now() + 60_000;
+};
+
 export const subscriptionStatusLabel = (
   status?: string | null,
-  subscription?: Pick<ClientSubscription, "ends_at" | "status"> | null,
+  subscription?: Pick<
+    ClientSubscription,
+    "ends_at" | "status" | "starts_at"
+  > | null,
 ) => {
   if (subscription && isSubscriptionExpired(subscription)) {
     return "Expired";
@@ -70,6 +86,9 @@ export const subscriptionStatusLabel = (
     case "canceled":
       return "Canceled";
     case "trialing":
+      if (isScheduledBillingStart(subscription)) {
+        return `Starts ${formatBillingDate(subscription!.starts_at)}`;
+      }
       return "Trialing";
     default:
       return status ?? "—";
@@ -109,7 +128,11 @@ export type SubscriptionListRibbon = {
 export const resolveSubscriptionListRibbon = (
   subscription: Pick<
     ClientSubscription,
-    "ends_at" | "status" | "enrollment_mode" | "agreement_signed_at"
+    | "ends_at"
+    | "status"
+    | "starts_at"
+    | "enrollment_mode"
+    | "agreement_signed_at"
   >,
 ): SubscriptionListRibbon => {
   if (isSubscriptionExpired(subscription)) {
@@ -138,6 +161,13 @@ export const resolveSubscriptionListRibbon = (
         className: "bg-emerald-600 text-white dark:bg-emerald-500",
       };
     case "trialing":
+      if (isScheduledBillingStart(subscription)) {
+        return {
+          key: "scheduled",
+          label: "Scheduled",
+          className: "bg-sky-600 text-white dark:bg-sky-500",
+        };
+      }
       return {
         key: "trialing",
         label: "Trial",

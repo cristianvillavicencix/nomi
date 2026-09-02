@@ -37,6 +37,23 @@ describe("subscriptionDisplayUtils", () => {
     expect(subscriptionStatusLabel("past_due")).toBe("Past due");
   });
 
+  it("labels future-start trialing as scheduled billing, not a free trial", () => {
+    expect(
+      subscriptionStatusLabel("trialing", {
+        status: "trialing",
+        ends_at: null,
+        starts_at: "2099-09-10",
+      }),
+    ).toBe("Starts Sep 10, 2099");
+    expect(
+      resolveSubscriptionListRibbon({
+        status: "trialing",
+        ends_at: null,
+        starts_at: "2099-09-10",
+      }).label,
+    ).toBe("Scheduled");
+  });
+
   it("maps subscription list ribbons by status", () => {
     expect(
       resolveSubscriptionListRibbon({ status: "active", ends_at: null }).label,

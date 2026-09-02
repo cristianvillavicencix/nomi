@@ -387,7 +387,7 @@ export const SubscriptionOverviewTab = ({
         <OverviewCard title="Status">
           <SummaryRow
             label="Status"
-            value={subscriptionStatusLabel(subscription.status)}
+            value={subscriptionStatusLabel(subscription.status, subscription)}
           />
           {subscription.cancel_at_period_end ? (
             <SummaryRow label="Cancellation" value="At period end" />
