@@ -96,8 +96,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Eye, FileText } from "lucide-react";
+import { Download, Eye, FileText } from "lucide-react";
 import { SignedSubscriptionAgreementDialog } from "@/modules/billing/subscriptions/SignedSubscriptionAgreementDialog";
+import { downloadSubscriptionAgreementPdf } from "@/modules/billing/subscriptions/subscriptionAgreementClientPdf";
 import {
   buildSubscriptionContractVariables,
   fillAgreementTermsMarkdown,
@@ -1332,6 +1333,44 @@ export const SubscriptionFormEditor = forwardRef<
                 <FileText className="size-3.5" />
                 View signed agreement
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  void downloadSubscriptionAgreementPdf({
+                    title: subscription.name || "Subscription agreement",
+                    markdown: resolveFilledAgreementTermsMarkdown({
+                      markdown: subscription.agreement_terms_markdown,
+                      subscription,
+                      clientName: clientDisplayName,
+                      clientAddress,
+                      clientRepresentative: clientRepresentativeName,
+                      clientEmail: recipientEmail || null,
+                      clientPhone: recipientPhone || null,
+                      providerRepresentative:
+                        identity?.fullName?.trim() || null,
+                      defaultVariables:
+                        selectedTemplate?.default_variables ?? null,
+                    }),
+                    subscriptionNumber: subscription.subscription_number,
+                    clientName: clientDisplayName,
+                    signatoryName: subscription.agreement_signatory_name,
+                    signedAt: subscription.agreement_signed_at,
+                    signaturePngDataUrl: subscription.agreement_signature_png,
+                  }).catch((error) => {
+                    notify(
+                      error instanceof Error
+                        ? error.message
+                        : "Could not download the signed agreement",
+                      { type: "error" },
+                    );
+                  });
+                }}
+              >
+                <Download className="size-3.5" />
+                Download PDF
+              </Button>
             </div>
           ) : null}
 
@@ -1930,6 +1969,7 @@ export const SubscriptionFormEditor = forwardRef<
         clientAddress={clientAddress}
         subscriptionName={subscription?.name ?? subscriptionName}
         subscriptionDescription={subscription?.description ?? null}
+        subscriptionNumber={subscription?.subscription_number}
       />
     </div>
   );

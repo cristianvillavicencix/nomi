@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
-import { ExternalLink, FileText } from "lucide-react";
-import { useGetIdentity, useGetList, useGetMany } from "ra-core";
+import { Download, ExternalLink, FileText, Receipt } from "lucide-react";
+import { useGetIdentity, useGetList, useGetMany, useNotify } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { OrganizationMember } from "@/modules/types";
 import { getClientShowPath } from "@/app/routing";
@@ -33,6 +33,10 @@ import {
 } from "@/components/ui/table";
 import { SignedSubscriptionAgreementDialog } from "@/modules/billing/subscriptions/SignedSubscriptionAgreementDialog";
 import { resolveFilledAgreementTermsMarkdown } from "@/modules/billing/subscriptions/resolveFilledAgreementTermsMarkdown";
+import {
+  downloadSubscriptionAgreementPdf,
+  downloadSubscriptionSetupReceiptPdf,
+} from "@/modules/billing/subscriptions/subscriptionAgreementClientPdf";
 
 type SubscriptionDeliveryLog = {
   id: number | string;
@@ -96,7 +100,11 @@ const parseLineItems = (subscription: ClientSubscription) => {
 export const SubscriptionOverviewTab = ({
   subscription,
 }: SubscriptionOverviewTabProps) => {
+  const notify = useNotify();
   const [signedAgreementOpen, setSignedAgreementOpen] = useState(false);
+  const [downloadingDoc, setDownloadingDoc] = useState<
+    null | "agreement" | "receipt"
+  >(null);
   const { identity } = useGetIdentity();
   const { data: companies = [] } = useGetMany<Company>(
     "companies",
@@ -172,6 +180,68 @@ export const SubscriptionOverviewTab = ({
       address,
     ],
   );
+
+  const canDownloadAgreement = Boolean(
+    subscription.agreement_signed_at ||
+      subscription.agreement_terms_markdown?.trim(),
+  );
+  const canDownloadReceipt = Boolean(
+    subscription.activated_at || subscription.payment_method_last4,
+  );
+
+  const handleDownloadAgreement = async () => {
+    if (!canDownloadAgreement || downloadingDoc) return;
+    setDownloadingDoc("agreement");
+    try {
+      await downloadSubscriptionAgreementPdf({
+        title: subscription.name || "Subscription agreement",
+        markdown: filledAgreementMarkdown || "",
+        subscriptionNumber: subscription.subscription_number,
+        clientName: clientLabel,
+        signatoryName: subscription.agreement_signatory_name,
+        signedAt: subscription.agreement_signed_at,
+        signaturePngDataUrl: subscription.agreement_signature_png,
+      });
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Could not download the signed agreement",
+        { type: "error" },
+      );
+    } finally {
+      setDownloadingDoc(null);
+    }
+  };
+
+  const handleDownloadReceipt = async () => {
+    if (!canDownloadReceipt || downloadingDoc) return;
+    setDownloadingDoc("receipt");
+    try {
+      await downloadSubscriptionSetupReceiptPdf({
+        organizationName: "Latino Business Support",
+        subscriptionName: subscription.name,
+        subscriptionNumber: subscription.subscription_number,
+        clientName: clientLabel,
+        amount: Number(subscription.amount) || 0,
+        currency: subscription.currency,
+        billingInterval: subscription.billing_interval,
+        paymentMethodLast4: subscription.payment_method_last4,
+        paymentMethodBrand: subscription.payment_method_brand,
+        completedAt:
+          subscription.activated_at || subscription.agreement_signed_at,
+      });
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Could not download the receipt",
+        { type: "error" },
+      );
+    } finally {
+      setDownloadingDoc(null);
+    }
+  };
 
   const { data: relatedInvoices = [] } = useGetList<ClientInvoice>(
     "client_invoices",
@@ -301,8 +371,7 @@ export const SubscriptionOverviewTab = ({
               </div>
             ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
-              {subscription.agreement_signed_at ||
-              subscription.agreement_terms_markdown?.trim() ? (
+              {canDownloadAgreement ? (
                 <Button
                   type="button"
                   variant="secondary"
@@ -311,6 +380,34 @@ export const SubscriptionOverviewTab = ({
                 >
                   <FileText className="size-3.5" />
                   View signed agreement
+                </Button>
+              ) : null}
+              {canDownloadAgreement ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={downloadingDoc !== null}
+                  onClick={() => void handleDownloadAgreement()}
+                >
+                  <Download className="size-3.5" />
+                  {downloadingDoc === "agreement"
+                    ? "Downloading…"
+                    : "Download contract PDF"}
+                </Button>
+              ) : null}
+              {canDownloadReceipt ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={downloadingDoc !== null}
+                  onClick={() => void handleDownloadReceipt()}
+                >
+                  <Receipt className="size-3.5" />
+                  {downloadingDoc === "receipt"
+                    ? "Downloading…"
+                    : "Download receipt"}
                 </Button>
               ) : null}
               {subscription.setup_short_code?.trim() ? (
@@ -503,6 +600,7 @@ export const SubscriptionOverviewTab = ({
         clientAddress={address === "—" ? null : address}
         subscriptionName={subscription.name}
         subscriptionDescription={subscription.description}
+        subscriptionNumber={subscription.subscription_number}
       />
     </div>
   );

@@ -1,11 +1,17 @@
+import { useState } from "react";
+import { Download } from "lucide-react";
+import { useNotify } from "ra-core";
 import { ContractDocumentMarkdown } from "@/modules/billing/subscriptions/ContractDocumentMarkdown";
+import { downloadSubscriptionAgreementPdf } from "@/modules/billing/subscriptions/subscriptionAgreementClientPdf";
+import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
 
 type SignedSubscriptionAgreementDialogProps = {
   open: boolean;
@@ -20,6 +26,7 @@ type SignedSubscriptionAgreementDialogProps = {
   clientAddress?: string | null;
   subscriptionName?: string | null;
   subscriptionDescription?: string | null;
+  subscriptionNumber?: string | null;
 };
 
 /** A4 content width ≈ 210mm; keep readable margins on the sheet. */
@@ -39,11 +46,40 @@ export function SignedSubscriptionAgreementDialog({
   clientAddress,
   subscriptionName,
   subscriptionDescription,
+  subscriptionNumber,
 }: SignedSubscriptionAgreementDialogProps) {
+  const notify = useNotify();
+  const [downloading, setDownloading] = useState(false);
   const company = clientCompany?.trim() || null;
   const representative =
     clientRepresentative?.trim() || signatoryName?.trim() || null;
   const providerRep = providerRepresentative?.trim() || null;
+  const canDownload = Boolean(termsMarkdown?.trim() || signaturePng);
+
+  const handleDownload = async () => {
+    if (!canDownload || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadSubscriptionAgreementPdf({
+        title: subscriptionName?.trim() || "Subscription agreement",
+        markdown: termsMarkdown ?? "",
+        subscriptionNumber,
+        clientName: company || representative,
+        signatoryName,
+        signedAt,
+        signaturePngDataUrl: signaturePng,
+      });
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Could not download the signed agreement",
+        { type: "error" },
+      );
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -136,6 +172,20 @@ export function SignedSubscriptionAgreementDialog({
             ) : null}
           </article>
         </div>
+        {canDownload ? (
+          <DialogFooter className="shrink-0 border-t px-5 py-3 sm:px-8">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={downloading}
+              onClick={() => void handleDownload()}
+            >
+              <Download className="size-3.5" />
+              {downloading ? "Downloading…" : "Download PDF"}
+            </Button>
+          </DialogFooter>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
