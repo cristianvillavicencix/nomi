@@ -1,6 +1,9 @@
-import { DEFAULT_CONTRACT_VARIABLES } from "@/modules/proposals/proposalCommercialConstants";
+import {
+  CONTRACT_ACCEPTANCE_SIGNATURE_HTML,
+  DEFAULT_CONTRACT_VARIABLES,
+} from "@/modules/proposals/proposalCommercialConstants";
 
-export const LBS_DEFAULT_CONTRACT_TERMS_VERSION = "1.0";
+export const LBS_DEFAULT_CONTRACT_TERMS_VERSION = "1.1";
 
 export const LBS_DEFAULT_CONTRACT_TERMS_TITLE =
   "Service Terms and Conditions — Latinos Business Support (LBS)";
@@ -97,11 +100,7 @@ Este Acuerdo se rige por las leyes del Estado de **Connecticut, EE. UU.**
 
 Al firmar electrónicamente, hacer clic en "Aceptar" o realizar el pago del depósito, el Cliente declara haber leído y aceptado estos Términos.
 
-**Cliente:** {{client_name}}
-**Aceptado el:** {{signed_at}}
-**Dirección IP de aceptación:** {{signed_ip}}
-
-**Por LBS:** {{lbs_signatory}}
+${CONTRACT_ACCEPTANCE_SIGNATURE_HTML}
 
 *Versión del documento: {{terms_version}} · Latinos Business Support LLC · Stamford, CT*`;
 

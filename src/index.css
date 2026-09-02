@@ -796,6 +796,72 @@ html.nomi-form-embed body {
   color: var(--contract-muted);
 }
 
+/* Side-by-side acceptance / signature block */
+.contract-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem 2rem;
+  margin: 1.5em 0 0.5em;
+  padding-top: 0.5em;
+}
+
+.contract-signatures-party {
+  min-width: 0;
+}
+
+.contract-signatures-heading {
+  margin: 0 0 0.75em !important;
+  color: var(--contract-heading);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.contract-signatures-mark {
+  display: flex;
+  align-items: flex-end;
+  min-height: 4.5rem;
+  margin-bottom: 0.85em;
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid var(--contract-rule);
+}
+
+.contract-signature-img {
+  display: block;
+  max-height: 4rem;
+  max-width: 100%;
+  width: auto;
+  object-fit: contain;
+}
+
+.contract-signature-line {
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin-bottom: 0.15em;
+  background: transparent;
+}
+
+.contract-signatures-party p {
+  margin: 0.2em 0 !important;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  font-weight: 400;
+  color: var(--contract-body);
+}
+
+.contract-signatures-party p strong {
+  color: var(--contract-ink);
+}
+
+@media (max-width: 640px) {
+  .contract-signatures {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+}
+
 /* A4 sheet stage for preview / print-like reading */
 .contract-document-stage {
   display: flex;

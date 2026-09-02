@@ -1,9 +1,10 @@
 import {
   DEFAULT_CONTRACT_VARIABLES,
   MAINTENANCE_CONTRACT_VARIABLES,
+  CONTRACT_ACCEPTANCE_SIGNATURE_HTML,
 } from "@/modules/proposals/proposalCommercialConstants";
 
-export const LBS_WEB_MAINTENANCE_CONTRACT_VERSION = "1.3";
+export const LBS_WEB_MAINTENANCE_CONTRACT_VERSION = "1.4";
 
 export const LBS_WEB_MAINTENANCE_CONTRACT_TITLE =
   "Contrato de Mantenimiento y Soporte Web";
@@ -143,14 +144,7 @@ Las notificaciones serán válidas por correo electrónico a las direcciones ind
 
 Al firmar electrónicamente, marcar “Acepto” o completar el proceso de aceptación del portal, el Cliente declara haber leído y aceptado este Acuerdo.
 
-**Cliente:** {{client_name}}  
-**Representante:** {{client_representative}}  
-**Cargo:** {{client_signatory_title}}  
-**Aceptado el:** {{signed_at}}  
-**Dirección IP de aceptación:** {{signed_ip}}
-
-**Por LBS:** {{lbs_signatory}}  
-**Cargo:** {{provider_signatory_title}}
+${CONTRACT_ACCEPTANCE_SIGNATURE_HTML}
 
 *Versión del documento: {{terms_version}} · {{provider_name}} · {{provider_address}}*`;
 

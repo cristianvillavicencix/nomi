@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Eye, Loader2, Pencil, Plus, Save, Send, Star, Trash2 } from "lucide-react";
+import { Eye, Loader2, Pencil, Plus, Save, Send, Star, Trash2, ImagePlus } from "lucide-react";
 import {
   useCreate,
   useGetIdentity,
@@ -7,7 +7,7 @@ import {
   useNotify,
   useUpdate,
 } from "ra-core";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,8 +53,104 @@ import {
   CONTRACT_CLIENT_AUTO_FILL_FIELDS,
   CONTRACT_POLICY_FIELD_GROUPS,
   CONTRACT_PROVIDER_FIELDS,
+  CONTRACT_PROVIDER_SIGNATURE_KEY,
 } from "@/modules/proposals/proposalCommercialConstants";
 import type { OrganizationContractTerms, ServicePackage } from "@/modules/types";
+
+const MAX_SIGNATURE_BYTES = 250_000;
+
+const ProviderSignatureUpload = ({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (dataUrl: string | null) => void;
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const onFile = (file: File | undefined) => {
+    setError(null);
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose a PNG or JPG signature image.");
+      return;
+    }
+    if (file.size > MAX_SIGNATURE_BYTES) {
+      setError("Signature image must be 250KB or smaller.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      if (!result.startsWith("data:image/")) {
+        setError("Could not read that image.");
+        return;
+      }
+      onChange(result);
+    };
+    reader.onerror = () => setError("Could not read that image.");
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="space-y-2 border-t pt-3">
+      <Label className="text-xs font-normal">Provider signature (top of acceptance)</Label>
+      <p className="text-xs text-muted-foreground">
+        Shown above the provider name in the two-column acceptance block. Client
+        signs in the portal on the right.
+      </p>
+      {value.startsWith("data:image/") ? (
+        <div className="flex flex-wrap items-end gap-3">
+          <img
+            src={value}
+            alt="Provider signature"
+            className="max-h-16 max-w-[220px] rounded border bg-white object-contain p-1"
+          />
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => inputRef.current?.click()}
+            >
+              Replace
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => onChange(null)}
+            >
+              <Trash2 className="size-3.5" />
+              Remove
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="flex w-full flex-col items-center gap-1.5 rounded-md border border-dashed px-3 py-4 text-xs text-muted-foreground hover:bg-muted/40"
+          onClick={() => inputRef.current?.click()}
+        >
+          <ImagePlus className="size-4" />
+          Upload signature image
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(event) => {
+          onFile(event.target.files?.[0]);
+          event.target.value = "";
+        }}
+      />
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
+};
 
 const slugify = (value: string) =>
   value
@@ -562,6 +658,20 @@ export const ContractTermsSettings = ({
                     </div>
                   ))}
                 </div>
+                <ProviderSignatureUpload
+                  value={defaultVariables[CONTRACT_PROVIDER_SIGNATURE_KEY] ?? ""}
+                  onChange={(dataUrl) =>
+                    setDefaultVariables((prev) => {
+                      const next = { ...prev };
+                      if (dataUrl) {
+                        next[CONTRACT_PROVIDER_SIGNATURE_KEY] = dataUrl;
+                      } else {
+                        delete next[CONTRACT_PROVIDER_SIGNATURE_KEY];
+                      }
+                      return next;
+                    })
+                  }
+                />
               </div>
 
               <div className="space-y-3 rounded-md border border-dashed bg-muted/15 p-3">

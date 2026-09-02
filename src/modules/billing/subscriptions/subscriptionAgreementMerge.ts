@@ -1,5 +1,7 @@
 /** Shared {{var}} merge for subscription agreement templates (mirrors proposal dialect). */
 
+import { buildContractSignatureMarks } from "@/modules/proposals/proposalCommercialConstants";
+
 export const mergeSubscriptionContractTerms = (
   body: string,
   variables: Record<string, string>,
@@ -100,9 +102,19 @@ export const buildSubscriptionContractVariables = (params: {
   const providerRep =
     params.providerRepresentative?.trim() || "Latinos Business Support LLC";
   const description = params.subscriptionDescription?.trim() || "";
+  const signatureMarks = buildContractSignatureMarks({
+    providerSignatureImage: defaults.provider_signature_image,
+  });
 
   return {
     ...defaults,
+    ...signatureMarks,
+    provider_name:
+      defaults.provider_name?.trim() || "Latinos Business Support LLC",
+    provider_signatory_title:
+      defaults.provider_signatory_title?.trim() || "Authorized representative",
+    client_signatory_title:
+      defaults.client_signatory_title?.trim() || "Authorized representative",
     client_name: company,
     client_company: company,
     client_representative: representative || "—",

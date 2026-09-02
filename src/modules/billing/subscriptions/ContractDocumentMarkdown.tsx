@@ -39,7 +39,11 @@ contractMarked.use({
   breaks: false,
   gfm: true,
   hooks: {
-    postprocess: (html) => DOMPurify.sanitize(html),
+    postprocess: (html) =>
+      DOMPurify.sanitize(html, {
+        ADD_DATA_URI_TAGS: ["img"],
+        ADD_ATTR: ["class"],
+      }),
   },
 });
 

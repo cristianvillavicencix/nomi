@@ -112,6 +112,55 @@ export const CONTRACT_PROVIDER_FIELDS = [
   { key: "lbs_signatory", label: "Default signatory name" },
 ] as const;
 
+/** Data-URL or https image for the provider signature block in Aceptación. */
+export const CONTRACT_PROVIDER_SIGNATURE_KEY = "provider_signature_image";
+
+/**
+ * Shared acceptance / signature block (two columns). Used by general +
+ * maintenance templates so layout stays consistent.
+ */
+export const CONTRACT_ACCEPTANCE_SIGNATURE_HTML = `<div class="contract-signatures">
+<div class="contract-signatures-party">
+<p class="contract-signatures-heading">Por el Proveedor</p>
+<div class="contract-signatures-mark">{{provider_signature_mark}}</div>
+<p><strong>{{lbs_signatory}}</strong></p>
+<p>{{provider_signatory_title}}</p>
+<p>{{provider_name}}</p>
+<p>Fecha: {{contract_date}}</p>
+</div>
+<div class="contract-signatures-party">
+<p class="contract-signatures-heading">Por el Cliente</p>
+<div class="contract-signatures-mark">{{client_signature_mark}}</div>
+<p><strong>{{client_representative}}</strong></p>
+<p>{{client_signatory_title}}</p>
+<p>{{client_name}}</p>
+<p>Fecha: {{signed_at}}</p>
+<p>IP: {{signed_ip}}</p>
+</div>
+</div>`;
+
+export const buildContractSignatureMarks = (params: {
+  providerSignatureImage?: string | null;
+  clientSignatureImage?: string | null;
+}): { provider_signature_mark: string; client_signature_mark: string } => {
+  const isSafeImage = (value: string) =>
+    value.startsWith("data:image/") ||
+    value.startsWith("https://") ||
+    value.startsWith("http://");
+
+  const provider = params.providerSignatureImage?.trim() || "";
+  const client = params.clientSignatureImage?.trim() || "";
+
+  return {
+    provider_signature_mark: isSafeImage(provider)
+      ? `<img src="${provider}" alt="Provider signature" class="contract-signature-img" />`
+      : `<span class="contract-signature-line" aria-hidden="true"></span>`,
+    client_signature_mark: isSafeImage(client)
+      ? `<img src="${client}" alt="Client signature" class="contract-signature-img" />`
+      : `<span class="contract-signature-line" aria-hidden="true"></span>`,
+  };
+};
+
 /** Shown as read-only help — filled when staff picks the client in enrollment. */
 export const CONTRACT_CLIENT_AUTO_FILL_FIELDS = [
   { key: "client_name", label: "Company / client name" },

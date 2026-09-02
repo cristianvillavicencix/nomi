@@ -55,8 +55,30 @@ export const buildSubscriptionContractVariables = (params: {
     params.providerRepresentative?.trim() || "Latinos Business Support LLC";
   const description = params.subscriptionDescription?.trim() || "";
 
+  const providerSig = String(defaults.provider_signature_image ?? "").trim();
+  const isSafeImage = (value: string) =>
+    value.startsWith("data:image/") ||
+    value.startsWith("https://") ||
+    value.startsWith("http://");
+  const provider_signature_mark = isSafeImage(providerSig)
+    ? `<img src="${providerSig}" alt="Provider signature" class="contract-signature-img" />`
+    : `<span class="contract-signature-line" aria-hidden="true"></span>`;
+  const client_signature_mark =
+    `<span class="contract-signature-line" aria-hidden="true"></span>`;
+
   return {
     ...defaults,
+    provider_signature_mark,
+    client_signature_mark,
+    provider_name:
+      String(defaults.provider_name ?? "").trim() ||
+      "Latinos Business Support LLC",
+    provider_signatory_title:
+      String(defaults.provider_signatory_title ?? "").trim() ||
+      "Authorized representative",
+    client_signatory_title:
+      String(defaults.client_signatory_title ?? "").trim() ||
+      "Authorized representative",
     client_name: company,
     client_company: company,
     client_representative: representative || "—",
