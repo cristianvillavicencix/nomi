@@ -3,7 +3,7 @@ import {
   MAINTENANCE_CONTRACT_VARIABLES,
 } from "@/modules/proposals/proposalCommercialConstants";
 
-export const LBS_WEB_MAINTENANCE_CONTRACT_VERSION = "1.2";
+export const LBS_WEB_MAINTENANCE_CONTRACT_VERSION = "1.3";
 
 export const LBS_WEB_MAINTENANCE_CONTRACT_TITLE =
   "Contrato de Mantenimiento y Soporte Web";
@@ -17,13 +17,11 @@ export const LBS_WEB_MAINTENANCE_CONTRACT_BODY = `# Contrato de Mantenimiento y 
 
 ## 1. Partes del Acuerdo
 
-Este Acuerdo de Mantenimiento y Soporte Web ("Acuerdo" o "Contrato") se celebra entre **{{provider_name}}** ("LBS", "EL PROVEEDOR", representado(a) por **{{provider_representative}}**), con domicilio en {{provider_address}}, Estado de incorporación {{provider_incorporation_state}}, EIN {{provider_ein}}, correo {{provider_email}}, teléfono {{provider_phone}}, sitio web {{provider_website}}, y **{{client_name}}** ("EL CLIENTE", "usted"), con domicilio en {{client_address}}, {{client_city_state_zip}}, representado(a) por **{{client_representative}}**, correo {{client_email}}, teléfono {{client_phone}}, con fecha de efecto **{{contract_date}}**.
+Este Acuerdo de Mantenimiento y Soporte Web ("Acuerdo") se celebra entre **{{provider_name}}** ("LBS", representado(a) por **{{provider_representative}}**, "nosotros", "el Proveedor"), con domicilio en {{provider_address}}, y **{{client_name}}** ("el Cliente", "usted"), con domicilio en {{client_address}}, representado(a) por **{{client_representative}}**, con fecha de **{{contract_date}}**.
 
-Número de contrato: **{{subscription_number}}**.
-Suscripción / plan: **{{subscription_name}}**.
+Suscripción: **{{subscription_name}}**{{subscription_number_line}}.
 {{subscription_description_line}}
-
-Al firmar o aceptar este Acuerdo, cada parte confirma que ha leído, comprendido y aceptado todos sus términos.
+Este Acuerdo se basa en la suscripción / contrato N.º **{{subscription_number}}** aceptada por el Cliente el **{{accepted_at}}**, la cual se incorpora por referencia.
 
 ## 2. Objeto y alcance del servicio
 
