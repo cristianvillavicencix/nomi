@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SignaturePad } from "@/components/ui/signature-pad";
 import { ContractDocumentMarkdown } from "@/modules/billing/subscriptions/ContractDocumentMarkdown";
-import { applyLiveClientSignatureFields } from "@/modules/billing/subscriptions/subscriptionAgreementMerge";
+import { applyLiveClientSignatureFields } from "@/modules/billing/subscriptions/applyLiveClientSignatureFields";
 import { formatSubscriptionAmountLabel } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
 import { cn } from "@/lib/utils";
 
