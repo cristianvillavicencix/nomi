@@ -95,9 +95,38 @@ export const MAINTENANCE_CONTRACT_VARIABLES = {
 
 /**
  * Org-level defaults editable in Settings → Contract templates.
- * Client/subscription fields (name, amount, line items) are filled at send time.
+ *
+ * - Provider: LBS company block (same for every client)
+ * - Policy: term / SLA / billing / legal (template defaults, NOT filled by picking a client)
+ * Client company fields are filled automatically when staff selects the contact/company.
  */
-export const CONTRACT_DEFAULT_VARIABLE_FIELDS = [
+export const CONTRACT_PROVIDER_FIELDS = [
+  { key: "provider_name", label: "Company name" },
+  { key: "provider_website", label: "Website" },
+  { key: "provider_address", label: "Address" },
+  { key: "provider_incorporation_state", label: "Incorporation state" },
+  { key: "provider_ein", label: "EIN / tax ID" },
+  { key: "provider_email", label: "Email" },
+  { key: "provider_phone", label: "Phone" },
+  { key: "provider_signatory_title", label: "Signatory title" },
+  { key: "lbs_signatory", label: "Default signatory name" },
+] as const;
+
+/** Shown as read-only help — filled when staff picks the client in enrollment. */
+export const CONTRACT_CLIENT_AUTO_FILL_FIELDS = [
+  { key: "client_name", label: "Company / client name" },
+  { key: "client_address", label: "Address" },
+  { key: "client_city_state_zip", label: "City, state, ZIP" },
+  { key: "client_representative", label: "Representative" },
+  { key: "client_email", label: "Email" },
+  { key: "client_phone", label: "Phone" },
+  { key: "subscription_name", label: "Plan / subscription name" },
+  { key: "total_amount", label: "Amount & recurring terms" },
+  { key: "line_items", label: "Line items" },
+  { key: "subscription_number", label: "Contract / subscription number" },
+] as const;
+
+export const CONTRACT_POLICY_FIELD_GROUPS = [
   {
     group: "Term & notices",
     fields: [
@@ -113,6 +142,10 @@ export const CONTRACT_DEFAULT_VARIABLE_FIELDS = [
       {
         key: "credential_handoff_days",
         label: "Credential handoff (business days)",
+      },
+      {
+        key: "client_signatory_title",
+        label: "Client signatory title (default)",
       },
     ],
   },
@@ -144,30 +177,6 @@ export const CONTRACT_DEFAULT_VARIABLE_FIELDS = [
       { key: "timeline", label: "Project timeline" },
       { key: "revision_rounds", label: "Revision rounds" },
       { key: "warranty_days", label: "Warranty (days)" },
-    ],
-  },
-  {
-    group: "Provider",
-    fields: [
-      { key: "provider_name", label: "Provider name" },
-      { key: "provider_website", label: "Website" },
-      { key: "provider_address", label: "Address" },
-      {
-        key: "provider_incorporation_state",
-        label: "Incorporation state",
-      },
-      { key: "provider_ein", label: "EIN / tax ID" },
-      { key: "provider_email", label: "Email" },
-      { key: "provider_phone", label: "Phone" },
-      {
-        key: "provider_signatory_title",
-        label: "Provider signatory title",
-      },
-      {
-        key: "client_signatory_title",
-        label: "Client signatory title",
-      },
-      { key: "lbs_signatory", label: "Default provider signatory name" },
     ],
   },
   {

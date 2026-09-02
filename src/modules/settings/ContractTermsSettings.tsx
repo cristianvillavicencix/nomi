@@ -49,7 +49,11 @@ import {
   LBS_DEFAULT_CONTRACT_TERMS_VERSION,
 } from "@/modules/proposals/defaultContractTerms";
 import { getWebMaintenanceContractTermsSeed } from "@/modules/proposals/maintenanceContractTerms";
-import { CONTRACT_DEFAULT_VARIABLE_FIELDS } from "@/modules/proposals/proposalCommercialConstants";
+import {
+  CONTRACT_CLIENT_AUTO_FILL_FIELDS,
+  CONTRACT_POLICY_FIELD_GROUPS,
+  CONTRACT_PROVIDER_FIELDS,
+} from "@/modules/proposals/proposalCommercialConstants";
 import type { OrganizationContractTerms, ServicePackage } from "@/modules/types";
 
 const slugify = (value: string) =>
@@ -440,7 +444,7 @@ export const ContractTermsSettings = ({
           <DialogDescription>
             {editorMode === "edit" && editingRow
               ? `${editingRow.slug ?? "—"} · v${editingRow.version}`
-              : "Key defaults apply to every client; client name, amount, and signature fill at send time."}
+              : "LBS company on one side; client fields auto-fill when you pick the contact."}
           </DialogDescription>
         </DialogHeader>
 
@@ -521,59 +525,122 @@ export const ContractTermsSettings = ({
             </p>
           </div>
 
-          <div className="space-y-3 rounded-md border bg-muted/20 p-3">
-            <div>
-              <Label className="text-sm">Key defaults (all clients)</Label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Term length, notices, SLA, provider, and legal defaults. These fill
-                {" {{placeholders}} "} in the body for every enrollment. Client
-                name, address, amount, and line items still come from the CRM
-                contact and subscription.
-              </p>
-            </div>
-            {CONTRACT_DEFAULT_VARIABLE_FIELDS.map((section) => {
-              const isMaintenanceContext =
-                slug.includes("maintenance") ||
-                "included_hours" in defaultVariables ||
-                "response_time" in defaultVariables;
-              if (
-                section.group === "Service plan defaults" &&
-                !isMaintenanceContext
-              ) {
-                return null;
-              }
-              return (
-                <div key={section.group} className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {section.group}
+          <div className="space-y-3">
+            <div className="grid gap-3 lg:grid-cols-2">
+              <div className="space-y-3 rounded-md border p-3">
+                <div>
+                  <Label className="text-sm">LBS / provider company</Label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Your company block on every contract. Same for all clients.
                   </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {section.fields.map((field) => (
-                      <div key={field.key} className="space-y-1">
-                        <Label
-                          htmlFor={`contract-var-${field.key}`}
-                          className="text-xs font-normal"
-                        >
-                          {field.label}
-                        </Label>
-                        <Input
-                          id={`contract-var-${field.key}`}
-                          value={defaultVariables[field.key] ?? ""}
-                          onChange={(event) =>
-                            setDefaultVariables((prev) => ({
-                              ...prev,
-                              [field.key]: event.target.value,
-                            }))
-                          }
-                          placeholder={`{{${field.key}}}`}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              );
-            })}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {CONTRACT_PROVIDER_FIELDS.map((field) => (
+                    <div key={field.key} className="space-y-1">
+                      <Label
+                        htmlFor={`contract-var-${field.key}`}
+                        className="text-xs font-normal"
+                      >
+                        {field.label}
+                      </Label>
+                      <Input
+                        id={`contract-var-${field.key}`}
+                        value={defaultVariables[field.key] ?? ""}
+                        onChange={(event) =>
+                          setDefaultVariables((prev) => ({
+                            ...prev,
+                            [field.key]: event.target.value,
+                          }))
+                        }
+                        placeholder={`{{${field.key}}}`}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3 rounded-md border border-dashed bg-muted/15 p-3">
+                <div>
+                  <Label className="text-sm">Filled when you pick the client</Label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Automatic from the CRM company/contact and the subscription
+                    you create. Not edited here.
+                  </p>
+                </div>
+                <ul className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
+                  {CONTRACT_CLIENT_AUTO_FILL_FIELDS.map((field) => (
+                    <li
+                      key={field.key}
+                      className="rounded-md border border-transparent bg-background/60 px-2 py-1.5"
+                    >
+                      <span className="font-medium text-foreground/80">
+                        {field.label}
+                      </span>
+                      <span className="mt-0.5 block font-mono text-[10px] opacity-70">
+                        {`{{${field.key}}}`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-md border bg-muted/20 p-3">
+              <div>
+                <Label className="text-sm">
+                  Template policy (not from client)
+                </Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Term length, notices, SLA, billing, and legal defaults. These
+                  stay the same until you change them here — choosing a client
+                  does not override them.
+                </p>
+              </div>
+              {CONTRACT_POLICY_FIELD_GROUPS.map((section) => {
+                const isMaintenanceContext =
+                  slug.includes("maintenance") ||
+                  "included_hours" in defaultVariables ||
+                  "response_time" in defaultVariables;
+                if (
+                  section.group === "Service plan defaults" &&
+                  !isMaintenanceContext
+                ) {
+                  return null;
+                }
+                return (
+                  <div key={section.group} className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {section.group}
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {section.fields.map((field) => (
+                        <div key={field.key} className="space-y-1">
+                          <Label
+                            htmlFor={`contract-var-${field.key}`}
+                            className="text-xs font-normal"
+                          >
+                            {field.label}
+                          </Label>
+                          <Input
+                            id={`contract-var-${field.key}`}
+                            value={defaultVariables[field.key] ?? ""}
+                            onChange={(event) =>
+                              setDefaultVariables((prev) => ({
+                                ...prev,
+                                [field.key]: event.target.value,
+                              }))
+                            }
+                            placeholder={`{{${field.key}}}`}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="space-y-2">
