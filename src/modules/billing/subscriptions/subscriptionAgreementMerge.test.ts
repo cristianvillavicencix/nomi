@@ -98,6 +98,8 @@ describe("buildSubscriptionContractVariables", () => {
     expect(merged).toContain("SUB-2026-0042");
     expect(merged).toContain("Latino Business Support");
     expect(merged).toContain("2 horas/mes");
+    expect(merged).toContain("60");
+    expect(merged).toContain("15");
     expect(merged).not.toMatch(/\{\{\w+\}\}/);
   });
 });

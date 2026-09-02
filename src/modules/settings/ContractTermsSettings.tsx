@@ -49,6 +49,7 @@ import {
   LBS_DEFAULT_CONTRACT_TERMS_VERSION,
 } from "@/modules/proposals/defaultContractTerms";
 import { getWebMaintenanceContractTermsSeed } from "@/modules/proposals/maintenanceContractTerms";
+import { CONTRACT_DEFAULT_VARIABLE_FIELDS } from "@/modules/proposals/proposalCommercialConstants";
 import type { OrganizationContractTerms, ServicePackage } from "@/modules/types";
 
 const slugify = (value: string) =>
@@ -309,6 +310,7 @@ export const ContractTermsSettings = ({
         body_markdown: body,
         slug: slugify(slug),
         is_active: true,
+        default_variables: defaultVariables,
       };
       if (editorMode === "new") {
         const existingSlug = termsRows.find(
@@ -339,7 +341,6 @@ export const ContractTermsSettings = ({
           data: {
             org_id: orgId,
             ...payload,
-            default_variables: defaultVariables,
             is_default: activeTemplates.length === 0,
             published_at: new Date().toISOString(),
           },
@@ -431,7 +432,7 @@ export const ContractTermsSettings = ({
         if (!open) closeEditor();
       }}
     >
-      <DialogContent className="flex max-h-[min(92vh,820px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+      <DialogContent className="flex max-h-[min(92vh,900px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
         <DialogHeader className="shrink-0 space-y-1 border-b px-5 py-4 pr-12 text-left">
           <DialogTitle>
             {editorMode === "new" ? "New contract template" : "Configure contract"}
@@ -439,7 +440,7 @@ export const ContractTermsSettings = ({
           <DialogDescription>
             {editorMode === "edit" && editingRow
               ? `${editingRow.slug ?? "—"} · v${editingRow.version}`
-              : "Template text, billing item link, and metadata."}
+              : "Key defaults apply to every client; client name, amount, and signature fill at send time."}
           </DialogDescription>
         </DialogHeader>
 
@@ -520,6 +521,61 @@ export const ContractTermsSettings = ({
             </p>
           </div>
 
+          <div className="space-y-3 rounded-md border bg-muted/20 p-3">
+            <div>
+              <Label className="text-sm">Key defaults (all clients)</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Term length, notices, SLA, provider, and legal defaults. These fill
+                {" {{placeholders}} "} in the body for every enrollment. Client
+                name, address, amount, and line items still come from the CRM
+                contact and subscription.
+              </p>
+            </div>
+            {CONTRACT_DEFAULT_VARIABLE_FIELDS.map((section) => {
+              const isMaintenanceContext =
+                slug.includes("maintenance") ||
+                "included_hours" in defaultVariables ||
+                "response_time" in defaultVariables;
+              if (
+                section.group === "Service plan defaults" &&
+                !isMaintenanceContext
+              ) {
+                return null;
+              }
+              return (
+                <div key={section.group} className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {section.group}
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {section.fields.map((field) => (
+                      <div key={field.key} className="space-y-1">
+                        <Label
+                          htmlFor={`contract-var-${field.key}`}
+                          className="text-xs font-normal"
+                        >
+                          {field.label}
+                        </Label>
+                        <Input
+                          id={`contract-var-${field.key}`}
+                          value={defaultVariables[field.key] ?? ""}
+                          onChange={(event) =>
+                            setDefaultVariables((prev) => ({
+                              ...prev,
+                              [field.key]: event.target.value,
+                            }))
+                          }
+                          placeholder={`{{${field.key}}}`}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           <div className="space-y-2">
             <Label>Body (Markdown)</Label>
             <Textarea
@@ -570,7 +626,31 @@ export const ContractTermsSettings = ({
                 Load web maintenance contract
               </Button>
             </div>
-          ) : null}
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const seed = getWebMaintenanceContractTermsSeed();
+                  if (
+                    !window.confirm(
+                      "Replace body and defaults with the latest web maintenance seed? Unsaved edits will be lost.",
+                    )
+                  ) {
+                    return;
+                  }
+                  setVersion(seed.version);
+                  setTitle(seed.title);
+                  setBody(seed.body_markdown);
+                  setDefaultVariables({ ...seed.default_variables });
+                }}
+              >
+                Refresh from maintenance seed
+              </Button>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="shrink-0 border-t px-5 py-3">
@@ -772,8 +852,8 @@ export const ContractTermsSettings = ({
         <CardTitle className="text-base">Contract templates</CardTitle>
         <CardDescription>
           Library of agreements for proposals and subscription enrollment.
-          Configure text, link a recurring billing item, preview merged terms, or
-          send an agreement.
+          Edit key defaults (term length, notices, SLA) once for all clients,
+          link a recurring billing item, preview, or send an agreement.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">{fields}</CardContent>

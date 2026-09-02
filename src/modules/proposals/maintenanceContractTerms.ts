@@ -87,7 +87,7 @@ Los servicios pueden incluir, según el plan contratado:
 
 **3.4. Pagos tardíos:** Los pagos recibidos después de **{{late_days}}** días de la fecha de vencimiento incurrirán en un cargo por mora del **{{late_fee}}** (o el máximo permitido por la ley del estado aplicable). El PROVEEDOR se reserva el derecho de suspender los servicios después de **{{late_suspension_days}}** días de retraso en el pago, previo aviso por escrito.
 
-**3.5. Aumentos de tarifa:** El PROVEEDOR podrá incrementar las tarifas con un preaviso de 60 días por escrito. Si el CLIENTE no acepta el nuevo precio, podrá terminar el contrato sin penalización al final del período en curso.
+**3.5. Aumentos de tarifa:** El PROVEEDOR podrá incrementar las tarifas con un preaviso de **{{fee_increase_notice_days}}** días por escrito. Si el CLIENTE no acepta el nuevo precio, podrá terminar el contrato sin penalización al final del período en curso.
 
 ---
 
@@ -121,7 +121,7 @@ Los servicios pueden incluir, según el plan contratado:
 - Fallas causadas por terceros (hosting, plugins de terceros, ataques cibernéticos fuera del control razonable).
 - Daños indirectos, incidentales, especiales o consecuenciales.
 
-**Responsabilidad máxima:** En ningún caso la responsabilidad total del PROVEEDOR excederá el monto total pagado por el CLIENTE en los **3 meses** anteriores al evento que dio origen a la reclamación.
+**Responsabilidad máxima:** En ningún caso la responsabilidad total del PROVEEDOR excederá el monto total pagado por el CLIENTE en los **{{liability_cap_months}} meses** anteriores al evento que dio origen a la reclamación.
 
 ---
 
@@ -137,17 +137,17 @@ Los servicios pueden incluir, según el plan contratado:
 
 ## 7. CONFIDENCIALIDAD
 
-Ambas partes acuerdan mantener la confidencialidad de toda información no pública, credenciales de acceso, datos de clientes y estrategias de negocio reveladas durante la relación contractual. Esta obligación sobrevive a la terminación del contrato por un período de **3 años**.
+Ambas partes acuerdan mantener la confidencialidad de toda información no pública, credenciales de acceso, datos de clientes y estrategias de negocio reveladas durante la relación contractual. Esta obligación sobrevive a la terminación del contrato por un período de **{{confidentiality_years}} años**.
 
 ---
 
 ## 8. TERMINACIÓN
 
-**8.1. Terminación con causa:** Cualquiera de las partes podrá terminar este contrato con efecto inmediato si la otra parte incumple sustancialmente cualquier término y no lo corrige dentro de 15 días después de recibir notificación por escrito.
+**8.1. Terminación con causa:** Cualquiera de las partes podrá terminar este contrato con efecto inmediato si la otra parte incumple sustancialmente cualquier término y no lo corrige dentro de **{{cure_period_days}}** días después de recibir notificación por escrito.
 
 **8.2. Terminación sin causa:** El CLIENTE podrá terminar en cualquier momento con un preaviso de **{{termination_notice_days}}** días por escrito, quedando obligado al pago de los servicios prestados hasta la fecha de terminación. No se realizarán reembolsos de pagos por adelantado salvo que el PROVEEDOR incumpla sus obligaciones.
 
-**8.3.** Al terminarse: El PROVEEDOR entregará al CLIENTE las credenciales y archivos actualizados del sitio web dentro de 5 días hábiles, siempre que no existan pagos pendientes.
+**8.3.** Al terminarse: El PROVEEDOR entregará al CLIENTE las credenciales y archivos actualizados del sitio web dentro de **{{credential_handoff_days}}** días hábiles, siempre que no existan pagos pendientes.
 
 ---
 

@@ -76,6 +76,11 @@ export const MAINTENANCE_CONTRACT_VARIABLES = {
   initial_term_months: "6",
   billing_day: "1",
   late_suspension_days: "10",
+  fee_increase_notice_days: "60",
+  cure_period_days: "15",
+  liability_cap_months: "3",
+  confidentiality_years: "3",
+  credential_handoff_days: "5",
   governing_state: "Connecticut",
   jurisdiction_county: "Fairfield",
   jurisdiction_state: "Connecticut",
@@ -87,6 +92,101 @@ export const MAINTENANCE_CONTRACT_VARIABLES = {
   support_hours: "Lun–Vie 9:00–17:00 ET",
   additional_scope: "—",
 } as const;
+
+/**
+ * Org-level defaults editable in Settings → Contract templates.
+ * Client/subscription fields (name, amount, line items) are filled at send time.
+ */
+export const CONTRACT_DEFAULT_VARIABLE_FIELDS = [
+  {
+    group: "Term & notices",
+    fields: [
+      { key: "initial_term_months", label: "Initial term (months)" },
+      { key: "cancel_notice_days", label: "Non-renewal notice (days)" },
+      { key: "termination_notice_days", label: "Termination notice (days)" },
+      { key: "client_response_days", label: "Client response time (days)" },
+      {
+        key: "fee_increase_notice_days",
+        label: "Fee increase notice (days)",
+      },
+      { key: "cure_period_days", label: "Breach cure period (days)" },
+      {
+        key: "credential_handoff_days",
+        label: "Credential handoff (business days)",
+      },
+    ],
+  },
+  {
+    group: "Billing policy",
+    fields: [
+      { key: "billing_day", label: "Billing day of month" },
+      { key: "late_days", label: "Late after (days)" },
+      { key: "late_fee", label: "Late fee" },
+      { key: "late_suspension_days", label: "Suspend after (days late)" },
+      { key: "currency", label: "Currency" },
+    ],
+  },
+  {
+    group: "Service plan defaults",
+    fields: [
+      { key: "included_hours", label: "Included hours" },
+      { key: "response_time", label: "Response time" },
+      { key: "backup_frequency", label: "Backup frequency" },
+      { key: "security_updates", label: "Security updates" },
+      { key: "support_channels", label: "Support channels" },
+      { key: "support_hours", label: "Support hours" },
+      { key: "additional_scope", label: "Additional scope" },
+    ],
+  },
+  {
+    group: "Proposal defaults",
+    fields: [
+      { key: "timeline", label: "Project timeline" },
+      { key: "revision_rounds", label: "Revision rounds" },
+      { key: "warranty_days", label: "Warranty (days)" },
+    ],
+  },
+  {
+    group: "Provider",
+    fields: [
+      { key: "provider_name", label: "Provider name" },
+      { key: "provider_website", label: "Website" },
+      { key: "provider_address", label: "Address" },
+      {
+        key: "provider_incorporation_state",
+        label: "Incorporation state",
+      },
+      { key: "provider_ein", label: "EIN / tax ID" },
+      { key: "provider_email", label: "Email" },
+      { key: "provider_phone", label: "Phone" },
+      {
+        key: "provider_signatory_title",
+        label: "Provider signatory title",
+      },
+      {
+        key: "client_signatory_title",
+        label: "Client signatory title",
+      },
+      { key: "lbs_signatory", label: "Default provider signatory name" },
+    ],
+  },
+  {
+    group: "Legal",
+    fields: [
+      { key: "governing_state", label: "Governing state" },
+      { key: "jurisdiction_county", label: "Jurisdiction county" },
+      { key: "jurisdiction_state", label: "Jurisdiction state" },
+      {
+        key: "liability_cap_months",
+        label: "Liability cap (months of fees)",
+      },
+      {
+        key: "confidentiality_years",
+        label: "Confidentiality survival (years)",
+      },
+    ],
+  },
+] as const;
 
 export type ClientBillingMode = "manual" | "stripe";
 
