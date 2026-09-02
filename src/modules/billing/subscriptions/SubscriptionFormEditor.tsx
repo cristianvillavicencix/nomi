@@ -75,6 +75,8 @@ import { ContractDocumentMarkdown } from "@/modules/billing/subscriptions/Contra
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -88,7 +90,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Eye, FileText } from "lucide-react";
-import { SubscriptionAgreementClientView } from "@/modules/billing/subscriptions/SubscriptionAgreementClientView";
 import { SignedSubscriptionAgreementDialog } from "@/modules/billing/subscriptions/SignedSubscriptionAgreementDialog";
 import {
   buildSubscriptionContractVariables,
@@ -1358,9 +1359,11 @@ export const SubscriptionFormEditor = forwardRef<
                         type="button"
                         variant="ghost"
                         size="sm"
-                        aria-label="View as client"
-                        title="View how the client sees the portal"
-                        disabled={fieldsLocked}
+                        aria-label="Preview contract"
+                        title="Preview filled contract (A4)"
+                        disabled={
+                          fieldsLocked || !agreementTermsMarkdown.trim()
+                        }
                         onClick={() => setAgreementPreviewOpen(true)}
                       >
                         <Eye className="size-4" />
@@ -1726,37 +1729,39 @@ export const SubscriptionFormEditor = forwardRef<
       </div>
 
       <Dialog open={agreementPreviewOpen} onOpenChange={setAgreementPreviewOpen}>
-        <DialogContent className="max-h-[92vh] gap-0 overflow-hidden border-0 bg-transparent p-0 shadow-none sm:max-w-md">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Client portal preview</DialogTitle>
+        <DialogContent className="flex max-h-[min(94vh,960px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(100vw-2rem,920px)]">
+          <DialogHeader className="shrink-0 border-b px-5 py-4 pr-12 text-left">
+            <DialogTitle>
+              Preview —{" "}
+              {selectedTemplate?.title?.trim() ||
+                subscriptionName ||
+                "Agreement"}
+            </DialogTitle>
+            <DialogDescription>
+              Same A4 contract document the client receives, filled with this
+              subscription’s client and plan.
+            </DialogDescription>
           </DialogHeader>
-          <div className="mx-auto max-h-[92vh] w-full max-w-md overflow-y-auto rounded-xl border bg-slate-50 shadow-xl">
-            <div className="sticky top-0 z-10 border-b bg-white/95 px-4 py-2.5 backdrop-blur">
-              <p className="text-center text-xs font-medium text-muted-foreground">
-                How the client sees the agreement portal
+          <div className="min-h-0 flex-1 overflow-y-auto bg-[#e5e7eb]">
+            {agreementTermsMarkdown.trim() ? (
+              <ContractDocumentMarkdown page>
+                {agreementTermsMarkdown}
+              </ContractDocumentMarkdown>
+            ) : (
+              <p className="p-6 text-center text-sm text-muted-foreground">
+                No terms to preview. Choose a contract template first.
               </p>
-            </div>
-            <div className="px-4 py-6">
-              <SubscriptionAgreementClientView
-                preview
-                model={{
-                  subscription_name: subscriptionName,
-                  amount,
-                  currency: "USD",
-                  billing_interval: billingInterval,
-                  line_items: lineItemsPayload,
-                  terms_markdown: agreementTermsMarkdown,
-                  contract_title: selectedTemplate?.title ?? null,
-                  terms_version: selectedTemplate?.version ?? null,
-                  organization_name: orgTitle || "Provider",
-                  provider_representative: identity?.fullName?.trim() || null,
-                  client_name: clientDisplayName,
-                  client_representative: clientRepresentativeName || null,
-                  client_address: clientAddress,
-                }}
-              />
-            </div>
+            )}
           </div>
+          <DialogFooter className="shrink-0 border-t px-5 py-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAgreementPreviewOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
