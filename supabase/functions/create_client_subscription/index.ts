@@ -48,6 +48,8 @@ type CreateBody = {
   ends_at?: string | null;
   enrollment_mode?: "direct" | "agreement";
   agreement_terms_markdown?: string | null;
+  /** When true, keep staff-edited markdown instead of reloading the Contracts template. */
+  agreement_terms_edited?: boolean | null;
   agreement_contract_terms_id?: number | null;
   payment_mode?: "saved_card" | "staff_card" | "request_setup";
   payment_method_id?: string | null;
@@ -326,7 +328,14 @@ Deno.serve(
           const defaults =
             (picked?.default_variables as Record<string, string> | null) ?? {};
 
-          const sourceBody = agreementTermsMarkdown || templateBody;
+          // Prefer the live template from Contracts so edits there always apply.
+          // Only keep client-sent markdown when staff explicitly edited terms
+          // in the subscription form.
+          const staffEditedTerms = body.agreement_terms_edited === true;
+          const sourceBody =
+            staffEditedTerms && agreementTermsMarkdown
+              ? agreementTermsMarkdown
+              : templateBody || agreementTermsMarkdown;
           if (!sourceBody) {
             return createErrorResponse(
               400,

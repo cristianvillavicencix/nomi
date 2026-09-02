@@ -322,7 +322,7 @@ export const SubscriptionFormEditor = forwardRef<
     [billTo],
   );
 
-  const { data: contractTemplates = [] } =
+  const { data: contractTemplates = [], refetch: refetchContractTemplates } =
     useGetList<OrganizationContractTerms>(
       "organization_contract_terms",
       {
@@ -334,6 +334,9 @@ export const SubscriptionFormEditor = forwardRef<
         enabled:
           mode === "create" &&
           (enrollmentMode === "agreement" || initialContractTermsId != null),
+        // Always pick up Contracts → template edits (do not keep a stale list).
+        staleTime: 0,
+        refetchOnMount: "always",
       },
     );
 
@@ -474,11 +477,14 @@ export const SubscriptionFormEditor = forwardRef<
 
   useEffect(() => {
     if (enrollmentMode !== "agreement") return;
-    if (agreementTermsEdited || termsEditMode) return;
+    if (termsEditMode) return;
     if (!selectedTemplate?.body_markdown?.trim()) {
-      setAgreementTermsMarkdown("");
+      if (!agreementTermsEdited) setAgreementTermsMarkdown("");
       return;
     }
+    // When the published template changes (Contracts save), drop the stale
+    // filled preview and rebuild — unless staff is mid-edit of the terms box.
+    if (agreementTermsEdited) return;
     const vars = buildSubscriptionContractVariables({
       clientName: clientDisplayName,
       clientAddress,
@@ -505,7 +511,10 @@ export const SubscriptionFormEditor = forwardRef<
     enrollmentMode,
     agreementTermsEdited,
     termsEditMode,
-    selectedTemplate,
+    selectedTemplate?.id,
+    selectedTemplate?.version,
+    selectedTemplate?.body_markdown,
+    selectedTemplate?.default_variables,
     clientDisplayName,
     clientRepresentativeName,
     clientAddress,
@@ -517,6 +526,12 @@ export const SubscriptionFormEditor = forwardRef<
     billingInterval,
     subscription?.subscription_number,
   ]);
+
+  // When switching to agreement mode, refresh templates from Contracts.
+  useEffect(() => {
+    if (mode !== "create" || enrollmentMode !== "agreement") return;
+    void refetchContractTemplates();
+  }, [mode, enrollmentMode, refetchContractTemplates]);
 
   useEffect(() => {
     if (paymentMode !== "request_setup") return;
@@ -752,6 +767,7 @@ export const SubscriptionFormEditor = forwardRef<
             enrollment_mode: "agreement",
             agreement_contract_terms_id: selectedContractTermsId,
             agreement_terms_markdown: filledTerms,
+            agreement_terms_edited: agreementTermsEdited,
             line_items: lineItemsPayload,
             send_email: sendEmail,
             send_sms: sendSms,
@@ -1396,6 +1412,7 @@ export const SubscriptionFormEditor = forwardRef<
                         setTermsEditMode(false);
                         setSelectedContractTermsId(Number(value));
                         setChangeContractOpen(false);
+                        void refetchContractTemplates();
                       }}
                     >
                       <SelectTrigger className="h-9">

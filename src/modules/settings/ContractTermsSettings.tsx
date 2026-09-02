@@ -241,8 +241,12 @@ export const ContractTermsSettings = ({
     await Promise.all([
       queryClient.invalidateQueries({
         queryKey: ["organization_contract_terms"],
+        refetchType: "all",
       }),
-      queryClient.invalidateQueries({ queryKey: ["service_packages"] }),
+      queryClient.invalidateQueries({
+        queryKey: ["service_packages"],
+        refetchType: "all",
+      }),
     ]);
   };
 
