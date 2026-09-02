@@ -69,7 +69,13 @@ export const SubscriptionAgreementClientView = ({
     const base = model.terms_markdown?.trim() || "";
     if (!base) return "";
     return applyLiveClientSignatureFields(base, {
-      signatoryName: liveSignatoryName ?? clientRepresentative,
+      signatoryName:
+        liveSignatoryName?.trim() ||
+        (clientRepresentative &&
+        clientRepresentative !== "—" &&
+        clientRepresentative !== "-"
+          ? clientRepresentative
+          : ""),
       signaturePng: liveSignaturePng,
     });
   }, [

@@ -52,42 +52,65 @@ Deno.serve(
         return createErrorResponse(404, "Invalid or expired link");
       }
 
-      const [{ data: org }, { data: contact }, { data: company }, { data: terms }, { data: creator }] =
-        await Promise.all([
-          supabaseAdmin
-            .from("organizations")
-            .select("name")
-            .eq("id", tokenRow.org_id)
-            .maybeSingle(),
-          subscription.contact_id
-            ? supabaseAdmin
-                .from("contacts")
-                .select("first_name, last_name, email_jsonb, phone_jsonb")
-                .eq("id", subscription.contact_id)
-                .maybeSingle()
-            : Promise.resolve({ data: null }),
-          subscription.company_id
-            ? supabaseAdmin
-                .from("companies")
-                .select("name, address, city, state_abbr, zipcode")
-                .eq("id", subscription.company_id)
-                .maybeSingle()
-            : Promise.resolve({ data: null }),
-          subscription.agreement_contract_terms_id
-            ? supabaseAdmin
-                .from("organization_contract_terms")
-                .select("title, version, default_variables")
-                .eq("id", subscription.agreement_contract_terms_id)
-                .maybeSingle()
-            : Promise.resolve({ data: null }),
-          subscription.created_by_member_id
-            ? supabaseAdmin
-                .from("organization_members")
-                .select("first_name, last_name")
-                .eq("id", subscription.created_by_member_id)
-                .maybeSingle()
-            : Promise.resolve({ data: null }),
-        ]);
+      const [
+        { data: org },
+        contactResult,
+        companyResult,
+        termsResult,
+        creatorResult,
+      ] = await Promise.all([
+        supabaseAdmin
+          .from("organizations")
+          .select("name")
+          .eq("id", tokenRow.org_id)
+          .maybeSingle(),
+        subscription.contact_id
+          ? supabaseAdmin
+              .from("contacts")
+              .select("first_name, last_name, email_jsonb, phone_jsonb")
+              .eq("id", subscription.contact_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        subscription.company_id
+          ? supabaseAdmin
+              .from("companies")
+              .select("name, address, city, state_abbr, zipcode")
+              .eq("id", subscription.company_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        subscription.agreement_contract_terms_id
+          ? supabaseAdmin
+              .from("organization_contract_terms")
+              .select("title, version, default_variables")
+              .eq("id", subscription.agreement_contract_terms_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        subscription.created_by_member_id
+          ? supabaseAdmin
+              .from("organization_members")
+              .select("first_name, last_name")
+              .eq("id", subscription.created_by_member_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+
+      let contact = contactResult?.data ?? null;
+      const company = companyResult?.data ?? null;
+      const terms = termsResult?.data ?? null;
+      const creator = creatorResult?.data ?? null;
+
+      // Company-only enrollment: still prefill signer from a company contact.
+      if (!contact && subscription.company_id) {
+        const { data: companyContact } = await supabaseAdmin
+          .from("contacts")
+          .select("first_name, last_name, email_jsonb, phone_jsonb")
+          .eq("org_id", tokenRow.org_id)
+          .eq("company_id", subscription.company_id)
+          .order("id", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        contact = companyContact ?? null;
+      }
 
       const contactName = contact
         ? [contact.first_name, contact.last_name].filter(Boolean).join(" ").trim()

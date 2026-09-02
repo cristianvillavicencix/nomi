@@ -1,3 +1,10 @@
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
 /** Overlay live client name + drawn signature onto filled agreement markdown. */
 export const applyLiveClientSignatureFields = (
   markdown: string,
@@ -6,14 +13,16 @@ export const applyLiveClientSignatureFields = (
     signaturePng?: string | null;
   },
 ) => {
-  const name = params.signatoryName?.trim() || "—";
+  const rawName = params.signatoryName?.trim() || "";
+  const name = rawName || "—";
+  const safeName = escapeHtml(name);
   const png = params.signaturePng?.trim() || "";
   const mark = png.startsWith("data:image/")
     ? `<img src="${png}" alt="Client signature" class="contract-signature-img" />`
     : `<span class="contract-signature-line" aria-hidden="true"></span>`;
 
   let out = markdown;
-  out = out.replace(/\{\{client_representative\}\}/g, name);
+  out = out.replace(/\{\{client_representative\}\}/g, safeName);
   out = out.replace(/\{\{client_signature_mark\}\}/g, mark);
   out = out.replace(
     /<img\s+src="data:image\/[^"]+"\s+alt="Client signature"\s+class="contract-signature-img"\s*\/>/g,
@@ -29,6 +38,19 @@ export const applyLiveClientSignatureFields = (
     }
   }
 
+  // Acceptance block: <p class="…">Por el Cliente</p> … <p><strong>NAME</strong></p>
+  out = out.replace(
+    /(Por el Cliente<\/p>\s*<div class="contract-signatures-mark">[\s\S]*?<\/div>\s*<p><strong>)([^<]*)(<\/strong><\/p>)/i,
+    `$1${safeName}$3`,
+  );
+
+  // Narrative Partes: representado(a) por **NAME**
+  out = out.replace(
+    /(representado\(a\) por\s+)\*\*[^*]*\*\*/gi,
+    `$1**${name}**`,
+  );
+
+  // Legacy labels if present
   out = out.replace(
     /(Por el Cliente[\s\S]*?\*\*Nombre:\*\*\s*)([^\n<]+)/i,
     `$1${name}`,

@@ -157,7 +157,7 @@ export const PublicSubscriptionAgreementPage = () => {
 
   useEffect(() => {
     const prefill = payload?.client_representative?.trim();
-    if (!prefill) return;
+    if (!prefill || prefill === "—" || prefill === "-") return;
     setSignatoryName((current) => (current.trim() ? current : prefill));
   }, [payload?.client_representative]);
 
@@ -166,7 +166,11 @@ export const PublicSubscriptionAgreementPage = () => {
       if (!shortCode.trim()) throw new Error("Missing link");
       return signPublicSubscriptionAgreement({
         short_code: shortCode,
-        signatory_name: signatoryName.trim(),
+        signatory_name: signatoryName.trim() ||
+          (payload?.client_representative?.trim() &&
+          payload.client_representative.trim() !== "—"
+            ? payload.client_representative.trim()
+            : ""),
         signature_png: signaturePng,
         base_url: resolvePublicAppBaseUrl(),
       });
@@ -225,9 +229,19 @@ export const PublicSubscriptionAgreementPage = () => {
     );
   }
 
+  const prefilledRep = (() => {
+    const fromPayload = payload.client_representative?.trim() || "";
+    if (fromPayload && fromPayload !== "—" && fromPayload !== "-") {
+      return fromPayload;
+    }
+    return "";
+  })();
+
+  const resolvedClientRep = signatoryName.trim() || prefilledRep;
+
   const canSubmit =
     agreed &&
-    Boolean(signatoryName.trim()) &&
+    Boolean(resolvedClientRep) &&
     signaturePng.startsWith("data:image/") &&
     !signMutation.isPending;
 
@@ -246,7 +260,7 @@ export const PublicSubscriptionAgreementPage = () => {
     organization_logo_url: payload.organization_logo_url,
     provider_representative: payload.provider_representative,
     client_name: payload.client_name,
-    client_representative: payload.client_representative,
+    client_representative: resolvedClientRep || payload.client_representative,
     client_address: payload.client_address,
   };
 
@@ -254,7 +268,7 @@ export const PublicSubscriptionAgreementPage = () => {
     <div className={shellClassName}>
       <SubscriptionAgreementClientView
         model={model}
-        liveSignatoryName={signatoryName}
+        liveSignatoryName={resolvedClientRep}
         liveSignaturePng={signaturePng}
         footer={
           payload.already_signed ? (
@@ -304,7 +318,7 @@ export const PublicSubscriptionAgreementPage = () => {
                 <Label htmlFor="signatory">Initials / full name</Label>
                 <Input
                   id="signatory"
-                  value={signatoryName}
+                  value={signatoryName || prefilledRep}
                   onChange={(event) => setSignatoryName(event.target.value)}
                   placeholder="e.g. J.D. or Jane Doe"
                   autoComplete="name"
