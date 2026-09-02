@@ -71,6 +71,7 @@ import {
 import { IconButton } from "@/components/ui/icon-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ContractDocumentMarkdown } from "@/modules/billing/subscriptions/ContractDocumentMarkdown";
 import {
   Dialog,
@@ -241,7 +242,6 @@ export const SubscriptionFormEditor = forwardRef<
     initialContractTermsId != null,
   );
   const [termsEditMode, setTermsEditMode] = useState(false);
-  const [changeContractOpen, setChangeContractOpen] = useState(false);
   const [agreementPreviewOpen, setAgreementPreviewOpen] = useState(false);
   const [signedAgreementOpen, setSignedAgreementOpen] = useState(false);
   const [sendEmail, setSendEmail] = useState(false);
@@ -1362,76 +1362,60 @@ export const SubscriptionFormEditor = forwardRef<
             {mode === "create" && enrollmentMode === "agreement" ? (
               <div className="space-y-3 rounded-md border bg-muted/10 p-3">
                 <div className="space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-muted-foreground">
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground">
                         Contract
-                      </p>
-                      <p className="truncate text-sm font-medium">
-                        {selectedTemplate
-                          ? `${selectedTemplate.title} (v${selectedTemplate.version})`
-                          : "No template selected"}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={fieldsLocked || contractTemplates.length === 0}
-                        onClick={() => setChangeContractOpen(true)}
-                      >
-                        Change contract
-                      </Button>
-                      <IconButton
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        aria-label="Preview contract"
-                        title="Preview filled contract (A4)"
-                        disabled={
-                          fieldsLocked || !agreementTermsMarkdown.trim()
+                      </Label>
+                      <Select
+                        value={
+                          selectedContractTermsId != null
+                            ? String(selectedContractTermsId)
+                            : undefined
                         }
-                        onClick={() => setAgreementPreviewOpen(true)}
+                        disabled={
+                          fieldsLocked || contractTemplates.length === 0
+                        }
+                        onValueChange={(value) => {
+                          setContractPickedManually(true);
+                          setAgreementTermsEdited(false);
+                          setTermsEditMode(false);
+                          setSelectedContractTermsId(Number(value));
+                          void refetchContractTemplates();
+                        }}
                       >
-                        <Eye className="size-4" />
-                      </IconButton>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Choose a contract template" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {contractTemplates.map((row) => (
+                            <SelectItem
+                              key={String(row.id)}
+                              value={String(row.id)}
+                            >
+                              {row.title}
+                              {row.is_default ? " (org default)" : ""} · v
+                              {row.version}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </div>
-
-                  {changeContractOpen ? (
-                    <Select
-                      value={
-                        selectedContractTermsId != null
-                          ? String(selectedContractTermsId)
-                          : undefined
+                    <IconButton
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="mb-0.5 shrink-0"
+                      aria-label="Preview contract"
+                      title="Preview filled contract (A4)"
+                      disabled={
+                        fieldsLocked || !agreementTermsMarkdown.trim()
                       }
-                      onValueChange={(value) => {
-                        setContractPickedManually(true);
-                        setAgreementTermsEdited(false);
-                        setTermsEditMode(false);
-                        setSelectedContractTermsId(Number(value));
-                        setChangeContractOpen(false);
-                        void refetchContractTemplates();
-                      }}
+                      onClick={() => setAgreementPreviewOpen(true)}
                     >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Choose a contract template" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contractTemplates.map((row) => (
-                          <SelectItem
-                            key={String(row.id)}
-                            value={String(row.id)}
-                          >
-                            {row.title}
-                            {row.is_default ? " (org default)" : ""} · v
-                            {row.version}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : null}
+                      <Eye className="size-4" />
+                    </IconButton>
+                  </div>
 
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-medium text-muted-foreground">
@@ -1470,7 +1454,7 @@ export const SubscriptionFormEditor = forwardRef<
                       ) : (
                         <p className="bg-white p-3 text-muted-foreground">
                           Select a package with a linked contract, or choose a
-                          template with Change contract.
+                          template from the Contract dropdown.
                         </p>
                       )}
                     </div>
