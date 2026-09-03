@@ -502,14 +502,62 @@ export async function attachPaymentMethodToCustomer(
   customerId: string,
   paymentMethodId: string,
 ) {
-  await stripe.paymentMethods.attach(paymentMethodId, {
-    customer: customerId,
-  });
+  try {
+    await stripe.paymentMethods.attach(paymentMethodId, {
+      customer: customerId,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message.toLowerCase() : String(error);
+    if (!message.includes("already been attached")) {
+      throw error;
+    }
+  }
   await stripe.customers.update(customerId, {
     invoice_settings: { default_payment_method: paymentMethodId },
   });
   const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
   return {
+    brand: pm.card?.brand ?? null,
+    last4: pm.card?.last4 ?? null,
+  };
+}
+
+export async function resolveStripeCardForCustomer(
+  stripe: Stripe,
+  customerId: string,
+): Promise<{
+  id: string;
+  brand: string | null;
+  last4: string | null;
+} | null> {
+  const trimmed = customerId.trim();
+  if (!trimmed) return null;
+
+  const customer = await stripe.customers.retrieve(trimmed);
+  if ("deleted" in customer && customer.deleted) return null;
+
+  const defaultPm = customer.invoice_settings?.default_payment_method;
+  const defaultId =
+    typeof defaultPm === "string" ? defaultPm : (defaultPm?.id ?? null);
+  if (defaultId) {
+    const pm = await stripe.paymentMethods.retrieve(defaultId);
+    return {
+      id: pm.id,
+      brand: pm.card?.brand ?? pm.type ?? null,
+      last4: pm.card?.last4 ?? null,
+    };
+  }
+
+  const list = await stripe.paymentMethods.list({
+    customer: trimmed,
+    type: "card",
+    limit: 1,
+  });
+  const pm = list.data[0];
+  if (!pm) return null;
+  return {
+    id: pm.id,
     brand: pm.card?.brand ?? null,
     last4: pm.card?.last4 ?? null,
   };
@@ -804,11 +852,6 @@ export async function finalizeInvoicePaymentFromIntent(
     throw new Error("Payment has not completed yet");
   }
 
-  const shouldSaveCard = Boolean(
-    params.invoice.save_card_for_future_charges ||
-      params.invoice.auto_charge_remainder,
-  );
-
   let stripeCustomerId = params.invoice.stripe_customer_id ?? null;
   let savedPaymentMethodId: string | null = null;
   let paymentMethodBrand: string | null = null;
@@ -823,7 +866,7 @@ export async function finalizeInvoicePaymentFromIntent(
   const paymentMethodId =
     typeof paymentMethod === "string" ? paymentMethod : paymentMethod?.id;
 
-  if (customerId && paymentMethodId && shouldSaveCard) {
+  if (customerId && paymentMethodId) {
     stripeCustomerId = customerId;
     const cardInfo = await attachPaymentMethodToCustomer(
       stripe,

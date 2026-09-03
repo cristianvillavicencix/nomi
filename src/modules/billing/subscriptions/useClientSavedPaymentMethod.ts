@@ -14,10 +14,11 @@ export type ClientSavedPaymentMethod = {
 
 const hasStripeCard = (row: {
   stripe_payment_method_id?: string | null;
+  stripe_customer_id?: string | null;
   payment_method_last4?: string | null;
 }) =>
   Boolean(row.stripe_payment_method_id?.trim()) &&
-  Boolean(row.payment_method_last4?.trim());
+  Boolean(row.stripe_customer_id?.trim());
 
 const toSavedCard = (
   row: {
@@ -30,7 +31,7 @@ const toSavedCard = (
   source: ClientSavedPaymentMethod["source"],
 ): ClientSavedPaymentMethod => ({
   brand: row.payment_method_brand ?? null,
-  last4: row.payment_method_last4!.trim(),
+  last4: row.payment_method_last4?.trim() || "",
   source,
   updatedAt: row.updated_at ?? null,
   stripePaymentMethodId: row.stripe_payment_method_id?.trim() ?? null,

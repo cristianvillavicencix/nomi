@@ -689,7 +689,7 @@ async function createDraftInvoiceForTicket(
     description: `Xactimate supplement · Ticket #${params.ticket.id}`,
     reference: `Ticket #${params.ticket.id} · ${params.ticket.subject}`,
     recipient_email: params.recipientEmail,
-    save_card_for_future_charges: false,
+    save_card_for_future_charges: true,
     upfront_percent: 100,
     auto_charge_remainder: false,
     line_items: lineItems,

@@ -206,11 +206,6 @@ Deno.serve(
             .filter(Boolean)
             .join(" ");
 
-          const shouldSaveCard = Boolean(
-            invoice.save_card_for_future_charges ||
-              invoice.auto_charge_remainder,
-          );
-
           const customer = await resolveOrCreateInvoiceStripeCustomer(stripe, {
             email,
             name: contactName || undefined,
@@ -229,16 +224,14 @@ Deno.serve(
           );
           paymentMethodBrand = cardInfo.brand;
           paymentMethodLast4 = cardInfo.last4;
-          if (shouldSaveCard) {
-            savedPaymentMethodId = paymentMethodId;
-          }
+          savedPaymentMethodId = paymentMethodId;
 
           const intent = await createInvoicePaymentIntent(stripe, {
             amountCents: amountToCents(chargeAmount),
             currency: invoice.currency ?? "usd",
             customerId: customer.id,
             paymentMethodId,
-            saveForFutureUse: shouldSaveCard,
+            saveForFutureUse: true,
             idempotencyKey: `client-invoice-${invoice.id}-${amountToCents(chargeAmount)}-${remainderInstallmentNumbers.join(",") || "checkout"}`,
             metadata: buildInvoicePaymentIntentMetadata(
               invoice,

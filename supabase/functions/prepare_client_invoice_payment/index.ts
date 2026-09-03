@@ -139,9 +139,7 @@ Deno.serve(
         .filter(Boolean)
         .join(" ");
 
-      const shouldSaveCard = Boolean(
-        invoice.save_card_for_future_charges || invoice.auto_charge_remainder,
-      );
+      const shouldSaveCard = true;
 
       const stripe = await getStripeForOrg(invoice.org_id);
       const metadata = buildInvoicePaymentIntentMetadata(

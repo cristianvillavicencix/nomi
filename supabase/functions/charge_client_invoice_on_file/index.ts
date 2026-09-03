@@ -9,10 +9,12 @@ import {
   amountToCents,
   createOffSessionInvoicePaymentIntent,
   isStripeMockMode,
+  resolveStripeCardForCustomer,
 } from "../_shared/clientProposalBilling.ts";
 import { applyClientInvoicePaymentUpdate } from "../_shared/clientInvoicePayment.ts";
 import { getStripeForOrg } from "../_shared/stripeClient.ts";
 import { isOrgClientInvoiceCheckoutEnabled } from "../_shared/organizationStripeSettings.ts";
+import { resolveClientStripePaymentMethod } from "../_shared/clientSubscriptionStripe.ts";
 import {
   getUnpaidRemainderChargesDueBy,
   parseInvoiceRemainderSchedule,
@@ -157,7 +159,7 @@ Deno.serve(
         const { data: invoice } = await supabaseAdmin
           .from("client_invoices")
           .select(
-            "id, org_id, amount, amount_paid, currency, status, upfront_percent, issue_date, due_date, remainder_schedule, stripe_customer_id, stripe_payment_method_id, payment_method_brand, payment_method_last4",
+            "id, org_id, contact_id, company_id, amount, amount_paid, currency, status, upfront_percent, issue_date, due_date, remainder_schedule, stripe_customer_id, stripe_payment_method_id, payment_method_brand, payment_method_last4",
           )
           .eq("id", invoiceId)
           .eq("org_id", member.org_id)
@@ -184,12 +186,48 @@ Deno.serve(
           );
         }
 
-        const customerId = invoice.stripe_customer_id?.trim();
-        const paymentMethodId = invoice.stripe_payment_method_id?.trim();
+        let customerId = invoice.stripe_customer_id?.trim() || "";
+        let paymentMethodId = invoice.stripe_payment_method_id?.trim() || "";
+        let paymentMethodBrand = invoice.payment_method_brand ?? null;
+        let paymentMethodLast4 = invoice.payment_method_last4 ?? null;
+
+        if (!customerId || !paymentMethodId) {
+          const fromClient = await resolveClientStripePaymentMethod(
+            supabaseAdmin,
+            {
+              orgId: invoice.org_id,
+              contactId: invoice.contact_id,
+              companyId: invoice.company_id,
+            },
+          );
+          if (fromClient) {
+            customerId = customerId || fromClient.stripeCustomerId;
+            paymentMethodId =
+              paymentMethodId || fromClient.stripePaymentMethodId;
+            paymentMethodBrand =
+              paymentMethodBrand || fromClient.paymentMethodBrand;
+            paymentMethodLast4 =
+              paymentMethodLast4 || fromClient.paymentMethodLast4;
+          }
+        }
+
+        const stripe = await getStripeForOrg(invoice.org_id);
+        if (customerId && !paymentMethodId) {
+          const fromStripe = await resolveStripeCardForCustomer(
+            stripe,
+            customerId,
+          );
+          if (fromStripe) {
+            paymentMethodId = fromStripe.id;
+            paymentMethodBrand = paymentMethodBrand || fromStripe.brand;
+            paymentMethodLast4 = paymentMethodLast4 || fromStripe.last4;
+          }
+        }
+
         if (!customerId || !paymentMethodId) {
           return createErrorResponse(
             400,
-            "No card is on file for this invoice. Enter a card or send a secure payment link.",
+            "No card is on file for this client. Enter a card or send a secure payment link.",
           );
         }
 
@@ -201,7 +239,6 @@ Deno.serve(
           return createErrorResponse(400, target.message);
         }
 
-        const stripe = await getStripeForOrg(invoice.org_id);
         const amountCents = amountToCents(target.chargeAmount);
         const today = new Date().toISOString().slice(0, 10);
         const idempotencyKey = `invoice-staff-${invoice.id}-${amountCents}-${today}-${Date.now()}`;
@@ -248,8 +285,8 @@ Deno.serve(
           newlyPaidInstallmentNumbers: target.newlyPaidInstallmentNumbers,
           stripeCustomerId: customerId,
           stripePaymentMethodId: paymentMethodId,
-          paymentMethodBrand: invoice.payment_method_brand,
-          paymentMethodLast4: invoice.payment_method_last4,
+          paymentMethodBrand,
+          paymentMethodLast4,
           clearAutoChargeError: true,
         });
 

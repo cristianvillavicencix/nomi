@@ -488,7 +488,7 @@ export async function prepareCombinedTicketInvoiceDraft(
         description: `Combined ticket invoice · Tickets ${ticketLabels}`,
         reference: `Tickets ${ticketLabels} · ${propertySummary}`,
         recipient_email: recipientEmail,
-        save_card_for_future_charges: false,
+        save_card_for_future_charges: true,
         upfront_percent: 100,
         auto_charge_remainder: false,
         line_items: pricing.lines.map((line, index) => ({

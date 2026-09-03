@@ -15,6 +15,7 @@ describe("pickLatestSavedPaymentMethod", () => {
       {
         id: 1,
         stripe_payment_method_id: "pm_invoice",
+        stripe_customer_id: "cus_invoice",
         payment_method_brand: "visa",
         payment_method_last4: "4242",
         updated_at: "2026-01-01T00:00:00.000Z",
@@ -25,6 +26,7 @@ describe("pickLatestSavedPaymentMethod", () => {
       {
         id: 2,
         stripe_payment_method_id: "pm_contract",
+        stripe_customer_id: "cus_contract",
         payment_method_brand: "mastercard",
         payment_method_last4: "5555",
         updated_at: "2026-06-01T00:00:00.000Z",
@@ -38,6 +40,7 @@ describe("pickLatestSavedPaymentMethod", () => {
         amount: 99,
         billing_interval: "monthly",
         stripe_payment_method_id: "pm_sub",
+        stripe_customer_id: "cus_sub",
         payment_method_brand: "amex",
         payment_method_last4: "1111",
         updated_at: "2026-08-01T00:00:00.000Z",
@@ -50,7 +53,7 @@ describe("pickLatestSavedPaymentMethod", () => {
       source: "subscription",
       updatedAt: "2026-08-01T00:00:00.000Z",
       stripePaymentMethodId: "pm_sub",
-      stripeCustomerId: null,
+      stripeCustomerId: "cus_sub",
     });
   });
 

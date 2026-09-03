@@ -28,7 +28,17 @@ import {
   formatInvoicePaymentMethod,
   hasInvoiceCardOnFile,
 } from "@/modules/billing/invoicePaymentUtils";
-import { resolveInvoiceRecipientEmail } from "@/modules/billing/billingUtils";
+import { billToSelectionFromClient, resolveInvoiceRecipientEmail } from "@/modules/billing/billingUtils";
+import { withInvoicePaymentQuery } from "@/modules/billing/invoiceEmailTemplate";
+import { PayInvoiceDialog } from "@/modules/billing/public/PayInvoiceDialog";
+import {
+  fetchPublicInvoice,
+  type PublicInvoicePayload,
+} from "@/modules/billing/public/publicInvoiceApi";
+import {
+  formatPaymentMethodLabel,
+  useClientSavedPaymentMethod,
+} from "@/modules/billing/subscriptions/useClientSavedPaymentMethod";
 import { withInvoicePaymentQuery } from "@/modules/billing/invoiceEmailTemplate";
 import { PayInvoiceDialog } from "@/modules/billing/public/PayInvoiceDialog";
 import {
@@ -86,8 +96,19 @@ export const InvoiceStaffChargeDialog = ({
     [invoice.amount, invoice.amount_paid],
   );
   const currency = invoice.currency ?? "USD";
-  const cardOnFile = formatInvoicePaymentMethod(invoice);
-  const hasCard = hasInvoiceCardOnFile(invoice);
+  const billTo = useMemo(
+    () => billToSelectionFromClient({ company, contact }),
+    [company, contact],
+  );
+  const { savedCard } = useClientSavedPaymentMethod(billTo);
+  const invoiceCardLabel = formatInvoicePaymentMethod(invoice);
+  const clientCardLabel = savedCard
+    ? formatPaymentMethodLabel(savedCard.brand, savedCard.last4)
+    : null;
+  const hasCard =
+    hasInvoiceCardOnFile(invoice) ||
+    Boolean(savedCard?.stripePaymentMethodId && savedCard.stripeCustomerId);
+  const cardOnFile = invoiceCardLabel ?? clientCardLabel;
   const recipientEmail = resolveInvoiceRecipientEmail({
     company,
     contact,
