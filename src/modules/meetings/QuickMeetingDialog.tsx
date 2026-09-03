@@ -269,23 +269,24 @@ export const QuickMeetingDialog = ({
         data: payload,
       });
 
-      const { errors } = await sendMeetingShareNotifications({
+      refresh();
+      onOpenChange(false);
+      window.open(meetingUrl, "_blank", "noopener,noreferrer");
+
+      notify("Call started", { type: "success" });
+
+      // Don't block the UI on email/SMS delivery; notifications can be slow.
+      void sendMeetingShareNotifications({
         record: created.data as Record<string, unknown>,
         shareEmail,
         shareSms,
         dataProvider,
         notify,
+      }).then(({ errors }) => {
+        if (errors.length > 0) {
+          notify(errors.join("."), { type: "warning" });
+        }
       });
-
-      refresh();
-      onOpenChange(false);
-      window.open(meetingUrl, "_blank", "noopener,noreferrer");
-
-      if (errors.length > 0) {
-        notify(errors.join("."), { type: "warning" });
-      } else {
-        notify("Call started", { type: "success" });
-      }
     } catch (error) {
       notify(
         error instanceof Error ? error.message : "Could not start the call",
