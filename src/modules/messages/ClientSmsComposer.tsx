@@ -40,11 +40,72 @@ type PendingAttachment = {
 
 const MMS_MAX_ITEMS = 10;
 const MMS_MAX_TOTAL_BYTES = 1_000_000;
+const MMS_MAX_IMAGE_WIDTH_PX = 1600;
+const JPEG_QUALITY_TRIES = [0.82, 0.72, 0.62];
 
 const formatBytesLabel = (bytes: number) =>
   bytes >= 1_000_000
     ? `${(bytes / 1_000_000).toFixed(1)} MB`
     : `${Math.round(bytes / 1000)} KB`;
+
+const compressImageFileForMms = async (file: File, maxBytes: number) => {
+  if (!file.type.startsWith("image/")) return file;
+  // ponytail: we don't read EXIF orientation; rare upside-down photos; upgrade by applying EXIF rotation.
+  if (!file.size || file.size <= maxBytes && file.size < 800_000) return file;
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const node = new Image();
+      node.onload = () => resolve(node);
+      node.onerror = () => reject(new Error("Failed to load image"));
+      node.src = objectUrl;
+    });
+
+    const srcW = img.naturalWidth || img.width;
+    const srcH = img.naturalHeight || img.height;
+    if (!srcW || !srcH) return file;
+
+    const scale = Math.min(1, MMS_MAX_IMAGE_WIDTH_PX / srcW);
+    const dstW = Math.max(1, Math.round(srcW * scale));
+    const dstH = Math.max(1, Math.round(srcH * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = dstW;
+    canvas.height = dstH;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+
+    // If the image has transparency, JPEG needs a background.
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, dstW, dstH);
+    ctx.drawImage(img, 0, 0, dstW, dstH);
+
+    const baseName = file.name.replace(/\.[^.]+$/, "");
+    let lastBlob: Blob | null = null;
+
+    for (const q of JPEG_QUALITY_TRIES) {
+      // eslint-disable-next-line no-await-in-loop
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(
+          (b) => resolve(b),
+          "image/jpeg",
+          q,
+        );
+      });
+      if (!blob) continue;
+      lastBlob = blob;
+      if (blob.size <= maxBytes) break;
+    }
+
+    if (!lastBlob) return file;
+    return new File([lastBlob], `${baseName}.jpg`, {
+      type: "image/jpeg",
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+};
 
 export const ClientSmsComposer = ({
   contact,
@@ -181,15 +242,6 @@ export const ClientSmsComposer = ({
       });
       return;
     }
-    const nextTotalBytes =
-      pendingFiles.reduce((sum, entry) => sum + entry.file.size, 0) + file.size;
-    if (nextTotalBytes > MMS_MAX_TOTAL_BYTES) {
-      notify(
-        `MMS attachments must stay under ${formatBytesLabel(MMS_MAX_TOTAL_BYTES)} total.`,
-        { type: "warning" },
-      );
-      return;
-    }
     const id = crypto.randomUUID();
     const previewUrl = file.type.startsWith("image/")
       ? URL.createObjectURL(file)
@@ -246,9 +298,29 @@ export const ClientSmsComposer = ({
 
     setIsSending(true);
     try {
-      const uploadedUrls: string[] = [];
+      const compressedFiles: File[] = [];
+      const maxBytesPerItem = Math.floor(
+        (MMS_MAX_TOTAL_BYTES * 0.95) / Math.max(pendingFiles.length, 1),
+      );
       for (const pending of pendingFiles) {
-        uploadedUrls.push(await uploadSmsMedia(pending.file, identity?.org_id));
+        compressedFiles.push(
+          await compressImageFileForMms(pending.file, maxBytesPerItem),
+        );
+      }
+
+      const totalBytes = compressedFiles.reduce((sum, entry) => sum + entry.size, 0);
+      if (pendingFiles.length > MMS_MAX_ITEMS) {
+        throw new Error(`MMS supports up to ${MMS_MAX_ITEMS} attachments.`);
+      }
+      if (totalBytes > MMS_MAX_TOTAL_BYTES) {
+        throw new Error(
+          `MMS attachments must stay under ${formatBytesLabel(MMS_MAX_TOTAL_BYTES)} total (got ${formatBytesLabel(totalBytes)}).`,
+        );
+      }
+
+      const uploadedUrls: string[] = [];
+      for (const file of compressedFiles) {
+        uploadedUrls.push(await uploadSmsMedia(file, identity?.org_id));
       }
 
       let finalBody = body.trim();
@@ -256,16 +328,6 @@ export const ClientSmsComposer = ({
         !isInternalNote && signature && (signatureRequired || includeSignature);
       if (shouldIncludeSignature && finalBody.length > 0) {
         finalBody = `${finalBody}\n${signature}`;
-      }
-
-      if (uploadedUrls.length > MMS_MAX_ITEMS) {
-        throw new Error(`MMS supports up to ${MMS_MAX_ITEMS} attachments.`);
-      }
-      const totalBytes = pendingFiles.reduce((sum, entry) => sum + entry.file.size, 0);
-      if (totalBytes > MMS_MAX_TOTAL_BYTES) {
-        throw new Error(
-          `MMS attachments must stay under ${formatBytesLabel(MMS_MAX_TOTAL_BYTES)} total.`,
-        );
       }
 
       if (!isInternalNote && finalBody && isSmsLengthOverLimit(finalBody)) {
