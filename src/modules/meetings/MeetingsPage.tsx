@@ -49,10 +49,7 @@ import {
 import { CalendarEventAssigneeAvatars } from "@/modules/calendar/CalendarEventAssigneeAvatars";
 import { toDateKey, type CalendarEvent } from "@/modules/calendar/calendarUtils";
 import { MeetingRowActionsMenu } from "@/modules/meetings/MeetingRowActionsMenu";
-import {
-  MeetingDoneSwitch,
-  MarkMeetingDoneButton,
-} from "@/modules/meetings/MeetingDoneSwitch";
+import { MarkMeetingDoneButton } from "@/modules/meetings/MeetingDoneSwitch";
 import { QuickMeetingDialog } from "@/modules/meetings/QuickMeetingDialog";
 
 type MeetingsTab = "upcoming" | "past";
@@ -332,13 +329,7 @@ export const MeetingsPage = () => {
                   <TableHead>Date</TableHead>
                   <TableHead>Time</TableHead>
                   <TableHead>Duration</TableHead>
-                  <TableHead
-                    className={
-                      tab === "upcoming" ? "w-[72px] text-center" : "w-[88px]"
-                    }
-                  >
-                    {tab === "upcoming" ? "Done" : "Status"}
-                  </TableHead>
+                  <TableHead className="w-[100px]">Done</TableHead>
                   <TableHead className="w-[52px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -405,27 +396,16 @@ export const MeetingsPage = () => {
                       </TableCell>
                       <TableCell>{timeLabel}</TableCell>
                       <TableCell>{durationLabel}</TableCell>
-                      <TableCell
-                        className={isPastTab ? undefined : "text-center"}
-                      >
-                        {isPastTab ? (
-                          isDone ? (
-                            <Badge variant="secondary">Done</Badge>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">
-                              —
-                            </span>
-                          )
+                      <TableCell>
+                        {isDone ? (
+                          <Badge variant="secondary">Done</Badge>
                         ) : (
-                          <MeetingDoneSwitch meeting={meeting} />
+                          <MarkMeetingDoneButton meeting={meeting} />
                         )}
                       </TableCell>
                       <TableCell className="text-right">
                         {isPastTab ? (
                           <div className="flex items-center justify-end gap-1">
-                            {!isDone ? (
-                              <MarkMeetingDoneButton meeting={meeting} />
-                            ) : null}
                             <MeetingRowActionsMenu
                               meeting={meeting}
                               onEdit={() => {
