@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSubscriptionListFilter,
   buildSubscriptionBankStatementPreview,
+  buildDefaultSubscriptionSetupMessage,
   canShowSubscriptionSetupLink,
   canSyncSubscriptionFromStripe,
   formatSubscriptionAmountLabel,
@@ -153,5 +154,18 @@ describe("subscriptionDisplayUtils", () => {
         stripe_subscription_id: null,
       }),
     ).toBe(false);
+  });
+
+  it("uses Latino Business Support and keeps the setup link on one SMS line", () => {
+    expect(
+      buildDefaultSubscriptionSetupMessage({
+        orgLabel: "SIGMA",
+        subscriptionName: "Maintenance + priority support",
+        amountLabel: "$185.00/mo",
+        shareUrl: "https://www.nomicrm.com/sub/abc",
+      }),
+    ).toBe(
+      "Latino Business Support: ready to start Maintenance + priority support ($185.00/mo)? Add your card for automatic billing: https://www.nomicrm.com/sub/abc",
+    );
   });
 });

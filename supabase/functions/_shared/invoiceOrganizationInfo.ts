@@ -1,5 +1,27 @@
 export const INVOICE_ORGANIZATION_NAME = "Latino Business Support";
 
+const PRODUCT_APP_TITLES = new Set([
+  "SIGMA",
+  "Sigma by Latino Business Support",
+  "Nomi CRM",
+  "LBS CRM",
+  "Atomic CRM",
+  "LBS",
+  "Nomi",
+  "NOMI",
+  "NOMI CRM",
+]);
+
+/** Public-facing org name for client emails/SMS — not the CRM product title. */
+export const resolveInvoiceOrganizationName = (config?: {
+  title?: string | null;
+}) => {
+  const title = config?.title?.trim();
+  if (title && !PRODUCT_APP_TITLES.has(title)) return title;
+  return INVOICE_ORGANIZATION_NAME;
+};
+
+
 export const INVOICE_ORGANIZATION_ADDRESS_LINE =
   "1200 Summer St, Stamford CT, 06902";
 

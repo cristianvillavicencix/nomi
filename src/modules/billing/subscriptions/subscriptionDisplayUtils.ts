@@ -1,5 +1,7 @@
 import type { ClientSubscription } from "@/modules/types";
 import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
+import { resolveInvoiceOrganizationName } from "@/modules/billing/invoiceOrganizationInfo";
+import { PRODUCT_MARK_SRC } from "@/lib/branding";
 
 export type SubscriptionStatusFilter =
   | "all"
@@ -359,20 +361,117 @@ export const buildSubscriptionSetupShareUrl = (
   shortCode: string,
 ) => `${origin.replace(/\/$/, "")}${buildSubscriptionSetupSharePath(shortCode)}`;
 
+const PUBLIC_SUBSCRIPTION_LOGO = `https://www.nomicrm.com${PRODUCT_MARK_SRC}`;
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const publicOrgLabel = (orgLabel: string) =>
+  resolveInvoiceOrganizationName({ title: orgLabel });
+
+const flattenSmsBody = (body: string) => body.replace(/\s+/g, " ").trim();
+
+const planLabel = (params: {
+  subscriptionName: string;
+  amountLabel?: string | null;
+}) =>
+  params.amountLabel
+    ? `${params.subscriptionName} (${params.amountLabel})`
+    : params.subscriptionName;
+
+const brandedEmailShell = (params: {
+  orgLabel: string;
+  greeting: string;
+  bodyHtml: string;
+  shareUrl: string;
+  ctaLabel: string;
+  logoUrl?: string | null;
+}) => {
+  const logo = params.logoUrl?.trim() || PUBLIC_SUBSCRIPTION_LOGO;
+  const shareUrl = params.shareUrl.trim();
+  return `<div style="font-family:Georgia,'Times New Roman',serif;color:#1f2937;line-height:1.55;max-width:560px;margin:0 auto;">
+  <div style="padding:8px 0 20px;">
+    <img src="${escapeHtml(logo)}" alt="${escapeHtml(params.orgLabel)}" width="120" height="auto" style="display:block;max-height:48px;width:auto;" />
+  </div>
+  <p style="margin:0 0 16px;font-size:16px;">${params.greeting}</p>
+  ${params.bodyHtml}
+  <p style="margin:0 0 28px;">
+    <a href="${escapeHtml(shareUrl)}" style="display:inline-block;background:#111827;color:#ffffff;padding:12px 22px;border-radius:6px;text-decoration:none;font-family:system-ui,sans-serif;font-size:14px;font-weight:600;">${escapeHtml(params.ctaLabel)}</a>
+  </p>
+  <p style="margin:0 0 8px;font-size:12px;color:#9ca3af;font-family:system-ui,sans-serif;word-break:break-all;">Or open this link: <a href="${escapeHtml(shareUrl)}" style="color:#4b5563;">${escapeHtml(shareUrl)}</a></p>
+  <p style="margin:24px 0 0;font-size:13px;color:#6b7280;">— ${escapeHtml(params.orgLabel)}</p>
+</div>`;
+};
+
 export const buildDefaultSubscriptionSetupMessage = (params: {
   orgLabel: string;
   subscriptionName: string;
   subscriptionNumber?: string | null;
   amountLabel?: string | null;
   shareUrl: string;
+  kind?: "setup" | "card_update";
 }) => {
-  const planLabel = params.amountLabel
-    ? `${params.subscriptionName} (${params.amountLabel})`
-    : params.subscriptionName;
+  const org = publicOrgLabel(params.orgLabel);
+  const plan = planLabel(params);
+  const url = params.shareUrl.trim();
+  if (params.kind === "card_update") {
+    return flattenSmsBody(`${org}: update your card for ${plan}: ${url}`);
+  }
+  return flattenSmsBody(
+    `${org}: ready to start ${plan}? Add your card for automatic billing: ${url}`,
+  );
+};
+
+export const buildDefaultSubscriptionSetupSubject = (params: {
+  orgLabel: string;
+  subscriptionName: string;
+  kind?: "setup" | "card_update";
+}) => {
+  const org = publicOrgLabel(params.orgLabel);
+  if (params.kind === "card_update") {
+    return `Update your card for ${params.subscriptionName}`;
+  }
+  return `Start ${params.subscriptionName} with ${org}`;
+};
+
+export const buildDefaultSubscriptionSetupEmailHtml = (params: {
+  orgLabel: string;
+  clientName?: string | null;
+  subscriptionName: string;
+  subscriptionNumber?: string | null;
+  amountLabel?: string | null;
+  shareUrl: string;
+  kind?: "setup" | "card_update";
+  logoUrl?: string | null;
+}) => {
+  const org = publicOrgLabel(params.orgLabel);
+  const greeting = params.clientName?.trim()
+    ? `Hello ${escapeHtml(params.clientName.trim())},`
+    : "Hello,";
+  const plan = planLabel(params);
+  const intro =
+    params.kind === "card_update"
+      ? `<p style="margin:0 0 12px;font-size:15px;"><strong>${escapeHtml(org)}</strong> needs an updated card for <strong>${escapeHtml(plan)}</strong>.</p>`
+      : `<p style="margin:0 0 12px;font-size:15px;"><strong>${escapeHtml(org)}</strong> is ready for you to start <strong>${escapeHtml(plan)}</strong>.</p>`;
+  const next =
+    params.kind === "card_update"
+      ? `<p style="margin:0 0 20px;font-size:15px;color:#4b5563;">Update your payment method so billing continues without interruption.</p>`
+      : `<p style="margin:0 0 20px;font-size:15px;color:#4b5563;">Add your card once — billing runs automatically from there.</p>`;
   const ref = params.subscriptionNumber?.trim()
-    ? ` Reference: ${params.subscriptionNumber.trim()}.`
+    ? `<p style="margin:0 0 16px;font-size:13px;color:#6b7280;">Reference: ${escapeHtml(params.subscriptionNumber.trim())}</p>`
     : "";
-  return `${params.orgLabel}: Set up your ${planLabel} subscription and save your card for automatic billing.${ref} ${params.shareUrl.trim()}`;
+  return brandedEmailShell({
+    orgLabel: org,
+    greeting,
+    bodyHtml: `${intro}${ref}${next}`,
+    shareUrl: params.shareUrl,
+    ctaLabel: params.kind === "card_update" ? "Update card" : "Start subscription",
+    logoUrl: params.logoUrl,
+  });
 };
 
 /** Compact agreement invite SMS / plain preview (single paragraph). */
@@ -383,13 +482,14 @@ export const buildDefaultAgreementInviteMessage = (params: {
   amountLabel?: string | null;
   shareUrl: string;
 }) => {
-  const plan = params.amountLabel
-    ? `${params.subscriptionName} (${params.amountLabel})`
-    : params.subscriptionName;
+  const org = publicOrgLabel(params.orgLabel);
+  const plan = planLabel(params);
   const ref = params.subscriptionNumber?.trim()
     ? ` Ref ${params.subscriptionNumber.trim()}.`
     : "";
-  return `${params.orgLabel}: Please review, sign, and add your card for ${plan}.${ref} ${params.shareUrl.trim()}`;
+  return flattenSmsBody(
+    `${org}: Please review, sign, and add your card for ${plan}.${ref} ${params.shareUrl.trim()}`,
+  );
 };
 
 export const buildDefaultAgreementInviteSubject = (subscriptionName: string) =>
@@ -402,25 +502,47 @@ export const buildDefaultAgreementInviteEmailHtml = (params: {
   subscriptionNumber?: string | null;
   amountLabel?: string | null;
   shareUrl: string;
+  logoUrl?: string | null;
 }) => {
+  const org = publicOrgLabel(params.orgLabel);
   const greeting = params.clientName?.trim()
-    ? `Hello ${params.clientName.trim()},`
+    ? `Hello ${escapeHtml(params.clientName.trim())},`
     : "Hello,";
-  const plan = params.amountLabel
-    ? `${params.subscriptionName} (${params.amountLabel})`
-    : params.subscriptionName;
+  const plan = planLabel(params);
   const ref = params.subscriptionNumber?.trim()
-    ? `<p style="margin:0 0 12px;color:#6b7280;font-size:13px;">Reference: ${params.subscriptionNumber.trim()}</p>`
+    ? `<p style="margin:0 0 16px;font-size:13px;color:#6b7280;">Reference: ${escapeHtml(params.subscriptionNumber.trim())}</p>`
     : "";
-  return `<div style="font-family:Georgia,serif;color:#1f2937;line-height:1.55;max-width:560px;">
-<p>${greeting}</p>
-<p><strong>${params.orgLabel}</strong> invited you to review and sign the agreement for <strong>${plan}</strong>.</p>
-${ref}
-<p>Review the terms, sign, and add your payment card. Billing starts after you finish.</p>
-<p style="margin:20px 0;"><a href="${params.shareUrl}" style="display:inline-block;background:#111827;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;font-family:system-ui,sans-serif;font-weight:600;">Review &amp; sign agreement</a></p>
-<p style="font-size:12px;color:#9ca3af;word-break:break-all;">${params.shareUrl}</p>
-<p style="color:#6b7280;font-size:13px;">— ${params.orgLabel}</p>
-</div>`;
+  return brandedEmailShell({
+    orgLabel: org,
+    greeting,
+    bodyHtml: `<p style="margin:0 0 12px;font-size:15px;"><strong>${escapeHtml(org)}</strong> invited you to review and sign the subscription agreement for <strong>${escapeHtml(plan)}</strong>.</p>${ref}<p style="margin:0 0 20px;font-size:15px;color:#4b5563;">Review the terms, add your signature, then save a payment card. Billing starts automatically after you finish.</p>`,
+    shareUrl: params.shareUrl,
+    ctaLabel: "Review & sign agreement",
+    logoUrl: params.logoUrl,
+  });
+};
+
+export const wrapSubscriptionMessageInBrandedHtml = (params: {
+  orgLabel: string;
+  message: string;
+  shareUrl: string;
+  ctaLabel: string;
+  clientName?: string | null;
+  logoUrl?: string | null;
+}) => {
+  const org = publicOrgLabel(params.orgLabel);
+  const greeting = params.clientName?.trim()
+    ? `Hello ${escapeHtml(params.clientName.trim())},`
+    : "Hello,";
+  const body = escapeHtml(params.message.trim()).replace(/\n/g, "<br/>");
+  return brandedEmailShell({
+    orgLabel: org,
+    greeting,
+    bodyHtml: `<p style="margin:0 0 20px;font-size:15px;color:#4b5563;">${body}</p>`,
+    shareUrl: params.shareUrl,
+    ctaLabel: params.ctaLabel,
+    logoUrl: params.logoUrl,
+  });
 };
 
 const STRIPE_SUFFIX_MAX = 22;

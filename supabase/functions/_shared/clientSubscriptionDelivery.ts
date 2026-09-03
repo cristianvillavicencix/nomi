@@ -10,6 +10,13 @@ import {
   buildDefaultAgreementInviteSms,
   buildDefaultAgreementInviteSubject,
   buildDefaultAgreementInviteText,
+  buildDefaultSubscriptionSetupHtml,
+  buildDefaultSubscriptionSetupSms,
+  buildDefaultSubscriptionSetupSubject,
+  buildDefaultSubscriptionSetupText,
+  flattenSmsBody,
+  wrapSubscriptionMessageInBrandedHtml,
+  type SubscriptionSetupCopyKind,
 } from "./subscriptionAgreementInviteEmail.ts";
 import {
   logSubscriptionDelivery,
@@ -37,6 +44,7 @@ export type SubscriptionSetupDeliveryParams = {
   /** When set, writes client_subscription_delivery_logs rows. */
   subscriptionId?: number | null;
   purpose?: SubscriptionDeliveryPurpose;
+  kind?: SubscriptionSetupCopyKind;
 };
 
 export const buildDefaultSubscriptionSetupMessage = (params: {
@@ -45,17 +53,16 @@ export const buildDefaultSubscriptionSetupMessage = (params: {
   subscriptionNumber?: string | null;
   amountLabel?: string | null;
   shareUrl: string;
-}) => {
-  const orgLabel = params.orgName?.trim() || "Latino Business Support";
-  const planLabel = params.amountLabel
-    ? `${params.subscriptionName} (${params.amountLabel})`
-    : params.subscriptionName;
-  // Single paragraph — avoid blank line before URL (phones split into two bubbles).
-  const ref = params.subscriptionNumber?.trim()
-    ? ` Reference: ${params.subscriptionNumber.trim()}.`
-    : "";
-  return `${orgLabel}: Set up your ${planLabel} subscription and save your card for automatic billing.${ref} ${params.shareUrl.trim()}`;
-};
+  kind?: SubscriptionSetupCopyKind;
+}) =>
+  buildDefaultSubscriptionSetupSms({
+    orgName: params.orgName,
+    subscriptionName: params.subscriptionName,
+    subscriptionNumber: params.subscriptionNumber,
+    amountLabel: params.amountLabel,
+    shareUrl: params.shareUrl,
+    kind: params.kind,
+  });
 
 export const replaceSetupUrlsInMessage = (message: string, shareUrl: string) => {
   const trimmedShareUrl = shareUrl.trim();
@@ -79,9 +86,11 @@ export const resolveSubscriptionSetupDeliveryCopy = (
     | "message"
     | "purpose"
     | "clientName"
+    | "kind"
   >,
 ) => {
   const isAgreementInvite = params.purpose === "agreement_invite";
+  const kind = params.kind ?? "setup";
 
   const defaultMessage = isAgreementInvite
     ? buildDefaultAgreementInviteSms({
@@ -92,66 +101,88 @@ export const resolveSubscriptionSetupDeliveryCopy = (
         amountLabel: params.amountLabel,
         shareUrl: params.shareUrl,
       })
-    : buildDefaultSubscriptionSetupMessage({
+    : buildDefaultSubscriptionSetupSms({
         orgName: params.orgName,
+        clientName: params.clientName,
         subscriptionName: params.subscriptionName,
         subscriptionNumber: params.subscriptionNumber,
         amountLabel: params.amountLabel,
         shareUrl: params.shareUrl,
+        kind,
       });
 
   const custom = params.message?.trim();
-  const message = custom
-    ? replaceSetupUrlsInMessage(custom, params.shareUrl)
-    : defaultMessage;
+  const message = flattenSmsBody(
+    custom
+      ? replaceSetupUrlsInMessage(custom, params.shareUrl)
+      : defaultMessage,
+  );
 
   const defaultSubject = isAgreementInvite
     ? buildDefaultAgreementInviteSubject({
         subscriptionName: params.subscriptionName,
       })
-    : `${params.orgName?.trim() || "Latino Business Support"}: Set up ${params.subscriptionName}`;
+    : buildDefaultSubscriptionSetupSubject({
+        orgName: params.orgName,
+        subscriptionName: params.subscriptionName,
+        shareUrl: params.shareUrl,
+        kind,
+      });
 
-  return { message, defaultSubject, isAgreementInvite, usedCustomMessage: Boolean(custom) };
+  return {
+    message,
+    defaultSubject,
+    isAgreementInvite,
+    usedCustomMessage: Boolean(custom),
+    kind,
+  };
 };
 
 export async function sendSubscriptionSetupDelivery(
   supabase: SupabaseClient,
   params: SubscriptionSetupDeliveryParams,
 ) {
-  const { message, defaultSubject, isAgreementInvite, usedCustomMessage } =
+  const { message, defaultSubject, isAgreementInvite, usedCustomMessage, kind } =
     resolveSubscriptionSetupDeliveryCopy(params);
   const subject = params.subject?.trim() || defaultSubject;
   const purpose = params.purpose ?? "setup_link";
+  const ctaLabel = kind === "card_update" ? "Update card" : "Start subscription";
 
   let emailSent = false;
   let emailSkipped = false;
   let smsSent = false;
   let smsSkipped = false;
 
+  const copyParams = {
+    orgName: params.orgName,
+    clientName: params.clientName,
+    subscriptionName: params.subscriptionName,
+    subscriptionNumber: params.subscriptionNumber,
+    amountLabel: params.amountLabel,
+    shareUrl: params.shareUrl,
+    kind,
+  };
+
   const emailTextBody =
     isAgreementInvite && !usedCustomMessage
-      ? buildDefaultAgreementInviteText({
-          orgName: params.orgName,
-          clientName: params.clientName,
-          subscriptionName: params.subscriptionName,
-          subscriptionNumber: params.subscriptionNumber,
-          amountLabel: params.amountLabel,
-          shareUrl: params.shareUrl,
-        })
-      : message;
+      ? buildDefaultAgreementInviteText(copyParams)
+      : usedCustomMessage
+        ? params.message?.trim() || message
+        : buildDefaultSubscriptionSetupText(copyParams);
 
   const emailHtmlBody =
     params.htmlBody?.trim() ||
     (isAgreementInvite && !usedCustomMessage
-      ? buildDefaultAgreementInviteHtml({
-          orgName: params.orgName,
-          clientName: params.clientName,
-          subscriptionName: params.subscriptionName,
-          subscriptionNumber: params.subscriptionNumber,
-          amountLabel: params.amountLabel,
-          shareUrl: params.shareUrl,
-        })
-      : emailTextBody.replace(/\n/g, "<br/>"));
+      ? buildDefaultAgreementInviteHtml(copyParams)
+      : usedCustomMessage
+        ? wrapSubscriptionMessageInBrandedHtml({
+            orgName: params.orgName,
+            clientName: params.clientName,
+            message: emailTextBody,
+            shareUrl: params.shareUrl,
+            ctaLabel,
+          })
+        : buildDefaultSubscriptionSetupHtml(copyParams));
 
   const emailTo = params.emailTo?.trim();
   if (params.sendEmail !== false && emailTo) {

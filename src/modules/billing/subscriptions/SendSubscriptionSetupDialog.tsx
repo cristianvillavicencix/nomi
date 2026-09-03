@@ -23,9 +23,14 @@ import {
   buildDefaultAgreementInviteEmailHtml,
   buildDefaultAgreementInviteMessage,
   buildDefaultAgreementInviteSubject,
+  buildDefaultSubscriptionSetupEmailHtml,
   buildDefaultSubscriptionSetupMessage,
+  buildDefaultSubscriptionSetupSubject,
   formatSubscriptionAmountLabel,
+  wrapSubscriptionMessageInBrandedHtml,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
+import { resolveInvoiceOrganizationName } from "@/modules/billing/invoiceOrganizationInfo";
+import { PRODUCT_MARK_SRC } from "@/lib/branding";
 import type { ClientSubscription } from "@/modules/types";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -123,7 +128,8 @@ export const SendSubscriptionSetupDialog = ({
     subscription.billing_interval,
   );
 
-  const orgLabel = orgTitle ?? "Latino Business Support";
+  const orgLabel = resolveInvoiceOrganizationName({ title: orgTitle });
+  const logoUrl = `${resolvePublicAppBaseUrl()}${PRODUCT_MARK_SRC}`;
   const clientName = useMemo(() => {
     if (contact) {
       return [contact.first_name, contact.last_name].filter(Boolean).join(" ").trim();
@@ -140,25 +146,44 @@ export const SendSubscriptionSetupDialog = ({
       shareUrl: previewShareUrl,
     };
     if (isAgreement) return buildDefaultAgreementInviteMessage(shared);
-    return buildDefaultSubscriptionSetupMessage(shared);
+    return buildDefaultSubscriptionSetupMessage({
+      ...shared,
+      kind: isCardUpdate ? "card_update" : "setup",
+    });
   }, [
-    isAgreement,
+    isCardUpdate,
     orgLabel,
     subscription.name,
     subscription.subscription_number,
     amountLabel,
     previewShareUrl,
+    isCardUpdate,
   ]);
 
   const deliveryMessage = messageEdited ? message.trim() : defaultMessage;
-  const subject = isCardUpdate
-    ? `${orgLabel}: Update card for ${subscription.name}`
-    : isAgreement
-      ? buildDefaultAgreementInviteSubject(subscription.name)
-      : `${orgLabel}: Set up ${subscription.name}`;
+  const setupKind = isCardUpdate ? "card_update" : "setup";
+  const subject = isAgreement
+    ? buildDefaultAgreementInviteSubject(subscription.name)
+    : buildDefaultSubscriptionSetupSubject({
+        orgLabel,
+        subscriptionName: subscription.name,
+        kind: setupKind,
+      });
 
-  const emailHtml =
-    isAgreement && !messageEdited
+  const emailHtml = messageEdited
+    ? wrapSubscriptionMessageInBrandedHtml({
+        orgLabel,
+        clientName: clientName || null,
+        message: deliveryMessage,
+        shareUrl: previewShareUrl,
+        ctaLabel: isAgreement
+          ? "Review & sign agreement"
+          : isCardUpdate
+            ? "Update card"
+            : "Start subscription",
+        logoUrl,
+      })
+    : isAgreement
       ? buildDefaultAgreementInviteEmailHtml({
           orgLabel,
           clientName: clientName || null,
@@ -166,8 +191,18 @@ export const SendSubscriptionSetupDialog = ({
           subscriptionNumber: subscription.subscription_number,
           amountLabel,
           shareUrl: previewShareUrl,
+          logoUrl,
         })
-      : deliveryMessage.replace(/\n/g, "<br/>");
+      : buildDefaultSubscriptionSetupEmailHtml({
+          orgLabel,
+          clientName: clientName || null,
+          subscriptionName: subscription.name,
+          subscriptionNumber: subscription.subscription_number,
+          amountLabel,
+          shareUrl: previewShareUrl,
+          kind: setupKind,
+          logoUrl,
+        });
 
   useEffect(() => {
     if (!open) return;

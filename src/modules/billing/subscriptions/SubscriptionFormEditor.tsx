@@ -50,12 +50,17 @@ import {
   type SubscriptionStaffCardFormHandle,
 } from "@/modules/billing/subscriptions/SubscriptionStaffCardForm";
 import { resolvePublicAppBaseUrl, resolveSubscriptionSetupShareUrl } from "@/lib/publicAppUrl";
+import { PRODUCT_MARK_SRC } from "@/lib/branding";
+import { resolveInvoiceOrganizationName } from "@/modules/billing/invoiceOrganizationInfo";
 import {
   buildDefaultAgreementInviteEmailHtml,
   buildDefaultAgreementInviteMessage,
   buildDefaultAgreementInviteSubject,
+  buildDefaultSubscriptionSetupEmailHtml,
   buildDefaultSubscriptionSetupMessage,
+  buildDefaultSubscriptionSetupSubject,
   formatSubscriptionAmountLabel,
+  wrapSubscriptionMessageInBrandedHtml,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
 import {
   computeSubscriptionEndsAt,
@@ -205,6 +210,8 @@ export const SubscriptionFormEditor = forwardRef<
   const refresh = useRefresh();
   const { identity } = useGetIdentity();
   const { title: orgTitle } = useConfigurationContext();
+  const orgLabel = resolveInvoiceOrganizationName({ title: orgTitle });
+  const logoUrl = `${resolvePublicAppBaseUrl()}${PRODUCT_MARK_SRC}`;
   const dataProvider = useDataProvider<CrmDataProvider>();
   const staffCardRef = useRef<SubscriptionStaffCardFormHandle>(null);
 
@@ -601,7 +608,7 @@ export const SubscriptionFormEditor = forwardRef<
 
   const defaultMessage = useMemo(() => {
     const shared = {
-      orgLabel: orgTitle ?? "Latino Business Support",
+      orgLabel,
       subscriptionName,
       subscriptionNumber:
         (subscription?.subscription_number ?? referenceNumber) || null,
@@ -618,7 +625,7 @@ export const SubscriptionFormEditor = forwardRef<
     return buildDefaultSubscriptionSetupMessage(shared);
   }, [
     enrollmentMode,
-    orgTitle,
+    orgLabel,
     subscriptionName,
     subscription?.subscription_number,
     referenceNumber,
@@ -633,15 +640,11 @@ export const SubscriptionFormEditor = forwardRef<
     : defaultMessage;
 
   const deliveryEmailHtml = useMemo(() => {
-    if (enrollmentMode !== "agreement") {
-      return deliveryMessage.replace(/\n/g, "<br/>");
-    }
-    if (messageEdited) {
-      return deliveryMessage.replace(/\n/g, "<br/>");
-    }
-    return buildDefaultAgreementInviteEmailHtml({
-      orgLabel: orgTitle ?? "Latino Business Support",
-      clientName: clientDisplayName !== "Client" ? clientDisplayName : null,
+    const clientName =
+      clientDisplayName !== "Client" ? clientDisplayName : null;
+    const sharedHtml = {
+      orgLabel,
+      clientName,
       subscriptionName,
       subscriptionNumber:
         (subscription?.subscription_number ?? referenceNumber) || null,
@@ -651,12 +654,31 @@ export const SubscriptionFormEditor = forwardRef<
         billingInterval,
       ),
       shareUrl: previewShareUrl,
-    });
+      logoUrl,
+    };
+    if (messageEdited) {
+      return wrapSubscriptionMessageInBrandedHtml({
+        orgLabel,
+        clientName,
+        message: deliveryMessage,
+        shareUrl: previewShareUrl,
+        ctaLabel:
+          enrollmentMode === "agreement"
+            ? "Review & sign agreement"
+            : "Start subscription",
+        logoUrl,
+      });
+    }
+    if (enrollmentMode === "agreement") {
+      return buildDefaultAgreementInviteEmailHtml(sharedHtml);
+    }
+    return buildDefaultSubscriptionSetupEmailHtml(sharedHtml);
   }, [
     enrollmentMode,
     messageEdited,
     deliveryMessage,
-    orgTitle,
+    orgLabel,
+    logoUrl,
     clientDisplayName,
     subscriptionName,
     subscription?.subscription_number,
@@ -671,8 +693,11 @@ export const SubscriptionFormEditor = forwardRef<
     if (enrollmentMode === "agreement") {
       return buildDefaultAgreementInviteSubject(subscriptionName);
     }
-    return `${orgTitle ?? "Latino Business Support"}: Set up ${subscriptionName}`;
-  }, [enrollmentMode, orgTitle, subscriptionName]);
+    return buildDefaultSubscriptionSetupSubject({
+      orgLabel,
+      subscriptionName,
+    });
+  }, [enrollmentMode, orgLabel, subscriptionName]);
 
   const endsAtIso = useMemo(() => {
     const startDate = new Date(`${startsAt}T00:00:00`);
@@ -1877,7 +1902,7 @@ export const SubscriptionFormEditor = forwardRef<
           deliveryEmailHtml={deliveryEmailHtml}
           deliveryEmailSubject={deliveryEmailSubject}
           enrollmentMode={enrollmentMode}
-          orgTitle={orgTitle ?? "Latino Business Support"}
+          orgTitle={orgLabel}
           canSubmit={canSubmit}
           isPending={saveMutation.isPending}
           onSubmit={() => saveMutation.mutate()}

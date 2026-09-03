@@ -1692,6 +1692,7 @@ export async function deliverSubscriptionSetupLink(
     message?: string | null;
     sendEmail?: boolean;
     sendSms?: boolean;
+    kind?: "setup" | "card_update";
   },
 ) {
   const { shareUrl } = await ensureSubscriptionSetupShareLink(supabase, {
@@ -1722,6 +1723,7 @@ export async function deliverSubscriptionSetupLink(
     contactId: params.subscription.contact_id,
     subscriptionId: params.subscription.id,
     purpose: "setup_link",
+    kind: params.kind ?? "setup",
   });
 }
 

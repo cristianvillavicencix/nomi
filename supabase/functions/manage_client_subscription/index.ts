@@ -392,14 +392,11 @@ Deno.serve(
             baseUrl,
             emailTo: recipientEmail,
             smsTo: body.sms_to,
-            subject:
-              body.subject ??
-              (isCardUpdate
-                ? `${org?.name ?? "Latino Business Support"}: Update card for ${subscription.name}`
-                : undefined),
+            subject: body.subject,
             message: body.message,
             sendEmail: body.send_email,
             sendSms: body.send_sms,
+            kind: isCardUpdate ? "card_update" : "setup",
           });
 
           const { data: fresh } = await supabaseAdmin
