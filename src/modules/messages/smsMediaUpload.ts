@@ -72,11 +72,24 @@ export const downloadMediaUrl = async (urlOrPath: string) => {
     }
     return;
   }
-  await downloadPrivateStorageFile({
-    bucket: MESSAGING_ATTACHMENTS_BUCKET,
-    path: urlOrPath,
-    filename: fileName,
-  });
+
+  // Avoid fetch() blob downloads for private storage:
+  // some signed storage URLs allow <img> rendering but block fetch due to CORS.
+  // Downloading via the signed URL navigation is more reliable.
+  const signedUrl = await createSignedMediaUrl(urlOrPath);
+  if (!signedUrl) {
+    throw new Error(
+      "Could not download this attachment. Ask the sender to resend the image.",
+    );
+  }
+
+  const anchor = document.createElement("a");
+  anchor.href = signedUrl;
+  anchor.download = fileName;
+  anchor.rel = "noopener";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
 };
 
 export const isImageMediaUrl = (urlOrPath: string) =>
