@@ -267,6 +267,17 @@ export type ClientSubscription = {
   updated_at?: string;
 } & Pick<RaRecord, "id">;
 
+export type ClientInvoiceEmailLog = {
+  org_id?: number;
+  invoice_id: Identifier;
+  email_type: string;
+  reference_key: string;
+  recipient_email: string;
+  delivery_status?: "sent" | "failed" | "skipped" | string | null;
+  error_message?: string | null;
+  sent_at?: string | null;
+} & Pick<RaRecord, "id">;
+
 export type ClientInvoiceAutoChargeLog = {
   org_id?: number;
   invoice_id: Identifier;
