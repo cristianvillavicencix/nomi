@@ -349,10 +349,10 @@ Deno.serve((req: Request) =>
             throw new Error("SMS is disabled in Settings → Connectors");
           }
 
-          const mediaForSend =
-            settings.messaging_provider === "telnyx"
-              ? mediaUrls
-              : await resolveTwilioMediaUrls(mediaUrls);
+          // Both Twilio and Telnyx require the media items to be reachable as URLs.
+          // Our stored `media_urls` are storage object paths, so we sign them.
+          // (If a legacy row already contains a public http(s) URL, we keep it as-is.)
+          const mediaForSend = await resolveTwilioMediaUrls(mediaUrls);
           const sendResult = await sendOrgSms({
             orgId,
             to: externalPhone,
