@@ -711,12 +711,6 @@ export const billingProvider = {
   }) {
     const { data, error } = await invokeEdgeFunction<{
       subscription?: Record<string, unknown>;
-      emailed?: boolean;
-      skipped?: string;
-      payment_methods?: Array<Record<string, unknown>>;
-      email_sent?: boolean;
-      sms_sent?: boolean;
-    }>(
       checkout_url?: string | null;
       setup_link_stale?: boolean;
       synced?: boolean;
