@@ -65,6 +65,7 @@ import { sendMeetingShareNotifications } from "@/modules/meetings/sendMeetingSha
 import { cn } from "@/lib/utils";
 import { useOrganizationMeetingNotificationSettings } from "@/modules/settings/useOrganizationMeetingNotificationSettings";
 import { DEFAULT_MEETING_NOTIFICATION_SETTINGS } from "@/modules/meetings/meetingNotificationSettings";
+import { TeamMemberMultiSelect } from "@/modules/shared/TeamMemberMultiSelect";
 
 const dealOptionText = (choice: {
   name?: string | null;
