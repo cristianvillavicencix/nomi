@@ -72,7 +72,20 @@ export const MeetingRowActionsMenu = ({
 
   return (
     <>
-      <DropdownMenu>
+      <div className="flex items-center justify-end gap-1">
+        {meetingUrl ? (
+          <IconButton asChild aria-label="Join call">
+            <a
+              href={meetingUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Video className="size-4" />
+            </a>
+          </IconButton>
+        ) : null}
+
+        <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <IconButton aria-label="Meeting actions">
             <MoreHorizontal className="size-4" />
@@ -81,14 +94,6 @@ export const MeetingRowActionsMenu = ({
         <DropdownMenuContent align="end" className="min-w-44">
           {meetingUrl ? (
             <>
-              <DropdownMenuItem
-                onSelect={() => {
-                  window.open(meetingUrl, "_blank", "noopener,noreferrer");
-                }}
-              >
-                <Video className="size-4" />
-                Join call
-              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => void handleCopy()}>
                 <Copy className="size-4" />
                 {copied ? "Copied" : "Copy link"}
@@ -115,6 +120,8 @@ export const MeetingRowActionsMenu = ({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      </div>
 
       {previewChannel ? (
         <MeetingResendInviteDialog

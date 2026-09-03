@@ -72,49 +72,55 @@ export const MeetingRowActionsMenu = ({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <IconButton aria-label="Meeting actions">
-            <MoreHorizontal className="size-4" />
+      <div className="flex items-center justify-end gap-1">
+        {meetingUrl ? (
+          <IconButton asChild aria-label="Join call">
+            <a
+              href={meetingUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Video className="size-4" />
+            </a>
           </IconButton>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-44">
-          {meetingUrl ? (
-            <>
-              <DropdownMenuItem
-                onSelect={() => {
-                  window.open(meetingUrl, "_blank", "noopener,noreferrer");
-                }}
-              >
-                <Video className="size-4" />
-                Join call
+        ) : null}
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <IconButton aria-label="Meeting actions">
+              <MoreHorizontal className="size-4" />
+            </IconButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-44">
+            {meetingUrl ? (
+              <>
+                <DropdownMenuItem onSelect={() => void handleCopy()}>
+                  <Copy className="size-4" />
+                  {copied ? "Copied" : "Copy link"}
+                </DropdownMenuItem>
+                {(canEmail || canSms) && <DropdownMenuSeparator />}
+              </>
+            ) : null}
+            {canEmail ? (
+              <DropdownMenuItem onSelect={() => setPreviewChannel("email")}>
+                <Mail className="size-4" />
+                Resend email
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => void handleCopy()}>
-                <Copy className="size-4" />
-                {copied ? "Copied" : "Copy link"}
+            ) : null}
+            {canSms ? (
+              <DropdownMenuItem onSelect={() => setPreviewChannel("sms")}>
+                <MessageSquare className="size-4" />
+                Resend SMS
               </DropdownMenuItem>
-              {(canEmail || canSms) && <DropdownMenuSeparator />}
-            </>
-          ) : null}
-          {canEmail ? (
-            <DropdownMenuItem onSelect={() => setPreviewChannel("email")}>
-              <Mail className="size-4" />
-              Resend email
+            ) : null}
+            {(canEmail || canSms || meetingUrl) && <DropdownMenuSeparator />}
+            <DropdownMenuItem onSelect={onEdit}>
+              <Pencil className="size-4" />
+              Edit
             </DropdownMenuItem>
-          ) : null}
-          {canSms ? (
-            <DropdownMenuItem onSelect={() => setPreviewChannel("sms")}>
-              <MessageSquare className="size-4" />
-              Resend SMS
-            </DropdownMenuItem>
-          ) : null}
-          {(canEmail || canSms || meetingUrl) && <DropdownMenuSeparator />}
-          <DropdownMenuItem onSelect={onEdit}>
-            <Pencil className="size-4" />
-            Edit
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       {previewChannel ? (
         <MeetingResendInviteDialog
