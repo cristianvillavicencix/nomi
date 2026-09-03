@@ -38,6 +38,14 @@ type PendingAttachment = {
   previewUrl?: string;
 };
 
+const MMS_MAX_ITEMS = 10;
+const MMS_MAX_TOTAL_BYTES = 1_000_000;
+
+const formatBytesLabel = (bytes: number) =>
+  bytes >= 1_000_000
+    ? `${(bytes / 1_000_000).toFixed(1)} MB`
+    : `${Math.round(bytes / 1000)} KB`;
+
 export const ClientSmsComposer = ({
   contact,
   dealId,
@@ -166,6 +174,22 @@ export const ClientSmsComposer = ({
   }
 
   const addPendingFile = (file: File) => {
+    const nextCount = pendingFiles.length + 1;
+    if (nextCount > MMS_MAX_ITEMS) {
+      notify(`MMS supports up to ${MMS_MAX_ITEMS} attachments.`, {
+        type: "warning",
+      });
+      return;
+    }
+    const nextTotalBytes =
+      pendingFiles.reduce((sum, entry) => sum + entry.file.size, 0) + file.size;
+    if (nextTotalBytes > MMS_MAX_TOTAL_BYTES) {
+      notify(
+        `MMS attachments must stay under ${formatBytesLabel(MMS_MAX_TOTAL_BYTES)} total.`,
+        { type: "warning" },
+      );
+      return;
+    }
     const id = crypto.randomUUID();
     const previewUrl = file.type.startsWith("image/")
       ? URL.createObjectURL(file)
@@ -232,6 +256,16 @@ export const ClientSmsComposer = ({
         !isInternalNote && signature && (signatureRequired || includeSignature);
       if (shouldIncludeSignature && finalBody.length > 0) {
         finalBody = `${finalBody}\n${signature}`;
+      }
+
+      if (uploadedUrls.length > MMS_MAX_ITEMS) {
+        throw new Error(`MMS supports up to ${MMS_MAX_ITEMS} attachments.`);
+      }
+      const totalBytes = pendingFiles.reduce((sum, entry) => sum + entry.file.size, 0);
+      if (totalBytes > MMS_MAX_TOTAL_BYTES) {
+        throw new Error(
+          `MMS attachments must stay under ${formatBytesLabel(MMS_MAX_TOTAL_BYTES)} total.`,
+        );
       }
 
       if (!isInternalNote && finalBody && isSmsLengthOverLimit(finalBody)) {
