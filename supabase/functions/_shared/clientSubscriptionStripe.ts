@@ -58,12 +58,14 @@ export type ClientSubscriptionRow = {
   setup_checkout_url: string | null;
   setup_share_url?: string | null;
   enrollment_mode?: "direct" | "agreement" | null;
+  agreement_contract_terms_id?: number | null;
   agreement_signed_at?: string | null;
   agreement_signatory_name?: string | null;
   agreement_signature_png?: string | null;
   agreement_signed_ip?: string | null;
   agreement_terms_markdown?: string | null;
   agreement_terms_version?: string | null;
+  agreement_invite_sent_at?: string | null;
   agreement_completion_emailed_at?: string | null;
   activated_at?: string | null;
   stripe_payment_method_id?: string | null;
@@ -625,10 +627,24 @@ export async function reactivateStripeSubscription(
     subscription: ClientSubscriptionRow;
     metadata: Record<string, string>;
   },
-) {
+): Promise<{ needs_setup: boolean }> {
+  const restorePendingSetup = async () => {
+    const now = new Date().toISOString();
+    await supabase
+      .from("client_subscriptions")
+      .update({
+        status: "pending_setup",
+        canceled_at: null,
+        cancel_at_period_end: false,
+        updated_at: now,
+      })
+      .eq("id", params.subscription.id);
+  };
+
   const customerId = params.subscription.stripe_customer_id?.trim();
   if (!customerId) {
-    throw new Error("Stripe customer is not set up for this subscription");
+    await restorePendingSetup();
+    return { needs_setup: true };
   }
 
   const savedPayment = await resolveClientStripePaymentMethod(supabase, {
@@ -637,11 +653,13 @@ export async function reactivateStripeSubscription(
     companyId: params.subscription.company_id,
   });
 
-  const paymentMethodId = savedPayment?.stripePaymentMethodId?.trim();
+  const paymentMethodId =
+    savedPayment?.stripePaymentMethodId?.trim() ||
+    params.subscription.stripe_payment_method_id?.trim() ||
+    "";
   if (!paymentMethodId) {
-    throw new Error(
-      "No saved payment method found. Send a setup link to collect a card first.",
-    );
+    await restorePendingSetup();
+    return { needs_setup: true };
   }
 
   const lineItems = normalizeSubscriptionLineItems(
@@ -678,7 +696,7 @@ export async function reactivateStripeSubscription(
     })
     .eq("id", params.subscription.id);
 
-  return stripeSub;
+  return { needs_setup: false };
 }
 
 export const mapStripeSubscriptionStatus = (

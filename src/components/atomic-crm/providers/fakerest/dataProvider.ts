@@ -1439,6 +1439,10 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     email_to,
     send_email,
     send_sms,
+    enrollment_mode,
+    agreement_contract_terms_id,
+    agreement_terms_markdown,
+    agreement_terms_version,
   }) => {
     if (action === "update") {
       const { data: subscription } = await baseDataProvider.update(
@@ -1454,11 +1458,41 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
             ...(reference_number !== undefined ? { reference_number } : {}),
             ...(deal_id !== undefined ? { deal_id } : {}),
             ...(line_items !== undefined ? { line_items } : {}),
+            ...(enrollment_mode
+              ? {
+                  enrollment_mode,
+                  agreement_contract_terms_id:
+                    agreement_contract_terms_id ?? null,
+                  agreement_terms_markdown: agreement_terms_markdown ?? null,
+                  agreement_terms_version: agreement_terms_version ?? null,
+                }
+              : {}),
           },
           previousData: { id: subscriptionId },
         },
       );
       return { subscription, setup_link_stale: false };
+    }
+
+    if (action === "reactivate") {
+      const { data: current } = await baseDataProvider.getOne(
+        "client_subscriptions",
+        { id: subscriptionId },
+      );
+      const hasCard = Boolean(current.stripe_payment_method_id);
+      const { data: updated } = await baseDataProvider.update(
+        "client_subscriptions",
+        {
+          id: subscriptionId,
+          data: {
+            status: hasCard ? "active" : "pending_setup",
+            canceled_at: null,
+            cancel_at_period_end: false,
+          },
+          previousData: current,
+        },
+      );
+      return { subscription: updated, needs_setup: !hasCard };
     }
 
     if (action === "apply_payment") {

@@ -307,9 +307,22 @@ export const SubscriptionDetailToolbar = ({
     mutationFn: (
       input: Parameters<CrmDataProvider["manageClientSubscription"]>[0],
     ) => dataProvider.manageClientSubscription(input),
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       refresh();
-      notify("Subscription updated", { type: "success" });
+      if (variables.action === "reactivate" && data?.needs_setup) {
+        notify(
+          "Restored to Pending setup — collect a card to finish activation.",
+          { type: "info" },
+        );
+        setFinishSetupOpen(true);
+        return;
+      }
+      notify(
+        variables.action === "reactivate"
+          ? "Subscription reactivated"
+          : "Subscription updated",
+        { type: "success" },
+      );
     },
     onError: (error: Error) => {
       notify(error.message || "Could not update subscription", { type: "error" });

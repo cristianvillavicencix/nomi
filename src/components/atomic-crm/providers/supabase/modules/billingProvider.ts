@@ -708,11 +708,16 @@ export const billingProvider = {
     base_url?: string | null;
     /** Days until auto-resume for pause. Null = until manual resume. */
     pause_days?: number | null;
+    enrollment_mode?: "direct" | "agreement" | null;
+    agreement_contract_terms_id?: number | null;
+    agreement_terms_markdown?: string | null;
+    agreement_terms_version?: string | null;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       subscription?: Record<string, unknown>;
       checkout_url?: string | null;
       setup_link_stale?: boolean;
+      needs_setup?: boolean;
       synced?: boolean;
       reason?: string;
       used_saved_card?: boolean;
@@ -752,6 +757,10 @@ export const billingProvider = {
         subject: params.subject,
         base_url: params.base_url ?? resolvePublicAppBaseUrl(),
         pause_days: params.pause_days,
+        enrollment_mode: params.enrollment_mode,
+        agreement_contract_terms_id: params.agreement_contract_terms_id,
+        agreement_terms_markdown: params.agreement_terms_markdown,
+        agreement_terms_version: params.agreement_terms_version,
       },
     });
 

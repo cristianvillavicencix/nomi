@@ -284,6 +284,12 @@ export const SubscriptionFormEditor = forwardRef<
   const isPendingSetup =
     subscription?.status === "pending_setup" ||
     (mode === "create" && waitingForCard);
+  const canChangeStartMode =
+    mode === "edit" &&
+    subscription?.status === "pending_setup" &&
+    !subscription.agreement_signed_at &&
+    !subscription.stripe_subscription_id?.trim();
+  const showStartModeControls = mode === "create" || canChangeStartMode;
   const isActiveLike =
     subscription?.status === "active" ||
     subscription?.status === "paused" ||
@@ -352,8 +358,10 @@ export const SubscriptionFormEditor = forwardRef<
       },
       {
         enabled:
-          mode === "create" &&
-          (enrollmentMode === "agreement" || initialContractTermsId != null),
+          showStartModeControls &&
+          (enrollmentMode === "agreement" ||
+            initialContractTermsId != null ||
+            Boolean(subscription?.agreement_contract_terms_id)),
         // Contracts → Templates is the live source of truth for create enrollment.
         staleTime: 0,
         refetchOnMount: "always",
@@ -363,7 +371,7 @@ export const SubscriptionFormEditor = forwardRef<
 
   // Live sync when Templates are saved (same tab) or the window is focused again.
   useEffect(() => {
-    if (mode !== "create") return;
+    if (!showStartModeControls) return;
     const pullLatest = () => {
       void refetchContractTemplates();
     };
@@ -373,7 +381,7 @@ export const SubscriptionFormEditor = forwardRef<
       window.removeEventListener("focus", pullLatest);
       window.removeEventListener("nomi:contract-terms-updated", pullLatest);
     };
-  }, [mode, refetchContractTemplates]);
+  }, [showStartModeControls, refetchContractTemplates]);
 
   const { data: initialPackage } = useGetOne<ServicePackage>(
     "service_packages",
@@ -415,7 +423,7 @@ export const SubscriptionFormEditor = forwardRef<
     { ids: packageIdsOnLines },
     {
       enabled:
-        mode === "create" &&
+        showStartModeControls &&
         enrollmentMode === "agreement" &&
         packageIdsOnLines.length > 0,
     },
@@ -740,6 +748,16 @@ export const SubscriptionFormEditor = forwardRef<
     setReferenceNumber(subscription.reference_number ?? "");
     setDealId(subscription.deal_id ? String(subscription.deal_id) : "");
     setPaymentMode(inferSubscriptionPaymentMode(subscription));
+    setEnrollmentMode(
+      subscription.enrollment_mode === "agreement" ? "agreement" : "direct",
+    );
+    setAgreementTermsMarkdown(subscription.agreement_terms_markdown ?? "");
+    setAgreementTermsEdited(false);
+    setSelectedContractTermsId(
+      subscription.agreement_contract_terms_id != null
+        ? Number(subscription.agreement_contract_terms_id)
+        : null,
+    );
     if (initialPaymentMode && isPendingSetup) {
       setPaymentMode(initialPaymentMode);
     }
@@ -949,6 +967,37 @@ export const SubscriptionFormEditor = forwardRef<
         }
       }
 
+      const enrollmentChanged =
+        canChangeStartMode &&
+        enrollmentMode !== (subscription.enrollment_mode ?? "direct");
+
+      let agreementTermsForUpdate: string | null = null;
+      if (canChangeStartMode && enrollmentMode === "agreement") {
+        if (!agreementTermsMarkdown.trim()) {
+          throw new Error("Add terms before saving Agreement start mode");
+        }
+        agreementTermsForUpdate = fillAgreementTermsMarkdown(
+          agreementTermsMarkdown.trim(),
+          buildSubscriptionContractVariables({
+            clientName: clientDisplayName,
+            clientAddress,
+            clientRepresentative: clientRepresentativeName,
+            clientEmail: recipientEmail || null,
+            clientPhone: recipientPhone || null,
+            providerRepresentative: identity?.fullName?.trim() || null,
+            subscriptionDescription: null,
+            subscriptionName: subscriptionName || "Subscription",
+            subscriptionNumber: subscription.subscription_number ?? null,
+            amount,
+            currency: subscription.currency ?? "USD",
+            billingInterval,
+            lineItems: lineItemsPayload,
+            termsVersion: selectedTemplate?.version || "1.0",
+            defaultVariables: selectedTemplate?.default_variables ?? null,
+          }),
+        );
+      }
+
       const updateResult = await dataProvider.manageClientSubscription({
         subscriptionId: subscription.id,
         action: "update",
@@ -959,9 +1008,52 @@ export const SubscriptionFormEditor = forwardRef<
         reference_number: referenceNumber.trim() || null,
         deal_id: dealId ? Number(dealId) : null,
         line_items: lineItemsPayload,
+        ...(canChangeStartMode
+          ? {
+              enrollment_mode: enrollmentMode,
+              agreement_contract_terms_id:
+                enrollmentMode === "agreement"
+                  ? selectedContractTermsId
+                  : null,
+              agreement_terms_markdown:
+                enrollmentMode === "agreement"
+                  ? agreementTermsForUpdate
+                  : null,
+              agreement_terms_version:
+                enrollmentMode === "agreement"
+                  ? selectedTemplate?.version ||
+                    subscription.agreement_terms_version ||
+                    "1.0"
+                  : null,
+            }
+          : {}),
       });
 
-      if (isPendingSetup && !subscription.stripe_subscription_id) {
+      if (
+        canChangeStartMode &&
+        enrollmentMode === "agreement" &&
+        (enrollmentChanged || sendEmail || sendSms)
+      ) {
+        if (sendEmail || sendSms) {
+          await dataProvider.manageClientSubscription({
+            subscriptionId: subscription.id,
+            action: "send_agreement",
+            send_email: sendEmail,
+            send_sms: sendSms,
+            email_to: recipientEmail || null,
+            sms_to: recipientPhone || null,
+            message: messageEdited ? message.trim() || null : null,
+            base_url: resolvePublicAppBaseUrl(),
+          });
+        }
+        return updateResult;
+      }
+
+      if (
+        isPendingSetup &&
+        !subscription.stripe_subscription_id &&
+        enrollmentMode === "direct"
+      ) {
         const paymentResult = await dataProvider.manageClientSubscription({
           subscriptionId: subscription.id,
           action: "apply_payment",
@@ -1470,7 +1562,7 @@ export const SubscriptionFormEditor = forwardRef<
 
         {!paymentSectionLocked ? (
           <CreateFormSection title="Payment" className="[&>div]:space-y-3">
-            {mode === "create" ? (
+            {showStartModeControls ? (
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">
                   Start mode
@@ -1487,6 +1579,15 @@ export const SubscriptionFormEditor = forwardRef<
                     )}
                     disabled={fieldsLocked}
                     onClick={() => {
+                      if (
+                        canChangeStartMode &&
+                        enrollmentMode === "agreement"
+                      ) {
+                        const confirmed = window.confirm(
+                          "Switch to Direct start mode? Any agreement invite already sent will no longer match this enrollment. Unsigned agreement terms will be cleared when you save.",
+                        );
+                        if (!confirmed) return;
+                      }
                       setEnrollmentMode("direct");
                       if (!sendEmail && !sendSms) {
                         setSendEmail(false);
@@ -1519,11 +1620,14 @@ export const SubscriptionFormEditor = forwardRef<
                   {enrollmentMode === "agreement"
                     ? "Client reviews terms, signs, then adds a card. Billing starts automatically."
                     : "Create with a card on file, enter a card, or request setup from the client."}
+                  {canChangeStartMode
+                    ? " Save to apply the start mode change."
+                    : null}
                 </p>
               </div>
             ) : null}
 
-            {mode === "create" && enrollmentMode === "agreement" ? (
+            {showStartModeControls && enrollmentMode === "agreement" ? (
               <div className="space-y-3 rounded-md border bg-muted/10 p-3">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-end gap-2">
@@ -1720,7 +1824,8 @@ export const SubscriptionFormEditor = forwardRef<
               </div>
             ) : null}
 
-            {enrollmentMode === "direct" || mode !== "create" ? (
+            {enrollmentMode === "direct" ||
+            (mode === "edit" && !canChangeStartMode) ? (
               <>
             {hasSavedCards ? (
               <div className="space-y-2">

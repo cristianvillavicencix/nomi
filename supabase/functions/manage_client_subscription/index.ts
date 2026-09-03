@@ -71,6 +71,10 @@ type ManageBody = {
   base_url?: string | null;
   /** Days until Stripe auto-resumes a pause. Null/omit = until manual resume. */
   pause_days?: number | null;
+  enrollment_mode?: "direct" | "agreement" | null;
+  agreement_contract_terms_id?: number | null;
+  agreement_terms_markdown?: string | null;
+  agreement_terms_version?: string | null;
 };
 
 const loadSubscription = async (orgId: number, subscriptionId: number) => {
@@ -644,6 +648,57 @@ Deno.serve(
             updated_at: new Date().toISOString(),
           };
 
+          if (body.enrollment_mode !== undefined && body.enrollment_mode !== null) {
+            const nextMode =
+              body.enrollment_mode === "agreement" ? "agreement" : "direct";
+            const currentMode = subscription.enrollment_mode ?? "direct";
+            if (nextMode !== currentMode) {
+              if (subscription.status !== "pending_setup") {
+                return createErrorResponse(
+                  400,
+                  "Start mode can only be changed while setup is pending",
+                );
+              }
+              if (subscription.agreement_signed_at) {
+                return createErrorResponse(
+                  400,
+                  "Cannot change start mode after the agreement is signed",
+                );
+              }
+              if (subscription.stripe_subscription_id?.trim()) {
+                return createErrorResponse(
+                  400,
+                  "Cannot change start mode after Stripe billing has started",
+                );
+              }
+            }
+
+            dbPatch.enrollment_mode = nextMode;
+            if (nextMode === "agreement") {
+              const termsMarkdown = body.agreement_terms_markdown?.trim() || null;
+              if (!termsMarkdown) {
+                return createErrorResponse(
+                  400,
+                  "Add agreement terms before switching to Agreement start mode",
+                );
+              }
+              dbPatch.agreement_contract_terms_id =
+                body.agreement_contract_terms_id != null
+                  ? Number(body.agreement_contract_terms_id)
+                  : subscription.agreement_contract_terms_id;
+              dbPatch.agreement_terms_markdown = termsMarkdown;
+              dbPatch.agreement_terms_version =
+                body.agreement_terms_version?.trim() ||
+                subscription.agreement_terms_version ||
+                "1.0";
+            } else if (currentMode === "agreement") {
+              dbPatch.agreement_contract_terms_id = null;
+              dbPatch.agreement_terms_markdown = null;
+              dbPatch.agreement_terms_version = null;
+              dbPatch.agreement_invite_sent_at = null;
+            }
+          }
+
           if (
             subscription.status === "pending_setup" &&
             billingChanged
@@ -712,24 +767,34 @@ Deno.serve(
               "Only canceled subscriptions can be reactivated",
             );
           }
-          await reactivateStripeSubscription(stripe, supabaseAdmin, {
-            subscription,
-            metadata: buildSubscriptionMetadata({
-              orgId: member.org_id,
-              subscriptionId: subscription.id,
-              contactId: subscription.contact_id,
-              companyId: subscription.company_id,
-            }),
-          });
+          const reactivation = await reactivateStripeSubscription(
+            stripe,
+            supabaseAdmin,
+            {
+              subscription,
+              metadata: buildSubscriptionMetadata({
+                orgId: member.org_id,
+                subscriptionId: subscription.id,
+                contactId: subscription.contact_id,
+                companyId: subscription.company_id,
+              }),
+            },
+          );
           const { data: fresh } = await supabaseAdmin
             .from("client_subscriptions")
             .select("*")
             .eq("id", subscription.id)
             .single();
-          return new Response(JSON.stringify({ subscription: fresh }), {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return new Response(
+            JSON.stringify({
+              subscription: fresh,
+              needs_setup: reactivation.needs_setup,
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
         }
 
         if (!stripeSubId) {
