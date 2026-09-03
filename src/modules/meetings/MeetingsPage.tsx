@@ -35,7 +35,10 @@ import {
 import type {
   CalendarEventRecord,
   Contact,
+  Company,
+  OrganizationMember,
 } from "@/components/atomic-crm/types";
+import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import { CalendarReminderDialog } from "@/modules/calendar/CalendarReminderDialog";
 import {
   formatEventTimeRange,
@@ -43,7 +46,8 @@ import {
   getContactDisplayName,
   DEFAULT_MEETING_DURATION_MINUTES,
 } from "@/modules/calendar/calendarReminderOptions";
-import { toDateKey } from "@/modules/calendar/calendarUtils";
+import { CalendarEventAssigneeAvatars } from "@/modules/calendar/CalendarEventAssigneeAvatars";
+import { toDateKey, type CalendarEvent } from "@/modules/calendar/calendarUtils";
 import { MeetingRowActionsMenu } from "@/modules/meetings/MeetingRowActionsMenu";
 import {
   MeetingDoneSwitch,
@@ -118,6 +122,54 @@ export const MeetingsPage = () => {
     });
     return map;
   }, [contacts]);
+
+  const companyIds = useMemo(() => {
+    const ids = meetings
+      .map((meeting) => meeting.company_id)
+      .filter(
+        (id): id is Identifier =>
+          id != null && String(id).trim() !== "",
+      );
+    return Array.from(new Set(ids));
+  }, [meetings]);
+
+  const { data: companies = [] } = useGetMany<Company>(
+    "companies_summary",
+    { ids: companyIds },
+    { enabled: companyIds.length > 0 },
+  );
+
+  const companiesById = useMemo(() => {
+    return new Map(companies.map((company) => [String(company.id), company]));
+  }, [companies]);
+
+  const memberIds = useMemo(() => {
+    const ids = new Set<Identifier>();
+    for (const meeting of meetings) {
+      if (
+        meeting.organization_member_id != null &&
+        String(meeting.organization_member_id).trim() !== ""
+      ) {
+        ids.add(meeting.organization_member_id);
+      }
+      for (const id of meeting.assignee_member_ids ?? []) {
+        if (id != null && String(id).trim() !== "") {
+          ids.add(id);
+        }
+      }
+    }
+    return Array.from(ids);
+  }, [meetings]);
+
+  const { data: members = [] } = useGetMany<OrganizationMember>(
+    "organization_members",
+    { ids: memberIds },
+    { enabled: memberIds.length > 0 },
+  );
+
+  const membersById = useMemo(() => {
+    return new Map(members.map((member) => [String(member.id), member]));
+  }, [members]);
 
   const filteredMeetings = useMemo(() => {
     const scoped = meetings.filter((record) =>
@@ -303,20 +355,48 @@ export const MeetingsPage = () => {
                     formatDurationLabel(meeting.duration_minutes) ?? "—";
                   const isDone = Boolean(meeting.completed_at);
                   const isPastTab = tab === "past";
+                  const company =
+                    meeting.company_id != null
+                      ? companiesById.get(String(meeting.company_id)) ?? null
+                      : null;
+
+                  const calendarEventForAvatars = {
+                    kind: "meeting",
+                    id: String(meeting.id),
+                    date: meeting.event_date,
+                    time: meeting.event_time ?? null,
+                    title: meeting.title,
+                    record: meeting,
+                    done: isDone,
+                    assignedName: null,
+                    contactName: null,
+                  } as CalendarEvent;
 
                   return (
                     <TableRow key={String(meeting.id)}>
                       <TableCell className="font-medium">
-                        {meeting.contact_id ? (
-                          <Link
-                            to={`/contacts/${meeting.contact_id}/show`}
-                            className="link-action"
-                          >
-                            {contactName}
-                          </Link>
-                        ) : (
-                          contactName
-                        )}
+                        <div className="flex items-center gap-2">
+                          {company ? (
+                            <CompanyAvatar record={company} width={20} />
+                          ) : null}
+                          {meeting.contact_id ? (
+                            <Link
+                              to={`/contacts/${meeting.contact_id}/show`}
+                              className="link-action"
+                            >
+                              {contactName}
+                            </Link>
+                          ) : (
+                            contactName
+                          )}
+                        </div>
+                        <div className="mt-1">
+                          <CalendarEventAssigneeAvatars
+                            event={calendarEventForAvatars}
+                            membersById={membersById}
+                            compact
+                          />
+                        </div>
                       </TableCell>
                       <TableCell>{meeting.title}</TableCell>
                       <TableCell>
