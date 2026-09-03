@@ -479,9 +479,12 @@ export const ClientSmsComposer = ({
               ) : (
                 <Paperclip className="size-3.5 text-muted-foreground" />
               )}
-              <span className="max-w-[140px] truncate">
-                {pending.file.name}
-              </span>
+              <div className="min-w-0">
+                <div className="max-w-[140px] truncate">{pending.file.name}</div>
+                <div className="text-[10px] text-muted-foreground">
+                  {formatBytesLabel(pending.file.size)}
+                </div>
+              </div>
               <button
                 type="button"
                 className="rounded-full p-0.5 hover:bg-muted"
