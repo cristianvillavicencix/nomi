@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
+import { Avatar as ContactAvatar } from "@/components/atomic-crm/contacts/Avatar";
 import {
   getContactEmail,
   getContactFullName,
@@ -83,7 +84,13 @@ export const buildCompanySearchMeta = (company: Company) => {
 export const renderContactReferenceOption = (contact: Contact): ReactNode => {
   const title = contactReferenceShortLabel(contact);
   const meta = buildContactSearchMeta(contact);
-  return <ReferenceOptionSingleLine title={title} meta={meta || undefined} />;
+  return (
+    <ReferenceOptionWithAvatar
+      avatar={<ContactAvatar record={contact} width={25} />}
+      title={title}
+      meta={meta || undefined}
+    />
+  );
 };
 
 export const renderCompanyReferenceOption = (company: Company): ReactNode => {
