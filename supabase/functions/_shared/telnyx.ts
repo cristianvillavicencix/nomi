@@ -22,9 +22,9 @@ export async function sendTelnyxSms(params: {
   messagingProfileId?: string | null;
   statusCallback?: string | null;
 }): Promise<TelnyxSendResult> {
-  const body = params.body.trim() || " ";
-  if (body !== " ") {
-    assertSmsBodyWithinLimit(body);
+  const rawBody = params.body.trim();
+  if (rawBody) {
+    assertSmsBodyWithinLimit(rawBody);
   }
 
   const from = params.from.trim();
@@ -32,23 +32,24 @@ export async function sendTelnyxSms(params: {
     throw new Error("Telnyx From number is required");
   }
 
+  const media = (params.mediaUrls ?? [])
+    .map((url) => url.trim())
+    .filter(Boolean);
   const payload: Record<string, unknown> = {
     from,
     to: params.to.trim(),
-    text: body,
-    type: "SMS",
+    type: media.length > 0 ? "MMS" : "SMS",
   };
+  if (rawBody || media.length === 0) {
+    payload.text = rawBody || " ";
+  }
+  if (media.length > 0) {
+    payload.media_urls = media;
+  }
 
   const profileId = params.messagingProfileId?.trim();
   if (profileId) {
     payload.messaging_profile_id = profileId;
-  }
-
-  const media = (params.mediaUrls ?? [])
-    .map((url) => url.trim())
-    .filter(Boolean);
-  if (media.length > 0) {
-    payload.media_urls = media;
   }
 
   const webhookUrl = params.statusCallback ?? getTelnyxSmsStatusCallbackUrl();
