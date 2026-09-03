@@ -212,6 +212,8 @@ export const QuickMeetingDialog = ({
       meeting_url: null as string | null,
       contact_id: null as Identifier | null,
       deal_id: null as Identifier | null,
+      // Pre-fill assignees with the current user so avatars render immediately.
+      assignee_member_ids: identity?.id != null ? [identity.id] : [],
       organization_member_id: identity?.id ?? null,
       completed_at: null,
       _meeting_contact_name: null as string | null,
@@ -424,6 +426,13 @@ const QuickMeetingFormBody = ({
             />
           </ReferenceInput>
         )}
+
+        <TeamMemberMultiSelect
+          source="assignee_member_ids"
+          label="Team"
+          required
+          placeholder="Select meeting assignees"
+        />
 
         <CreateFormFieldRow>
           <SelectInput
