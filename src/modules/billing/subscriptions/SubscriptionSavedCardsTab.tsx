@@ -17,6 +17,7 @@ import {
   type SubscriptionStaffCardFormHandle,
 } from "@/modules/billing/subscriptions/SubscriptionStaffCardForm";
 import {
+  formatPaymentMethodLabel,
   formatSavedCardLabel,
   formatSavedCardMask,
   savedCardSourceLabel,
@@ -486,12 +487,16 @@ export const SubscriptionSavedCardsTab = ({
         </div>
       )}
 
-      {subscription.payment_method_last4 ? (
+      {subscription.stripe_payment_method_id ||
+      subscription.payment_method_brand ||
+      subscription.payment_method_last4 ? (
         <p className="text-xs text-muted-foreground">
           Stripe currently charges{" "}
           <span className="font-medium text-foreground">
-            {subscription.payment_method_brand ?? "Card"}{" "}
-            {formatSavedCardMask(subscription.payment_method_last4)}
+            {formatPaymentMethodLabel(
+              subscription.payment_method_brand,
+              subscription.payment_method_last4,
+            )}
           </span>{" "}
           for renewals on this subscription.
         </p>

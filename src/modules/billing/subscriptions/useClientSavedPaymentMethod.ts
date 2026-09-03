@@ -39,8 +39,28 @@ const toSavedCard = (
 
 export const formatSavedCardMask = (last4: string) => `····${last4.trim()}`;
 
+/** Stripe Link often stores brand=link and placeholder last4=0000. */
+export const formatPaymentMethodLabel = (
+  brand?: string | null,
+  last4?: string | null,
+) => {
+  const rawBrand = brand?.trim() || "";
+  const digits = last4?.trim() || "";
+  const isLink = rawBrand.toLowerCase() === "link";
+  const hasRealLast4 = Boolean(digits) && digits !== "0000";
+  const prettyBrand = isLink
+    ? "Link"
+    : rawBrand
+      ? rawBrand.charAt(0).toUpperCase() + rawBrand.slice(1)
+      : "Card";
+
+  if (isLink && !hasRealLast4) return "Link";
+  if (hasRealLast4) return `${prettyBrand} ${formatSavedCardMask(digits)}`;
+  return prettyBrand;
+};
+
 export const formatSavedCardLabel = (card: ClientSavedPaymentMethod) =>
-  `${card.brand ?? "Card"} ${formatSavedCardMask(card.last4)}`;
+  formatPaymentMethodLabel(card.brand, card.last4);
 
 export const savedCardSourceLabel = (source: ClientSavedPaymentMethod["source"]) => {
   if (source === "contract") return "Proposal / deposit";

@@ -127,20 +127,61 @@ export async function buildSubscriptionAgreementDocuments(
 export async function sendSubscriptionAgreementCompletionEmail(
   supabase: SupabaseClient,
   subscription: ClientSubscriptionRow,
+  options?: { force?: boolean },
 ): Promise<{ emailed: boolean; skipped?: string }> {
-  if ((subscription as { agreement_completion_emailed_at?: string | null })
-    .agreement_completion_emailed_at) {
+  const force = options?.force === true;
+  if (
+    !force &&
+    (subscription as { agreement_completion_emailed_at?: string | null })
+      .agreement_completion_emailed_at
+  ) {
     return { emailed: false, skipped: "already_sent" };
   }
   if (!subscription.agreement_signed_at) {
+    await logSubscriptionDelivery(supabase, {
+      orgId: subscription.org_id,
+      subscriptionId: subscription.id,
+      channel: "email",
+      purpose: "agreement_completion",
+      toAddress: "unknown",
+      status: "skipped",
+      errorMessage: "not_signed",
+      createdBy: subscription.created_by_member_id
+        ? Number(subscription.created_by_member_id)
+        : null,
+    });
     return { emailed: false, skipped: "not_signed" };
   }
   if (!(await isOrgTransactionalEmailConfigured(subscription.org_id))) {
+    await logSubscriptionDelivery(supabase, {
+      orgId: subscription.org_id,
+      subscriptionId: subscription.id,
+      channel: "email",
+      purpose: "agreement_completion",
+      toAddress: "unknown",
+      status: "skipped",
+      errorMessage: "email_not_configured",
+      createdBy: subscription.created_by_member_id
+        ? Number(subscription.created_by_member_id)
+        : null,
+    });
     return { emailed: false, skipped: "email_not_configured" };
   }
 
   const docs = await buildSubscriptionAgreementDocuments(supabase, subscription);
   if (!docs.clientEmail) {
+    await logSubscriptionDelivery(supabase, {
+      orgId: subscription.org_id,
+      subscriptionId: subscription.id,
+      channel: "email",
+      purpose: "agreement_completion",
+      toAddress: "unknown",
+      status: "skipped",
+      errorMessage: "no_email",
+      createdBy: subscription.created_by_member_id
+        ? Number(subscription.created_by_member_id)
+        : null,
+    });
     return { emailed: false, skipped: "no_email" };
   }
 
@@ -168,28 +209,46 @@ export async function sendSubscriptionAgreementCompletionEmail(
     logoUrl: `${resolvePublicAppBaseUrl()}/logos/sigma.png`,
   });
 
-  await sendTransactionalEmail({
-    orgId: subscription.org_id,
-    orgName,
-    to: [docs.clientEmail],
-    subject,
-    textBody,
-    htmlBody,
-    attachments: [
-      {
-        name: docs.contractFilename,
-        contentBase64: docs.contractPdfBase64,
-        contentType: "application/pdf",
-      },
-      {
-        name: docs.receiptFilename,
-        contentBase64: docs.receiptPdfBase64,
-        contentType: "application/pdf",
-      },
-    ],
-    ...invoiceEmail,
-    emailChannel: "billing",
-  });
+  try {
+    await sendTransactionalEmail({
+      orgId: subscription.org_id,
+      orgName,
+      to: [docs.clientEmail],
+      subject,
+      textBody,
+      htmlBody,
+      attachments: [
+        {
+          name: docs.contractFilename,
+          contentBase64: docs.contractPdfBase64,
+          contentType: "application/pdf",
+        },
+        {
+          name: docs.receiptFilename,
+          contentBase64: docs.receiptPdfBase64,
+          contentType: "application/pdf",
+        },
+      ],
+      ...invoiceEmail,
+      emailChannel: "billing",
+    });
+  } catch (error) {
+    await logSubscriptionDelivery(supabase, {
+      orgId: subscription.org_id,
+      subscriptionId: subscription.id,
+      channel: "email",
+      purpose: "agreement_completion",
+      toAddress: docs.clientEmail,
+      subject,
+      bodyPreview: textBody,
+      status: "failed",
+      errorMessage: error instanceof Error ? error.message : "email_failed",
+      createdBy: subscription.created_by_member_id
+        ? Number(subscription.created_by_member_id)
+        : null,
+    });
+    throw error;
+  }
 
   await logSubscriptionDelivery(supabase, {
     orgId: subscription.org_id,

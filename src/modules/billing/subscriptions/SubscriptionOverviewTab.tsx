@@ -1,7 +1,8 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
-import { Download, ExternalLink, FileText, Receipt } from "lucide-react";
-import { useGetIdentity, useGetList, useGetMany, useNotify } from "ra-core";
+import { Download, ExternalLink, FileText, Mail, Receipt } from "lucide-react";
+import { useDataProvider, useGetIdentity, useGetList, useGetMany, useNotify, useRefresh } from "ra-core";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { OrganizationMember } from "@/modules/types";
 import { getClientShowPath } from "@/app/routing";
@@ -37,6 +38,7 @@ import {
   downloadSubscriptionAgreementPdf,
   downloadSubscriptionSetupReceiptPdf,
 } from "@/modules/billing/subscriptions/subscriptionAgreementClientPdf";
+import { formatPaymentMethodLabel } from "@/modules/billing/subscriptions/useClientSavedPaymentMethod";
 
 type SubscriptionDeliveryLog = {
   id: number | string;
@@ -101,10 +103,13 @@ export const SubscriptionOverviewTab = ({
   subscription,
 }: SubscriptionOverviewTabProps) => {
   const notify = useNotify();
+  const refresh = useRefresh();
+  const dataProvider = useDataProvider<CrmDataProvider>();
   const [signedAgreementOpen, setSignedAgreementOpen] = useState(false);
   const [downloadingDoc, setDownloadingDoc] = useState<
     null | "agreement" | "receipt"
   >(null);
+  const [emailingDocs, setEmailingDocs] = useState(false);
   const { identity } = useGetIdentity();
   const { data: companies = [] } = useGetMany<Company>(
     "companies",
@@ -243,6 +248,38 @@ export const SubscriptionOverviewTab = ({
     }
   };
 
+  const handleEmailCompletionDocs = async () => {
+    if (!subscription.agreement_signed_at || emailingDocs) return;
+    setEmailingDocs(true);
+    try {
+      const result = await dataProvider.manageClientSubscription({
+        subscriptionId: subscription.id,
+        action: "send_completion",
+      });
+      if (result?.emailed) {
+        notify("Signed docs emailed to the client", { type: "success" });
+        refresh();
+      } else {
+        notify(
+          result?.skipped
+            ? `Could not email docs (${result.skipped})`
+            : "Could not email signed docs",
+          { type: "warning" },
+        );
+        refresh();
+      }
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Could not email signed docs",
+        { type: "error" },
+      );
+    } finally {
+      setEmailingDocs(false);
+    }
+  };
+
   const { data: relatedInvoices = [] } = useGetList<ClientInvoice>(
     "client_invoices",
     {
@@ -320,8 +357,13 @@ export const SubscriptionOverviewTab = ({
           <SummaryRow
             label="Card on file"
             value={
-              subscription.payment_method_last4
-                ? `${subscription.payment_method_brand ?? "Card"} ····${subscription.payment_method_last4}`
+              subscription.payment_method_last4 ||
+              subscription.payment_method_brand ||
+              subscription.stripe_payment_method_id
+                ? formatPaymentMethodLabel(
+                    subscription.payment_method_brand,
+                    subscription.payment_method_last4,
+                  )
                 : "None"
             }
           />
@@ -408,6 +450,22 @@ export const SubscriptionOverviewTab = ({
                   {downloadingDoc === "receipt"
                     ? "Downloading…"
                     : "Download receipt"}
+                </Button>
+              ) : null}
+              {subscription.agreement_signed_at ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={emailingDocs}
+                  onClick={() => void handleEmailCompletionDocs()}
+                >
+                  <Mail className="size-3.5" />
+                  {emailingDocs
+                    ? "Sending…"
+                    : subscription.agreement_completion_emailed_at
+                      ? "Resend signed docs"
+                      : "Email signed docs"}
                 </Button>
               ) : null}
               {subscription.setup_short_code?.trim() ? (

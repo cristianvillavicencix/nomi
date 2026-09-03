@@ -328,10 +328,19 @@ const readPaymentMethodFromStripe = (
       last4: null as string | null,
     };
   }
+  const cardBrand = paymentMethod.card?.brand?.trim() || null;
+  const cardLast4 = paymentMethod.card?.last4?.trim() || null;
+  // Link wallets may expose type=link with a placeholder card last4 (0000).
+  const type = paymentMethod.type?.trim() || null;
+  const brand =
+    cardBrand ||
+    (type && type !== "card" ? type : null);
+  const last4 =
+    brand === "link" && cardLast4 === "0000" ? null : cardLast4;
   return {
     id: paymentMethod.id,
-    brand: paymentMethod.card?.brand ?? null,
-    last4: paymentMethod.card?.last4 ?? null,
+    brand,
+    last4,
   };
 };
 
@@ -1363,18 +1372,23 @@ export async function resolveSubscriptionBillingEmail(
   let businessEmail: string | null = null;
 
   if (params.companyId) {
-    const { data } = await supabase
+    // Companies store billing emails in context_links (lbs:business_email=…),
+    // not dedicated email columns.
+    const { data, error } = await supabase
       .from("companies")
-      .select("context_links, primary_contact_email_jsonb, email")
+      .select("context_links")
       .eq("id", params.companyId)
       .maybeSingle();
+    if (error) {
+      console.warn(
+        "resolveSubscriptionBillingEmail.company_error",
+        params.companyId,
+        error.message,
+      );
+    }
     companyContextLinks = (data?.context_links as string[] | null) ?? null;
-    primaryContactEmails =
-      (data?.primary_contact_email_jsonb as Array<{
-        email?: string | null;
-        isPrimary?: boolean;
-      }> | null) ?? null;
-    businessEmail = data?.email ?? null;
+    primaryContactEmails = null;
+    businessEmail = null;
   }
 
   let contactEmails: Array<{ email?: string | null; isPrimary?: boolean }> | null =

@@ -44,6 +44,7 @@ type ManageBody = {
     | "reactivate"
     | "send_setup"
     | "send_agreement"
+    | "send_completion"
     | "request_card_update"
     | "update_payment_method"
     | "list_payment_methods"
@@ -256,6 +257,47 @@ Deno.serve(
               subscription: fresh,
               agreement_share_url: fresh?.setup_share_url ?? null,
               ...delivery,
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        if (action === "send_completion") {
+          if ((subscription.enrollment_mode ?? "direct") !== "agreement") {
+            return createErrorResponse(
+              400,
+              "This subscription is not an agreement enrollment",
+            );
+          }
+          if (!subscription.agreement_signed_at) {
+            return createErrorResponse(
+              400,
+              "Agreement must be signed before sending completion docs",
+            );
+          }
+
+          const { sendSubscriptionAgreementCompletionEmail } = await import(
+            "../_shared/subscriptionAgreementCompletion.ts"
+          );
+          const result = await sendSubscriptionAgreementCompletionEmail(
+            supabaseAdmin,
+            subscription,
+            { force: true },
+          );
+
+          const { data: freshCompletion } = await supabaseAdmin
+            .from("client_subscriptions")
+            .select("*")
+            .eq("id", subscription.id)
+            .single();
+
+          return new Response(
+            JSON.stringify({
+              subscription: freshCompletion,
+              ...result,
             }),
             {
               status: 200,

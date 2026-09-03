@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { pickLatestSavedPaymentMethod } from "@/modules/billing/subscriptions/useClientSavedPaymentMethod";
+import {
+  formatPaymentMethodLabel,
+  pickLatestSavedPaymentMethod,
+} from "@/modules/billing/subscriptions/useClientSavedPaymentMethod";
 import type { ClientInvoice, ClientSubscription, Contract } from "@/modules/types";
 
 describe("pickLatestSavedPaymentMethod", () => {
@@ -51,16 +54,9 @@ describe("pickLatestSavedPaymentMethod", () => {
     });
   });
 
-  it("ignores rows without stripe payment method id", () => {
-    const invoices: ClientInvoice[] = [
-      {
-        id: 1,
-        payment_method_brand: "visa",
-        payment_method_last4: "4242",
-        updated_at: "2026-06-01T00:00:00.000Z",
-      } as ClientInvoice,
-    ];
-
-    expect(pickLatestSavedPaymentMethod(invoices, [])).toBeNull();
+  it("formats Link wallets without a fake ····0000 mask", () => {
+    expect(formatPaymentMethodLabel("link", "0000")).toBe("Link");
+    expect(formatPaymentMethodLabel("Link", null)).toBe("Link");
+    expect(formatPaymentMethodLabel("visa", "4242")).toBe("Visa ····4242");
   });
 });

@@ -44,7 +44,7 @@ import {
   resolveSavedCardPaymentMethodId,
   savedCardOptionValue,
 } from "@/modules/billing/subscriptions/SavedCardSelect";
-import { useClientSavedPaymentMethod } from "@/modules/billing/subscriptions/useClientSavedPaymentMethod";
+import { useClientSavedPaymentMethod, formatPaymentMethodLabel } from "@/modules/billing/subscriptions/useClientSavedPaymentMethod";
 import {
   SubscriptionStaffCardForm,
   type SubscriptionStaffCardFormHandle,
@@ -1841,13 +1841,17 @@ export const SubscriptionFormEditor = forwardRef<
               </>
             ) : null}
           </CreateFormSection>
-        ) : subscription?.payment_method_last4 ? (
+        ) : subscription?.stripe_payment_method_id ||
+          subscription?.payment_method_brand ||
+          subscription?.payment_method_last4 ? (
           <CreateFormSection title="Payment">
             <div className="rounded-md border bg-muted/20 px-3 py-2.5 text-sm">
               <p className="font-medium">Payment method on file</p>
               <p className="text-muted-foreground">
-                {subscription.payment_method_brand ?? "Card"} ····
-                {subscription.payment_method_last4}
+                {formatPaymentMethodLabel(
+                  subscription.payment_method_brand,
+                  subscription.payment_method_last4,
+                )}
               </p>
             </div>
           </CreateFormSection>

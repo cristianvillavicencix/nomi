@@ -681,6 +681,7 @@ export const billingProvider = {
       | "reactivate"
       | "send_setup"
       | "send_agreement"
+      | "send_completion"
       | "request_card_update"
       | "update_payment_method"
       | "list_payment_methods"
@@ -710,6 +711,12 @@ export const billingProvider = {
   }) {
     const { data, error } = await invokeEdgeFunction<{
       subscription?: Record<string, unknown>;
+      emailed?: boolean;
+      skipped?: string;
+      payment_methods?: Array<Record<string, unknown>>;
+      email_sent?: boolean;
+      sms_sent?: boolean;
+    }>(
       checkout_url?: string | null;
       setup_link_stale?: boolean;
       synced?: boolean;
@@ -718,6 +725,8 @@ export const billingProvider = {
       used_staff_card?: boolean;
       email_sent?: boolean;
       sms_sent?: boolean;
+      emailed?: boolean;
+      skipped?: string;
       payment_methods?: Array<{
         id: string;
         brand: string | null;

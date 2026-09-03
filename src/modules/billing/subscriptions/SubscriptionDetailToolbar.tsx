@@ -29,6 +29,7 @@ import {
   subscriptionStatusLabel,
   subscriptionStatusVariant,
 } from "@/modules/billing/subscriptions/subscriptionDisplayUtils";
+import { formatPaymentMethodLabel } from "@/modules/billing/subscriptions/useClientSavedPaymentMethod";
 import { SendSubscriptionSetupDialog } from "@/modules/billing/subscriptions/SendSubscriptionSetupDialog";
 import { CollectSubscriptionPaymentDialog } from "@/modules/billing/subscriptions/CollectSubscriptionPaymentDialog";
 import { FinishSubscriptionSetupDialog } from "@/modules/billing/subscriptions/FinishSubscriptionSetupDialog";
@@ -220,9 +221,15 @@ export const SubscriptionDetailHeader = ({
     subscription.billing_interval,
   );
   const nextCharge = subscription.next_billing_at?.slice(0, 10);
-  const cardLabel = subscription.payment_method_last4
-    ? `${subscription.payment_method_brand ?? "Card"} ····${subscription.payment_method_last4}`
-    : null;
+  const cardLabel =
+    subscription.payment_method_last4 ||
+    subscription.payment_method_brand ||
+    subscription.stripe_payment_method_id
+      ? formatPaymentMethodLabel(
+          subscription.payment_method_brand,
+          subscription.payment_method_last4,
+        )
+      : null;
 
   return (
     <div className="space-y-1">
