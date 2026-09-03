@@ -28,7 +28,10 @@ import {
   formatInvoicePaymentMethod,
   hasInvoiceCardOnFile,
 } from "@/modules/billing/invoicePaymentUtils";
-import { billToSelectionFromClient, resolveInvoiceRecipientEmail } from "@/modules/billing/billingUtils";
+import {
+  billToSelectionFromClient,
+  resolveInvoiceRecipientEmail,
+} from "@/modules/billing/billingUtils";
 import { withInvoicePaymentQuery } from "@/modules/billing/invoiceEmailTemplate";
 import { PayInvoiceDialog } from "@/modules/billing/public/PayInvoiceDialog";
 import {
@@ -39,12 +42,6 @@ import {
   formatPaymentMethodLabel,
   useClientSavedPaymentMethod,
 } from "@/modules/billing/subscriptions/useClientSavedPaymentMethod";
-import { withInvoicePaymentQuery } from "@/modules/billing/invoiceEmailTemplate";
-import { PayInvoiceDialog } from "@/modules/billing/public/PayInvoiceDialog";
-import {
-  fetchPublicInvoice,
-  type PublicInvoicePayload,
-} from "@/modules/billing/public/publicInvoiceApi";
 import { contactHasSmsPhone } from "@/modules/messages/messageContactUtils";
 import { useSendClientSms } from "@/modules/messages/useClientSms";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
