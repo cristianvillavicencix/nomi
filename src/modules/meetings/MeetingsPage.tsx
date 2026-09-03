@@ -342,27 +342,17 @@ export const MeetingsPage = () => {
                       <TableCell className="text-right">
                         {isPastTab ? (
                           <div className="flex items-center justify-end gap-1">
-                            {isDone ? (
-                              <span className="text-sm text-muted-foreground">
-                                —
-                              </span>
-                            ) : (
-                              <>
-                                <MarkMeetingDoneButton meeting={meeting} />
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditId(meeting.id);
-                                    setEditDateKey(meeting.event_date);
-                                    setScheduleOpen(true);
-                                  }}
-                                >
-                                  Edit
-                                </Button>
-                              </>
-                            )}
+                            {!isDone ? (
+                              <MarkMeetingDoneButton meeting={meeting} />
+                            ) : null}
+                            <MeetingRowActionsMenu
+                              meeting={meeting}
+                              onEdit={() => {
+                                setEditId(meeting.id);
+                                setEditDateKey(meeting.event_date);
+                                setScheduleOpen(true);
+                              }}
+                            />
                           </div>
                         ) : (
                           <MeetingRowActionsMenu
