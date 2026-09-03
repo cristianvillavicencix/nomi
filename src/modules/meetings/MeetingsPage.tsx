@@ -327,6 +327,7 @@ export const MeetingsPage = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Contact</TableHead>
+                  <TableHead>Team</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Time</TableHead>
@@ -390,13 +391,13 @@ export const MeetingsPage = () => {
                             contactName
                           )}
                         </div>
-                        <div className="mt-1">
-                          <CalendarEventAssigneeAvatars
-                            event={calendarEventForAvatars}
-                            membersById={membersById}
-                            compact
-                          />
-                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <CalendarEventAssigneeAvatars
+                          event={calendarEventForAvatars}
+                          membersById={membersById}
+                          compact
+                        />
                       </TableCell>
                       <TableCell>{meeting.title}</TableCell>
                       <TableCell>
