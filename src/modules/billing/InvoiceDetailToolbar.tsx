@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { ClientInvoice } from "@/modules/types";
 import { cn } from "@/lib/utils";
-import { InvoiceSendHistory } from "@/modules/billing/InvoiceSendHistory";
+import { InvoiceSendHistoryPanel } from "@/modules/billing/InvoiceSendHistoryPanel";
 import { VoidInvoiceReasonDialog } from "@/modules/billing/VoidInvoiceReasonDialog";
 
 export type InvoiceSendChannel = "email" | "sms" | "both";
@@ -747,7 +747,7 @@ export const InvoiceDetailToolbar = ({
       ) : null}
 
       {invoice.status !== "draft" ? (
-        <InvoiceSendHistory invoice={invoice} />
+        <InvoiceSendHistoryPanel invoice={invoice} />
       ) : null}
 
       <VoidInvoiceReasonDialog

@@ -20,7 +20,11 @@ const formatWhen = (value?: string | null) => {
   });
 };
 
-export const InvoiceSendHistory = ({ invoice }: { invoice: ClientInvoice }) => {
+export const InvoiceSendHistoryPanel = ({
+  invoice,
+}: {
+  invoice: ClientInvoice;
+}) => {
   const { data: logs = [] } = useGetList<ClientInvoiceEmailLog>(
     "client_invoice_email_logs",
     {
