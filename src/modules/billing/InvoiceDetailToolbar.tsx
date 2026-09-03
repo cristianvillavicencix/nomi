@@ -8,6 +8,7 @@ import {
   ExternalLink,
   FileDown,
   FileText,
+  History,
   Loader2,
   Mail,
   MessageSquare,
@@ -644,6 +645,19 @@ export const InvoiceDetailToolbar = ({
           </DropdownMenu>
         ) : null}
 
+        {invoice.status !== "draft" ? (
+          <InvoiceSendHistoryPanel
+            invoice={invoice}
+            trigger={
+              <ToolbarButton disabled={busy}>
+                <History className="size-3.5" />
+                Send history
+                <ChevronDown className="size-3 opacity-60" />
+              </ToolbarButton>
+            }
+          />
+        ) : null}
+
         {showMoreActions ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -744,10 +758,6 @@ export const InvoiceDetailToolbar = ({
             onConfigurePayment={onConfigurePayment}
           />
         )
-      ) : null}
-
-      {invoice.status !== "draft" ? (
-        <InvoiceSendHistoryPanel invoice={invoice} />
       ) : null}
 
       <VoidInvoiceReasonDialog

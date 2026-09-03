@@ -1,5 +1,11 @@
 import { Mail, MessageSquare } from "lucide-react";
+import type { ReactElement } from "react";
 import { useGetList } from "ra-core";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { ClientInvoice, ClientInvoiceEmailLog } from "@/modules/types";
 import {
   invoiceSendHistoryChannel,
@@ -22,8 +28,10 @@ const formatWhen = (value?: string | null) => {
 
 export const InvoiceSendHistoryPanel = ({
   invoice,
+  trigger,
 }: {
   invoice: ClientInvoice;
+  trigger: ReactElement;
 }) => {
   const { data: logs = [] } = useGetList<ClientInvoiceEmailLog>(
     "client_invoice_email_logs",
@@ -77,39 +85,45 @@ export const InvoiceSendHistoryPanel = ({
   if (rows.length === 0) return null;
 
   return (
-    <div className="rounded-md border bg-muted/20 px-3 py-2">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        Send history
-      </p>
-      <ul className="mt-1.5 space-y-1.5">
-        {rows.map((row) => (
-          <li
-            key={row.id}
-            className="flex items-start gap-2 text-xs leading-snug"
-          >
-            {row.channel.includes("SMS") && !row.channel.includes("Email") ? (
-              <MessageSquare className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-            ) : (
-              <Mail className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-            )}
-            <div className="min-w-0 flex-1">
-              <p>
-                <span className="font-medium text-foreground">{row.label}</span>
-                <span className="text-muted-foreground">
-                  {" "}
-                  · {row.channel} · {row.status}
-                </span>
-              </p>
-              <p className="truncate text-muted-foreground">
-                {[row.to, row.when].filter(Boolean).join(" · ")}
-              </p>
-              {row.error ? (
-                <p className="truncate text-destructive">{row.error}</p>
-              ) : null}
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-80 p-2">
+        <p className="px-1 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Send history
+        </p>
+        <ul className="max-h-72 space-y-1.5 overflow-y-auto">
+          {rows.map((row) => (
+            <li
+              key={row.id}
+              className="flex items-start gap-2 rounded-sm px-1 py-0.5 text-xs leading-snug"
+            >
+              {row.channel.includes("SMS") && !row.channel.includes("Email") ? (
+                <MessageSquare className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+              ) : (
+                <Mail className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p>
+                  <span className="font-medium text-foreground">
+                    {row.label}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · {row.channel} · {row.status}
+                  </span>
+                </p>
+                <p className="truncate text-muted-foreground">
+                  {[row.to, row.when].filter(Boolean).join(" · ")}
+                </p>
+                {row.error ? (
+                  <p className="truncate text-destructive">{row.error}</p>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
+
