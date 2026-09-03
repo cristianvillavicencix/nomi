@@ -32,6 +32,7 @@ import {
   type ClientSubscriptionRow,
   type SubscriptionPaymentMode,
 } from "../_shared/clientSubscriptionStripe.ts";
+import { refreshUnsignedAgreementTerms } from "../_shared/refreshUnsignedAgreementTerms.ts";
 
 type ManageBody = {
   subscription_id?: number;
@@ -183,6 +184,10 @@ Deno.serve(
               400,
               "Cannot resend agreement on a canceled subscription",
             );
+          }
+
+          if (!subscription.agreement_signed_at) {
+            await refreshUnsignedAgreementTerms(supabaseAdmin, subscription);
           }
 
           await ensureSubscriptionStripeCustomer(
@@ -711,6 +716,23 @@ Deno.serve(
             .from("client_subscriptions")
             .update(dbPatch)
             .eq("id", subscription.id);
+
+          if (
+            (dbPatch.enrollment_mode === "agreement" ||
+              (subscription.enrollment_mode === "agreement" &&
+                body.enrollment_mode !== "direct")) &&
+            subscription.status === "pending_setup" &&
+            !subscription.agreement_signed_at &&
+            body.agreement_terms_markdown === undefined
+          ) {
+            const refreshed = await loadSubscription(
+              member.org_id,
+              subscription.id,
+            );
+            if (refreshed) {
+              await refreshUnsignedAgreementTerms(supabaseAdmin, refreshed);
+            }
+          }
 
           if (stripeSubId) {
             const updatedSub = await updateStripeSubscriptionBilling(stripe, {

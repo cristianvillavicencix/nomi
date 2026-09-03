@@ -872,11 +872,16 @@ export const SubscriptionFormEditor = forwardRef<
 
       if (mode === "create") {
         if (enrollmentMode === "agreement") {
-          if (!agreementTermsMarkdown.trim()) {
+          const sourceBody =
+            agreementTermsEdited && agreementTermsMarkdown.trim()
+              ? agreementTermsMarkdown.trim()
+              : selectedTemplate?.body_markdown?.trim() ||
+                agreementTermsMarkdown.trim();
+          if (!sourceBody) {
             throw new Error("Add terms before sending the agreement link");
           }
           const filledTerms = fillAgreementTermsMarkdown(
-            agreementTermsMarkdown.trim(),
+            sourceBody,
             buildSubscriptionContractVariables({
               clientName: clientDisplayName,
               clientAddress,
@@ -973,11 +978,16 @@ export const SubscriptionFormEditor = forwardRef<
 
       let agreementTermsForUpdate: string | null = null;
       if (canChangeStartMode && enrollmentMode === "agreement") {
-        if (!agreementTermsMarkdown.trim()) {
+        const sourceBody =
+          agreementTermsEdited && agreementTermsMarkdown.trim()
+            ? agreementTermsMarkdown.trim()
+            : selectedTemplate?.body_markdown?.trim() ||
+              agreementTermsMarkdown.trim();
+        if (!sourceBody) {
           throw new Error("Add terms before saving Agreement start mode");
         }
         agreementTermsForUpdate = fillAgreementTermsMarkdown(
-          agreementTermsMarkdown.trim(),
+          sourceBody,
           buildSubscriptionContractVariables({
             clientName: clientDisplayName,
             clientAddress,

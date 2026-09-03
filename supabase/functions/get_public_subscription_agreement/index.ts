@@ -7,6 +7,8 @@ import {
   mergeContractTerms,
 } from "../_shared/subscriptionContractTerms.ts";
 import { resolvePublicAppBaseUrl } from "../_shared/publicAppUrl.ts";
+import { refreshUnsignedAgreementTerms } from "../_shared/refreshUnsignedAgreementTerms.ts";
+import type { ClientSubscriptionRow } from "../_shared/clientSubscriptionStripe.ts";
 
 type GetBody = {
   short_code?: string;
@@ -167,7 +169,15 @@ Deno.serve(
       }
 
       let termsMarkdown = String(subscription.agreement_terms_markdown ?? "");
-      if (hasPlaceholders(termsMarkdown)) {
+      if (!subscription.agreement_signed_at) {
+        const refreshed = await refreshUnsignedAgreementTerms(
+          supabaseAdmin,
+          subscription as ClientSubscriptionRow,
+        );
+        if (refreshed) {
+          termsMarkdown = refreshed;
+        }
+      } else if (hasPlaceholders(termsMarkdown)) {
         const lineItems = Array.isArray(subscription.line_items)
           ? subscription.line_items
           : [];
@@ -202,7 +212,6 @@ Deno.serve(
         }
         termsMarkdown = mergeContractTerms(termsMarkdown, vars);
         if (
-          subscription.agreement_signed_at &&
           subscription.agreement_signature_png?.startsWith("data:image/")
         ) {
           const sigMark = buildSubscriptionContractVariables({
@@ -224,7 +233,6 @@ Deno.serve(
             client_signature_mark: sigMark,
           });
         }
-        // Persist repair so staff overview and future opens stay filled.
         await supabaseAdmin
           .from("client_subscriptions")
           .update({
