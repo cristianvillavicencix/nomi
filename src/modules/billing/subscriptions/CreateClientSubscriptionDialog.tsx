@@ -1,3 +1,6 @@
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { useNotify } from "ra-core";
 import {
   Dialog,
   DialogContent,
@@ -5,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { buildSubscriptionDetailSearchParams } from "@/modules/billing/subscriptions/billingNavigation";
 import { SubscriptionFormEditor } from "@/modules/billing/subscriptions/SubscriptionFormEditor";
 
 type CreateClientSubscriptionDialogProps = {
@@ -23,13 +27,50 @@ export const CreateClientSubscriptionDialog = ({
   initialPackageId = null,
   initialEnrollmentMode = "direct",
 }: CreateClientSubscriptionDialogProps) => {
+  const navigate = useNavigate();
+  const notify = useNotify();
+  const [waitingSubscriptionId, setWaitingSubscriptionId] = useState<
+    number | null
+  >(null);
+
+  useEffect(() => {
+    if (!open) setWaitingSubscriptionId(null);
+  }, [open]);
+
+  const dismissWaiting = useCallback(
+    (subscriptionId: number) => {
+      setWaitingSubscriptionId(null);
+      onOpenChange(false);
+      notify(
+        "Setup link already sent. Subscription is Pending setup — the client can add their card anytime.",
+        { type: "info" },
+      );
+      navigate(
+        `/billing?${buildSubscriptionDetailSearchParams(String(subscriptionId), "overview").toString()}`,
+      );
+    },
+    [navigate, notify, onOpenChange],
+  );
+
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen && waitingSubscriptionId != null) {
+        dismissWaiting(waitingSubscriptionId);
+        return;
+      }
+      onOpenChange(nextOpen);
+    },
+    [dismissWaiting, onOpenChange, waitingSubscriptionId],
+  );
+
   const editorKey = [
     initialContractTermsId ?? "none",
     initialPackageId ?? "none",
     initialEnrollmentMode,
   ].join("-");
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+    <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
       <DialogContent
         className="flex max-h-[92vh] w-[min(96vw,76rem)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:max-w-[76rem]"
         onOpenAutoFocus={(event) => {
@@ -76,8 +117,13 @@ export const CreateClientSubscriptionDialog = ({
               initialEnrollmentMode={initialEnrollmentMode}
               initialContractTermsId={initialContractTermsId}
               initialPackageId={initialPackageId}
-              onSaved={() => onOpenChange(false)}
+              onSaved={() => {
+                setWaitingSubscriptionId(null);
+                onOpenChange(false);
+              }}
               onCancel={() => onOpenChange(false)}
+              onWaitingForCard={setWaitingSubscriptionId}
+              onCloseWaiting={dismissWaiting}
             />
           </div>
         ) : null}

@@ -50,6 +50,8 @@ type SubscriptionCreateReviewPanelProps = {
   isPending: boolean;
   onSubmit: () => void;
   onCancel: () => void;
+  /** When waiting for client card — dismiss without aborting the saved subscription. */
+  onCloseWaiting?: () => void;
   submitLabel?: string;
   pendingLabel?: string;
   hideActions?: boolean;
@@ -92,6 +94,7 @@ export const SubscriptionCreateReviewPanel = ({
   isPending,
   onSubmit,
   onCancel,
+  onCloseWaiting,
   submitLabel = "Create subscription",
   pendingLabel = "Creating…",
   hideActions = false,
@@ -153,8 +156,9 @@ export const SubscriptionCreateReviewPanel = ({
 
       {waitingForCard ? (
         <div className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-          Waiting for the client to add a card. This screen will update when the
-          card is saved — then you can activate the subscription.
+          Subscription saved and the setup link is already sent. You can close
+          anytime — the client can add their card later. If you stay open, this
+          screen updates when the card is saved so you can activate.
         </div>
       ) : null}
 
@@ -240,8 +244,14 @@ export const SubscriptionCreateReviewPanel = ({
 
       {!hideActions ? (
         <div className="mt-auto flex flex-wrap justify-end gap-2 border-t pt-4">
-          <Button type="button" variant="ghost" onClick={onCancel}>
-            Cancel
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={
+              waitingForCard ? (onCloseWaiting ?? onCancel) : onCancel
+            }
+          >
+            {waitingForCard ? "Close" : "Cancel"}
           </Button>
           <Button
             type="button"

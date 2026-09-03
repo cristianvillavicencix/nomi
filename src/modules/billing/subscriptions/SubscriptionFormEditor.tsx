@@ -183,6 +183,10 @@ type SubscriptionFormEditorProps = {
     used_staff_card?: boolean;
   }) => void;
   onCancel?: () => void;
+  /** Fired when create enters waiting-for-client-card after sending the setup link. */
+  onWaitingForCard?: (subscriptionId: number) => void;
+  /** Dismiss create dialog while waiting — subscription stays pending_setup. */
+  onCloseWaiting?: (subscriptionId: number) => void;
   onStateChange?: (state: { canSubmit: boolean; isPending: boolean }) => void;
 };
 
@@ -198,6 +202,8 @@ export const SubscriptionFormEditor = forwardRef<
     scrollContainer = "self",
     onSaved,
     onCancel,
+    onWaitingForCard,
+    onCloseWaiting,
     onStateChange,
     initialPaymentMode = null,
     initialEnrollmentMode = "direct",
@@ -1029,7 +1035,10 @@ export const SubscriptionFormEditor = forwardRef<
         !waitingForCard
       ) {
         setWaitingForCard(true);
-        if (createdId != null) setPendingSubscriptionId(createdId);
+        if (createdId != null) {
+          setPendingSubscriptionId(createdId);
+          onWaitingForCard?.(createdId);
+        }
         notify(
           sendEmail || sendSms
             ? "Setup link sent — waiting for the client to add a card"
@@ -1907,6 +1916,13 @@ export const SubscriptionFormEditor = forwardRef<
           isPending={saveMutation.isPending}
           onSubmit={() => saveMutation.mutate()}
           onCancel={() => onCancel?.()}
+          onCloseWaiting={() => {
+            if (pendingSubscriptionId != null) {
+              onCloseWaiting?.(pendingSubscriptionId);
+              return;
+            }
+            onCancel?.();
+          }}
           submitLabel={
             waitingForCard && clientCardReady
               ? "Activate subscription"

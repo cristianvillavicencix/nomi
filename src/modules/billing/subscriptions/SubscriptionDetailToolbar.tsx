@@ -89,7 +89,8 @@ const SubscriptionPendingSetupBanner = ({
   <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
     <p className="text-sm text-muted-foreground">
       <span className="font-medium text-foreground">What&apos;s next?</span>{" "}
-      Choose how to collect a payment method and activate recurring billing.
+      The client can finish the setup link anytime. Or collect a card here and
+      activate recurring billing.
     </p>
     <Button type="button" size="sm" disabled={isPending} onClick={onFinishSetup}>
       <CreditCard className="size-4" />
