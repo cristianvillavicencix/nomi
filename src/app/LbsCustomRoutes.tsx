@@ -178,6 +178,11 @@ const FormPublicEntry = lazy(() =>
     default: module.FormPublicEntry,
   })),
 );
+const WebsiteBriefPreviewPage = lazy(() =>
+  import("@/modules/forms/public/WebsiteBriefPreviewPage").then((module) => ({
+    default: module.WebsiteBriefPreviewPage,
+  })),
+);
 const ShortUrlRedirect = lazy(() =>
   import("@/modules/forms/public/ShortUrlRedirect").then((module) => ({
     default: module.ShortUrlRedirect,
@@ -388,6 +393,14 @@ export const renderLbsPublicFormRoute = () => (
       element={
         <LazyRoute label="Loading…">
           <PortalShortUrlRedirect />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="/forms/preview/website-brief"
+      element={
+        <LazyRoute label="Loading brief preview…">
+          <WebsiteBriefPreviewPage />
         </LazyRoute>
       }
     />

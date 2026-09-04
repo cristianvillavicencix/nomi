@@ -9,6 +9,8 @@ export type UploadedFormFile = {
   bucket?: string;
   mime_type?: string;
   original_name?: string;
+  /** Existing deal_resources.id when reopening a request link. */
+  resource_id?: number;
 };
 
 type UploadFormFileOptions = {

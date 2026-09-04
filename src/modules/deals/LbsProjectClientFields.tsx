@@ -1,21 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { required, useGetOne, type Identifier } from "ra-core";
-import { Mail, Phone } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { required, useGetList, useGetOne, type Identifier } from "ra-core";
 import { useFormContext, useWatch } from "react-hook-form";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { AutocompleteCompanyInput } from "@/components/atomic-crm/companies/AutocompleteCompanyInput";
-import { getPersonShowPath } from "@/app/routing";
-import type { Contact, Deal } from "@/components/atomic-crm/types";
-import {
-  getContactEmail,
-  getContactFullName,
-  getContactPhone,
-} from "@/modules/clients/clientShowUtils";
+import type { Company, Contact, Deal } from "@/components/atomic-crm/types";
+import { getContactFullName } from "@/modules/clients/clientShowUtils";
 import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import { lbsProjectContactName } from "@/modules/deals/LbsProjectContactOption";
-import { CreateFormSectionLabel } from "@/modules/shared/createForm/CreateFormLayout";
-import { SelectedEntityRow } from "@/modules/shared/entityPickerUi";
+import { CONTACT_STATUS_FILTER } from "@/modules/shared/relatedFilters";
+import { resolvePrimaryContactId } from "@/modules/work/workCreateAccountLinkUtils";
 import { isValidRecordId } from "@/lib/isValidRecordId";
 
 type ContactCreateDefaults = {
@@ -36,118 +30,113 @@ type PendingClientCreate = {
   resolve: (record?: Contact) => void;
 };
 
-const toAutocompleteContact = (
-  contactId: Identifier,
-  companyName: string,
-  contact?: Partial<Contact> | null,
-): Contact => {
-  const fullName = contact ? getContactFullName(contact as Contact) : "";
-  const parts = fullName.split(/\s+/).filter(Boolean);
-  return {
-    id: contactId,
-    first_name: contact?.first_name ?? parts[0] ?? "",
-    last_name: contact?.last_name ?? parts.slice(1).join(" "),
-    company_name: companyName,
-  } as Contact;
-};
-
+/**
+ * Account first, then contact. Picking an account auto-selects its only
+ * contact (or primary); multiple contacts stay choosable. Supports create.
+ */
 export const LbsProjectClientFields = ({
-  variant = "default",
   seedContact,
 }: {
-  variant?: "default" | "create";
-  /** Preloaded contact (e.g. URL preset) — skips getOne on first paint. */
+  /** Prefill from URL/contact page — company + contact come from form defaults. */
   seedContact?: Contact | null;
 } = {}) => {
-  const isCreateVariant = variant === "create";
   const { setValue } = useFormContext<Deal & Record<string, unknown>>();
-  const contactId = useWatch({ name: "contact_id" });
-  const selectedContactId = isValidRecordId(contactId)
-    ? Number(contactId)
+  const companyId = useWatch({ name: "company_id" }) as
+    | Identifier
+    | null
+    | undefined;
+  const contactId = useWatch({ name: "contact_id" }) as
+    | Identifier
+    | null
+    | undefined;
+
+  const selectedCompanyId = isValidRecordId(companyId)
+    ? Number(companyId)
     : null;
 
-  const [optimisticContact, setOptimisticContact] = useState<Contact | null>(
-    null,
+  const { data: company } = useGetOne<Company>(
+    "companies",
+    { id: selectedCompanyId as number },
+    { enabled: selectedCompanyId != null },
   );
-  const skipGetOneForId = useRef<number | null>(null);
 
-  const shouldFetchSelectedContact =
-    selectedContactId != null && skipGetOneForId.current !== selectedContactId;
-
-  const { data: selectedContact, isError: selectedContactError } =
-    useGetOne<Contact>(
+  const { data: companyContacts = [], isFetched: companyContactsFetched } =
+    useGetList<Contact>(
       "contacts",
-      { id: selectedContactId as number },
-      { enabled: shouldFetchSelectedContact, retry: false },
+      {
+        filter: {
+          "company_id@eq": selectedCompanyId,
+          "status@in": CONTACT_STATUS_FILTER,
+        },
+        pagination: { page: 1, perPage: 100 },
+        sort: { field: "last_name", order: "ASC" },
+      },
+      { enabled: selectedCompanyId != null, staleTime: 30_000 },
     );
-
-  useEffect(() => {
-    if (!seedContact || !isValidRecordId(seedContact.id)) return;
-    const id = Number(seedContact.id);
-    skipGetOneForId.current = id;
-    setOptimisticContact(
-      toAutocompleteContact(id, seedContact.company_name ?? "", seedContact),
-    );
-  }, [seedContact]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogDefaults, setDialogDefaults] = useState<ContactCreateDefaults>(
     {},
   );
   const pendingCreateRef = useRef<PendingClientCreate | null>(null);
-
-  const clearClient = useCallback(() => {
-    setOptimisticContact(null);
-    skipGetOneForId.current = null;
-    setValue("contact_id", null, { shouldDirty: true });
-    setValue("contact_ids", [], { shouldDirty: true });
-    setValue("company_id", null, { shouldDirty: true });
-    setValue("company_name", "", { shouldDirty: true });
-  }, [setValue]);
+  const seededRef = useRef(false);
 
   useEffect(() => {
-    if (!selectedContactError) return;
-    clearClient();
-  }, [clearClient, selectedContactError]);
+    if (seededRef.current || !seedContact || !isValidRecordId(seedContact.id)) {
+      return;
+    }
+    seededRef.current = true;
+    if (isValidRecordId(seedContact.company_id)) {
+      setValue("company_id", Number(seedContact.company_id), {
+        shouldDirty: false,
+      });
+      setValue("company_name", seedContact.company_name ?? "", {
+        shouldDirty: false,
+      });
+    }
+    setValue("contact_id", Number(seedContact.id), { shouldDirty: false });
+    setValue("contact_ids", [Number(seedContact.id)], { shouldDirty: false });
+  }, [seedContact, setValue]);
 
   useEffect(() => {
-    if (
-      selectedContact &&
-      optimisticContact &&
-      String(selectedContact.id) === String(optimisticContact.id)
-    ) {
-      setOptimisticContact(null);
-      skipGetOneForId.current = null;
+    if (selectedCompanyId == null) {
+      if (contactId != null) {
+        setValue("contact_id", null, { shouldDirty: true });
+      }
+      return;
     }
-  }, [optimisticContact, selectedContact]);
 
-  const activeContact =
-    optimisticContact &&
-    selectedContactId != null &&
-    String(optimisticContact.id) === String(selectedContactId)
-      ? optimisticContact
-      : selectedContact;
-
-  const applyClientToProject = (
-    contactIdValue: Identifier,
-    companyId: Identifier | null | undefined,
-    businessName: string,
-  ) => {
-    setValue("contact_id", Number(contactIdValue), { shouldDirty: true });
-    setValue("contact_ids", [Number(contactIdValue)], { shouldDirty: true });
-    if (isValidRecordId(companyId)) {
-      setValue("company_id", Number(companyId), { shouldDirty: true });
-      setValue("company_name", businessName, { shouldDirty: false });
-    } else {
-      setValue("company_id", null, { shouldDirty: true });
-      setValue("company_name", businessName.trim(), { shouldDirty: true });
+    if (company?.name) {
+      setValue("company_name", company.name, { shouldDirty: false });
     }
-  };
 
-  const settlePendingCreate = (record?: Contact) => {
+    // Wait until contacts load so we don't wipe a valid selection mid-fetch.
+    if (!companyContactsFetched) return;
+
+    const nextContactId = resolvePrimaryContactId(
+      selectedCompanyId,
+      contactId,
+      companyContacts,
+      company?.primary_contact_id,
+    );
+
+    if (String(nextContactId ?? "") !== String(contactId ?? "")) {
+      setValue("contact_id", nextContactId, { shouldDirty: true });
+    }
+  }, [
+    selectedCompanyId,
+    company?.name,
+    company?.primary_contact_id,
+    companyContacts,
+    companyContactsFetched,
+    contactId,
+    setValue,
+  ]);
+
+  const settlePendingCreate = useCallback((record?: Contact) => {
     pendingCreateRef.current?.resolve(record);
     pendingCreateRef.current = null;
-  };
+  }, []);
 
   const closeClientCreate = (open: boolean) => {
     setDialogOpen(open);
@@ -168,101 +157,66 @@ export const LbsProjectClientFields = ({
     });
   };
 
-  const finishContactSelection = (
-    contactIdValue: Identifier,
-    companyId: Identifier | null | undefined,
-    businessName: string,
-    contact?: Partial<Contact> | null,
-  ) => {
-    const record = toAutocompleteContact(contactIdValue, businessName, contact);
-    skipGetOneForId.current = Number(contactIdValue);
-    setOptimisticContact(record);
-    applyClientToProject(contactIdValue, companyId, businessName);
-    settlePendingCreate(record);
+  const handleContactCreated = (contact: Contact) => {
+    if (isValidRecordId(contact.company_id)) {
+      setValue("company_id", Number(contact.company_id), { shouldDirty: true });
+      setValue("company_name", contact.company_name ?? "", {
+        shouldDirty: false,
+      });
+    }
+    setValue("contact_id", Number(contact.id), { shouldDirty: true });
+    setValue("contact_ids", [Number(contact.id)], { shouldDirty: true });
+    settlePendingCreate(contact);
     setDialogOpen(false);
   };
 
-  const handleContactCreated = (contact: Contact) => {
-    finishContactSelection(
-      contact.id,
-      contact.company_id ?? null,
-      contact.company_name ?? "",
-      contact,
-    );
-  };
-
-  const contactSummaryDetails = activeContact
-    ? [
-        ...(getContactEmail(activeContact) !== "—"
-          ? [
-              {
-                key: "email",
-                icon: Mail,
-                text: getContactEmail(activeContact),
-              },
-            ]
-          : []),
-        ...(getContactPhone(activeContact) !== "—"
-          ? [
-              {
-                key: "phone",
-                icon: Phone,
-                text: getContactPhone(activeContact),
-              },
-            ]
-          : []),
-      ]
-    : [];
+  const contactEmptyText = useMemo(() => {
+    if (selectedCompanyId == null) return "Select an account first";
+    if (companyContacts.length === 0) return "No contacts — create one";
+    return "Select contact";
+  }, [selectedCompanyId, companyContacts.length]);
 
   return (
     <>
-      {isCreateVariant ? (
-        <CreateFormSectionLabel required>Contact</CreateFormSectionLabel>
-      ) : null}
-
-      {isCreateVariant && selectedContactId != null ? (
-        <SelectedEntityRow
-          title={
-            activeContact
-              ? getContactFullName(activeContact)
-              : lbsProjectContactName(activeContact)
-          }
-          subtitle={activeContact?.company_name?.trim() || undefined}
-          details={contactSummaryDetails}
-          profileHref={
-            activeContact ? getPersonShowPath(activeContact) : undefined
-          }
-          onRemove={clearClient}
-          removeAriaLabel="Clear contact"
+      <ReferenceInput source="company_id" reference="companies">
+        <AutocompleteCompanyInput
+          label="Account"
+          placeholder="Search account"
+          labelVariant="floating"
+          validate={required()}
         />
-      ) : (
-        <ReferenceInput source="contact_id" reference="contacts">
-          <AutocompleteInput
-            label={isCreateVariant ? false : "Contact"}
-            inputText={lbsProjectContactName}
-            validate={required()}
-            helperText={false}
-            placeholder="Search contact"
-            filterToQuery={(searchText) => ({ q: searchText })}
-            onCreate={(searchText) => {
-              const query = searchText?.trim() ?? "";
-              return startContactCreateFromSearch({ contactName: query });
-            }}
-            createItemLabel='Create contact "%{item}"'
-            labelVariant={isCreateVariant ? undefined : "floating"}
-          />
-        </ReferenceInput>
-      )}
+      </ReferenceInput>
 
-      {!isCreateVariant ? (
-        <ReferenceInput source="company_id" reference="companies">
-          <AutocompleteCompanyInput
-            label="Account"
-            placeholder="Search company"
-            labelVariant="floating"
-          />
-        </ReferenceInput>
-      ) : null}
+      <ReferenceInput
+        source="contact_id"
+        reference="contacts"
+        filter={
+          selectedCompanyId != null
+            ? {
+                "company_id@eq": selectedCompanyId,
+                "status@in": CONTACT_STATUS_FILTER,
+              }
+            : { "id@eq": -1 }
+        }
+      >
+        <AutocompleteInput
+          label="Contact"
+          optionText={lbsProjectContactName}
+          inputText={getContactFullName}
+          validate={required()}
+          helperText={false}
+          disabled={selectedCompanyId == null}
+          placeholder={contactEmptyText}
+          emptyText={contactEmptyText}
+          filterToQuery={(searchText) => ({ q: searchText })}
+          onCreate={(searchText) => {
+            const query = searchText?.trim() ?? "";
+            return startContactCreateFromSearch({ contactName: query });
+          }}
+          createLabel="Create new contact"
+          labelVariant="floating"
+        />
+      </ReferenceInput>
 
       <ContactFormDialog
         open={dialogOpen}
@@ -270,7 +224,21 @@ export const LbsProjectClientFields = ({
         navigateOnCreate={false}
         title="New contact"
         submitLabel="Create contact"
-        createDefaults={buildContactCreateDefaults(dialogDefaults.contactName)}
+        description={
+          company?.name
+            ? `Contact for ${company.name}`
+            : "Contact for the selected account"
+        }
+        lockCompanyId={selectedCompanyId ?? undefined}
+        createDefaults={{
+          ...buildContactCreateDefaults(dialogDefaults.contactName),
+          status: "contact_only",
+          person_kind: "contact_only",
+          lead_stage: null,
+          ...(selectedCompanyId != null
+            ? { company_id: selectedCompanyId }
+            : {}),
+        }}
         onCreated={handleContactCreated}
       />
     </>

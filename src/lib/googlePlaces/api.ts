@@ -24,10 +24,14 @@ export class GooglePlacesUnavailableError extends Error {
 const normalizePlaceIdForNewApi = (placeId: string) =>
   placeId.trim().replace(/^places\//, "");
 
+const looksLikePostalCode = (input: string) =>
+  /^\d{3,5}(-\d{0,4})?$/.test(input.trim());
+
 const fetchNewPlacesAutocomplete = async (
   input: string,
   mode: GooglePlacesAutocompleteMode,
   signal?: AbortSignal,
+  primaryTypes?: string[],
 ): Promise<
   | { ok: true; data: GooglePlaceSuggestion[] }
   | { ok: false; status: number; detail?: string }
@@ -38,8 +42,15 @@ const fetchNewPlacesAutocomplete = async (
     regionCode: "US",
   };
 
+  if (mode === "address") {
+    // Hard-filter to US so suggestions look like street + city + state + ZIP
+    body.includedRegionCodes = ["us"];
+  }
+
   if (mode === "business") {
     body.includedPrimaryTypes = ["establishment"];
+  } else if (primaryTypes?.length) {
+    body.includedPrimaryTypes = primaryTypes;
   }
 
   const response = await fetch(
@@ -89,6 +100,22 @@ const fetchNewPlacesAutocomplete = async (
   return { ok: true, data };
 };
 
+const mergeSuggestions = (
+  ...lists: GooglePlaceSuggestion[][]
+): GooglePlaceSuggestion[] => {
+  const seen = new Set<string>();
+  const merged: GooglePlaceSuggestion[] = [];
+  for (const list of lists) {
+    for (const item of list) {
+      if (seen.has(item.placeId)) continue;
+      seen.add(item.placeId);
+      merged.push(item);
+      if (merged.length >= 8) return merged;
+    }
+  }
+  return merged;
+};
+
 export const fetchPlacesAutocomplete = async (
   input: string,
   mode: GooglePlacesAutocompleteMode,
@@ -106,6 +133,18 @@ export const fetchPlacesAutocomplete = async (
 
   const newResult = await fetchNewPlacesAutocomplete(input, mode, signal);
   if (newResult.ok) {
+    // ZIP / postal: also pull postal_code predictions and merge
+    if (mode === "address" && looksLikePostalCode(input)) {
+      const zipResult = await fetchNewPlacesAutocomplete(
+        input,
+        mode,
+        signal,
+        ["postal_code"],
+      );
+      if (zipResult.ok) {
+        return mergeSuggestions(zipResult.data, newResult.data);
+      }
+    }
     return newResult.data;
   }
 
@@ -124,6 +163,34 @@ export const fetchPlacesAutocomplete = async (
   }
 
   return [];
+};
+
+/** Prefer full formatted addresses (with ZIP) for suggestion labels. */
+export const enrichPlaceSuggestionsWithAddresses = async (
+  suggestions: GooglePlaceSuggestion[],
+  signal?: AbortSignal,
+): Promise<GooglePlaceSuggestion[]> => {
+  if (suggestions.length === 0) return suggestions;
+
+  const enriched = await Promise.all(
+    suggestions.slice(0, 6).map(async (item) => {
+      if (signal?.aborted) return item;
+      // Already looks like a full US line with ZIP — keep as-is
+      if (/\b\d{5}(-\d{4})?\b/.test(item.text)) return item;
+      try {
+        const details = await fetchGooglePlaceDetails(item.placeId, signal);
+        const formatted = details?.formattedAddress?.trim();
+        if (formatted) {
+          return { placeId: item.placeId, text: formatted };
+        }
+      } catch {
+        // keep original prediction text
+      }
+      return item;
+    }),
+  );
+
+  return enriched;
 };
 
 const withStreetLine = (details: GooglePlaceDetails): GooglePlaceDetails => ({

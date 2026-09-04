@@ -23,6 +23,10 @@ import {
   parseBeforeAfterCategorySlug,
   parseServiceCategorySlug,
 } from "@/modules/deals/projectResourceConstants";
+import {
+  formatTeamResourceLabel,
+  parseTeamResourceLabel,
+} from "@/modules/deals/teamResourceLabel";
 
 export type BeforeAfterPhotoType = "before" | "after";
 
@@ -42,7 +46,7 @@ type ResourceUploadDialogProps = {
   onFilesChange: (files: File[]) => void;
   onUpload: () => void;
   isUploading: boolean;
-  uploadMode?: "default" | "service-name" | "before-after";
+  uploadMode?: "default" | "service-name" | "before-after" | "team";
   serviceOptions?: ResourceUploadServiceOption[];
   selectedService?: string;
   onServiceChange?: (value: string) => void;
@@ -107,14 +111,25 @@ export const ResourceUploadDialog = ({
   };
 
   const isBeforeAfter = uploadMode === "before-after";
+  const isTeam = uploadMode === "team" || category === "team";
   const isServiceName =
     uploadMode === "service-name" ||
     parseServiceCategorySlug(category) ||
     category === "service-photo";
+  const teamParts = parseTeamResourceLabel(label);
   const canUpload =
     !isUploading &&
     files.length > 0 &&
     (!isBeforeAfter || (Boolean(selectedService) && Boolean(photoType)));
+
+  const setTeamPart = (part: "name" | "role", value: string) => {
+    onLabelChange(
+      formatTeamResourceLabel({
+        name: part === "name" ? value : teamParts.name,
+        role: part === "role" ? value : teamParts.role,
+      }),
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -178,6 +193,27 @@ export const ResourceUploadDialog = ({
                 />
               </div>
             </>
+          ) : isTeam ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="resource-team-name">Name</Label>
+                <Input
+                  id="resource-team-name"
+                  value={teamParts.name}
+                  onChange={(event) => setTeamPart("name", event.target.value)}
+                  placeholder="e.g. Maria Lopez"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="resource-team-role">Role</Label>
+                <Input
+                  id="resource-team-role"
+                  value={teamParts.role}
+                  onChange={(event) => setTeamPart("role", event.target.value)}
+                  placeholder="e.g. Project manager"
+                />
+              </div>
+            </div>
           ) : isServiceName ? (
             <div className="space-y-2">
               <Label htmlFor="resource-service-label">Service name *</Label>

@@ -85,8 +85,8 @@ export const ClientProjectsTab = ({
       <ClientTabEmpty
         message={
           contactId
-            ? "No deals linked to this contact yet."
-            : "No deals for this client yet. Use More → New deal to create one."
+            ? "No projects linked to this contact yet."
+            : "No projects for this client yet. Use More → New project to create one."
         }
       />
     );
@@ -97,7 +97,7 @@ export const ClientProjectsTab = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Deal</TableHead>
+            <TableHead>Project</TableHead>
             <TableHead>Stage</TableHead>
             <TableHead className="hidden md:table-cell">Amount</TableHead>
             <TableHead className="hidden lg:table-cell">Updated</TableHead>
@@ -165,8 +165,8 @@ export const ClientOpenDealsTab = ({
       <ClientTabEmpty
         message={
           contactId
-            ? "No open deals linked to this contact yet."
-            : "No open deals for this company yet."
+            ? "No open projects linked to this contact yet."
+            : "No open projects for this company yet."
         }
       />
     );
@@ -177,7 +177,7 @@ export const ClientOpenDealsTab = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Deal</TableHead>
+            <TableHead>Project</TableHead>
             <TableHead>Stage</TableHead>
             <TableHead className="hidden md:table-cell">Amount</TableHead>
             <TableHead className="hidden lg:table-cell">Updated</TableHead>

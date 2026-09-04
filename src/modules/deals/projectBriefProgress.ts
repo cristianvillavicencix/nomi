@@ -1,7 +1,7 @@
 import {
   getBriefOverallStats,
   getBriefSectionStats,
-  getVisibleBriefSections,
+  getProjectBriefSections,
 } from "@/modules/deals/websiteBriefSchema";
 import { getProjectDeliveryDate } from "@/modules/deals/projectDeliveryDate";
 import {
@@ -26,7 +26,7 @@ export const getProjectBriefProgress = (
   record: LbsDeal,
 ): ProjectBriefProgress => {
   const brief = record.website_brief ?? {};
-  const overall = getBriefOverallStats(record.project_type, brief);
+  const overall = getBriefOverallStats(record.project_type, brief, "essential");
   const setupFilled =
     Number(Boolean(record.project_type)) +
     Number(Boolean(getProjectDeliveryDate(record)));
@@ -48,7 +48,10 @@ export const getIncompleteBriefSections = (record: LbsDeal) => {
   if (!record.project_type) incomplete.push("Project setup");
   if (!getProjectDeliveryDate(record)) incomplete.push("Delivery date");
 
-  for (const section of getVisibleBriefSections(record.project_type)) {
+  for (const section of getProjectBriefSections(
+    record.project_type,
+    "essential",
+  )) {
     const stats = getBriefSectionStats(section, brief);
     if (stats.total > 0 && !stats.isComplete) {
       incomplete.push(section.title);

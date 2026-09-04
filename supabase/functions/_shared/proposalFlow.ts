@@ -305,7 +305,7 @@ export async function resolveDealForProposal(
       company_id: proposal.company_id,
       contact_id: proposal.contact_id,
       contact_ids: contactIds,
-      stage: forClientPortal ? "pending_payment" : "setup",
+      stage: "won",
       amount: proposal.amount ?? 0,
       estimated_value: proposal.amount ?? 0,
       description: proposal.notes ?? "",
@@ -486,7 +486,7 @@ export async function markDealPendingPayment(
     .from("deals")
     .update({
       accepted_proposal_id: proposalId,
-      stage: "pending_payment",
+      stage: "won",
       lifecycle_phase: "opportunity",
       amount,
       estimated_value: amount,

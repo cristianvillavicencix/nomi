@@ -48,8 +48,8 @@ export const PROPOSAL_DOCUMENT_VARIABLE_DEFINITIONS: {
   },
   {
     key: "deal",
-    label: "Deal",
-    description: "Linked deal name, if the proposal is tied to a deal.",
+    label: "Project",
+    description: "Linked project name, if the proposal is tied to a project.",
   },
   {
     key: "proposal_number",

@@ -8,7 +8,7 @@ import {
   FormLabel,
 } from "@/components/admin/form";
 import { InputHelperText } from "@/components/admin/input-helper-text";
-import { FloatingFieldShell } from "@/components/ui/floating-field";
+import { FloatingFieldShell, floatingFieldPlaceholder } from "@/components/ui/floating-field";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
@@ -95,7 +95,11 @@ export const PhoneInput = (props: PhoneInputProps) => {
         ref={field.ref}
         autoComplete="tel-national"
         value={displayValue}
-        placeholder={useFloating ? (placeholder ?? " ") : placeholder}
+        placeholder={
+          useFloating
+            ? floatingFieldPlaceholder(floatingActive, placeholder)
+            : placeholder
+        }
         className={cn(
           useFloating &&
             "h-9 border-0 bg-transparent px-3 shadow-none focus-visible:ring-0",

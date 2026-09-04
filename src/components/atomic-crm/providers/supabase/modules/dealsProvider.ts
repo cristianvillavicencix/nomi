@@ -840,6 +840,78 @@ export const dealsProvider = {
     }
     return data?.value ?? null;
   },
+  async getDealEnvVarValue(varId: Identifier) {
+    const { data, error } = await invokeEdgeFunction<{
+      value?: string | null;
+    }>("deal_env_var_value", {
+      method: "POST",
+      body: {
+        action: "get",
+        var_id: Number(varId),
+      },
+    });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to reveal environment variable",
+      );
+    }
+    return data?.value ?? null;
+  },
+  async setDealEnvVarValue(varId: Identifier, value: string | null) {
+    const { data, error } = await invokeEdgeFunction<{ ok?: boolean }>(
+      "deal_env_var_value",
+      {
+        method: "POST",
+        body: {
+          action: "set",
+          var_id: Number(varId),
+          value,
+        },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to save environment variable",
+      );
+    }
+    if (!data?.ok) {
+      throw new Error("Failed to save environment variable");
+    }
+    return data;
+  },
+  async setDealEnvVarsMany(
+    dealId: Identifier,
+    vars: Array<{
+      key: string;
+      value: string;
+      is_secret?: boolean;
+      sort_order?: number;
+    }>,
+  ) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      ids?: number[];
+    }>("deal_env_var_value", {
+      method: "POST",
+      body: {
+        action: "set_many",
+        deal_id: Number(dealId),
+        vars,
+      },
+    });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to save environment variables",
+      );
+    }
+    if (!data?.ok) {
+      throw new Error("Failed to save environment variables");
+    }
+    return data;
+  },
   async setDealSecretValue(secretId: Identifier, value: string | null) {
     const { data, error } = await invokeEdgeFunction<{ ok?: boolean }>(
       "deal_secret_value",

@@ -2,20 +2,21 @@
 
 ## 1. Purpose
 
-Sales and delivery pipeline at `/deals` (kanban + table). Each row is a **deal** record (LBS calls them "projects" in much of the UI). Stages come from `organization_pipeline_stages` or defaults in `lbsProjectConstants.ts`. Create flow: `/deals/create` → chooser (manual project vs web form). Detail: `/deals/:id/show` with brief, resources, tasks, billing tabs. **New Deal modal** (company/contact context) creates open pipeline deals via `dataProvider.createDeal`.
+Sales and delivery pipeline at `/deals` (kanban + table). Each row is a **deal** record; staff UI says **Projects**. Default stages are the **9-stage** web pipeline in `lbsProjectConstants.ts` (also seeded in `organization_pipeline_stages`). Create flow: `/deals/create` (manual project vs web form). Detail: `/deals/:id/show` (`ProjectShowPage` + workspace tabs). Client context navigates to the same create route (no separate create dialog).
+
+See also: [`DEALS-PROJECTS-DECISIONS.md`](DEALS-PROJECTS-DECISIONS.md), [`DEALS-PROJECTS-STAGES-MATRIX.md`](DEALS-PROJECTS-STAGES-MATRIX.md).
 
 ## 2. Files & components
 
 | Area | Paths |
 |------|-------|
 | List/Board | `src/components/atomic-crm/deals/DealList.tsx`, `LbsDealBoardContent.tsx` |
-| Show | `src/components/atomic-crm/deals/DealShow.tsx`, `src/lbs/deals/DealProjectTabs.tsx`, `LbsDealHeaderOverview.tsx` |
-| Create | `src/lbs/deals/ProjectCreateFlow.tsx`, `AgencyProjectCreateForm.tsx`, `NewProjectChooserDialog.tsx` |
-| New deal modal | `src/lbs/deals/NewDealDialog.tsx`, `createDeal.ts` |
+| Show | `src/modules/deals/projects/ProjectShowPage.tsx`, `ProjectWorkspaceTabs.tsx`, `LbsDealHeaderOverview.tsx` |
+| Create | `src/modules/deals/ProjectCreateFlow.tsx`, `projects/AgencyProjectCreateForm.tsx` |
+| Shared insert | `src/modules/deals/createDeal.ts`; lead convert uses `buildDealInsertRecord` |
 | Stage | `dealStageMutations.ts`, `useLbsPipelineConfig.ts`, `useStageDeals.ts` |
 | Forms | `LbsDealInputs.tsx`, `projectForm.ts`, `lbsAgencyProjectModel.ts` |
-| Shared insert | `src/lbs/deals/createDeal.ts`; `convertLeadToClient` uses `buildDealInsertRecord` |
-| Filters | `src/lbs/deals/openDealFilters.ts` |
+| Filters | `src/modules/deals/openDealFilters.ts` |
 | Realtime | `useDealsRealtime.ts`, `useDealResourcesRealtime.ts` |
 
 ## 3. Database

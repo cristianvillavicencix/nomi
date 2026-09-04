@@ -6,6 +6,7 @@ import {
 } from "@/modules/clients/clientShowUtils";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { LbsDeal } from "@/modules/types";
+import { applyCrmContactCompanyToBrief } from "@/modules/deals/briefPrefillShared";
 import { cleanStoredBriefSocialLinks } from "@/modules/deals/briefSocialLinks";
 import { deploymentUrlPatchFromBrief } from "@/modules/deals/projects/projectDeploymentUrls";
 import {
@@ -15,10 +16,12 @@ import {
 
 export const optionalBriefUrl = (url?: string) => {
   if (!url?.trim()) return;
+  const trimmed = url.trim();
+  // Accept https://, http://, www., or bare domains (example.com / example.com/path)
   const urlRegex =
-    /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([-.]{1}[a-z0-9]+)*\.[a-z]{2,}(:[0-9]{1,5})?(\/.*)?$/i;
-  if (!urlRegex.test(url.trim())) {
-    return "Must be a valid URL";
+    /^(https?:\/\/)?(www\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(\:[0-9]{1,5})?(\/.*)?$/i;
+  if (!urlRegex.test(trimmed)) {
+    return "Enter a website like example.com, www.example.com, or https://example.com";
   }
 };
 
@@ -30,45 +33,30 @@ export const buildPrefilledBriefRecord = (
   const currentBrief: Record<string, unknown> = {
     ...((record.website_brief as Record<string, unknown> | undefined) ?? {}),
   };
-  const fillIfEmpty = (key: string, value: string | undefined | null) => {
-    if (value == null || value === "") return;
-    const existing = currentBrief[key];
-    if (existing != null && String(existing).trim().length > 0) return;
-    currentBrief[key] = value;
-  };
 
-  if (contact) {
-    fillIfEmpty("contact_first_name", contact.first_name);
-    fillIfEmpty("contact_last_name", contact.last_name);
-    if (!contact.first_name && !contact.last_name) {
-      const legacy = String(currentBrief.contact_name ?? "").trim();
-      if (legacy) {
-        const [first, ...rest] = legacy.split(/\s+/);
-        fillIfEmpty("contact_first_name", first);
-        fillIfEmpty("contact_last_name", rest.join(" "));
-      }
-    }
-    fillIfEmpty("contact_email", getContactEmail(contact));
-    fillIfEmpty("contact_phone", getContactPhone(contact));
-  }
-
-  if (company) {
-    fillIfEmpty("company_name", company.name);
-    fillIfEmpty("existing_website", company.website);
-    const fullAddress = [
-      company.address,
-      company.city,
-      company.state_abbr,
-      company.zipcode,
-    ]
-      .filter(Boolean)
-      .join(", ");
-    fillIfEmpty("full_address", fullAddress);
-    fillIfEmpty("full_address_street", company.address ?? "");
-    fillIfEmpty("full_address_city", company.city ?? "");
-    fillIfEmpty("full_address_state", company.state_abbr ?? "");
-    fillIfEmpty("full_address_zip", company.zipcode ?? "");
-  }
+  applyCrmContactCompanyToBrief(
+    currentBrief,
+    contact
+      ? {
+          first_name: contact.first_name,
+          last_name: contact.last_name,
+          email: getContactEmail(contact),
+          phone: getContactPhone(contact),
+          address: contact.address,
+        }
+      : null,
+    company
+      ? {
+          name: company.name,
+          website: company.website,
+          phone_number: company.phone_number,
+          address: company.address,
+          city: company.city,
+          state_abbr: company.state_abbr,
+          zipcode: company.zipcode,
+        }
+      : null,
+  );
 
   return { ...record, website_brief: currentBrief };
 };

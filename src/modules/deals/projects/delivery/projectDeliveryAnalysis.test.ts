@@ -62,7 +62,7 @@ describe("buildProjectDeliveryAnalysis", () => {
 
     const message = formatDeliveryAnalysisBlockerMessage(items);
     expect(message).toContain("Brief completed");
-    expect(message).toContain("Complete the website brief in Overview");
+    expect(message).toContain("Complete the website brief in the Brief tab");
     expect(message).toContain("Production URL");
     expect(message).toContain("Security");
   });

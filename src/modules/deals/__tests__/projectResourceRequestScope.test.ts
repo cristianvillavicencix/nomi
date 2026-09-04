@@ -126,10 +126,22 @@ describe("shouldShowProjectResourcesSection", () => {
     ).toBe(true);
   });
 
-  it("skips company intro for service-photo-only scope", () => {
+  it("skips company intro for any scoped CRM request", () => {
     expect(
       shouldShowProjectResourcesSection("company_info", ["service:framing"]),
     ).toBe(false);
+    expect(
+      shouldShowProjectResourcesSection("company_info", [
+        "logo",
+        "team",
+        "service:exterior-painting",
+      ]),
+    ).toBe(false);
+  });
+
+  it("shows company intro only for unscoped public forms", () => {
+    expect(shouldShowProjectResourcesSection("company_info", null)).toBe(true);
+    expect(shouldShowProjectResourcesSection("company_info", [])).toBe(true);
   });
 
   it("hides before-after for a single service photo scope", () => {

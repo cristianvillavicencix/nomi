@@ -522,6 +522,46 @@ export type DealSecret = {
   updated_at?: string;
 } & Pick<RaRecord, "id">;
 
+export type DealHosting = {
+  org_id?: number;
+  deal_id: Identifier;
+  provider?: string | null;
+  panel_url?: string | null;
+  location?: string | null;
+  plan_name?: string | null;
+  started_at?: string | null;
+  renewal_at?: string | null;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type DealDomain = {
+  org_id?: number;
+  deal_id: Identifier;
+  domain: string;
+  registrar?: string | null;
+  dns_notes?: string | null;
+  registered_at?: string | null;
+  renewal_at?: string | null;
+  https_notes?: string | null;
+  notes?: string | null;
+  sort_order?: number | null;
+  created_at?: string;
+  updated_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type DealEnvVar = {
+  org_id?: number;
+  deal_id: Identifier;
+  key: string;
+  has_value?: boolean;
+  is_secret?: boolean;
+  sort_order?: number | null;
+  created_at?: string;
+  updated_at?: string;
+} & Pick<RaRecord, "id">;
+
 export type ProjectDelivery = {
   org_id?: number;
   deal_id: Identifier;
@@ -670,6 +710,8 @@ export type ClientSmsDraft = {
   dealId?: Identifier | null;
   /** E.164 number to use when the contact has multiple phones, or for phone-only SMS. */
   externalPhone?: string | null;
+  /** Prefill composer body when opening SMS from a share dialog. */
+  initialBody?: string | null;
 };
 
 export type BusinessHoursDay = {

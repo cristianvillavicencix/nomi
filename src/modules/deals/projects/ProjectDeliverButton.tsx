@@ -6,10 +6,27 @@ import { ProjectDeliverWizard } from "@/modules/deals/projects/delivery/ProjectD
 import { isProjectDelivered } from "@/modules/deals/projects/ProjectDeliveredStamp";
 import type { LbsDeal } from "@/modules/types";
 
-export const ProjectDeliverButton = ({ record }: { record: LbsDeal }) => {
+type ProjectDeliverButtonProps = {
+  record: LbsDeal;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+};
+
+export const ProjectDeliverButton = ({
+  record,
+  open: openProp,
+  onOpenChange,
+}: ProjectDeliverButtonProps) => {
   const canDeliver = useMemberCapability("crm.pipeline.edit");
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const delivered = isProjectDelivered(record);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : uncontrolledOpen;
+
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
 
   if (!canDeliver) return null;
 

@@ -158,7 +158,7 @@ export const buildTicketMergeRows = (
     left: left.contactName,
     right: right.contactName,
   },
-  { key: "deal_id", label: "Deal", left: left.dealName, right: right.dealName },
+  { key: "deal_id", label: "Project", left: left.dealName, right: right.dealName },
   {
     key: "created_at",
     label: "Created",

@@ -16,10 +16,13 @@ import { ProjectResourcesTab } from "@/modules/deals/ProjectResourcesTab";
 import { LbsProjectOverviewTab } from "@/modules/deals/LbsProjectOverviewTab";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import {
+  DEFAULT_PROJECT_TAB,
   getValidProjectTab,
   resolveProjectTabSelection,
 } from "@/modules/deals/dealProjectTabUtils";
 import { ProjectSecurityWorkspaceTab } from "@/modules/deals/projects/tabs/ProjectSecurityTab";
+import { ProjectMessagesPanel } from "@/modules/deals/projects/ProjectMessagesPanel";
+import { ProjectTasksPanel } from "@/modules/deals/projects/ProjectTasksPanel";
 import {
   isSupabaseSchemaMissingError,
   supabaseTableQueryOptions,
@@ -27,6 +30,14 @@ import {
 import { useDealsRealtime } from "@/components/atomic-crm/deals/useDealsRealtime";
 import { useDealResourcesRealtime } from "@/modules/deals/useDealResourcesRealtime";
 import type { DealResource, LbsDeal } from "@/modules/types";
+
+const resolveContactIds = (record: LbsDeal): LbsDeal["contact_ids"] => {
+  if (record.contact_ids && record.contact_ids.length > 0) {
+    return record.contact_ids;
+  }
+  if (record.contact_id != null) return [record.contact_id];
+  return [];
+};
 
 const ProjectFinancialsTab = lazy(() =>
   import("@/modules/deals/projects/tabs/ProjectFinancialsTab").then((m) => ({
@@ -42,7 +53,7 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = getValidProjectTab(searchParams.get("tab"));
   const [visited, setVisited] = useState<Set<string>>(
-    () => new Set(["overview"]),
+    () => new Set([DEFAULT_PROJECT_TAB]),
   );
 
   const { data: projectResources = [], error: resourcesListError } =
@@ -89,7 +100,7 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
     const nextTab = resolveProjectTabSelection(tab);
     setVisited((prev) => new Set(prev).add(nextTab));
     const nextSearchParams = new URLSearchParams(searchParams);
-    if (nextTab === "overview") nextSearchParams.delete("tab");
+    if (nextTab === DEFAULT_PROJECT_TAB) nextSearchParams.delete("tab");
     else nextSearchParams.set("tab", nextTab);
     setSearchParams(nextSearchParams, { replace: true });
   };
@@ -106,8 +117,8 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
         >
           <StickyTabsBar className="shrink-0 bg-background pb-1">
             <TabsList className="inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
-              <TabsTrigger value="overview" className="shrink-0">
-                Activities
+              <TabsTrigger value="tasks" className="shrink-0">
+                Tasks
               </TabsTrigger>
               <TabsTrigger
                 value="website-brief"
@@ -133,11 +144,22 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                   Financials
                 </TabsTrigger>
               ) : null}
+              <TabsTrigger value="messages" className="shrink-0">
+                Messages
+              </TabsTrigger>
+              <TabsTrigger value="overview" className="shrink-0">
+                Activities
+              </TabsTrigger>
             </TabsList>
           </StickyTabsBar>
           <ScrollableContentArea className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <TabsContent value="overview" className="pt-4">
-              <LbsProjectOverviewTab record={record} />
+            <TabsContent value="tasks" className="pt-4">
+              {showTab("tasks") ? (
+                <ProjectTasksPanel
+                  record={record}
+                  contactIds={resolveContactIds(record)}
+                />
+              ) : null}
             </TabsContent>
             <TabsContent value="website-brief" className="pt-4">
               <WebsiteBriefTab record={record} />
@@ -157,6 +179,16 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                 ) : null}
               </TabsContent>
             ) : null}
+            <TabsContent value="messages" className="pt-4">
+              {showTab("messages") ? (
+                <div className="h-[min(32rem,60vh)] min-h-[22rem] overflow-hidden rounded-md border">
+                  <ProjectMessagesPanel record={record} className="h-full" />
+                </div>
+              ) : null}
+            </TabsContent>
+            <TabsContent value="overview" className="pt-4">
+              <LbsProjectOverviewTab record={record} />
+            </TabsContent>
           </ScrollableContentArea>
         </Tabs>
       </CardContent>

@@ -88,7 +88,7 @@ export const ClientShowActions = ({
           <Button variant="secondary" size="sm" className="h-8 gap-1.5" asChild>
             <Link to={newDealPath}>
               <Plus className="size-3.5" />
-              New Deal
+              New project
             </Link>
           </Button>
         ) : null}

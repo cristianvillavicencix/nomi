@@ -10,7 +10,8 @@ const LEGACY_BASE = "https://maps.googleapis.com/maps/api/place";
 
 const legacyTypesForMode = (mode: GooglePlacesAutocompleteMode) => {
   if (mode === "business") return "establishment";
-  return "address";
+  // geocode = street addresses + cities + postal codes (not street-only)
+  return "geocode";
 };
 
 export const fetchLegacyPlacesAutocomplete = async (

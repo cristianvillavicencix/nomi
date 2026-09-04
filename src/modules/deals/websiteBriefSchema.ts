@@ -11,10 +11,19 @@ import {
   lbsProjectTypeChoices,
   type LbsProjectScopeMode,
 } from "@/modules/deals/lbsProjectConstants";
+import {
+  ESSENTIAL_BRIEF_SECTION_IDS,
+  filterBriefSections,
+} from "@/modules/deals/projectBriefRequestScope";
 
 export const WEBSITE_INTAKE_SLUG = "website-intake";
 
-const WEBSITE_TYPES = new Set(["new-website", "redesign", "ecommerce"]);
+const WEBSITE_TYPES = new Set([
+  "website",
+  "new-website",
+  "redesign",
+  "ecommerce",
+]);
 const LANDING_TYPES = new Set(["landing-page"]);
 const ECOMMERCE_TYPES = new Set(["ecommerce"]);
 const REDESIGN_TYPES = new Set(["redesign"]);
@@ -24,9 +33,12 @@ const CAMPAIGN_TYPES = new Set([
   "social-media",
   "email-marketing",
   "branding",
+  "automation",
+  "crm-setup",
   "maintenance",
 ]);
 const BRAND_CONTENT_TYPES = new Set([
+  "website",
   "new-website",
   "redesign",
   "landing-page",
@@ -34,6 +46,7 @@ const BRAND_CONTENT_TYPES = new Set([
   "branding",
 ]);
 const TECHNICAL_TYPES = new Set([
+  "website",
   "new-website",
   "redesign",
   "landing-page",
@@ -498,6 +511,20 @@ export const getVisibleBriefSections = (projectType?: string | null) => {
   }));
 };
 
+/** CRM project brief surfaces — Essential pack by default (matches client send). */
+export type ProjectBriefPack = "essential" | "full";
+
+export const getProjectBriefSections = (
+  projectType?: string | null,
+  pack: ProjectBriefPack = "essential",
+) => {
+  const sections = getVisibleBriefSections(projectType);
+  if (pack === "full" || !usesContractorBriefForm(projectType || "website")) {
+    return sections;
+  }
+  return filterBriefSections(sections, ESSENTIAL_BRIEF_SECTION_IDS);
+};
+
 export type BriefSectionStats = {
   filled: number;
   total: number;
@@ -532,15 +559,29 @@ export const getBriefSectionStats = (
   const applicableFields = section.fields.filter((field) =>
     evaluateCondition(field.visibleWhen, briefAnswers),
   );
-  const filled = applicableFields.filter((field) =>
+
+  // Empty optional fields should not block Complete / drag % down forever.
+  // Track: all required fields + any optional fields that already have a value.
+  const trackedFields = applicableFields.filter(
+    (field) =>
+      field.required === true || isBriefFieldFilled(field, briefAnswers),
+  );
+  const filled = trackedFields.filter((field) =>
     isBriefFieldFilled(field, briefAnswers),
   ).length;
-  const total = applicableFields.length;
+  const total = trackedFields.length;
+  const anyFilled = applicableFields.some((field) =>
+    isBriefFieldFilled(field, briefAnswers),
+  );
+  const requiredComplete = applicableFields
+    .filter((field) => field.required === true)
+    .every((field) => isBriefFieldFilled(field, briefAnswers));
+
   return {
     filled,
     total,
-    isComplete: total > 0 && filled === total,
-    isEmpty: filled === 0,
+    isComplete: total > 0 && filled === total && requiredComplete,
+    isEmpty: !anyFilled,
   };
 };
 
@@ -565,8 +606,9 @@ export const getBriefSectionPreview = (
 export const getBriefOverallStats = (
   projectType: string | undefined | null,
   brief: Record<string, string | null | undefined> = {},
+  pack: ProjectBriefPack = "essential",
 ) => {
-  const sections = getVisibleBriefSections(projectType);
+  const sections = getProjectBriefSections(projectType, pack);
   return sections.reduce(
     (acc, section) => {
       const stats = getBriefSectionStats(section, brief);

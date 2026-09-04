@@ -15,16 +15,25 @@ import { TaskFormContent } from "./TaskFormContent";
 export const TaskEdit = ({
   open,
   close,
+  onOpenChange,
   taskId,
 }: {
   taskId: Identifier;
   open: boolean;
-  close: () => void;
+  /** @deprecated Prefer onOpenChange */
+  close?: () => void;
+  onOpenChange?: (open: boolean) => void;
 }) => {
   const notify = useNotify();
+
+  const handleOpenChange = (next: boolean) => {
+    onOpenChange?.(next);
+    if (!next) close?.();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={close}>
-      {taskId && (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      {taskId ? (
         <EditBase
           id={taskId}
           resource="tasks"
@@ -32,7 +41,7 @@ export const TaskEdit = ({
           transform={normalizeTaskCreateData}
           mutationOptions={{
             onSuccess: () => {
-              close();
+              handleOpenChange(false);
               notify("Task updated", {
                 type: "info",
                 undoable: true,
@@ -41,17 +50,17 @@ export const TaskEdit = ({
           }}
           redirect={false}
         >
-          <DialogContent className="lg:max-w-xl overflow-y-auto max-h-9/10 top-1/20 translate-y-0">
+          <DialogContent className="max-h-[90vh] overflow-y-auto lg:max-w-xl">
             <Form className="flex flex-col gap-4">
               <DialogHeader>
                 <DialogTitle>Edit task</DialogTitle>
               </DialogHeader>
-              <TaskFormContent showDealLink={false} />
-              <DialogFooter className="w-full sm:justify-between gap-4">
+              <TaskFormContent showAccountLink={false} />
+              <DialogFooter className="w-full gap-4 sm:justify-between">
                 <DeleteButton
                   mutationOptions={{
                     onSuccess: () => {
-                      close();
+                      handleOpenChange(false);
                       notify("Task deleted", {
                         type: "info",
                         undoable: true,
@@ -65,7 +74,7 @@ export const TaskEdit = ({
             </Form>
           </DialogContent>
         </EditBase>
-      )}
+      ) : null}
     </Dialog>
   );
 };

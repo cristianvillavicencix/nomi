@@ -1,5 +1,4 @@
 import {
-  createContext,
   useCallback,
   useContext,
   useMemo,
@@ -15,31 +14,29 @@ import {
 import { ManualHandoffDialog } from "@/modules/deals/ManualHandoffDialog";
 import { isBriefRequirementsWaived } from "@/modules/deals/projectManualHandoff";
 import type { BriefRequestScope } from "@/modules/deals/projectBriefRequestScope";
+import { ESSENTIAL_BRIEF_REQUEST } from "@/modules/deals/projectBriefRequestScope";
 import { SendProjectWebFormDialog } from "@/modules/deals/SendProjectWebFormDialog";
 import { WebsiteBriefSectionSheet } from "@/modules/deals/WebsiteBriefSectionSheet";
 import { downloadProjectBriefMarkdown } from "@/modules/deals/exportProjectBriefMarkdown";
 import { useBriefPrefilledRecord } from "@/modules/deals/websiteBriefEditorShared";
+import {
+  ProjectBriefActionsContext,
+  type ProjectBriefActionsContextValue,
+} from "@/modules/deals/projects/projectBriefActionsContext";
 import type { LbsDeal } from "@/modules/types";
 
-type ProjectBriefActionsContextValue = {
-  openRequestBrief: (scope?: BriefRequestScope) => void;
-  openFillAllSections: () => void;
-  openManualHandoff: () => void;
-  exportBrief: () => void;
-  isManualHandoffActive: boolean;
+const NOOP_BRIEF_ACTIONS: ProjectBriefActionsContextValue = {
+  openRequestBrief: () => {},
+  openFillAllSections: () => {},
+  openManualHandoff: () => {},
+  exportBrief: () => {},
+  isManualHandoffActive: false,
 };
-
-const ProjectBriefActionsContext =
-  createContext<ProjectBriefActionsContextValue | null>(null);
 
 export const useProjectBriefActions = () => {
   const ctx = useContext(ProjectBriefActionsContext);
-  if (!ctx) {
-    throw new Error(
-      "useProjectBriefActions must be used within ProjectBriefActionsProvider",
-    );
-  }
-  return ctx;
+  // Degrade instead of crashing (Vite HMR can briefly remount with a stale context).
+  return ctx ?? NOOP_BRIEF_ACTIONS;
 };
 
 export const useProjectBriefActionsOptional = () =>
@@ -70,7 +67,7 @@ export const ProjectBriefActionsProvider = ({
   );
 
   const openRequestBrief = useCallback((scope?: BriefRequestScope) => {
-    setSendScope(scope);
+    setSendScope(scope ?? ESSENTIAL_BRIEF_REQUEST);
     setSendOpen(true);
   }, []);
 

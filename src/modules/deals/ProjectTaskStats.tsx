@@ -9,7 +9,7 @@ export const ProjectTaskStats = ({
 }) => {
   if (variant === "compact") {
     return (
-      <span className="inline-flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+      <span className="inline-flex shrink-0 items-center gap-x-1.5 whitespace-nowrap text-sm text-muted-foreground">
         <span>
           <span className="font-medium text-foreground">{stats.open}</span> open
         </span>

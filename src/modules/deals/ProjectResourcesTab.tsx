@@ -29,7 +29,6 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Contact } from "@/components/atomic-crm/types";
 import { SendProjectResourcesDialog } from "@/modules/deals/SendProjectResourcesDialog";
-import { ProjectResourceLinkedDocs } from "@/modules/deals/ProjectResourceLinkedDocs";
 import { formatTabCount } from "@/modules/deals/dealProjectTabUtils";
 import {
   buildServiceCategory,
@@ -395,6 +394,10 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
   const handleDownloadItems = async (
     items: DealResource[],
     zipBaseName: string,
+    options?: {
+      layout?: "flat" | "before-after";
+      contextLabel?: string;
+    },
   ) => {
     if (items.length === 0) {
       notify("No files to download", { type: "warning" });
@@ -402,7 +405,7 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
     }
     setDownloadingTab(true);
     try {
-      await downloadResourcesAsZip(items, zipBaseName);
+      await downloadResourcesAsZip(items, zipBaseName, options);
       notify("ZIP download started");
     } catch (error) {
       notify(
@@ -444,6 +447,10 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
     requestTarget: string,
     uploadLabelText: string,
     zipBaseName: string,
+    zipOptions?: {
+      layout?: "flat" | "before-after";
+      contextLabel?: string;
+    },
   ) => (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-muted-foreground">
@@ -484,7 +491,9 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
                   variant="secondary"
                   aria-label="Download ZIP"
                   disabled={downloadingTab || items.length === 0}
-                  onClick={() => void handleDownloadItems(items, zipBaseName)}
+                  onClick={() =>
+                    void handleDownloadItems(items, zipBaseName, zipOptions)
+                  }
                 >
                   <Download className="size-4" />
                 </IconButton>
@@ -595,6 +604,10 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
                   buildZipBaseName(
                     activeServiceTabDef?.label ?? "photo-services",
                   ),
+                  {
+                    contextLabel:
+                      activeServiceTabDef?.label ?? "Photo services",
+                  },
                 )}
 
                 <Tabs
@@ -678,6 +691,11 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
                   buildZipBaseName(
                     activeBeforeAfterTabDef?.label ?? "before-after",
                   ),
+                  {
+                    layout: "before-after",
+                    contextLabel:
+                      activeBeforeAfterTabDef?.label ?? "Before & After",
+                  },
                 )}
 
                 <Tabs
@@ -766,18 +784,6 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
               </>
             )}
 
-            {tab.id === "document" ? (
-              <div className="space-y-3 border-t pt-4">
-                <div>
-                  <h4 className="text-sm font-semibold">Linked records</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Proposals, contracts, and form submissions tied to this
-                    project.
-                  </p>
-                </div>
-                <ProjectResourceLinkedDocs dealId={record.id} />
-              </div>
-            ) : null}
           </TabsContent>
         ))}
       </Tabs>
@@ -803,10 +809,12 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
         uploadMode={
           uploadTarget?.mode === "before-after"
             ? "before-after"
-            : uploadTarget?.category === "service-photo" ||
-                uploadTarget?.category.startsWith("service:")
-              ? "service-name"
-              : "default"
+            : uploadTarget?.category === "team"
+              ? "team"
+              : uploadTarget?.category === "service-photo" ||
+                  uploadTarget?.category.startsWith("service:")
+                ? "service-name"
+                : "default"
         }
         serviceOptions={beforeAfterSubTabs.map((tab) => ({
           value: tab.category,

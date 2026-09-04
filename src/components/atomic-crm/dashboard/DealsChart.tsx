@@ -13,10 +13,8 @@ import type { Deal } from "../types";
 // since the money is committed. Stages absent here weight 0 (no pending contribution).
 const STAGE_PIPELINE_WEIGHT: Record<string, number> = {
   lead: 0.1,
-  discovery: 0.25,
   proposal_sent: 0.5,
-  pending_payment: 0.85,
-  design: 1,
+  won: 1,
   development: 1,
   review: 1,
   launch: 1,
@@ -103,7 +101,7 @@ export const DealsChart = memo(() => {
       <div className="flex flex-col">
         <ChartHeader />
         <p className="text-sm text-muted-foreground">
-          No deals in the last {MONTHS_WINDOW} months.
+          No projects in the last {MONTHS_WINDOW} months.
         </p>
       </div>
     );

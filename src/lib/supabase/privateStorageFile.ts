@@ -281,6 +281,9 @@ export async function resolveDisplayUrlFromReference(
     if (!parsed && isExternalHttpUrl(trimmed)) {
       return resolvePrivateStorageBlobUrl({ reference: trimmed });
     }
+    if (!parsed && trimmed.startsWith("/")) {
+      return trimmed;
+    }
     return resolvePrivateStorageBlobUrl({
       reference: trimmed,
       defaultBucket: options?.defaultBucket ?? options?.bucket,

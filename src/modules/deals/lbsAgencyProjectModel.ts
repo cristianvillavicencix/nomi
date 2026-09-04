@@ -24,20 +24,17 @@ export type LbsProjectPriority =
 
 export const LBS_DEFAULT_PROJECT_PRIORITY: LbsProjectPriority = "normal";
 
-/** Kanban columns — full web agency pipeline. */
+/** Kanban columns — full web agency pipeline (9 stages). */
 export const lbsAgencyPipelineStages = [
   { value: "lead", label: "Lead" },
-  { value: "discovery", label: "Discovery" },
-  { value: "proposal_sent", label: "Proposal Sent" },
-  { value: "pending_payment", label: "Pending Payment" },
+  { value: "proposal_sent", label: "Proposal" },
   { value: "won", label: "Won" },
-  { value: "design", label: "Design" },
-  { value: "development", label: "Development" },
-  { value: "review", label: "Client Review" },
+  { value: "development", label: "Build" },
+  { value: "review", label: "Review" },
   { value: "launch", label: "Launch" },
   { value: "maintenance", label: "Maintenance" },
-  { value: "closed_won", label: "Closed Won" },
-  { value: "closed_lost", label: "Closed Lost" },
+  { value: "closed_won", label: "Closed" },
+  { value: "closed_lost", label: "Lost" },
 ] as const;
 
 export type LbsAgencyPipelineStage =
@@ -122,8 +119,8 @@ export const getAgencyProjectTypeLabel = (value?: string | null) => {
 /** Maps Kanban stage → default delivery_status. */
 export const STAGE_TO_DELIVERY_STATUS: Record<string, LbsDeliveryStatus> = {
   won: "planning",
-  design: "in_design",
   development: "in_development",
+  design: "in_development",
   review: "client_review",
   launch: "ready_to_launch",
   maintenance: "launched",

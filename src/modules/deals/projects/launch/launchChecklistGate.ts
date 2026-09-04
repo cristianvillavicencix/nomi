@@ -32,7 +32,7 @@ export const getLaunchChecklistBlocker = async (
 
   return {
     incompleteRequired,
-    message: `${incompleteRequired} required launch checklist item${incompleteRequired === 1 ? "" : "s"} still incomplete. Open the Launch tab to finish them before moving to Launch.`,
+    message: `${incompleteRequired} required launch checklist item${incompleteRequired === 1 ? "" : "s"} still incomplete. Complete them in Deliver before moving to Launch.`,
   };
 };
 

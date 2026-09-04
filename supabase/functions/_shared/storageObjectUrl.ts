@@ -23,6 +23,11 @@ export const parseStorageObjectReference = (
     };
   }
 
+  // Root-absolute app assets (e.g. /logos/sigma.png) are not storage paths.
+  if (trimmed.startsWith("/")) {
+    return null;
+  }
+
   if (
     defaultBucket &&
     !trimmed.startsWith("http://") &&
@@ -83,7 +88,8 @@ export const resolveStorageDisplayUrl = async (
     return trimmed.startsWith("http://") ||
       trimmed.startsWith("https://") ||
       trimmed.startsWith("blob:") ||
-      trimmed.startsWith("data:")
+      trimmed.startsWith("data:") ||
+      trimmed.startsWith("/")
       ? trimmed
       : null;
   }

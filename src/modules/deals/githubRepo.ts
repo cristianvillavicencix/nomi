@@ -42,11 +42,25 @@ export const normalizeGithubRepoInput = (input?: string | null) => {
 
 export const getGithubRepoUrl = (input?: string | null) => {
   const parsed = parseGithubRepo(input);
-  return parsed ? `https://github.com/${parsed.slug}` : null;
+  if (parsed) return `https://github.com/${parsed.slug}`;
+  const trimmed = input?.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^[A-Za-z0-9._-]+\.[A-Za-z]{2,}(\/|$)/.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+  return null;
 };
 
 export const getGithubRepoLabel = (input?: string | null) =>
   parseGithubRepo(input)?.slug ?? input?.trim() ?? null;
+
+/** Store owner/repo when parseable; otherwise keep free-text Git URL. */
+export const normalizeGitRepoInput = (input?: string | null) => {
+  const trimmed = input?.trim();
+  if (!trimmed) return null;
+  return parseGithubRepo(trimmed)?.slug ?? trimmed;
+};
 
 export const optionalGithubRepo = (value?: string) => {
   if (!value?.trim()) return;

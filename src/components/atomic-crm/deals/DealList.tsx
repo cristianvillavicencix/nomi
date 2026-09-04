@@ -88,7 +88,7 @@ const DealList = () => {
       filters={dealFilters}
       actions={
         <PageActions>
-          <PageTitle label="Deals" />
+          <PageTitle label="Projects" />
         </PageActions>
       }
       pagination={null}
@@ -128,9 +128,9 @@ const DealListSearchField = () => {
     <ModuleSearchField
       value={searchDraft}
       onChange={setSearchDraft}
-      basePlaceholder="Search deals by name or company"
+      basePlaceholder="Search projects by name or company"
       total={total}
-      itemSingular="deal"
+      itemSingular="project"
     />
   );
 };

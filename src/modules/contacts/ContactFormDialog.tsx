@@ -444,7 +444,10 @@ export const ContactFormDialog = ({
             )
               ? resolveContactCompanyForSave(values, effectiveLock)
               : { companyId: null, companyDraft: null };
-            const status = String(values.status ?? "contact_only");
+            const status =
+              lockCompanyId != null && lockCompanyId !== PENDING_COMPANY_LOCK
+                ? "contact_only"
+                : String(values.status ?? "contact_only");
             const interestedServices = Array.isArray(values.interested_services)
               ? (values.interested_services as string[])
               : [];
@@ -514,13 +517,24 @@ export const ContactFormDialog = ({
               ...createDefaults,
               ...(lockCompanyId != null &&
               lockCompanyId !== PENDING_COMPANY_LOCK
-                ? { company_id: lockCompanyId }
+                ? {
+                    company_id: lockCompanyId,
+                    person_kind: "contact_only" as const,
+                    status: "contact_only",
+                    lead_stage: null,
+                  }
                 : {}),
             }}
           >
             <ContactFormDialogCreateChrome
               title={resolvedTitle}
-              description="Create the person and link them to an existing company when applicable."
+              description={
+                description ||
+                (lockCompanyId != null &&
+                lockCompanyId !== PENDING_COMPANY_LOCK
+                  ? "Add a contact for this account."
+                  : "Create the person and link them to an existing company when applicable.")
+              }
               isSaving={isSaving}
               isMobile={isMobile}
               onClose={handleClose}

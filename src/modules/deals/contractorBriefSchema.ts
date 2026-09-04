@@ -27,8 +27,7 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
   {
     id: "confirm_data",
     title: "Confirm your details",
-    description:
-      "Review what we already have on file and fill in anything that's missing.",
+    description: "Confirm or update what’s on file.",
     fields: [
       field({
         key: "contact_first_name",
@@ -71,6 +70,7 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         key: "business_email",
         type: "email",
         label: "Business email",
+        required: true,
         visible_when: {
           operator: "and",
           conditions: [
@@ -85,6 +85,7 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         key: "business_phone",
         type: "phone",
         label: "Business phone",
+        required: true,
         visible_when: {
           operator: "and",
           conditions: [
@@ -97,26 +98,23 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
       }),
       field({
         key: "full_address",
-        type: "textarea",
-        label: "Full business address",
-        required: true,
+        type: "text",
+        label: "Business address",
       }),
       field({
         key: "existing_website",
         type: "text",
-        label: "Current website (if any)",
-        placeholder: "www.yourcompany.com",
+        label: "Current website",
+        placeholder: "example.com",
       }),
       field({
         key: "social_links",
         type: "dynamic_list",
         label: "Social media",
         min_items: 0,
-        add_button_label: "Add social profile",
-        item_label_template: "Social profile {index}",
-        item_placeholder: "e.g. Facebook|facebook.com/yourcompany",
-        help_text:
-          "Optional. Add each profile you use (Facebook, Instagram, etc.).",
+        add_button_label: "Add profile",
+        item_label_template: "Profile {index}",
+        item_placeholder: "facebook.com/yourpage",
       }),
     ],
   },
@@ -125,9 +123,33 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
     title: "About your business",
     fields: [
       field({
+        key: "target_audience",
+        type: "textarea",
+        label: "Who is your ideal customer?",
+        placeholder: "Homeowners in Austin, small shops, etc.",
+      }),
+      field({
+        key: "service_areas",
+        type: "textarea",
+        label: "Service areas / cities",
+      }),
+      field({
+        key: "differentiators",
+        type: "dynamic_list",
+        label: "What makes you different?",
+        min_items: 0,
+        add_button_label: "Add point",
+        item_placeholder: "e.g. Family-owned since 1998",
+      }),
+      field({
+        key: "business_hours",
+        type: "textarea",
+        label: "Business hours",
+      }),
+      field({
         key: "company_founded_year",
         type: "number",
-        label: "Year the company was founded",
+        label: "Year founded",
         min: 1900,
         max: new Date().getFullYear(),
       }),
@@ -147,122 +169,112 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         key: "certifications",
         type: "text",
         label: "Certifications & awards",
-        help_text:
-          "Add each certification, license, or award. Include a link and upload a badge image if you have one.",
-      }),
-      field({
-        key: "service_areas",
-        type: "textarea",
-        label: "Service areas / cities you work in",
-      }),
-      field({
-        key: "business_hours",
-        type: "textarea",
-        label: "Business hours",
       }),
     ],
   },
   {
     id: "web_content",
-    title: "Story & website content",
-    description:
-      "This helps us write your About, homepage, and trust sections.",
+    title: "Website content",
     fields: [
+      field({
+        key: "content_owner",
+        type: "radio",
+        label: "Who provides texts and images?",
+        options: [
+          "We will provide everything",
+          "Need copywriting help",
+          "Need photography help",
+          "Need both copy and photos",
+        ],
+      }),
       field({
         key: "company_story",
         type: "textarea",
         label: "Company story",
-        help_text:
-          "How the business started, who founded it, milestones, and what makes you unique today.",
-        placeholder:
-          "e.g. We started in 2010 as a two-person family team and now serve the whole county…",
+        placeholder: "Short origin story for About / homepage…",
       }),
       field({
         key: "warranties_guarantees",
         type: "dynamic_list",
         label: "Warranties you offer",
-        help_text: "Add each warranty separately.",
         min_items: 0,
         add_button_label: "Add warranty",
-        item_placeholder: "e.g. 10-year materials warranty…",
-      }),
-      field({
-        key: "differentiators",
-        type: "dynamic_list",
-        label: "What makes you different from competitors?",
-        help_text: "Add 3–5 bullet points.",
-        min_items: 0,
-        add_button_label: "Add differentiator",
-        item_placeholder:
-          "e.g. Family-owned since 1998, lifetime workmanship guarantee…",
+        item_placeholder: "e.g. 10-year materials warranty",
       }),
       field({
         key: "emergency_services",
         type: "radio",
-        label: "Do you offer emergency or after-hours service?",
+        label: "Emergency or after-hours service?",
         options: ["Yes, 24/7", "Yes, emergencies only", "No"],
       }),
     ],
   },
   {
     id: "services",
-    title: "Your services",
+    title: "Services",
     fields: [
+      field({
+        key: "website_goals",
+        type: "multi_select",
+        label: "Primary website goals",
+        options: [
+          "Generate leads / sales",
+          "Show portfolio",
+          "Inform / educate",
+          "Book appointments",
+          "Sell products (e-commerce)",
+        ],
+      }),
+      field({
+        key: "sitemap",
+        type: "textarea",
+        label: "Main pages",
+        placeholder: "Home, About, Services, Contact…",
+      }),
+      field({
+        key: "features_integrations",
+        type: "textarea",
+        label: "Must-have features",
+        placeholder: "Contact form, booking, gallery…",
+      }),
       field({
         key: "service_categories",
         type: "text",
-        label: "What type of contractor are you?",
-        help_text: "Select your specialty — sub-services will auto-fill.",
+        label: "Business type",
+      }),
+      field({
+        key: "service_category_other",
+        type: "text",
+        label: "Describe your business",
+        placeholder: "e.g. Florist, catering, tutoring…",
+        visible_when: whenEquals("service_categories", "Other"),
       }),
       field({
         key: "services_offered",
         type: "multi_select",
         label: "Services offered",
-        options: [
-          "Roof Repairs",
-          "Roof Replacements",
-          "Chimney Repairs",
-          "Siding Repairs",
-          "Siding Replacements",
-          "Vinyl Siding Installation",
-          "Deck Repairs",
-          "Deck Replacements",
-          "New Deck Construction",
-          "Composite Decking (Trex)",
-          "Railing Systems",
-          "Gutter Cleaning",
-          "Gutter Repairs",
-          "Gutter Replacements",
-          "Gutter Installation",
-          "Exterior Painting",
-          "Interior Painting",
-          "Power Washing",
-          "Exterior Renovations",
-          "General Home Improvements",
-        ],
+        options: [],
       }),
       field({
         key: "brands_used",
         type: "text",
-        label: "Brands / manufacturers you work with",
-        help_text: "Select the brands you prefer or are certified with.",
+        label: "Brands you work with",
       }),
       field({
         key: "primary_service",
         type: "text",
-        label: "Primary / most profitable service",
-        help_text: "Pick one of the services you selected above.",
+        label: "Primary service",
       }),
       field({
         key: "free_offers",
         type: "multi_select",
-        label: "Do you offer free inspections or estimates?",
+        label: "Free estimates or consults?",
         options: ["Free inspection", "Free estimate", "Both", "Neither"],
       }),
       field({
         key: "insurance_claims",
         type: "radio",
-        label: "Do you work with insurance claims?",
+        label: "Work with insurance claims?",
         options: ["Yes", "No"],
       }),
       field({
@@ -414,9 +426,28 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
     title: "Brand & style",
     fields: [
       field({
+        key: "reference_sites",
+        type: "dynamic_list",
+        label: "Reference websites",
+        min_items: 0,
+        add_button_label: "Add site",
+        item_placeholder: "www.example.com",
+      }),
+      field({
+        key: "design_style",
+        type: "radio",
+        label: "Tone",
+        options: [
+          "Professional & Corporate",
+          "Friendly & Approachable",
+          "Bold & Modern",
+          "Clean & Minimal",
+        ],
+      }),
+      field({
         key: "brand_colors_option",
         type: "radio",
-        label: "Do you have specific brand colors?",
+        label: "Do you have brand colors?",
         options: ["Yes", "No, use colors from the logo"],
       }),
       field({
@@ -438,34 +469,15 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         visible_when: whenEquals("brand_colors_option", "Yes"),
       }),
       field({
-        key: "design_style",
-        type: "radio",
-        label: "Design style preference",
-        options: [
-          "Professional & Corporate",
-          "Friendly & Approachable",
-          "Bold & Modern",
-          "Clean & Minimal",
-        ],
-      }),
-      field({
         key: "typography_preference",
         type: "radio",
         label: "Font preference",
         options: ["Modern (sans-serif)", "Classic (serif)", "Bold / Display"],
       }),
       field({
-        key: "reference_sites",
-        type: "dynamic_list",
-        label: "Reference websites",
-        min_items: 0,
-        add_button_label: "Add reference site",
-        item_placeholder: "www.example.com",
-      }),
-      field({
         key: "site_exclusions",
         type: "textarea",
-        label: "Anything you do NOT want on your site?",
+        label: "Anything you do NOT want on the site?",
       }),
     ],
   },

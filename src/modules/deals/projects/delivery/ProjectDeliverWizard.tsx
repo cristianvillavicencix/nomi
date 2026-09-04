@@ -24,6 +24,7 @@ import { getContactEmail } from "@/modules/clients/clientShowUtils";
 import { getProjectBriefProgress } from "@/modules/deals/projectBriefProgress";
 import { resolveProjectDeploymentUrls } from "@/modules/deals/projects/projectDeploymentUrls";
 import { DeliverProjectFormFields } from "@/modules/deals/projects/delivery/DeliverProjectFormFields";
+import { ProjectDeliveryAnalysisStep } from "@/modules/deals/projects/delivery/ProjectDeliveryAnalysisStep";
 import { ProjectDeliveryDoneActions } from "@/modules/deals/projects/delivery/ProjectDeliveryDoneActions";
 import {
   buildProjectDeliveryAnalysis,
@@ -399,7 +400,7 @@ export const ProjectDeliverWizard = ({
           <DialogDescription>
             {phase === "done"
               ? "Download, print, or email the handoff summary."
-              : "Fill the handoff details, then deliver. You can download and email right after."}
+              : "Review readiness (including the launch checklist), fill handoff details, then deliver."}
           </DialogDescription>
         </DialogHeader>
 
@@ -440,6 +441,18 @@ export const ProjectDeliverWizard = ({
                 </ul>
               </div>
             ) : null}
+
+            <div className="rounded-lg border border-border p-3">
+              <p className="mb-1 text-sm font-medium">Launch checklist & readiness</p>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Required checklist items and other delivery checks before handoff.
+              </p>
+              <ProjectDeliveryAnalysisStep
+                items={analysisItems}
+                analysisSkipped={analysisSkipped}
+                onSkipAnalysis={() => setAnalysisSkipped(true)}
+              />
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="delivery-maintenance-months">

@@ -109,7 +109,7 @@ export const ContactRelatedAccounts = ({
             ) : null}
             <span className="text-xs text-muted-foreground">
               {row.dealCount === 0
-                ? "No deals yet"
+                ? "No projects yet"
                 : `${row.dealCount} deal${row.dealCount === 1 ? "" : "s"}`}
               {row.wonCount > 0
                 ? ` · ${row.wonCount} won`

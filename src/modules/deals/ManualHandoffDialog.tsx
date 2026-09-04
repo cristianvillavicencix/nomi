@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import {
   approveBriefSection,
   getBriefSectionApproval,
-  getVisibleBriefSections,
+  getProjectBriefSections,
   type WebsiteBriefWithApprovals,
 } from "@/modules/deals/websiteBriefSchema";
 import {
@@ -43,7 +43,7 @@ export const ManualHandoffDialog = ({
   const waived = isBriefRequirementsWaived(record);
 
   const sections = useMemo(
-    () => getVisibleBriefSections(record.project_type),
+    () => getProjectBriefSections(record.project_type, "essential"),
     [record.project_type],
   );
 

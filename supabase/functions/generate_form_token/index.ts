@@ -17,6 +17,34 @@ type GenerateTokenBody = {
   max_uses?: number | null;
   base_url?: string;
   is_preview?: boolean;
+  /** Optional share scope stored on the token so /f/{code} stays short. */
+  request_scope?: {
+    sections?: string[];
+    presetServices?: string[];
+  } | null;
+};
+
+const normalizeRequestScope = (
+  value: GenerateTokenBody["request_scope"],
+): {
+  sections: string[];
+  presetServices?: string[];
+} | null => {
+  if (!value || typeof value !== "object") return null;
+  const sections = Array.isArray(value.sections)
+    ? value.sections
+        .map((entry) => String(entry ?? "").trim())
+        .filter(Boolean)
+    : [];
+  if (sections.length === 0) return null;
+  const presetServices = Array.isArray(value.presetServices)
+    ? value.presetServices
+        .map((entry) => String(entry ?? "").trim())
+        .filter(Boolean)
+    : [];
+  return presetServices.length > 0
+    ? { sections, presetServices }
+    : { sections };
 };
 
 const resolveBaseUrl = (requested?: string) => {
@@ -111,6 +139,8 @@ Deno.serve((req: Request) =>
           return Boolean(data?.id);
         });
 
+        const requestScope = normalizeRequestScope(body.request_scope);
+
         const { data: tokenRow, error: insertError } = await supabaseAdmin
           .from("public_form_tokens")
           .insert({
@@ -125,6 +155,7 @@ Deno.serve((req: Request) =>
             max_uses: Number.isFinite(maxUses as number) ? maxUses : maxUses,
             is_preview: isPreview,
             created_by_member_id: member.id,
+            request_scope: requestScope,
           })
           .select("token, short_code, expires_at, max_uses")
           .single();

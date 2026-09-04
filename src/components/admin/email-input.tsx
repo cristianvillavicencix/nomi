@@ -14,7 +14,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { FloatingFieldShell } from "@/components/ui/floating-field";
+import { FloatingFieldShell, floatingFieldPlaceholder } from "@/components/ui/floating-field";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -117,7 +117,11 @@ export const EmailInput = (props: EmailInputProps) => {
               id={id}
               autoComplete="email"
               value={inputValue}
-              placeholder={useFloating ? (placeholder ?? " ") : placeholder}
+              placeholder={
+                useFloating
+                  ? floatingFieldPlaceholder(floatingActive, placeholder)
+                  : placeholder
+              }
               className={cn(
                 useFloating &&
                   "h-9 border-0 bg-transparent px-3 shadow-none focus-visible:ring-0",

@@ -368,6 +368,10 @@ Deno.serve(
             deal_id: submission.deal_id,
           },
           answers,
+          tokenData.request_scope as
+            | { sections?: string[]; presetServices?: string[] }
+            | null
+            | undefined,
         );
       }
 

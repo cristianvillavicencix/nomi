@@ -95,18 +95,25 @@ export const CreateFormDialogShell = ({
     <DialogFooter
       className={cn(
         "shrink-0 gap-2 border-t bg-muted/30 px-5 py-4 sm:px-6",
-        footerNotice ? "flex-col items-stretch" : "",
         isMobile && "flex-col-reverse sm:flex-col-reverse",
       )}
     >
-      {footerNotice}
       <div
         className={cn(
-          "flex gap-2",
-          footerNotice ? "justify-end" : "",
-          isMobile && "w-full flex-col-reverse",
+          "flex w-full items-center justify-end gap-3",
+          isMobile && "flex-col-reverse items-stretch gap-2",
         )}
       >
+        {footerNotice ? (
+          <div
+            className={cn(
+              "mr-auto",
+              isMobile && "mr-0 w-full justify-start",
+            )}
+          >
+            {footerNotice}
+          </div>
+        ) : null}
         <Button
           type="button"
           variant="secondary"

@@ -36,7 +36,7 @@ const buildStreetLine = (
 };
 
 const legacyTypesForMode = (mode: GooglePlacesAutocompleteMode) =>
-  mode === "business" ? "establishment" : "address";
+  mode === "business" ? "establishment" : "geocode";
 
 const stripWebsiteForDisplay = (uri: string): string =>
   uri
@@ -65,6 +65,25 @@ const pickComponent = (
   return match.longText ?? match.long_name ?? "";
 };
 
+const looksLikePostalCode = (input: string) =>
+  /^\d{3,5}(-\d{0,4})?$/.test(input.trim());
+
+const mergeSuggestions = (
+  ...lists: GooglePlaceSuggestion[][]
+): GooglePlaceSuggestion[] => {
+  const seen = new Set<string>();
+  const merged: GooglePlaceSuggestion[] = [];
+  for (const list of lists) {
+    for (const item of list) {
+      if (seen.has(item.placeId)) continue;
+      seen.add(item.placeId);
+      merged.push(item);
+      if (merged.length >= 8) return merged;
+    }
+  }
+  return merged;
+};
+
 export const serverPlacesAutocomplete = async (
   input: string,
   mode: GooglePlacesAutocompleteMode,
@@ -76,6 +95,19 @@ export const serverPlacesAutocomplete = async (
 
   const newResult = await fetchNewPlacesAutocomplete(input, mode, key);
   if (newResult.ok) {
+    if (mode === "address" && looksLikePostalCode(input)) {
+      const zipResult = await fetchNewPlacesAutocomplete(
+        input,
+        mode,
+        key,
+        ["postal_code"],
+      );
+      if (zipResult.ok) {
+        return {
+          suggestions: mergeSuggestions(zipResult.suggestions, newResult.suggestions),
+        };
+      }
+    }
     return { suggestions: newResult.suggestions };
   }
 
@@ -98,6 +130,7 @@ const fetchNewPlacesAutocomplete = async (
   input: string,
   mode: GooglePlacesAutocompleteMode,
   key: string,
+  primaryTypes?: string[],
 ): Promise<
   | { ok: true; suggestions: GooglePlaceSuggestion[] }
   | { ok: false; errorMessage: string }
@@ -107,8 +140,13 @@ const fetchNewPlacesAutocomplete = async (
     languageCode: "en",
     regionCode: "US",
   };
+  if (mode === "address") {
+    body.includedRegionCodes = ["us"];
+  }
   if (mode === "business") {
     body.includedPrimaryTypes = ["establishment"];
+  } else if (primaryTypes?.length) {
+    body.includedPrimaryTypes = primaryTypes;
   }
 
   const response = await fetch(

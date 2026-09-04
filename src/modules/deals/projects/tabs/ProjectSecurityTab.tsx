@@ -1,6 +1,8 @@
-import { ProjectSecurityTab as ProjectCredentialsPanel } from "@/modules/deals/ProjectSecurityTab";
-import { ProjectDeploymentCard } from "@/modules/deals/projects/ProjectDeploymentCard";
-import { ProjectGithubLink } from "@/modules/deals/ProjectGithubLink";
+import { ProjectSecurityTab as ProjectAccountsPanel } from "@/modules/deals/ProjectSecurityTab";
+import { ProjectDomainsCard } from "@/modules/deals/projects/ProjectDomainsCard";
+import { ProjectEnvVarsCard } from "@/modules/deals/projects/ProjectEnvVarsCard";
+import { ProjectHostingCard } from "@/modules/deals/projects/ProjectHostingCard";
+import { ProjectOverviewSecurityCard } from "@/modules/deals/projects/ProjectOverviewSecurityCard";
 import type { LbsDeal } from "@/modules/types";
 
 export const ProjectSecurityWorkspaceTab = ({
@@ -8,16 +10,22 @@ export const ProjectSecurityWorkspaceTab = ({
 }: {
   record: LbsDeal;
 }) => (
-  <div className="space-y-6">
-    <div>
-      <h3 className="text-base font-semibold">Security & deployment</h3>
-      <p className="text-sm text-muted-foreground">
-        Repository status, live URLs, and project credentials.
-      </p>
+  <div className="divide-y divide-border/50">
+    <div className="pb-7">
+      <ProjectOverviewSecurityCard record={record} />
     </div>
-
-    <ProjectGithubLink record={record} showEditLink />
-    <ProjectDeploymentCard record={record} />
-    <ProjectCredentialsPanel record={record} />
+    <div className="py-7">
+      <ProjectDomainsCard record={record} />
+    </div>
+    <div className="py-7">
+      <ProjectHostingCard record={record} />
+    </div>
+    <div className="py-7">
+      <ProjectEnvVarsCard record={record} />
+    </div>
+    <div className="space-y-3 pt-7">
+      <h3 className="text-sm font-semibold">Accounts &amp; links</h3>
+      <ProjectAccountsPanel record={record} />
+    </div>
   </div>
 );

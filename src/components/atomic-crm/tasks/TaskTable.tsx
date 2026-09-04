@@ -38,7 +38,6 @@ import type {
   TaskParticipant,
 } from "@/components/atomic-crm/types";
 import { TaskEdit } from "@/components/atomic-crm/tasks/TaskEdit";
-import { TaskEditSheet } from "@/components/atomic-crm/tasks/TaskEditSheet";
 import {
   getTaskPriorityClassName,
   getTaskPriorityLabel,
@@ -53,7 +52,6 @@ import {
   getOpenTaskAgeLabel,
   getUserCompletionDurationLabel,
 } from "@/components/atomic-crm/tasks/taskTiming";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 export const TaskTable = ({
   tasks,
@@ -67,7 +65,6 @@ export const TaskTable = ({
   showProject?: boolean;
   emptyMessage?: string;
 }) => {
-  const isMobile = useIsMobile();
   const sortedTasks = sortTasksByPriorityAndDue(tasks);
   const taskIds = useMemo(
     () => sortedTasks.map((task) => task.id),
@@ -101,7 +98,6 @@ export const TaskTable = ({
             <TaskTableRow
               key={String(task.id)}
               task={task}
-              isMobile={isMobile}
               showProject={showProject}
               status={status}
               participants={participantsByTaskId[String(task.id)] ?? []}
@@ -116,13 +112,11 @@ export const TaskTable = ({
 const TaskTableRow = ({
   task,
   showProject = false,
-  isMobile,
   status = "open",
   participants = [],
 }: {
   task: TaskRecord;
   showProject?: boolean;
-  isMobile: boolean;
   status?: TaskStatusFilter;
   participants?: TaskParticipant[];
 }) => {
@@ -291,15 +285,11 @@ const TaskTableRow = ({
         </TableCell>
       </TableRow>
 
-      {isMobile ? (
-        <TaskEdit open={editOpen} onOpenChange={setEditOpen} taskId={task.id} />
-      ) : (
-        <TaskEditSheet
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          taskId={task.id}
-        />
-      )}
+      <TaskEdit
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        taskId={task.id}
+      />
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>

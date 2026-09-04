@@ -9,7 +9,7 @@ import {
 } from "@/components/admin/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FloatingFieldShell } from "@/components/ui/floating-field";
+import { FloatingFieldShell, floatingFieldPlaceholder } from "@/components/ui/floating-field";
 import { InputHelperText } from "@/components/admin/input-helper-text";
 import { cn } from "@/lib/utils";
 
@@ -60,6 +60,10 @@ export const TextInput = (props: TextInputProps) => {
 
   const hasValue = String(field.value ?? "").length > 0;
   const floatingActive = focused || hasValue;
+  const resolvedPlaceholder =
+    labelVariant === "floating"
+      ? floatingFieldPlaceholder(floatingActive, placeholder)
+      : placeholder;
 
   if (labelVariant === "floating" && label !== false) {
     return (
@@ -73,6 +77,7 @@ export const TextInput = (props: TextInputProps) => {
           label={labelNode}
           htmlFor={id}
           required={isRequired}
+          labelAlign={multiline ? "top" : "center"}
           className={multiline ? "min-h-[5.5rem] items-stretch" : undefined}
         >
           <FormControl>
@@ -81,9 +86,9 @@ export const TextInput = (props: TextInputProps) => {
                 {...rest}
                 {...field}
                 id={id}
-                placeholder={placeholder ?? " "}
+                placeholder={resolvedPlaceholder}
                 className={cn(
-                  "min-h-[5.5rem] resize-y rounded-md border-0 bg-transparent px-3 py-2 shadow-none focus-visible:ring-0",
+                  "min-h-[5.5rem] resize-y rounded-md border-0 bg-transparent px-3 py-2.5 shadow-none focus-visible:ring-0",
                   inputClassName,
                 )}
                 onFocus={(event) => {
@@ -101,7 +106,7 @@ export const TextInput = (props: TextInputProps) => {
                 {...rest}
                 {...field}
                 id={id}
-                placeholder={placeholder ?? " "}
+                placeholder={resolvedPlaceholder}
                 className={cn(
                   "h-9 border-0 bg-transparent px-3 shadow-none focus-visible:ring-0",
                   inputClassName,

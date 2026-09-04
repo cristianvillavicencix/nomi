@@ -1,51 +1,20 @@
 import type { DealPipelineStage } from "@/components/atomic-crm/types";
-import { normalizeLbsProjectStage } from "@/modules/deals/lbsProjectConstants";
+import {
+  buildLbsDealPipelineStages,
+  getLbsStageColor,
+  lbsProjectStages,
+  normalizeLbsProjectStage,
+} from "@/modules/deals/lbsProjectConstants";
 
-/** Compact project detail pipeline — max 7 steps for the show page header. */
-export const LBS_PROJECT_DISPLAY_STAGES = [
-  {
-    id: "lead",
-    label: "Lead",
-    stageIds: ["lead", "discovery"],
-    targetStage: "lead",
-  },
-  {
-    id: "proposal",
-    label: "Proposal",
-    stageIds: ["proposal_sent"],
-    targetStage: "proposal_sent",
-  },
-  {
-    id: "won",
-    label: "Won",
-    stageIds: ["won"],
-    targetStage: "won",
-  },
-  {
-    id: "production",
-    label: "Build",
-    stageIds: ["design", "development"],
-    targetStage: "design",
-  },
-  {
-    id: "review",
-    label: "Review",
-    stageIds: ["review"],
-    targetStage: "review",
-  },
-  {
-    id: "launch",
-    label: "Launch",
-    stageIds: ["launch", "maintenance"],
-    targetStage: "launch",
-  },
-  {
-    id: "closed",
-    label: "Closed",
-    stageIds: ["closed_won", "closed_lost"],
-    targetStage: "closed_won",
-  },
-] as const;
+/**
+ * Project show header pipeline — 1:1 with kanban stages (9-stage web pipeline).
+ */
+export const LBS_PROJECT_DISPLAY_STAGES = lbsProjectStages.map((stage) => ({
+  id: stage.value,
+  label: stage.label,
+  stageIds: [stage.value] as readonly string[],
+  targetStage: stage.value,
+}));
 
 export type LbsProjectDisplayStageId =
   (typeof LBS_PROJECT_DISPLAY_STAGES)[number]["id"];
@@ -58,13 +27,9 @@ const displayStageById = Object.fromEntries(
 >;
 
 export const getProjectDisplayPipelineStages = (): DealPipelineStage[] =>
-  LBS_PROJECT_DISPLAY_STAGES.map((stage, index) => ({
-    id: stage.id,
-    label: stage.label,
-    color: "#64748b",
-    order: index + 1,
-    pipelineId: "display",
-    isDefault: stage.id === "lead",
+  buildLbsDealPipelineStages().map((stage) => ({
+    ...stage,
+    color: getLbsStageColor(stage.id),
   }));
 
 export const getProjectDisplayStageForDealStage = (
@@ -74,7 +39,7 @@ export const getProjectDisplayStageForDealStage = (
   const match = LBS_PROJECT_DISPLAY_STAGES.find((entry) =>
     (entry.stageIds as readonly string[]).includes(normalized),
   );
-  return match?.id ?? "lead";
+  return (match?.id ?? "lead") as LbsProjectDisplayStageId;
 };
 
 export const resolveProjectDisplayStageChange = (

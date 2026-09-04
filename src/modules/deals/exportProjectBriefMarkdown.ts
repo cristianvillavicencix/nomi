@@ -7,7 +7,7 @@ import {
 import { isBriefMetadataKey } from "@/modules/deals/projectManualHandoff";
 import {
   getBriefSectionApproval,
-  getVisibleBriefSections,
+  getProjectBriefSections,
   lbsProjectTypeChoices,
   type WebsiteBriefFieldDef,
   type WebsiteBriefWithApprovals,
@@ -122,7 +122,7 @@ const formatFieldBlock = (field: WebsiteBriefFieldDef, value: unknown) => {
 export const buildProjectBriefMarkdown = (record: LbsDeal): string => {
   const brief = (record.website_brief ?? {}) as WebsiteBriefWithApprovals;
   const answers = brief as Record<string, unknown>;
-  const sections = getVisibleBriefSections(record.project_type);
+  const sections = getProjectBriefSections(record.project_type, "essential");
   const exportedAt = new Date().toLocaleString(undefined, {
     dateStyle: "medium",
     timeStyle: "short",

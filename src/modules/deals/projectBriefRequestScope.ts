@@ -6,9 +6,26 @@ export type BriefRequestScope = {
   sections: BriefRequestSection[];
 };
 
+/** Full contractor brief (all sections). */
 export const FULL_BRIEF_REQUEST: BriefRequestScope = {
   sections: CONTRACTOR_BRIEF_SECTIONS.map((section) => section.id),
 };
+
+/**
+ * Default client send — quick website brief.
+ * Maps to: confirm → business → goals/scope → design → content.
+ */
+export const ESSENTIAL_BRIEF_REQUEST: BriefRequestScope = {
+  sections: [
+    "confirm_data",
+    "about_business",
+    "services",
+    "brand_style",
+    "web_content",
+  ],
+};
+
+export const ESSENTIAL_BRIEF_SECTION_IDS = ESSENTIAL_BRIEF_REQUEST.sections;
 
 export const parseBriefSectionsParam = (
   value: string | null,
@@ -41,14 +58,35 @@ export const readBriefScopeFromLocation = (): BriefRequestSection[] | null => {
   return parseBriefSectionsParam(params.get("sections"));
 };
 
+/** Prefer scope order so Essential packs follow confirm → … → content. */
 export const filterBriefSections = <T extends { id: string }>(
   sections: T[],
   scope: BriefRequestSection[] | null,
 ): T[] => {
   if (!scope?.length) return sections;
-  const allowed = new Set(scope);
-  return sections.filter((section) => allowed.has(section.id));
+  const byId = new Map(sections.map((section) => [section.id, section]));
+  return scope
+    .map((id) => byId.get(id))
+    .filter((section): section is T => section != null);
 };
+
+const sameSectionSet = (a: string[], b: string[]) => {
+  if (a.length !== b.length) return false;
+  const set = new Set(a);
+  return b.every((id) => set.has(id));
+};
+
+export const isEssentialBriefScope = (
+  sections: BriefRequestSection[] | null | undefined,
+): boolean =>
+  Boolean(sections?.length) &&
+  sameSectionSet(sections!, ESSENTIAL_BRIEF_REQUEST.sections);
+
+export const isFullBriefScope = (
+  sections: BriefRequestSection[] | null | undefined,
+): boolean =>
+  Boolean(sections?.length) &&
+  sameSectionSet(sections!, FULL_BRIEF_REQUEST.sections);
 
 const BRIEF_SECTION_LABELS: Record<string, string> = Object.fromEntries(
   CONTRACTOR_BRIEF_SECTIONS.map((section) => [
@@ -59,9 +97,8 @@ const BRIEF_SECTION_LABELS: Record<string, string> = Object.fromEntries(
 
 export const getBriefScopeSummary = (scope: BriefRequestScope): string => {
   if (scope.sections.length === 0) return "Project brief";
-  if (scope.sections.length === FULL_BRIEF_REQUEST.sections.length) {
-    return "Full project brief";
-  }
+  if (isEssentialBriefScope(scope.sections)) return "Quick website brief";
+  if (isFullBriefScope(scope.sections)) return "Full project brief";
   return scope.sections
     .map((id) => BRIEF_SECTION_LABELS[id] ?? id.replace(/_/g, " "))
     .join(", ");

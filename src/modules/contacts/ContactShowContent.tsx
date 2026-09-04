@@ -168,7 +168,7 @@ export const ContactShowContent = ({
               {tabLabel("activity", "Activity", activityCount)}
             </TabsTrigger>
             <TabsTrigger value="deals" className={tabTriggerClassName}>
-              {tabLabel("deals", "Deals", counts.projects)}
+              {tabLabel("deals", "Projects", counts.projects)}
             </TabsTrigger>
             <TabsTrigger value="financial" className={tabTriggerClassName}>
               {tabLabel("financial", "Financial", financialCount)}
@@ -198,7 +198,7 @@ export const ContactShowContent = ({
           </TabsContent>
           <TabsContent value="deals" className="mt-0">
             <ClientTabSectionCard
-              title="Deals"
+              title="Projects"
               count={counts.projects}
               flush
             >

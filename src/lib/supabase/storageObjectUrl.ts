@@ -28,7 +28,8 @@ export const parseStorageObjectReference = (
     !trimmed.startsWith("http://") &&
     !trimmed.startsWith("https://") &&
     !trimmed.startsWith("blob:") &&
-    !trimmed.startsWith("data:")
+    !trimmed.startsWith("data:") &&
+    !trimmed.startsWith("/")
   ) {
     return { bucket: defaultBucket, path: trimmed };
   }

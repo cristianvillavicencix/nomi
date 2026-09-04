@@ -1,12 +1,16 @@
 export const LBS_PROJECT_TABS = [
-  "overview",
+  "tasks",
   "website-brief",
   "resources",
   "security",
   "financials",
+  "messages",
+  "overview",
 ] as const;
 
 export type LbsProjectTab = (typeof LBS_PROJECT_TABS)[number];
+
+export const DEFAULT_PROJECT_TAB: LbsProjectTab = "tasks";
 
 /** Old tab slugs still linked from elsewhere in the app. */
 const LEGACY_TAB_MAP: Record<string, LbsProjectTab> = {
@@ -23,7 +27,8 @@ const LEGACY_TAB_MAP: Record<string, LbsProjectTab> = {
   activities: "overview",
   settings: "security",
   tickets: "overview",
-  schedule: "overview",
+  schedule: "tasks",
+  calendar: "tasks",
   launch: "overview",
   maintenance: "financials",
   delivery: "overview",
@@ -31,12 +36,10 @@ const LEGACY_TAB_MAP: Record<string, LbsProjectTab> = {
   change_orders: "financials",
   payments: "financials",
   commissions: "financials",
-  // Removed tabs — redirect to safe defaults.
-  tasks: "overview",
-  chat: "overview",
-  messages: "overview",
-  "team-chat": "overview",
-  "project-chat": "overview",
+  // Removed / renamed tabs — redirect to safe defaults.
+  chat: "messages",
+  "team-chat": "messages",
+  "project-chat": "messages",
 };
 
 export const getValidProjectTab = (value: string | null): LbsProjectTab => {
@@ -46,7 +49,7 @@ export const getValidProjectTab = (value: string | null): LbsProjectTab => {
   if (value && LEGACY_TAB_MAP[value]) {
     return LEGACY_TAB_MAP[value];
   }
-  return "overview";
+  return DEFAULT_PROJECT_TAB;
 };
 
 export const resolveProjectTabSelection = (tab: string): LbsProjectTab =>

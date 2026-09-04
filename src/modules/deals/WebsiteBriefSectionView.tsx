@@ -6,7 +6,7 @@ import {
   getProjectDeliveryDate,
 } from "@/modules/deals/projectDeliveryDate";
 import {
-  getVisibleBriefSections,
+  getProjectBriefSections,
   lbsProjectTypeChoices,
   type WebsiteBriefSectionDef,
 } from "@/modules/deals/websiteBriefSchema";
@@ -151,7 +151,7 @@ export const WebsiteBriefSectionView = ({
   }
 
   if (target.kind === "all") {
-    const sections = getVisibleBriefSections(record.project_type);
+    const sections = getProjectBriefSections(record.project_type, "essential");
     return (
       <div className="space-y-6">
         <div className="space-y-1">

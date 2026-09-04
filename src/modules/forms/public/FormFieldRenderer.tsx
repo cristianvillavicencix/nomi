@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -13,10 +14,17 @@ import { SignaturePad } from "@/components/ui/signature-pad";
 import type { FormFieldDef } from "@/modules/forms/types";
 import { DynamicListField } from "@/modules/forms/public/fields/DynamicListField";
 import { FormFileMultiField } from "@/modules/forms/public/fields/FormFileMultiField";
+import { TeamPhotosField } from "@/modules/forms/public/fields/TeamPhotosField";
 import {
   uploadFormFile,
   type UploadedFormFile,
 } from "@/modules/forms/public/uploadFormFile";
+import {
+  FloatingFieldShell,
+  floatingFieldControlClassName,
+  floatingFieldPlaceholder,
+} from "@/components/ui/floating-field";
+import { cn } from "@/lib/utils";
 
 type FormFieldRendererProps = {
   field: FormFieldDef;
@@ -31,6 +39,73 @@ const readString = (value: unknown): string => {
   if (value == null) return "";
   if (Array.isArray(value)) return value.join(", ");
   return String(value);
+};
+
+const FloatingTextControl = ({
+  field,
+  value,
+  onChange,
+  disabled,
+  inputType,
+  multiline,
+}: {
+  field: FormFieldDef;
+  value: unknown;
+  onChange: (next: unknown) => void;
+  disabled?: boolean;
+  inputType: string;
+  multiline?: boolean;
+}) => {
+  const [focused, setFocused] = useState(false);
+  const text = readString(value);
+  const active = focused || text.trim().length > 0;
+
+  return (
+    <div className="space-y-1">
+      <FloatingFieldShell
+        active={active}
+        label={field.label ?? field.key}
+        htmlFor={field.key}
+        required={field.required}
+        labelAlign={multiline ? "top" : "center"}
+        className={multiline ? "items-start py-2" : undefined}
+      >
+        {multiline ? (
+          <Textarea
+            id={field.key}
+            value={text}
+            disabled={disabled}
+            rows={4}
+            className={cn(
+              floatingFieldControlClassName,
+              "h-auto min-h-[5.5rem] resize-y py-1",
+            )}
+            placeholder={floatingFieldPlaceholder(active, field.placeholder)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        ) : (
+          <Input
+            id={field.key}
+            type={inputType}
+            value={text}
+            disabled={disabled}
+            min={field.min}
+            max={field.max}
+            className={floatingFieldControlClassName}
+            placeholder={floatingFieldPlaceholder(active, field.placeholder)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        )}
+      </FloatingFieldShell>
+      {field.help_text ? (
+        <p className="text-xs text-muted-foreground">{field.help_text}</p>
+      ) : null}
+    </div>
+  );
 };
 
 export const FormFieldRenderer = ({
@@ -69,18 +144,14 @@ export const FormFieldRenderer = ({
 
   if (field.type === "textarea") {
     return (
-      <div className="space-y-2">
-        {commonLabel}
-        <Textarea
-          id={field.key}
-          value={readString(value)}
-          placeholder={field.placeholder}
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-          rows={4}
-        />
-        {helpText}
-      </div>
+      <FloatingTextControl
+        field={field}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        inputType="text"
+        multiline
+      />
     );
   }
 
@@ -255,6 +326,21 @@ export const FormFieldRenderer = ({
   }
 
   if (field.type === "file_multi") {
+    if (field.key === "team_photos" && token) {
+      return (
+        <div className="space-y-2">
+          {commonLabel}
+          <TeamPhotosField
+            field={field}
+            value={value}
+            token={token}
+            disabled={disabled}
+            onChange={onChange}
+          />
+          {helpText}
+        </div>
+      );
+    }
     return (
       <FormFileMultiField
         field={field}
@@ -270,7 +356,8 @@ export const FormFieldRenderer = ({
   }
 
   if (field.type === "file") {
-    const files = value && typeof value === "object" ? [value as UploadedFormFile] : [];
+    const files =
+      value && typeof value === "object" ? [value as UploadedFormFile] : [];
 
     const handleSingleFile = async (fileList: FileList | null) => {
       if (!fileList?.length) return;
@@ -328,6 +415,7 @@ export const FormFieldRenderer = ({
     );
   }
 
+  // Use text for "url" so www.example.com / example.com work without https://
   const inputType =
     field.type === "email"
       ? "email"
@@ -335,26 +423,17 @@ export const FormFieldRenderer = ({
         ? "tel"
         : field.type === "number"
           ? "number"
-          : field.type === "url"
-            ? "url"
-            : field.type === "date"
-              ? "date"
-              : "text";
+          : field.type === "date"
+            ? "date"
+            : "text";
 
   return (
-    <div className="space-y-2">
-      {commonLabel}
-      <Input
-        id={field.key}
-        type={inputType}
-        value={readString(value)}
-        placeholder={field.placeholder}
-        disabled={disabled}
-        min={field.min}
-        max={field.max}
-        onChange={(event) => onChange(event.target.value)}
-      />
-      {helpText}
-    </div>
+    <FloatingTextControl
+      field={field}
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      inputType={inputType}
+    />
   );
 };

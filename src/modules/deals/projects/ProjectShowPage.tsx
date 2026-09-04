@@ -16,12 +16,6 @@ import { ProjectStageFlow } from "@/components/atomic-crm/deals/ProjectStageFlow
 import { useNavigationLayoutPreference } from "@/components/atomic-crm/layout/navigationLayoutPreference";
 import { MobileBackButton } from "@/components/atomic-crm/misc/MobileBackButton";
 import { IconButton } from "@/components/ui/icon-button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { deliveryStatusForStage } from "@/modules/deals/lbsAgencyProjectModel";
 import { LbsDealHeaderOverview } from "@/modules/deals/LbsDealHeaderOverview";
 import { LbsProjectDeliveryUrgency } from "@/modules/deals/LbsProjectDeliveryUrgency";
@@ -45,7 +39,7 @@ import { ProjectWorkspaceTabs } from "@/modules/deals/projects/ProjectWorkspaceT
 import { ProjectDeliveredStamp } from "@/modules/deals/projects/ProjectDeliveredStamp";
 import { ProjectDeliverButton } from "@/modules/deals/projects/ProjectDeliverButton";
 import { ProjectNextMaintenanceBadge } from "@/modules/deals/projects/ProjectNextMaintenanceBadge";
-import { ProjectContextPanel } from "@/modules/deals/projects/ProjectContextPanel";
+import { ProjectWorkspaceGates } from "@/modules/deals/projects/ProjectWorkspaceGates";
 import { ProjectTasksDialog } from "@/modules/deals/projects/ProjectTasksRail";
 import { ClientPortalDialog } from "@/modules/portal/ClientPortalDialog";
 import type { LbsDeal } from "@/modules/types";
@@ -57,34 +51,14 @@ const ArchivedTitle = () => (
   </div>
 );
 
-const TASKS_RAIL_STORAGE_KEY = "nomi.project.tasksRail.collapsed";
-
-const readTasksRailCollapsed = () => {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(TASKS_RAIL_STORAGE_KEY) === "true";
-};
-
 const ProjectShowContent = () => {
   const record = useRecordContext<LbsDeal>();
   const isMobile = useIsMobile();
   const { data: identity } = useGetIdentity();
   const dataProvider = useDataProvider();
-  const [tasksRailCollapsed, setTasksRailCollapsed] = useState(
-    readTasksRailCollapsed,
-  );
   const [tasksDialogOpen, setTasksDialogOpen] = useState(false);
   const [portalDialogOpen, setPortalDialogOpen] = useState(false);
-  const [mobileContextOpen, setMobileContextOpen] = useState(false);
-
-  const handleToggleRail = () => {
-    setTasksRailCollapsed((prev) => {
-      const next = !prev;
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(TASKS_RAIL_STORAGE_KEY, String(next));
-      }
-      return next;
-    });
-  };
+  const [deliverOpen, setDeliverOpen] = useState(false);
   const notify = useNotify();
   const refresh = useRefresh();
   const [update, { isPending: isUpdatingStage }] = useUpdate();
@@ -122,7 +96,7 @@ const ProjectShowContent = () => {
     const nextDeliveryStatus = deliveryStatusForStage(normalizedStage);
     const isClosedStage =
       normalizedStage === "closed_won" || normalizedStage === "delivered";
-    const isOpportunityStage = ["lead", "discovery", "proposal_sent"].includes(
+    const isOpportunityStage = ["lead", "proposal_sent"].includes(
       normalizedStage,
     );
     const nextLifecyclePhase = isClosedStage
@@ -206,8 +180,8 @@ const ProjectShowContent = () => {
         <ProjectDeliveredStamp record={record} />
         <div
           className={cn(
-            "shrink-0 space-y-2 px-1 sm:px-0",
-            isMobile && "max-h-[42%] space-y-1.5 overflow-y-auto overscroll-contain",
+            "shrink-0 space-y-2 px-1 pt-3 sm:px-0 sm:pt-4",
+            isMobile && "max-h-[42%] space-y-1.5 overflow-y-auto overscroll-contain pt-1",
           )}
         >
           {isMobile ? (
@@ -218,8 +192,8 @@ const ProjectShowContent = () => {
               </span>
               <div className="ml-auto">
                 <IconButton
-                  aria-label="Open project context"
-                  onClick={() => setMobileContextOpen(true)}
+                  aria-label="Open project tasks"
+                  onClick={() => setTasksDialogOpen(true)}
                 >
                   <ListChecks className="size-5" />
                 </IconButton>
@@ -236,18 +210,23 @@ const ProjectShowContent = () => {
             <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto">
               <ProjectNextMaintenanceBadge record={record} />
               <LbsProjectDeliveryUrgency record={record} />
-              <ProjectDeliverButton record={record} />
+              <ProjectDeliverButton
+                record={record}
+                open={deliverOpen}
+                onOpenChange={setDeliverOpen}
+              />
               <ProjectActionsMenu
                 record={record}
-                onOpenTasks={() =>
-                  isMobile
-                    ? setMobileContextOpen(true)
-                    : setTasksDialogOpen(true)
-                }
+                onOpenTasks={() => setTasksDialogOpen(true)}
                 onOpenPortal={() => setPortalDialogOpen(true)}
               />
             </div>
           </div>
+
+          <ProjectWorkspaceGates
+            record={record}
+            onOpenDeliver={() => setDeliverOpen(true)}
+          />
 
           <ProjectStageFlow
             stages={displayStages}
@@ -260,38 +239,9 @@ const ProjectShowContent = () => {
           />
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <ProjectWorkspaceTabs record={record} />
-          </div>
-          <div className="hidden lg:flex lg:h-full lg:min-h-0 lg:shrink-0">
-            <ProjectContextPanel
-              record={record}
-              collapsed={tasksRailCollapsed}
-              onToggleCollapsed={handleToggleRail}
-            />
-          </div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <ProjectWorkspaceTabs record={record} />
         </div>
-
-        {isMobile ? (
-          <Sheet open={mobileContextOpen} onOpenChange={setMobileContextOpen}>
-            <SheetContent
-              side="right"
-              className="flex h-full min-h-0 w-full flex-col gap-0 p-0 sm:max-w-md"
-            >
-              <SheetHeader className="shrink-0 border-b px-4 py-3 text-left">
-                <SheetTitle>Project context</SheetTitle>
-              </SheetHeader>
-              <div className="min-h-0 flex-1 overflow-hidden [&_aside]:!h-full [&_aside]:!w-full [&_aside]:border-l-0">
-                <ProjectContextPanel
-                  record={record}
-                  collapsed={false}
-                  onToggleCollapsed={() => setMobileContextOpen(false)}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
-        ) : null}
 
         <ProjectTasksDialog
           record={record}

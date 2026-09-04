@@ -151,6 +151,10 @@ export const formsProvider = {
     maxUses?: number | null;
     baseUrl?: string;
     isPreview?: boolean;
+    requestScope?: {
+      sections: string[];
+      presetServices?: string[];
+    } | null;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       token: string;
@@ -169,9 +173,10 @@ export const formsProvider = {
         company_id: payload.companyId ?? null,
         deal_id: payload.dealId ?? null,
         expires_in_days: payload.expiresInDays ?? 30,
-        max_uses: payload.maxUses ?? 1,
+        max_uses: payload.maxUses === undefined ? 1 : payload.maxUses,
         base_url: payload.baseUrl ?? window.location.origin,
         is_preview: payload.isPreview ?? false,
+        request_scope: payload.requestScope ?? null,
       },
     });
 

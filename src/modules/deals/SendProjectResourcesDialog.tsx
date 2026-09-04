@@ -1,7 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useGetList, useDataProvider, useNotify } from "ra-core";
-import { Copy, ExternalLink, Loader2, Mail, Upload } from "lucide-react";
+import {
+  useGetList,
+  useGetOne,
+  useDataProvider,
+  useNotify,
+} from "ra-core";
+import {
+  Copy,
+  ExternalLink,
+  Loader2,
+  Mail,
+  MessageSquare,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import {
@@ -14,26 +25,20 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import type { FormInstance } from "@/modules/forms/types";
+import { resolveShareUrl } from "@/modules/forms/share/formLinkUtils";
 import { PROJECT_RESOURCES_SLUG } from "@/modules/deals/projectResourceConstants";
-import {
-  appendRequestScopeToUrl,
-  type ResourceRequestScope,
-} from "@/modules/deals/projectResourceRequestScope";
+import type { ResourceRequestScope } from "@/modules/deals/projectResourceRequestScope";
 import { mailtoHref } from "@/lib/linking";
-
-const resolveShareUrl = (
-  result: { url: string; short_url?: string },
-  origin: string,
-) => {
-  if (result.short_url) {
-    return result.short_url.startsWith("http")
-      ? result.short_url
-      : `${origin}${result.short_url}`;
-  }
-  return result.url.startsWith("http") ? result.url : `${origin}${result.url}`;
-};
+import { useMessagesQuickAccessOptional } from "@/modules/messages/messagesQuickAccessContext";
+import {
+  contactHasSmsPhone,
+  resolveClientSmsPhone,
+} from "@/modules/messages/messageContactUtils";
+import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
 
 type SendProjectResourcesDialogProps = {
   open: boolean;
@@ -60,6 +65,9 @@ export const SendProjectResourcesDialog = ({
 }: SendProjectResourcesDialogProps) => {
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
+  const messagesQuickAccess = useMessagesQuickAccessOptional();
+  const { smsEnabled } = useMessagingEnabled();
+  const canSendMessages = useMemberCapability("messaging.send");
   const [copied, setCopied] = useState(false);
 
   const { data: forms = [] } = useGetList<FormInstance>(
@@ -73,6 +81,16 @@ export const SendProjectResourcesDialog = ({
   );
 
   const formInstance = forms[0];
+  const resolvedContactId =
+    contactId != null && Number.isFinite(Number(contactId))
+      ? Number(contactId)
+      : null;
+
+  const { data: contact } = useGetOne<Contact>(
+    "contacts",
+    { id: resolvedContactId as number },
+    { enabled: open && resolvedContactId != null },
+  );
 
   const generateLink = useMutation({
     mutationFn: async () => {
@@ -84,8 +102,9 @@ export const SendProjectResourcesDialog = ({
         companyId: companyId != null ? Number(companyId) : null,
         contactId: contactId != null ? Number(contactId) : null,
         expiresInDays: 30,
-        maxUses: 1,
+        maxUses: null,
         baseUrl: window.location.origin,
+        requestScope: requestScope ?? null,
       });
     },
     onError: () => {
@@ -109,9 +128,8 @@ export const SendProjectResourcesDialog = ({
 
   const formUrl = useMemo(() => {
     if (!generateLink.data) return "";
-    const base = resolveShareUrl(generateLink.data, window.location.origin);
-    return requestScope ? appendRequestScopeToUrl(base, requestScope) : base;
-  }, [generateLink.data, requestScope]);
+    return resolveShareUrl(generateLink.data, window.location.origin);
+  }, [generateLink.data]);
 
   const handleCopy = async () => {
     if (!formUrl) return;
@@ -132,6 +150,33 @@ export const SendProjectResourcesDialog = ({
     );
     return `mailto:${trimmed}?subject=${subject}&body=${body}`;
   }, [formUrl, clientEmail, clientName, projectName]);
+
+  const smsBody = useMemo(() => {
+    if (!formUrl) return "";
+    const first =
+      contact?.first_name?.trim() ||
+      clientName?.trim().split(/\s+/)[0] ||
+      "";
+    return `Hi${first ? ` ${first}` : ""}, please upload your project photos here: ${formUrl}`;
+  }, [formUrl, contact?.first_name, clientName]);
+
+  const canTextClient = Boolean(
+    formUrl &&
+      contact &&
+      contactHasSmsPhone(contact) &&
+      resolveClientSmsPhone(contact) &&
+      smsEnabled &&
+      canSendMessages &&
+      messagesQuickAccess,
+  );
+
+  const handleTextClient = async () => {
+    if (!contact || !messagesQuickAccess || !smsBody) return;
+    onClose();
+    await messagesQuickAccess.openSms(contact, dealId, {
+      initialBody: smsBody,
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -196,31 +241,33 @@ export const SendProjectResourcesDialog = ({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:justify-between">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Done
-          </Button>
-          <div className="flex gap-2">
-            {emailHref ? (
-              <Button type="button" variant="secondary" asChild>
-                <a href={emailHref}>
-                  <Mail className="size-4" />
-                  Email client
-                </a>
-              </Button>
+        <DialogFooter className="gap-2 sm:justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!canTextClient || messagesQuickAccess?.isOpening}
+            onClick={() => void handleTextClient()}
+          >
+            {messagesQuickAccess?.isOpening ? (
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Button type="button" variant="secondary" disabled>
+              <MessageSquare className="size-4" />
+            )}
+            Text client
+          </Button>
+          {emailHref ? (
+            <Button type="button" asChild>
+              <a href={emailHref}>
                 <Mail className="size-4" />
                 Email client
-              </Button>
-            )}
-            <Button type="button" disabled={!formUrl} asChild>
-              <a href={formUrl || "#"} target="_blank" rel="noreferrer">
-                <Upload className="size-4" />
-                Preview form
               </a>
             </Button>
-          </div>
+          ) : (
+            <Button type="button" disabled>
+              <Mail className="size-4" />
+              Email client
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

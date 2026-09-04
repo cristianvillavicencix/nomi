@@ -15,30 +15,23 @@ export const lbsProjectTypeChoices = [
   { value: "email-marketing", label: "Email marketing (legacy)" },
 ];
 
-/** Full web agency pipeline: sales funnel + delivery + close. */
+/** Full web agency pipeline: sales funnel + delivery + close (9 stages). */
 export const LBS_WEB_PIPELINE_STAGES = [
   { value: "lead", label: "Lead" },
-  { value: "discovery", label: "Discovery" },
-  { value: "proposal_sent", label: "Proposal Sent" },
-  { value: "pending_payment", label: "Pending Payment" },
+  { value: "proposal_sent", label: "Proposal" },
   { value: "won", label: "Won" },
-  { value: "design", label: "Design" },
-  { value: "development", label: "Development" },
-  { value: "review", label: "Client Review" },
+  { value: "development", label: "Build" },
+  { value: "review", label: "Review" },
   { value: "launch", label: "Launch" },
   { value: "maintenance", label: "Maintenance" },
-  { value: "closed_won", label: "Closed Won" },
-  { value: "closed_lost", label: "Closed Lost" },
+  { value: "closed_won", label: "Closed" },
+  { value: "closed_lost", label: "Lost" },
 ] as const;
 
 export const lbsProjectStages = LBS_WEB_PIPELINE_STAGES;
 
 /** Pre-delivery sales stages (brief not required). */
-export const LBS_PRE_DELIVERY_STAGES = new Set([
-  "lead",
-  "discovery",
-  "proposal_sent",
-]);
+export const LBS_PRE_DELIVERY_STAGES = new Set(["lead", "proposal_sent"]);
 
 /** Contractor / restoration pipeline slugs (not used in LBS). */
 export const CONTRACTOR_PROJECT_STAGE_IDS = [
@@ -56,12 +49,14 @@ export const LEGACY_LBS_STAGE_MAP: Record<string, string> = {
   client_review: "review",
   delivered: "closed_won",
   opportunity: "lead",
-  qualified: "discovery",
+  qualified: "lead",
+  discovery: "lead",
+  pending_payment: "won",
   proposal: "proposal_sent",
   negotiation: "proposal_sent",
   kickoff: "won",
   approved: "won",
-  scheduled: "design",
+  scheduled: "development",
   closed: "closed_won",
   active: "launch",
   on_hold: "development",
@@ -69,14 +64,13 @@ export const LEGACY_LBS_STAGE_MAP: Record<string, string> = {
   pending_inspection: "review",
   completed: "closed_won",
   content_collection: "development",
-  design: "design",
+  design: "development",
   development: "development",
   review: "review",
   live: "launch",
   maintenance: "maintenance",
   lost: "closed_lost",
   lead: "lead",
-  discovery: "discovery",
   proposal_sent: "proposal_sent",
   won: "won",
   launch: "launch",
@@ -191,6 +185,51 @@ export const getLbsProjectScopeMode = (
 
 export const LBS_LANDING_PAGE_SCOPE = "Landing page";
 
+/** Website / web build types that use GitHub on create/edit. */
+const PROJECT_TYPES_WITH_GITHUB = new Set([
+  "website",
+  "new-website",
+  "redesign",
+  "landing-page",
+  "ecommerce",
+]);
+
+/** Types that ask for the current/live site URL on create/edit. */
+const PROJECT_TYPES_WITH_WEBSITE_URL = new Set([
+  "website",
+  "new-website",
+  "redesign",
+  "landing-page",
+  "ecommerce",
+  "maintenance",
+  "seo",
+  "google-ads",
+]);
+
+/** Types that ask for domain + hosting on create/edit. */
+const PROJECT_TYPES_WITH_DOMAIN_HOSTING = new Set([
+  "website",
+  "new-website",
+  "redesign",
+  "landing-page",
+  "ecommerce",
+  "maintenance",
+]);
+
+export const projectTypeShowsGithub = (projectType?: string | null) =>
+  Boolean(projectType && PROJECT_TYPES_WITH_GITHUB.has(projectType));
+
+export const projectTypeShowsWebsiteUrl = (projectType?: string | null) =>
+  Boolean(projectType && PROJECT_TYPES_WITH_WEBSITE_URL.has(projectType));
+
+export const projectTypeShowsDomainHosting = (projectType?: string | null) =>
+  Boolean(projectType && PROJECT_TYPES_WITH_DOMAIN_HOSTING.has(projectType));
+
+export const projectTypeShowsServiceDetails = (projectType?: string | null) =>
+  projectTypeShowsWebsiteUrl(projectType) ||
+  projectTypeShowsDomainHosting(projectType) ||
+  projectTypeShowsGithub(projectType);
+
 export const buildLbsDealPipelineStages = () =>
   lbsProjectStages.map((stage, index) => ({
     id: stage.value,
@@ -214,10 +253,8 @@ export const buildLbsDealPipelines = () => [
 export const getLbsStageColor = (stageValue: string) => {
   const normalized = normalizeLbsProjectStage(stageValue);
   if (normalized === "lead") return "#64748b";
-  if (normalized === "discovery") return "#3b82f6";
   if (normalized === "proposal_sent") return "#f59e0b";
   if (normalized === "won") return "#16a34a";
-  if (normalized === "design") return "#9333ea";
   if (normalized === "development") return "#6366f1";
   if (normalized === "review") return "#f97316";
   if (normalized === "launch") return "#0d9488";

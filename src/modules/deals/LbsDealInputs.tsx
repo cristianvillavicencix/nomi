@@ -29,6 +29,10 @@ import {
   LBS_LANDING_PAGE_SCOPE,
   lbsProjectStages,
   lbsProjectTypeChoices,
+  projectTypeShowsDomainHosting,
+  projectTypeShowsGithub,
+  projectTypeShowsServiceDetails,
+  projectTypeShowsWebsiteUrl,
 } from "@/modules/deals/lbsProjectConstants";
 import { LBS_PROJECT_PRIORITIES } from "@/modules/deals/lbsAgencyProjectModel";
 import { lbsProjectContactName } from "@/modules/deals/LbsProjectContactOption";
@@ -37,6 +41,37 @@ import type { Proposal } from "@/modules/types";
 const toNumber = (value: unknown): number | null => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+/** Prefer stored amount; fall back to one_time_total when amount is empty. */
+const resolveProposalBudget = (proposal?: Proposal | null): number | null => {
+  const amount =
+    toNumber(proposal?.amount) ?? toNumber(proposal?.one_time_total);
+  return amount != null && amount > 0 ? amount : null;
+};
+
+const isSelectableProjectProposal = (proposal: Proposal) => {
+  const status = String(proposal.status ?? "").toLowerCase();
+  return status !== "draft" && status !== "rejected" && status !== "cancelled";
+};
+
+/** Map linked proposal status → project stage (sales funnel only). */
+const stageFromProposal = (proposal?: Proposal | null): string | null => {
+  if (!proposal) return null;
+  const status = String(proposal.status ?? "").toLowerCase();
+  if (status === "accepted" || status === "paid_in_full") return "won";
+  if (!isSelectableProjectProposal(proposal)) return null;
+  return "proposal_sent";
+};
+
+const isEarlySalesStage = (stageValue?: string | null) => {
+  const stage = String(stageValue ?? "");
+  return (
+    !stage ||
+    stage === "lead" ||
+    stage === "proposal_sent" ||
+    stage === "won"
+  );
 };
 
 const isAdminMember = (member: OrganizationMember) =>
@@ -79,44 +114,62 @@ const optionalPositiveCurrency = (value: unknown) => {
   return undefined;
 };
 
-const FormSectionDivider = () => (
-  <div
-    className="h-px w-full bg-gradient-to-r from-transparent via-border/80 to-transparent"
-    aria-hidden
-  />
-);
+const toDateOnly = (value: unknown): string | null => {
+  if (value == null || value === "") return null;
+  const raw = String(value);
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? null;
+};
+
+/** Delivery may equal start; only reject when it is earlier. */
+const deliveryOnOrAfterStart = (
+  value: unknown,
+  allValues?: { start_date?: unknown },
+) => {
+  const delivery = toDateOnly(value);
+  const start = toDateOnly(allValues?.start_date);
+  if (!delivery || !start) return undefined;
+  if (delivery < start) {
+    return "Delivery date must be on or after the start date";
+  }
+  return undefined;
+};
 
 const FormSection = ({
   title,
   children,
-  showDivider = true,
 }: {
-  title: string;
+  title?: string;
   children: ReactNode;
-  showDivider?: boolean;
 }) => (
-  <>
-    {showDivider ? <FormSectionDivider /> : null}
-    <section className="space-y-4 py-1">
+  <section className="space-y-4 py-1">
+    {title ? (
       <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
         {title}
       </h3>
-      {children}
-    </section>
-  </>
+    ) : null}
+    {children}
+  </section>
 );
 
-export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
-  const showStep = (step: 1 | 2) => !createStep || createStep === step;
+export const LbsDealInputs = ({
+  seedContact,
+  mode = "edit",
+}: {
+  seedContact?: Contact | null;
+  /** Create seeds default assignees; same field set as edit. */
+  mode?: "create" | "edit";
+} = {}) => {
   const isMobile = useIsMobile();
   const canViewAmounts = useCanViewAmounts();
-  const isCreateFlow = createStep != null;
+  const isCreateFlow = mode === "create";
   const { identity } = useGetIdentity();
   const { control, setValue, getValues } = useFormContext<
     Deal & Record<string, unknown>
   >();
   const contactId = useWatch({ control, name: "contact_id" });
   const contactIds = useWatch({ control, name: "contact_ids" });
+  const companyId = useWatch({ control, name: "company_id" });
   const companyName = useWatch({ control, name: "company_name" });
   const acceptedProposalId = useWatch({
     control,
@@ -130,9 +183,9 @@ export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
   const notes = useWatch({ control, name: "notes" });
   const description = useWatch({ control, name: "description" });
   const projectName = useWatch({ control, name: "name" });
-  const salespersonIds = useWatch({ control, name: "salesperson_ids" });
 
   const selectedContactId = toNumber(contactId);
+  const selectedCompanyId = toNumber(companyId);
   const selectedProposalId = toNumber(acceptedProposalId);
   const previousContactId = useRef<number | null>(null);
   const teamAssignedRef = useRef(false);
@@ -146,6 +199,27 @@ export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
     { id: selectedProposalId as number },
     { enabled: selectedProposalId != null },
   );
+
+  const proposalListFilter = useMemo(() => {
+    if (selectedCompanyId != null) {
+      return { "company_id@eq": selectedCompanyId };
+    }
+    if (selectedContactId != null) {
+      return { "contact_id@eq": selectedContactId };
+    }
+    return null;
+  }, [selectedCompanyId, selectedContactId]);
+
+  const { data: accountProposals = [], isFetched: accountProposalsFetched } =
+    useGetList<Proposal>(
+      "proposals",
+      {
+        filter: proposalListFilter ?? { "id@eq": -1 },
+        pagination: { page: 1, perPage: 50 },
+        sort: { field: "updated_at", order: "DESC" },
+      },
+      { enabled: proposalListFilter != null, staleTime: 30_000 },
+    );
   const { data: organizationMembers = [] } = useGetList<OrganizationMember>(
     "organization_members",
     {
@@ -166,23 +240,6 @@ export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
       ),
     );
   }, [identity?.id, organizationMembers]);
-
-  const assignedTeamMembers = useMemo(() => {
-    const ids = (
-      isCreateFlow
-        ? defaultCreateTeamIds
-        : Array.isArray(salespersonIds)
-          ? salespersonIds.map((id) => Number(id))
-          : []
-    ).filter(Number.isFinite);
-
-    const byId = new Map(
-      organizationMembers.map((member) => [Number(member.id), member]),
-    );
-    return ids
-      .map((id) => byId.get(id))
-      .filter((member): member is OrganizationMember => member != null);
-  }, [defaultCreateTeamIds, isCreateFlow, organizationMembers, salespersonIds]);
 
   const stageChoices = useMemo(
     () => withCurrentCustomChoice(lbsProjectStages, String(stage ?? "")),
@@ -317,17 +374,70 @@ export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
     setValue("name", autoProjectName, { shouldDirty: false });
   }, [autoProjectName, projectName, setValue]);
 
+  // Auto-select proposal when the account/contact has exactly one usable proposal.
   useEffect(() => {
-    const proposalAmount = toNumber(selectedProposal?.amount);
-    if (proposalAmount == null || proposalAmount <= 0) return;
-    setValue("estimated_value", proposalAmount, { shouldDirty: false });
-    setValue("amount", proposalAmount, { shouldDirty: false });
-  }, [selectedProposal?.amount, setValue]);
+    if (proposalListFilter == null) {
+      if (selectedProposalId != null) {
+        setValue("accepted_proposal_id", null, { shouldDirty: true });
+      }
+      return;
+    }
+    if (!accountProposalsFetched) return;
+
+    const usable = accountProposals.filter(isSelectableProjectProposal);
+    const stillValid =
+      selectedProposalId != null &&
+      usable.some((proposal) => Number(proposal.id) === selectedProposalId);
+
+    if (stillValid) return;
+
+    const accepted = usable.filter((proposal) => {
+      const status = String(proposal.status ?? "").toLowerCase();
+      return status === "accepted" || status === "paid_in_full";
+    });
+    const pick =
+      accepted.length === 1
+        ? accepted[0]
+        : usable.length === 1
+          ? usable[0]
+          : null;
+
+    if (pick) {
+      setValue("accepted_proposal_id", pick.id, { shouldDirty: true });
+      return;
+    }
+
+    if (selectedProposalId != null) {
+      setValue("accepted_proposal_id", null, { shouldDirty: true });
+    }
+  }, [
+    accountProposals,
+    accountProposalsFetched,
+    proposalListFilter,
+    selectedProposalId,
+    setValue,
+  ]);
+
+  const proposalBudget = resolveProposalBudget(selectedProposal);
+
+  useEffect(() => {
+    if (proposalBudget == null) return;
+    setValue("estimated_value", proposalBudget, { shouldDirty: false });
+    setValue("amount", proposalBudget, { shouldDirty: false });
+  }, [proposalBudget, setValue]);
+
+  // When a proposal is linked, bump stage: accepted → Won, otherwise → Proposal.
+  useEffect(() => {
+    const nextStage = stageFromProposal(selectedProposal ?? null);
+    if (!nextStage) return;
+    if (!isEarlySalesStage(stage)) return;
+    if (String(stage ?? "") === "won" && nextStage === "proposal_sent") return;
+    if (String(stage ?? "") === nextStage) return;
+    setValue("stage", nextStage, { shouldDirty: true });
+  }, [selectedProposal, setValue, stage]);
 
   const proposalBudgetLocked =
-    selectedProposalId != null &&
-    toNumber(selectedProposal?.amount) != null &&
-    toNumber(selectedProposal?.amount)! > 0;
+    selectedProposalId != null && proposalBudget != null;
 
   const scopeMode = getLbsProjectScopeMode(String(projectType ?? ""));
 
@@ -344,188 +454,202 @@ export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
     }
   }, [getValues, scopeMode, setValue]);
 
-  const gridClass = isMobile ? "grid-cols-1" : "grid-cols-2";
+  const gridClass = isMobile
+    ? "grid-cols-1 items-start"
+    : "grid-cols-2 items-start";
 
   return (
     <div className="flex flex-col gap-6">
-      {showStep(1) ? (
-        <FormSection title="Project overview" showDivider={false}>
-          <div className={`grid gap-4 ${gridClass}`}>
-            <div className={isMobile ? undefined : "md:col-span-2"}>
-              <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
-                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                  Project name
-                </p>
-                <p className="mt-1 text-sm font-medium text-foreground">
-                  {autoProjectName || "Select a client and service to generate"}
-                </p>
-              </div>
+      <FormSection>
+        <div className={`grid gap-4 ${gridClass}`}>
+          <div className={isMobile ? undefined : "md:col-span-2"}>
+            <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
+              <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                Project name
+              </p>
+              <p className="mt-1 text-sm font-medium text-foreground">
+                {autoProjectName || "Select a client and service to generate"}
+              </p>
             </div>
-            <LbsProjectClientFields />
-            <ReferenceInput
-              source="accepted_proposal_id"
-              reference="proposals"
-              filter={
-                selectedContactId != null
+          </div>
+          <LbsProjectClientFields seedContact={seedContact} />
+          <ReferenceInput
+            source="accepted_proposal_id"
+            reference="proposals"
+            filter={
+              selectedCompanyId != null
+                ? { "company_id@eq": selectedCompanyId }
+                : selectedContactId != null
                   ? { "contact_id@eq": selectedContactId }
-                  : undefined
-              }
-            >
-              <AutocompleteInput
-                label="Accepted proposal (optional)"
-                optionText="title"
-                helperText={
-                  proposalBudgetLocked
-                    ? "Budget is taken from this proposal."
-                    : false
-                }
-                filterToQuery={(searchText) => ({ q: searchText })}
-                labelVariant="floating"
-              />
-            </ReferenceInput>
+                  : { "id@eq": -1 }
+            }
+          >
             <AutocompleteInput
-              source="project_type"
-              label="Service type"
-              choices={projectTypeAutocompleteChoices}
-              optionText="name"
-              optionValue="id"
-              translateChoice={false}
-              validate={required()}
-              create
-              placeholder="Select or type a service"
+              label="Accepted proposal (optional)"
+              optionText="title"
               helperText={false}
+              disabled={
+                selectedCompanyId == null && selectedContactId == null
+              }
+              placeholder={
+                selectedCompanyId == null && selectedContactId == null
+                  ? "Select an account first"
+                  : "Search proposal"
+              }
+              filterToQuery={(searchText) => ({ q: searchText })}
               labelVariant="floating"
             />
+          </ReferenceInput>
+          <AutocompleteInput
+            source="project_type"
+            label="Service type"
+            choices={projectTypeAutocompleteChoices}
+            optionText="name"
+            optionValue="id"
+            translateChoice={false}
+            validate={required()}
+            create
+            placeholder="Select or type a service"
+            helperText={false}
+            labelVariant="floating"
+          />
+        </div>
+      </FormSection>
+
+      <FormSection title="Timeline">
+        <div className={`grid gap-4 ${gridClass}`}>
+          <SelectInput
+            source="stage"
+            label="Project stage"
+            choices={stageChoices}
+            optionText="label"
+            optionValue="value"
+            helperText={false}
+            validate={required()}
+            labelVariant="floating"
+          />
+          <SelectInput
+            source="priority"
+            label="Priority"
+            choices={LBS_PROJECT_PRIORITIES}
+            optionText="label"
+            optionValue="value"
+            helperText={false}
+            labelVariant="floating"
+          />
+          <DateInput
+            source="start_date"
+            label="Start date"
+            helperText={false}
+            labelVariant="floating"
+          />
+          <DateInput
+            source="expected_end_date"
+            label="Delivery date"
+            helperText={false}
+            validate={deliveryOnOrAfterStart}
+            labelVariant="floating"
+          />
+        </div>
+      </FormSection>
+
+      <FormSection title="Budget">
+        <div className={`grid gap-4 ${gridClass}`}>
+          {!canViewAmounts ? null : !proposalBudgetLocked ? (
+            <NumberInput
+              source="estimated_value"
+              label="Project budget (USD)"
+              helperText={false}
+              validate={optionalPositiveCurrency}
+              min={0}
+              step={0.01}
+              labelVariant="floating"
+            />
+          ) : (
+            <div className="self-start rounded-md border border-input bg-background px-3 py-2 shadow-xs">
+              <p className="text-[11px] font-medium leading-none text-muted-foreground">
+                Project budget (USD)
+              </p>
+              <p className="mt-1.5 text-sm font-medium tabular-nums text-foreground">
+                <MoneyText value={proposalBudget ?? 0} />
+              </p>
+            </div>
+          )}
+        </div>
+      </FormSection>
+
+      {projectTypeShowsServiceDetails(String(projectType ?? "")) ? (
+        <FormSection title="Service details">
+          <div className={`grid gap-4 ${gridClass}`}>
+            {projectTypeShowsWebsiteUrl(String(projectType ?? "")) ? (
+              <TextInput
+                source="website_brief.existing_website"
+                label="Current website"
+                helperText={false}
+                placeholder="https://example.com"
+                labelVariant="floating"
+              />
+            ) : null}
+            {projectTypeShowsDomainHosting(String(projectType ?? "")) ? (
+              <>
+                <TextInput
+                  source="website_brief.domain"
+                  label="Domain"
+                  helperText={false}
+                  placeholder="example.com"
+                  labelVariant="floating"
+                />
+                <TextInput
+                  source="website_brief.hosting"
+                  label="Hosting"
+                  helperText={false}
+                  placeholder="Current or preferred host"
+                  labelVariant="floating"
+                />
+              </>
+            ) : null}
+            {projectTypeShowsGithub(String(projectType ?? "")) ? (
+              <TextInput
+                source="github_repo"
+                label="GitHub repository"
+                helperText={false}
+                placeholder="lbs-web/acme-roofing"
+                validate={optionalGithubRepo}
+                labelVariant="floating"
+              />
+            ) : null}
           </div>
         </FormSection>
       ) : null}
 
-      {showStep(2) ? (
-        <FormSection title="Timeline & team">
-          <div className={`grid gap-4 ${gridClass}`}>
-            <SelectInput
-              source="stage"
-              label="Project stage"
-              choices={stageChoices}
-              optionText="label"
-              optionValue="value"
-              helperText={false}
-              validate={required()}
-              labelVariant="floating"
-            />
-            <SelectInput
-              source="priority"
-              label="Priority"
-              choices={LBS_PROJECT_PRIORITIES}
-              optionText="label"
-              optionValue="value"
-              helperText={false}
-              labelVariant="floating"
-            />
-            <DateInput
-              source="start_date"
-              label="Start date"
-              helperText={false}
-              labelVariant="floating"
-            />
-            <DateInput
-              source="expected_end_date"
-              label="Delivery date"
-              helperText={false}
-              labelVariant="floating"
-            />
-            {!canViewAmounts ? null : !proposalBudgetLocked ? (
-              <NumberInput
-                source="estimated_value"
-                label="Project budget (USD)"
-                helperText={false}
-                validate={optionalPositiveCurrency}
-                min={0}
-                step={0.01}
-                labelVariant="floating"
-              />
-            ) : (
-              <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
-                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                  Project budget (USD)
-                </p>
-                <p className="mt-1 text-sm font-medium tabular-nums text-foreground">
-                  <MoneyText value={toNumber(selectedProposal?.amount) ?? 0} />
-                </p>
-              </div>
-            )}
-            <TextInput
-              source="github_repo"
-              label="GitHub repository"
-              helperText="owner/repo or full github.com URL"
-              placeholder="lbs-web/acme-roofing"
-              validate={optionalGithubRepo}
-              labelVariant="floating"
-            />
-            <div className={isMobile ? undefined : "md:col-span-2"}>
-              {isCreateFlow ? (
-                <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
-                  <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    Assigned team
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    The project creator and workspace administrators are added
-                    automatically.
-                  </p>
-                  {assignedTeamMembers.length > 0 ? (
-                    <ul className="mt-3 space-y-1.5">
-                      {assignedTeamMembers.map((member) => (
-                        <li
-                          key={member.id}
-                          className="flex items-center justify-between gap-2 text-sm"
-                        >
-                          <span className="font-medium text-foreground">
-                            {memberDisplayName(member)}
-                          </span>
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            {Number(member.id) === Number(identity?.id)
-                              ? "Creator"
-                              : isAdminMember(member)
-                                ? "Admin"
-                                : "Team"}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="mt-2 text-sm text-muted-foreground">—</p>
-                  )}
-                </div>
-              ) : (
-                <ReferenceArrayInput
-                  source="salesperson_ids"
-                  reference="organization_members"
-                  filter={{ "disabled@neq": true }}
-                >
-                  <AutocompleteArrayInput
-                    label="Assign team"
-                    optionText={getMemberOptionText}
-                    helperText={false}
-                    placeholder="Select team members"
-                    filterToQuery={(searchText) => ({ q: searchText })}
-                  />
-                </ReferenceArrayInput>
-              )}
-            </div>
-            <div className={isMobile ? undefined : "md:col-span-2"}>
-              <TextInput
-                source="notes"
-                label="Internal notes"
-                multiline
-                rows={3}
-                helperText="The full brief is filled out separately in the project's Brief tab or sent to the client as a web form."
-                placeholder="Discovery notes, client requests, or next steps"
-                labelVariant="floating"
-              />
-            </div>
-          </div>
-        </FormSection>
-      ) : null}
+      <FormSection title="Team">
+        <ReferenceArrayInput
+          source="salesperson_ids"
+          reference="organization_members"
+          filter={{ "disabled@neq": true }}
+        >
+          <AutocompleteArrayInput
+            label="Assign team"
+            optionText={getMemberOptionText}
+            helperText={false}
+            placeholder="Select team members"
+            labelVariant="floating"
+            filterToQuery={(searchText) => ({ q: searchText })}
+          />
+        </ReferenceArrayInput>
+      </FormSection>
+
+      <FormSection title="Notes">
+        <TextInput
+          source="notes"
+          label="Internal notes"
+          multiline
+          rows={3}
+          helperText={false}
+          placeholder="Discovery notes, client requests, or next steps"
+          labelVariant="floating"
+        />
+      </FormSection>
     </div>
   );
 };

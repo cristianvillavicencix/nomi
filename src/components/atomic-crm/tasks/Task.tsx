@@ -33,7 +33,6 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { useDeleteWithUndoController, useNotify, useUpdate } from "ra-core";
 import { MoreVertical } from "lucide-react";
 import type { Contact, Deal, Task as TData } from "../types";
-import { TaskEditSheet } from "./TaskEditSheet";
 import { TaskEdit } from "./TaskEdit";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -68,10 +67,6 @@ export const Task = ({
   const isDoneForUser = usesParticipantCompletion
     ? checkboxChecked
     : isFullyDone;
-
-  const handleCloseEdit = () => {
-    setOpenEdit(false);
-  };
 
   const [update] = useUpdate();
   const { handleDelete } = useDeleteWithUndoController({
@@ -263,15 +258,11 @@ export const Task = ({
         </DropdownMenu>
       </div>
 
-      {isMobile ? (
-        <TaskEditSheet
-          taskId={task.id}
-          open={openEdit}
-          onOpenChange={setOpenEdit}
-        />
-      ) : (
-        <TaskEdit taskId={task.id} open={openEdit} close={handleCloseEdit} />
-      )}
+      <TaskEdit
+        taskId={task.id}
+        open={openEdit}
+        onOpenChange={setOpenEdit}
+      />
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent className="sm:max-w-md">

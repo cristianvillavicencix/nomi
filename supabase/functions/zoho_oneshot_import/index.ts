@@ -671,9 +671,7 @@ const mapZohoStage = (zohoStage: string | null, info: StageInfo) => {
     }
   }
   // Heuristic mapping
-  if (lower.includes("design"))
-    return { stage: "design", lifecycle_phase: "delivery" };
-  if (lower.includes("development") || lower.includes("dev"))
+  if (lower.includes("design") || lower.includes("development") || lower.includes("dev") || lower.includes("build"))
     return { stage: "development", lifecycle_phase: "delivery" };
   if (lower.includes("review"))
     return { stage: "review", lifecycle_phase: "delivery" };
@@ -684,7 +682,7 @@ const mapZohoStage = (zohoStage: string | null, info: StageInfo) => {
   if (lower.includes("proposal") || lower.includes("quote"))
     return { stage: "proposal_sent", lifecycle_phase: "opportunity" };
   if (lower.includes("discovery") || lower.includes("analysis"))
-    return { stage: "discovery", lifecycle_phase: "opportunity" };
+    return { stage: "lead", lifecycle_phase: "opportunity" };
   return { stage: info.defaultStageKey, lifecycle_phase: "opportunity" };
 };
 

@@ -36,6 +36,7 @@ Deno.serve(
           contact_id,
           company_id,
           deal_id,
+          request_scope,
           form_instance:form_instances (
             id,
             org_id,
@@ -150,16 +151,116 @@ Deno.serve(
         ? templateJoin[0]?.type
         : templateJoin?.type;
 
-      const logoUrl = await resolveStorageDisplayUrl(
+      const formSlug = String(formInstance.slug ?? "");
+      const isProjectBrief =
+        formSlug === "project_brief" || templateType === "project_brief";
+      const isProjectResources = formSlug === "project-resources";
+      const useAgencyBranding = isProjectBrief || isProjectResources;
+
+      const [{ data: orgRow }, { data: configRow }] = await Promise.all([
+        supabaseAdmin
+          .from("organizations")
+          .select("name, email, phone, address, website")
+          .eq("id", tokenData.org_id)
+          .maybeSingle(),
+        supabaseAdmin
+          .from("configuration")
+          .select("config")
+          .eq("id", 1)
+          .maybeSingle(),
+      ]);
+
+      const config =
+        configRow?.config != null && typeof configRow.config === "object"
+          ? (configRow.config as Record<string, unknown>)
+          : {};
+      const agencyName =
+        String(orgRow?.name ?? "").trim() ||
+        String(config.companyLegalName ?? "").trim() ||
+        String(config.title ?? "").trim() ||
+        "Latino Business Support";
+
+      const configAddress = [
+        config.companyAddressLine1,
+        config.companyAddressLine2,
+        [config.companyCity, config.companyState, config.companyPostalCode]
+          .map((part) => String(part ?? "").trim())
+          .filter(Boolean)
+          .join(", "),
+        config.companyCountry &&
+        String(config.companyCountry).trim().toUpperCase() !== "US"
+          ? config.companyCountry
+          : null,
+      ]
+        .map((part) => String(part ?? "").trim())
+        .filter(Boolean)
+        .join(", ");
+
+      const agencyPhone =
+        String(config.companyPhone ?? "").trim() ||
+        String(orgRow?.phone ?? "").trim() ||
+        "4752570243";
+      const agencyEmail =
+        String(config.companyEmail ?? "").trim() ||
+        String(orgRow?.email ?? "").trim() ||
+        "info@lbs.bz";
+      const agencyAddress =
+        configAddress ||
+        String(orgRow?.address ?? "").trim() ||
+        "1200 Summer St, Stamford, CT 06902";
+      const agencyWebsite =
+        String(config.companyWebsite ?? "").trim() ||
+        String(orgRow?.website ?? "").trim() ||
+        "https://lbs.bz";
+
+      const formLogoUrl = await resolveStorageDisplayUrl(
         supabaseAdmin,
-        formInstance.logo_url,
+        formInstance.logo_url as string | null | undefined,
         { defaultBucket: "form-branding", expiresIn: 60 * 60 * 24 },
       );
+      const configLogoRaw =
+        String(config.lightModeLogo ?? "").trim() ||
+        String(config.darkModeLogo ?? "").trim() ||
+        null;
+      const configLogoUrl = configLogoRaw
+        ? await resolveStorageDisplayUrl(supabaseAdmin, configLogoRaw, {
+            defaultBucket: "attachments",
+            expiresIn: 60 * 60 * 24,
+          })
+        : null;
+      const logoUrl =
+        formLogoUrl ||
+        configLogoUrl ||
+        (useAgencyBranding ? "/logos/sigma.png" : null);
+
       const backgroundImageUrl = await resolveStorageDisplayUrl(
         supabaseAdmin,
-        formInstance.background_image_url,
+        formInstance.background_image_url as string | null | undefined,
         { defaultBucket: "form-branding", expiresIn: 60 * 60 * 24 },
       );
+
+      const storedWelcomeTitle = String(formInstance.welcome_title ?? "").trim();
+      const storedWelcomeMessage = String(
+        formInstance.welcome_message ?? "",
+      ).trim();
+      const welcomeTitle =
+        storedWelcomeTitle ||
+        (isProjectBrief
+          ? "Thank you for your trust"
+          : isProjectResources
+            ? "Share your project photos"
+            : null);
+      const welcomeMessage =
+        storedWelcomeMessage ||
+        (isProjectBrief
+          ? agencyName
+            ? `Thanks for choosing ${agencyName}. We’re excited to build your website with you. This short brief helps us get the details right — many answers are already filled in, and it only takes a few minutes.`
+            : "Thanks for trusting us with your website. This short brief helps us get the details right — many answers are already filled in, and it only takes a few minutes."
+          : isProjectResources
+            ? agencyName
+              ? `Thanks for working with ${agencyName}. Upload logos, team photos, and service photos so we can build your site with the right assets.`
+              : "Upload logos, team photos, and service photos so we can build your site with the right assets."
+            : null);
 
       return new Response(
         JSON.stringify({
@@ -173,10 +274,15 @@ Deno.serve(
             schema: formInstance.schema,
             type: templateType ?? "custom",
             logo_url: logoUrl,
+            agency_name: agencyName,
+            agency_phone: agencyPhone,
+            agency_email: agencyEmail,
+            agency_address: agencyAddress,
+            agency_website: agencyWebsite,
             primary_color: formInstance.primary_color,
             background_image_url: backgroundImageUrl,
-            welcome_title: formInstance.welcome_title,
-            welcome_message: formInstance.welcome_message,
+            welcome_title: welcomeTitle,
+            welcome_message: welcomeMessage,
             thank_you_title: formInstance.thank_you_title,
             thank_you_message: formInstance.thank_you_message,
             recaptcha_enabled: formInstance.recaptcha_enabled,
@@ -185,6 +291,7 @@ Deno.serve(
             custom_css: formInstance.custom_css,
           },
           prefill,
+          request_scope: tokenData.request_scope ?? null,
           links: {
             contact_id: tokenData.contact_id,
             company_id: tokenData.company_id,

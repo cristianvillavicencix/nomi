@@ -1,4 +1,5 @@
 export {
+  enrichPlaceSuggestionsWithAddresses,
   fetchGooglePlaceDetails,
   fetchPlacesAutocomplete,
   GooglePlacesUnavailableError,

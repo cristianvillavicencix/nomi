@@ -3,12 +3,19 @@ import type { Identifier } from "ra-core";
 import type { ClientSmsDraft, Contact, Conversation } from "@/modules/types";
 
 export type MessagesQuickAccessContextValue = {
-  openSms: (contact: Contact, dealId?: Identifier | null) => Promise<void>;
+  openSms: (
+    contact: Contact,
+    dealId?: Identifier | null,
+    options?: { initialBody?: string | null },
+  ) => Promise<void>;
   openSmsToPhone: (phone: string) => Promise<void>;
   isOpening: boolean;
   isDockOpen: boolean;
   focusedConversation: Conversation | null;
   draftSms: ClientSmsDraft | null;
+  /** One-shot composer prefill (e.g. share dialogs). */
+  smsPrefillRequest: { key: number; text: string } | null;
+  clearSmsPrefillRequest: () => void;
   activeConversationId: Identifier | null;
   clearFocusedConversation: () => void;
   setDraftSms: (draft: ClientSmsDraft | null) => void;

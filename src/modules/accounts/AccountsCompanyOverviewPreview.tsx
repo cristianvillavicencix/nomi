@@ -297,7 +297,7 @@ export const AccountsCompanyOverviewPreview = ({
               <PreviewTabTrigger value="activity" label="Activity" />
               <PreviewTabTrigger
                 value="deals"
-                label="Deals"
+                label="Projects"
                 count={openDeals.length}
               />
               <PreviewTabTrigger
@@ -333,7 +333,7 @@ export const AccountsCompanyOverviewPreview = ({
                 <p className="text-sm text-muted-foreground">Loading deals…</p>
               ) : openDeals.length === 0 ? (
                 <EmptyBlock
-                  message="No open deals for this company yet."
+                  message="No open projects for this company yet."
                   action={
                     newDealPath ? (
                       <Button

@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode, useMemo } from "react";
 import { useGetOne } from "ra-core";
-import { Github, User } from "lucide-react";
+import { ExternalLink, Github, User } from "lucide-react";
 import { Link } from "react-router";
 import type { Contact } from "@/components/atomic-crm/types";
 import {
@@ -12,12 +12,23 @@ import {
   getGithubRepoLabel,
   getGithubRepoUrl,
 } from "@/modules/deals/githubRepo";
-import { DealClientSmsButton } from "@/modules/deals/DealClientSmsButton";
+import {
+  normalizeDeploymentUrl,
+  resolveProjectDeploymentUrls,
+} from "@/modules/deals/projects/projectDeploymentUrls";
 import { ProjectPortalLinkButton } from "@/modules/portal/ProjectPortalLinkButton";
 import { OpenMailComposeLink } from "@/modules/mail/OpenMailComposeLink";
 import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import type { LbsDeal } from "@/modules/types";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
+
+const productionLinkLabel = (url: string) => {
+  try {
+    return new URL(normalizeDeploymentUrl(url)).hostname.replace(/^www\./i, "");
+  } catch {
+    return url.replace(/^https?:\/\//i, "").replace(/\/$/, "");
+  }
+};
 
 const MetaSeparator = () => (
   <span className="shrink-0 text-muted-foreground/40" aria-hidden>
@@ -69,6 +80,9 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
     (record.company_id ? `Account #${record.company_id}` : null);
   const githubUrl = getGithubRepoUrl(record.github_repo);
   const githubLabel = getGithubRepoLabel(record.github_repo);
+  const productionUrl = normalizeDeploymentUrl(
+    resolveProjectDeploymentUrls(record).productionUrl,
+  );
 
   return (
     <div className="min-w-0 space-y-1.5">
@@ -77,14 +91,6 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
           {record.name}
         </h1>
         <ProjectPortalLinkButton record={record} />
-        <DealClientSmsButton
-          record={record}
-          size="icon"
-          variant="ghost"
-          label="Message client"
-          showLabel={false}
-          className="text-muted-foreground hover:text-foreground"
-        />
         {githubUrl ? (
           <a
             href={githubUrl}
@@ -158,6 +164,26 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
                 dealId={record.id}
                 className="link-action truncate"
               />
+            ) : null,
+          },
+          {
+            key: "production",
+            node: productionUrl ? (
+              <a
+                href={productionUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link-action inline-flex min-w-0 items-center gap-1 truncate"
+                title="Open production site"
+              >
+                <ExternalLink
+                  className="size-3.5 shrink-0 opacity-70"
+                  aria-hidden
+                />
+                <span className="truncate">
+                  {productionLinkLabel(productionUrl)}
+                </span>
+              </a>
             ) : null,
           },
         ]}

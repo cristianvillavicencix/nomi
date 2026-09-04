@@ -32,7 +32,7 @@ export const NewDealCreateButton = ({
     <div className={cn("flex items-stretch", className)}>
       <Link
         to={manualTo}
-        aria-label="New deal"
+        aria-label="New project"
         className={cn(
           buttonVariants({ variant: "primary", size: "md" }),
           "rounded-r-none border-r-0 pr-3",
@@ -40,7 +40,7 @@ export const NewDealCreateButton = ({
         onClick={stopPropagation}
       >
         <Plus />
-        <ToolbarLabel priority="primary">New deal</ToolbarLabel>
+        <ToolbarLabel priority="primary">New project</ToolbarLabel>
       </Link>
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -50,7 +50,7 @@ export const NewDealCreateButton = ({
           )}
         >
           <ChevronDown className="size-4" />
-          <span className="sr-only">More new deal options</span>
+          <span className="sr-only">More new project options</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => navigate(requestFormTo)}>

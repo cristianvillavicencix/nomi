@@ -28,11 +28,15 @@ import {
   type WebsiteBriefSendType,
 } from "@/modules/deals/websiteBriefSendOptions";
 import {
-  appendBriefScopeToUrl,
+  ESSENTIAL_BRIEF_REQUEST,
+  FULL_BRIEF_REQUEST,
   getBriefScopeSummary,
+  isEssentialBriefScope,
+  isFullBriefScope,
   type BriefRequestScope,
 } from "@/modules/deals/projectBriefRequestScope";
 import { mailtoHref } from "@/lib/linking";
+import { resolveShareUrl } from "@/modules/forms/share/formLinkUtils";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { LbsDeal } from "@/modules/types";
 
@@ -59,6 +63,8 @@ const normalizeBriefSendType = (
   );
   return match?.value ?? "website";
 };
+
+type BriefPack = "essential" | "full";
 
 export const SendProjectWebFormDialog = ({
   open,
@@ -101,13 +107,23 @@ export const SendProjectWebFormDialog = ({
   const [selectedFormId, setSelectedFormId] = useState("");
   const [briefProjectType, setBriefProjectType] =
     useState<WebsiteBriefSendType>(normalizeBriefSendType(projectType));
+  const [briefPack, setBriefPack] = useState<BriefPack>("essential");
   const [copied, setCopied] = useState(false);
   const [formUrl, setFormUrl] = useState("");
 
+  const isSingleSection = Boolean(
+    requestScope && requestScope.sections.length === 1,
+  );
+
+  const effectiveScope = useMemo((): BriefRequestScope => {
+    if (isSingleSection && requestScope) return requestScope;
+    if (briefPack === "full") return FULL_BRIEF_REQUEST;
+    return ESSENTIAL_BRIEF_REQUEST;
+  }, [briefPack, isSingleSection, requestScope]);
+
   const scopeSummary = useMemo(
-    () =>
-      requestScope ? getBriefScopeSummary(requestScope) : "Full project brief",
-    [requestScope],
+    () => getBriefScopeSummary(effectiveScope),
+    [effectiveScope],
   );
 
   useEffect(() => {
@@ -115,7 +131,16 @@ export const SendProjectWebFormDialog = ({
     setBriefProjectType(normalizeBriefSendType(projectType));
     setCopied(false);
     setFormUrl("");
-  }, [open, projectType]);
+    if (requestScope && isFullBriefScope(requestScope.sections)) {
+      setBriefPack("full");
+    } else if (
+      !requestScope ||
+      isEssentialBriefScope(requestScope.sections) ||
+      requestScope.sections.length !== 1
+    ) {
+      setBriefPack("essential");
+    }
+  }, [open, projectType, requestScope]);
 
   useEffect(() => {
     const pool = briefForms.length > 0 ? briefForms : forms;
@@ -156,16 +181,11 @@ export const SendProjectWebFormDialog = ({
         expiresInDays: 30,
         maxUses: 5,
         baseUrl: window.location.origin,
+        requestScope: effectiveScope,
       });
     },
     onSuccess: (result) => {
-      const base = result.url.startsWith("http")
-        ? result.url
-        : `${window.location.origin}${result.url}`;
-      const scopedUrl = requestScope
-        ? appendBriefScopeToUrl(base, requestScope)
-        : base;
-      setFormUrl(scopedUrl);
+      setFormUrl(resolveShareUrl(result, window.location.origin));
       onLinkGenerated?.();
     },
     onError: () => {
@@ -182,10 +202,11 @@ export const SendProjectWebFormDialog = ({
     open,
     selectedFormId,
     briefProjectType,
+    briefPack,
     dealId,
     companyId,
     contactId,
-    requestScope,
+    effectiveScope,
   ]);
 
   const handleCopy = async () => {
@@ -205,33 +226,54 @@ export const SendProjectWebFormDialog = ({
       projectName ? `${scopeSummary} — ${projectName}` : `${scopeSummary} form`,
     );
     const body = encodeURIComponent(
-      `Hi${clientName ? ` ${clientName}` : ""},\n\nPlease complete this brief section for your project${projectName ? ` (${projectName})` : ""}:\n\n${scopeSummary}\n\n${formUrl}\n\nFields we already have will appear pre-filled — just confirm or update them.\n\nThank you!`,
+      `Hi${clientName ? ` ${clientName}` : ""},\n\nPlease complete this brief for your project${projectName ? ` (${projectName})` : ""}:\n\n${scopeSummary}\n\n${formUrl}\n\nFields we already have will appear pre-filled — just confirm or update them.\n\nThank you!`,
     );
     return `mailto:${trimmed}?subject=${subject}&body=${body}`;
   }, [formUrl, clientEmail, clientName, projectName, scopeSummary]);
 
   const formPool = briefForms.length > 0 ? briefForms : forms;
-  const isPartialRequest = Boolean(requestScope?.sections.length);
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isPartialRequest ? "Request brief section" : "Send project brief"}
+            {isSingleSection ? "Request brief section" : "Send project brief"}
           </DialogTitle>
           <DialogDescription>
-            {isPartialRequest
+            {isSingleSection
               ? `This link asks the client only for: ${scopeSummary}. Their answers merge into the project brief.`
               : dealId
-                ? "Share the full brief link. We save the project type on the deal and pre-fill CRM data."
-                : "Choose the form and brief type to share with your client."}
+                ? `Share a ${briefPack === "essential" ? "quick" : "full"} brief link. CRM data is pre-filled for the client.`
+                : "Choose the form and brief pack to share with your client."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
-          {!isPartialRequest ? (
+          {!isSingleSection ? (
             <>
+              <div className="space-y-2">
+                <Label>Brief pack</Label>
+                <Select
+                  value={briefPack}
+                  onValueChange={(value) => setBriefPack(value as BriefPack)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select pack" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="essential">
+                      Quick website brief (5 steps)
+                    </SelectItem>
+                    <SelectItem value="full">Full project brief</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Default is the quick pack. Use full only when you need every
+                  section.
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label>Form</Label>
                 <Select
@@ -255,7 +297,7 @@ export const SendProjectWebFormDialog = ({
               </div>
 
               <div className="space-y-2">
-                <Label>Brief type</Label>
+                <Label>Project type</Label>
                 <Select
                   value={briefProjectType}
                   onValueChange={(value) =>
@@ -275,7 +317,7 @@ export const SendProjectWebFormDialog = ({
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   Set when generating the link — the client does not choose this
-                  again on the form.
+                  again on the form ({briefTypeLabel}).
                 </p>
               </div>
             </>

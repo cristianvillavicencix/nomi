@@ -21,12 +21,13 @@ export type ProjectDeliveryAnalysisInput = {
 };
 
 export const DELIVERY_ANALYSIS_FIX_HINTS: Record<string, string> = {
-  brief: "Complete the website brief in Overview",
+  brief: "Complete the website brief in the Brief tab",
   production_url: "Add the production URL under Security → Deployment",
   credentials: "Add credentials under Security",
-  launch_checklist: "Complete items below or use Deliver anyway",
-  resources: "Upload files in the project resources section",
-  portal: "Link a client contact on the project overview",
+  launch_checklist:
+    "Finish required launch checklist items below, or use Deliver anyway",
+  resources: "Upload files in Multimedia",
+  portal: "Link a client contact on the project",
 };
 
 const formatPendingChecklistDetail = (

@@ -46,6 +46,10 @@ export const MessagesQuickAccessProvider = ({
   const [focusedConversation, setFocusedConversation] =
     useState<Conversation | null>(null);
   const [draftSms, setDraftSms] = useState<ClientSmsDraft | null>(null);
+  const [smsPrefillRequest, setSmsPrefillRequest] = useState<{
+    key: number;
+    text: string;
+  } | null>(null);
   const [activeConversationId, setActiveConversationId] =
     useState<Identifier | null>(null);
 
@@ -103,6 +107,10 @@ export const MessagesQuickAccessProvider = ({
     setDraftSms(null);
   }, []);
 
+  const clearSmsPrefillRequest = useCallback(() => {
+    setSmsPrefillRequest(null);
+  }, []);
+
   const focusConversation = useCallback(
     (conversation: Conversation) => {
       setDraftSms(null);
@@ -113,10 +121,18 @@ export const MessagesQuickAccessProvider = ({
   );
 
   const openSms = useCallback(
-    async (nextContact: Contact, nextDealId?: Identifier | null) => {
+    async (
+      nextContact: Contact,
+      nextDealId?: Identifier | null,
+      options?: { initialBody?: string | null },
+    ) => {
       setIsOpening(true);
       setDraftSms(null);
       setFocusedConversation(null);
+      const body = String(options?.initialBody ?? "").trim();
+      setSmsPrefillRequest(
+        body ? { key: Date.now(), text: body } : null,
+      );
 
       if (!location.pathname.startsWith("/messages")) {
         navigate("/messages");
@@ -128,7 +144,11 @@ export const MessagesQuickAccessProvider = ({
           viewConversation(existing);
           setFocusedConversation(existing);
         } else {
-          setDraftSms({ contact: nextContact, dealId: nextDealId ?? null });
+          setDraftSms({
+            contact: nextContact,
+            dealId: nextDealId ?? null,
+            initialBody: body || null,
+          });
         }
       } catch (error) {
         notify(
@@ -219,6 +239,8 @@ export const MessagesQuickAccessProvider = ({
       isDockOpen,
       focusedConversation,
       draftSms,
+      smsPrefillRequest,
+      clearSmsPrefillRequest,
       activeConversationId,
       clearFocusedConversation,
       setDraftSms,
@@ -235,6 +257,7 @@ export const MessagesQuickAccessProvider = ({
       activeConversationId,
       clearDraftSms,
       clearFocusedConversation,
+      clearSmsPrefillRequest,
       closeInbox,
       draftSms,
       focusConversation,
@@ -246,6 +269,7 @@ export const MessagesQuickAccessProvider = ({
       openSms,
       openSmsToPhone,
       setDraftSms,
+      smsPrefillRequest,
       toggleInbox,
       viewConversation,
     ],

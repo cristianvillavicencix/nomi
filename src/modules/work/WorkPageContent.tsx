@@ -16,7 +16,6 @@ import {
   ModuleSearchField,
 } from "@/components/atomic-crm/layout/ModuleToolbar";
 import { TaskEdit } from "@/components/atomic-crm/tasks/TaskEdit";
-import { TaskEditSheet } from "@/components/atomic-crm/tasks/TaskEditSheet";
 import { useTaskParticipantsByTaskIds } from "@/components/atomic-crm/tasks/useTaskParticipants";
 import {
   useMarkTaskTagNotificationsRead,
@@ -61,7 +60,6 @@ import {
 } from "@/modules/calendar/calendarUtils";
 import { useCalendarBusinessHours } from "@/modules/calendar/useCalendarBusinessHours";
 import { useCalendarAssigneeMembers } from "@/modules/calendar/useCalendarAssigneeMembers";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useIsAdminLevel } from "@/lib/permissions/useIsAdminLevel";
 import { WorkCalendarListView } from "@/modules/work/WorkCalendarListView";
 import { WorkCalendarView } from "@/modules/work/WorkCalendarView";
@@ -85,7 +83,6 @@ const ALL_TEAM_MEMBERS = "all";
 const getDealLabel = (deal: Deal) => deal.name?.trim() || `Project #${deal.id}`;
 
 export const WorkPageContent = () => {
-  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { preferences, setPreferences } = useWorkPreferences();
@@ -752,19 +749,11 @@ export const WorkPageContent = () => {
       />
 
       {editTaskId != null ? (
-        isMobile ? (
-          <TaskEditSheet
-            taskId={editTaskId}
-            open={editTaskOpen}
-            onOpenChange={setEditTaskOpen}
-          />
-        ) : (
-          <TaskEdit
-            taskId={editTaskId}
-            open={editTaskOpen}
-            close={() => setEditTaskOpen(false)}
-          />
-        )
+        <TaskEdit
+          taskId={editTaskId}
+          open={editTaskOpen}
+          onOpenChange={setEditTaskOpen}
+        />
       ) : null}
     </div>
   );

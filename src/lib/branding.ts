@@ -9,6 +9,13 @@ export const PRODUCT_FULL_NAME = "Sigma by Latino Business Support";
 
 export const PRODUCT_TEAM_SIGN_OFF = `The ${PRODUCT_FULL_NAME} team`;
 
+/** Public agency contact (Settings / public forms). */
+export const PRODUCT_ORG_EMAIL = "info@lbs.bz";
+export const PRODUCT_ORG_PHONE = "4752570243";
+export const PRODUCT_ORG_ADDRESS = "1200 Summer St, Stamford, CT 06902";
+export const PRODUCT_ORG_WEBSITE = "https://lbs.bz";
+export const PRODUCT_ORG_PHONE_DISPLAY = "(475) 257-0243";
+
 /** App mark for chrome (Ask Sigma, sidebar wordmark asset). Root-absolute path. */
 export const PRODUCT_MARK_SRC = "/logos/sigma.png";
 

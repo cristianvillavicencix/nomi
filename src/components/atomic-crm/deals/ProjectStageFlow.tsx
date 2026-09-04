@@ -22,17 +22,28 @@ const getProgressColor = (
   index: number,
   total: number,
   state: StageVisualState,
+  stageId: string,
 ) => {
-  const ratio = total <= 1 ? 1 : index / (total - 1);
-  const hue = 216;
+  // Lost is off the happy path — keep it clearly red when reached.
+  if (stageId === "closed_lost") {
+    if (state === "pending") return "hsl(220 16% 90%)";
+    if (state === "active") return "hsl(0 72% 46%)";
+    return "hsl(0 58% 60%)";
+  }
+
+  // Same cool → warm arc as the project calendar (sky → amber toward delivery/close).
+  // Closed is the warm cap; ignore Lost in the ratio.
+  const progressSteps = Math.max(total - 2, 1);
+  const cappedIndex = Math.min(index, progressSteps);
+  const ratio = cappedIndex / progressSteps;
+  const hue = 198 - ratio * 160;
 
   if (state === "active") {
-    const lightness = 44 - ratio * 8;
-    return `hsl(${hue} 78% ${lightness}%)`;
+    return `hsl(${hue} 82% 44%)`;
   }
 
   if (state === "completed") {
-    const lightness = 74 - ratio * 22;
+    const lightness = 66 - ratio * 10;
     return `hsl(${hue} 72% ${lightness}%)`;
   }
 
@@ -121,7 +132,12 @@ const ProjectStageFlowInner = ({
       <div className="flex w-full min-w-0 items-stretch">
         {stages.map((stage, index) => {
           const state = getStageVisualState(index, activeIndex);
-          const background = getProgressColor(index, stages.length, state);
+          const background = getProgressColor(
+            index,
+            stages.length,
+            state,
+            stage.id,
+          );
           const textColor = getTextColor(state);
           const isCurrent = stage.id === stages[activeIndex]?.id;
           const canChangeToStage = interactive && !isCurrent;

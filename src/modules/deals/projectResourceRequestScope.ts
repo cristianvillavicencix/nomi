@@ -192,7 +192,8 @@ export const shouldShowProjectResourcesSection = (
     sections.length > 0 && sections.every((entry) => entry.startsWith("service:"));
 
   if (sectionId === "company_info") {
-    if (serviceOnlyScope) return false;
+    // Scoped CRM share links already know the client — skip re-asking.
+    if (sections?.length) return false;
     return true;
   }
 

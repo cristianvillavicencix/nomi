@@ -53,6 +53,10 @@ const lazyRouteModules = [
   ],
   ["FormPublicEntry", () => import("@/modules/forms/public/FormPublicEntry")],
   [
+    "WebsiteBriefPreviewPage",
+    () => import("@/modules/forms/public/WebsiteBriefPreviewPage"),
+  ],
+  [
     "PublicProposalPage",
     () => import("@/modules/proposals/public/PublicProposalPage"),
   ],

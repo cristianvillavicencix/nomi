@@ -333,7 +333,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
           {shellHidesGlobalHeader ? (
             <SpotlightSearchButton variant="hidden" />
           ) : null}
-          {shellHidesGlobalHeader ? (
+          {shellHidesGlobalHeader && !isProjectShowShell ? (
             <CrmAssistantButton variant="fab" />
           ) : null}
 

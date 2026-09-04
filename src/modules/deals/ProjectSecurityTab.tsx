@@ -40,15 +40,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   emptyDealAccessFormValues,
   emptyDealAccessLinkFormValues,
   normalizeAccessUrl,
+  PROJECT_ACCESS_PRESETS,
   type DealAccessFormValues,
 } from "@/modules/deals/projectAccessConstants";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  SecurityFloatingInput,
+  SecurityFloatingTextarea,
+} from "@/modules/deals/projects/securityFloatingFields";
+import {
+  FloatingFieldShell,
+  floatingFieldControlClassName,
+} from "@/components/ui/floating-field";
+import { cn } from "@/lib/utils";
 import {
   getSupabaseSchemaMissingMessage,
   isSupabaseSchemaMissingError,
@@ -408,6 +422,12 @@ const AccessEntryDialog = ({
   const isLink = values.kind === "link";
   const canSave =
     values.label.trim().length > 0 && (!isLink || values.url.trim().length > 0);
+  const [presetOpen, setPresetOpen] = useState(false);
+  const presetActive =
+    presetOpen ||
+    PROJECT_ACCESS_PRESETS.includes(
+      values.label as (typeof PROJECT_ACCESS_PRESETS)[number],
+    );
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -415,90 +435,106 @@ const AccessEntryDialog = ({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-1">
-          <div className="space-y-2">
-            <Label htmlFor="access-label">Label</Label>
-            <Input
-              id="access-label"
-              value={values.label}
-              onChange={(event) =>
-                onChange({ ...values, label: event.target.value })
-              }
-              placeholder={
-                isLink
-                  ? "Google Business Profile, Review link, Facebook page…"
-                  : "Custom label, e.g. Shopify admin"
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="access-url">
-              {isLink ? "Link URL" : "Login URL"}
-            </Label>
-            <Input
-              id="access-url"
-              value={values.url}
-              onChange={(event) =>
-                onChange({ ...values, url: event.target.value })
-              }
-              placeholder={
-                isLink
-                  ? "https://g.page/your-business or https://facebook.com/…"
-                  : "https://example.com/wp-admin"
-              }
-            />
-          </div>
+        <div className="space-y-3 py-1">
           {isLink ? null : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="access-username">Username</Label>
-                <Input
-                  id="access-username"
-                  value={values.username}
-                  onChange={(event) =>
-                    onChange({ ...values, username: event.target.value })
-                  }
-                  placeholder="admin@client.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="access-password">Password</Label>
-                <Input
-                  id="access-password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={values.password}
-                  onChange={(event) =>
-                    onChange({ ...values, password: event.target.value })
-                  }
-                  placeholder={
-                    isEditing ? "Leave blank to keep unchanged" : "Optional"
-                  }
-                />
-              </div>
+            <FloatingFieldShell
+              active={presetActive}
+              label="Preset"
+              htmlFor="access-preset"
+            >
+              <Select
+                value={
+                  PROJECT_ACCESS_PRESETS.includes(
+                    values.label as (typeof PROJECT_ACCESS_PRESETS)[number],
+                  )
+                    ? values.label
+                    : undefined
+                }
+                open={presetOpen}
+                onOpenChange={setPresetOpen}
+                onValueChange={(preset) =>
+                  onChange({
+                    ...values,
+                    label: preset,
+                    secret_label:
+                      preset === "API key" ? "API key" : values.secret_label,
+                  })
+                }
+              >
+                <SelectTrigger
+                  id="access-preset"
+                  className={cn(
+                    floatingFieldControlClassName,
+                    "h-9 border-0 shadow-none focus:ring-0",
+                  )}
+                >
+                  <SelectValue placeholder=" " />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROJECT_ACCESS_PRESETS.map((preset) => (
+                    <SelectItem key={preset} value={preset}>
+                      {preset}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FloatingFieldShell>
+          )}
+          <SecurityFloatingInput
+            id="access-label"
+            label="Label"
+            value={values.label}
+            placeholder={
+              isLink
+                ? "Google Business Profile, Review link…"
+                : "Custom label, e.g. Shopify admin"
+            }
+            onChange={(value) => onChange({ ...values, label: value })}
+          />
+          <SecurityFloatingInput
+            id="access-url"
+            label={isLink ? "Link URL" : "Login URL"}
+            value={values.url}
+            placeholder={
+              isLink
+                ? "https://g.page/your-business"
+                : "https://example.com/wp-admin"
+            }
+            onChange={(value) => onChange({ ...values, url: value })}
+          />
+          {isLink ? null : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SecurityFloatingInput
+                id="access-username"
+                label="Username"
+                value={values.username}
+                placeholder="admin@client.com"
+                onChange={(value) => onChange({ ...values, username: value })}
+              />
+              <SecurityFloatingInput
+                id="access-password"
+                label="Password"
+                type="password"
+                value={values.password}
+                placeholder={
+                  isEditing ? "Leave blank to keep unchanged" : "Optional"
+                }
+                onChange={(value) => onChange({ ...values, password: value })}
+              />
             </div>
           )}
-          <div className="space-y-2">
-            <Label htmlFor="access-notes">Instructions for client</Label>
-            <Textarea
-              id="access-notes"
-              value={values.notes}
-              onChange={(event) =>
-                onChange({ ...values, notes: event.target.value })
-              }
-              placeholder={
-                isLink
-                  ? "e.g. Use this link to manage your Google Business Profile or collect reviews."
-                  : "e.g. Sign in with Google using this email. LBS does not store your Google password."
-              }
-              rows={3}
-            />
-            <p className="text-xs text-muted-foreground">
-              {isLink
-                ? "Optional. Shown in the client portal when this link is shared at delivery."
-                : "Shown in the client portal when this credential is shared at delivery. Leave password empty for Google or client-owned logins."}
-            </p>
-          </div>
+          <SecurityFloatingTextarea
+            id="access-notes"
+            label="Notes"
+            rows={3}
+            value={values.notes}
+            placeholder={
+              isLink
+                ? "Optional notes for the team."
+                : "e.g. Sign in with Google. Password owned by the client."
+            }
+            onChange={(value) => onChange({ ...values, notes: value })}
+          />
         </div>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose}>
@@ -542,33 +578,24 @@ const SecretDialog = ({
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
       </DialogHeader>
-      <div className="space-y-4 py-1">
-        <div className="space-y-2">
-          <Label htmlFor="secret-label">Label</Label>
-          <Input
-            id="secret-label"
-            value={values.label}
-            onChange={(event) =>
-              onChange({ ...values, label: event.target.value })
-            }
-            placeholder="Place API key"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="secret-value">API key</Label>
-          <Input
-            id="secret-value"
-            type="password"
-            autoComplete="new-password"
-            value={values.value}
-            onChange={(event) =>
-              onChange({ ...values, value: event.target.value })
-            }
-            placeholder={
-              isEditing ? "Leave blank to keep unchanged" : "Paste value"
-            }
-          />
-        </div>
+      <div className="space-y-3 py-1">
+        <SecurityFloatingInput
+          id="secret-label"
+          label="Label"
+          value={values.label}
+          placeholder="Place API key"
+          onChange={(value) => onChange({ ...values, label: value })}
+        />
+        <SecurityFloatingInput
+          id="secret-value"
+          label="API key"
+          type="password"
+          value={values.value}
+          placeholder={
+            isEditing ? "Leave blank to keep unchanged" : "Paste value"
+          }
+          onChange={(value) => onChange({ ...values, value })}
+        />
       </div>
       <DialogFooter>
         <Button type="button" variant="ghost" onClick={onClose}>
@@ -1143,10 +1170,8 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
       </div>
 
       {secrets.length === 0 ? null : (
-        <div className="overflow-x-auto rounded-md border">
-          <div className="border-b bg-muted/20 px-4 py-2 text-sm font-semibold">
-            API keys & secrets
-          </div>
+        <div className="overflow-x-auto">
+          <p className="mb-2 text-sm font-medium">API keys &amp; secrets</p>
           <Table>
             <TableHeader>
               <TableRow>
@@ -1173,10 +1198,8 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
       )}
 
       {linkEntries.length === 0 ? null : (
-        <div className="overflow-x-auto rounded-md border">
-          <div className="border-b bg-muted/20 px-4 py-2 text-sm font-semibold">
-            Links
-          </div>
+        <div className="overflow-x-auto">
+          <p className="mb-2 text-sm font-medium">Links</p>
           <Table>
             <TableHeader>
               <TableRow>
@@ -1201,7 +1224,7 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
       )}
 
       {loginEntries.length === 0 && linkEntries.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center">
+        <div className="py-6 text-center">
           <KeyRound className="mx-auto text-muted-foreground" />
           <p className="mt-3 text-sm font-medium">No access entries yet</p>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -1210,10 +1233,8 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
           </p>
         </div>
       ) : loginEntries.length === 0 ? null : (
-        <div className="overflow-x-auto rounded-md border">
-          <div className="border-b bg-muted/20 px-4 py-2 text-sm font-semibold">
-            Logins
-          </div>
+        <div className="overflow-x-auto">
+          <p className="mb-2 text-sm font-medium">Logins</p>
           <Table>
             <TableHeader>
               <TableRow>

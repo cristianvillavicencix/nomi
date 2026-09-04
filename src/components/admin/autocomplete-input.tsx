@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from "react";
 import { useCallback, useMemo } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,7 +22,7 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from "@/components/ui/popover";
-import { FloatingFieldShell } from "@/components/ui/floating-field";
+import { FloatingFieldShell, floatingFieldPlaceholder } from "@/components/ui/floating-field";
 import type {
   ChoicesProps,
   InputProps,
@@ -352,7 +352,7 @@ export const AutocompleteInput = (
               onPointerDown={handleInputPointerDown}
               placeholder={
                 useFloating
-                  ? " "
+                  ? floatingFieldPlaceholder(floatingActive, placeholder)
                   : !open && selectedLabel
                     ? undefined
                     : placeholder
@@ -414,14 +414,6 @@ export const AutocompleteInput = (
                       }
                       disabled={disabled}
                     >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4 shrink-0",
-                          field.value === getChoiceValue(choice)
-                            ? "opacity-100"
-                            : "opacity-0",
-                        )}
-                      />
                       {getOptionContent(
                         isCreateItem ? createItem : choice,
                         isCreateItem,

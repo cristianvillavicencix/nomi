@@ -1,4 +1,4 @@
-import { required } from "ra-core";
+import { required, useGetOne } from "ra-core";
 import type { Identifier } from "ra-core";
 import { useFormContext, useWatch } from "react-hook-form";
 import { DateInput } from "@/components/admin/date-input";
@@ -6,6 +6,7 @@ import { NumberInput } from "@/components/admin/number-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
 import { AutocompleteArrayInput } from "@/components/admin/autocomplete-array-input";
+import type { Company } from "@/components/atomic-crm/types";
 import { ContactCompanyPickerField } from "@/modules/contacts/ContactCompanyPickerField";
 import { CompanyInlineDraftFields } from "@/modules/contacts/CompanyInlineDraftFields";
 import {
@@ -36,6 +37,7 @@ import {
   CreateFormStatusCard,
 } from "@/modules/shared/createForm/CreateFormLayout";
 import { PersonMoreOptionsSection } from "@/modules/contacts/personFormSections/PersonMoreOptionsSection";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
 type PersonFormCreateLayoutProps = {
   mode: PersonFormMode;
@@ -47,6 +49,28 @@ const PIPELINE_STAGE_CHOICES = LBS_LEAD_KANBAN_STAGES.map((stage) => ({
   id: stage.id,
   name: stage.label,
 }));
+
+const LockedAccountBanner = ({ companyId }: { companyId: Identifier }) => {
+  const { data: company } = useGetOne<Company>(
+    "companies",
+    { id: companyId },
+    { enabled: isValidRecordId(companyId) },
+  );
+  const name = company?.name?.trim();
+
+  return (
+    <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
+      <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+        Account
+      </p>
+      <p className="mt-1 text-sm font-medium text-foreground">
+        {name
+          ? `Contact for ${name}`
+          : "Contact for the selected account"}
+      </p>
+    </div>
+  );
+};
 
 const PrimaryContactToggle = () => {
   const { setValue } = useFormContext<PersonFormValues>();
@@ -225,10 +249,18 @@ export const PersonFormCreateLayout = ({
   });
 
   if (mode === "directory") {
+    const accountLocked = isValidRecordId(lockCompanyId);
+
     return (
       <div className="space-y-5">
-        <DirectoryCommercialStatus />
-        {personKind === "prospect" ? <DirectorySalesFields /> : null}
+        {accountLocked ? (
+          <LockedAccountBanner companyId={lockCompanyId as Identifier} />
+        ) : (
+          <DirectoryCommercialStatus />
+        )}
+        {!accountLocked && personKind === "prospect" ? (
+          <DirectorySalesFields />
+        ) : null}
 
         <CreateFormFieldRow columns={2}>
           <TextInput
@@ -275,10 +307,12 @@ export const PersonFormCreateLayout = ({
           labelVariant="floating"
         />
 
-        <PersonAssignmentSection
-          assignmentMulti={visibility.assignmentMulti}
-          flat
-        />
+        {!accountLocked ? (
+          <PersonAssignmentSection
+            assignmentMulti={visibility.assignmentMulti}
+            flat
+          />
+        ) : null}
       </div>
     );
   }

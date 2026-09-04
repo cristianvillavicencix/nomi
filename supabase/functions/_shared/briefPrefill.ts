@@ -13,6 +13,23 @@ const formatAddress = (parts: Array<string | null | undefined>) =>
     .filter(Boolean)
     .join(", ");
 
+const isEmpty = (value: unknown) => {
+  if (value == null) return true;
+  if (typeof value === "string") return value.trim().length === 0;
+  if (Array.isArray(value)) return value.length === 0;
+  return false;
+};
+
+const fillIfEmpty = (
+  prefill: Record<string, unknown>,
+  key: string,
+  value: string | undefined | null,
+) => {
+  if (value == null || value === "") return;
+  if (!isEmpty(prefill[key])) return;
+  prefill[key] = value;
+};
+
 export const buildBriefPrefillFromCrm = ({
   deal,
   contact,
@@ -45,7 +62,7 @@ export const buildBriefPrefillFromCrm = ({
     Object.assign(prefill, deal.website_brief);
   }
   if (deal?.project_type) {
-    prefill.project_type = deal.project_type;
+    fillIfEmpty(prefill, "project_type", deal.project_type);
   }
 
   const contactName = contact
@@ -54,28 +71,42 @@ export const buildBriefPrefillFromCrm = ({
   const contactEmail = contact ? primaryEmail(contact.email_jsonb) : "";
   const contactPhone = contact ? primaryPhone(contact.phone_jsonb) : "";
 
-  if (contactName) prefill.contact_name = contactName;
-  if (contactEmail) {
-    prefill.contact_email = contactEmail;
-    prefill.form_notification_email ??= contactEmail;
-  }
-  if (contactPhone) {
-    prefill.contact_phone = contactPhone;
-    prefill.whatsapp_business ??= contactPhone;
+  if (contact) {
+    fillIfEmpty(prefill, "contact_first_name", contact.first_name);
+    fillIfEmpty(prefill, "contact_last_name", contact.last_name);
+    if (!contact.first_name && !contact.last_name && contactName) {
+      const [first, ...rest] = contactName.split(/\s+/);
+      fillIfEmpty(prefill, "contact_first_name", first);
+      fillIfEmpty(prefill, "contact_last_name", rest.join(" "));
+    }
+    fillIfEmpty(prefill, "contact_name", contactName || undefined);
+    fillIfEmpty(prefill, "contact_email", contactEmail);
+    fillIfEmpty(prefill, "form_notification_email", contactEmail);
+    fillIfEmpty(prefill, "contact_phone", contactPhone);
+    fillIfEmpty(prefill, "whatsapp_business", contactPhone);
   }
 
-  if (company?.name) prefill.company_name = company.name;
-  if (company?.website) prefill.existing_website = company.website;
-  if (company?.phone_number) prefill.business_phone = company.phone_number;
+  if (company) {
+    fillIfEmpty(prefill, "company_name", company.name);
+    fillIfEmpty(prefill, "existing_website", company.website);
+    fillIfEmpty(prefill, "business_phone", company.phone_number);
 
-  const companyAddress = formatAddress([
-    company?.address,
-    company?.city,
-    company?.state_abbr,
-    company?.zipcode,
-  ]);
-  const address = companyAddress || contact?.address?.trim() || "";
-  if (address) prefill.full_address = address;
+    const companyAddress = formatAddress([
+      company.address,
+      company.city,
+      company.state_abbr,
+      company.zipcode,
+    ]);
+    fillIfEmpty(prefill, "full_address", companyAddress);
+    fillIfEmpty(prefill, "full_address_street", company.address ?? "");
+    fillIfEmpty(prefill, "full_address_city", company.city ?? "");
+    fillIfEmpty(prefill, "full_address_state", company.state_abbr ?? "");
+    fillIfEmpty(prefill, "full_address_zip", company.zipcode ?? "");
+  }
+
+  if (isEmpty(prefill.full_address) && contact?.address?.trim()) {
+    fillIfEmpty(prefill, "full_address", contact.address.trim());
+  }
 
   return prefill;
 };

@@ -36,6 +36,31 @@ const FileAnswer = ({ value }: { value: unknown }) => {
     );
   }
 
+  if (
+    value &&
+    typeof value === "object" &&
+    "file" in value &&
+    (value as { file?: unknown }).file
+  ) {
+    const entry = value as {
+      person_name?: string;
+      person_role?: string;
+      file: { url?: string; name?: string };
+    };
+    const name = String(entry.person_name ?? "").trim();
+    const role = String(entry.person_role ?? "").trim();
+    const caption =
+      name && role ? `${name} — ${role}` : name || role || entry.file.name;
+    return (
+      <div className="space-y-0.5">
+        {caption ? (
+          <div className="text-sm font-medium text-foreground">{caption}</div>
+        ) : null}
+        <FileAnswer value={entry.file} />
+      </div>
+    );
+  }
+
   if (value && typeof value === "object" && "url" in value) {
     const file = value as { url?: string; name?: string };
     if (!file.url) return <span>—</span>;

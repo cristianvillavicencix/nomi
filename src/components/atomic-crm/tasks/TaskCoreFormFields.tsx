@@ -30,7 +30,6 @@ export const TaskCoreFormFields = ({
         label="Date"
         helperText={false}
         validate={required()}
-        labelVariant="floating"
       />
       <CalendarTimeInput source="due_time" label="Time" helperText={false} />
     </div>

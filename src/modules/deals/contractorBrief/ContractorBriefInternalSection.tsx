@@ -192,20 +192,22 @@ export const ContractorBriefInternalSection = ({
       "service_areas",
       "business_hours",
       "company_founded_year",
+      "differentiators",
+      "certifications",
     ]);
     return (
       <div className={gridClass}>
-        <div className={gridClass.includes("1") ? "" : "md:col-span-2"}>
-          <NumberInput
-            source="website_brief.company_founded_year"
-            label="Year the company was founded"
-            helperText={false}
-            labelVariant="floating"
-          />
-        </div>
         {section.fields
           .filter((field) => !skip.has(field.key))
           .map((field) => renderDefaultField(field))}
+        <div className={gridClass.includes("1") ? "" : "md:col-span-2"}>
+          <TagAddField
+            label="What makes you different?"
+            value={briefAnswers.differentiators}
+            placeholder="Type a point and press Enter"
+            onChange={(next) => setField("differentiators", next)}
+          />
+        </div>
         <ServiceAreasPlacesInput
           value={briefAnswers.service_areas}
           onChange={(next) => setField("service_areas", next)}
@@ -214,6 +216,14 @@ export const ContractorBriefInternalSection = ({
           value={briefAnswers.business_hours}
           onChange={(next) => setField("business_hours", next)}
         />
+        <div className={gridClass.includes("1") ? "" : "md:col-span-2"}>
+          <NumberInput
+            source="website_brief.company_founded_year"
+            label="Year founded (optional)"
+            helperText={false}
+            labelVariant="floating"
+          />
+        </div>
       </div>
     );
   }
@@ -230,25 +240,43 @@ export const ContractorBriefInternalSection = ({
     ]);
     return (
       <div className={gridClass}>
+        {section.fields
+          .filter(
+            (field) =>
+              field.key === "website_goals" ||
+              field.key === "sitemap" ||
+              field.key === "features_integrations",
+          )
+          .map((field) => renderDefaultField(field))}
+        {section.fields
+          .filter((field) => field.key === "service_categories")
+          .map((field) => renderDefaultField(field))}
+        {String(briefAnswers.service_categories ?? "") === "Other" ||
+        (Array.isArray(briefAnswers.service_categories) &&
+          briefAnswers.service_categories.includes("Other"))
+          ? section.fields
+              .filter((field) => field.key === "service_category_other")
+              .map((field) => renderDefaultField(field))
+          : null}
         <TagAddField
           label="Services offered"
           value={briefAnswers.services_offered}
-          placeholder="e.g. Roof Repairs"
+          placeholder="e.g. Floral arrangements"
           helpText="Add each service one at a time."
           onChange={(next) => setField("services_offered", next)}
         />
         <TagAddField
-          label="Brands / manufacturers you work with"
+          label="Brands you work with"
           value={briefAnswers.brands_used}
-          placeholder="e.g. GAF, Trex, Owens Corning"
+          placeholder="e.g. Brand name"
           helpText="Add each brand as a tag."
           onChange={(next) => setField("brands_used", next)}
         />
         <div className={gridClass.includes("1") ? "" : "md:col-span-2"}>
           <TextInput
             source="website_brief.primary_service"
-            label="Primary / most profitable service"
-            helperText="Pick one of the services you added above."
+            label="Primary service"
+            helperText={false}
             labelVariant="floating"
           />
         </div>
@@ -270,7 +298,16 @@ export const ContractorBriefInternalSection = ({
           />
         ) : null}
         {section.fields
-          .filter((field) => !skip.has(field.key))
+          .filter(
+            (field) =>
+              !skip.has(field.key) &&
+              field.key !== "website_goals" &&
+              field.key !== "sitemap" &&
+              field.key !== "features_integrations" &&
+              field.key !== "service_categories" &&
+              field.key !== "service_category_other" &&
+              field.key !== "brands_used",
+          )
           .map((field) => renderDefaultField(field))}
       </div>
     );

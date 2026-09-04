@@ -8,7 +8,7 @@ import {
   FormLabel,
 } from "@/components/admin/form";
 import { Input } from "@/components/ui/input";
-import { FloatingFieldShell } from "@/components/ui/floating-field";
+import { FloatingFieldShell, floatingDateEmptyValueClassName } from "@/components/ui/floating-field";
 import { InputHelperText } from "@/components/admin/input-helper-text";
 import { cn } from "@/lib/utils";
 
@@ -248,6 +248,8 @@ export const DateInput = (props: DateInputProps) => {
           "scheme-light dark:scheme-dark relative [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:opacity-100 appearance-none",
           useFloating &&
             "h-9 border-0 bg-transparent px-3 shadow-none focus-visible:ring-0",
+          useFloating && floatingDateEmptyValueClassName(floatingActive),
+          useFloating && !floatingActive && "text-transparent",
           inputClassName,
         )}
         disabled={disabled || readOnly}

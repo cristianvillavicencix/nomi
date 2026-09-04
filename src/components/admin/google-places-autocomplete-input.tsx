@@ -14,7 +14,7 @@ import {
 } from "@/components/admin/form";
 import { InputHelperText } from "@/components/admin/input-helper-text";
 import { Input } from "@/components/ui/input";
-import { FloatingFieldShell } from "@/components/ui/floating-field";
+import { FloatingFieldShell, floatingFieldPlaceholder } from "@/components/ui/floating-field";
 import {
   Popover,
   PopoverAnchor,
@@ -189,7 +189,7 @@ export const GooglePlacesAutocompleteInput = ({
   const useFloating = labelVariant === "floating" && label !== false;
   const floatingActive = focused || open || String(field.value ?? "").length > 0;
   const inputPlaceholder = useFloating
-    ? " "
+    ? floatingFieldPlaceholder(floatingActive, placeholder ?? defaultPlaceholder)
     : (placeholder ?? defaultPlaceholder);
 
   const fieldControl = (
@@ -299,6 +299,7 @@ export const GooglePlacesAutocompleteInput = ({
           label={labelNode}
           htmlFor={id}
           required={isRequired}
+          labelAlign={multiline ? "top" : "center"}
           className={multiline ? "min-h-[5.5rem] items-stretch" : undefined}
         >
           <FormControl>{fieldControl}</FormControl>

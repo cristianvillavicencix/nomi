@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import {
   FileIcon,
   FileVideo2,
@@ -39,6 +39,13 @@ const isVideoFile = (file: UploadedFormFile) => {
   );
 };
 
+type PendingPreview = {
+  id: string;
+  name: string;
+  previewUrl: string;
+  isImage: boolean;
+};
+
 type FormFileUploadZoneProps = {
   id: string;
   accept?: string;
@@ -71,19 +78,68 @@ export const FormFileUploadZone = ({
   compact = false,
 }: FormFileUploadZoneProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingRef = useRef<PendingPreview[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [pending, setPending] = useState<PendingPreview[]>([]);
   const remaining = Math.max(0, maxFiles - files.length);
   const atLimit = remaining <= 0;
   const canAdd = !disabled && !uploading && !atLimit;
+  const isSingleSlot = maxFiles === 1;
+  const singleFile = files[0];
+  const singlePending = pending[0];
+  const showSinglePreview =
+    isSingleSlot && (Boolean(singleFile) || Boolean(singlePending));
+  const showMultiGrid =
+    !isSingleSlot && (files.length > 0 || pending.length > 0);
+  const showFooter = showSinglePreview || showMultiGrid;
 
   const openPicker = () => {
     if (!canAdd) return;
     inputRef.current?.click();
   };
 
+  const clearPending = (entries: PendingPreview[]) => {
+    for (const entry of entries) {
+      URL.revokeObjectURL(entry.previewUrl);
+    }
+  };
+
+  const replacePending = (next: PendingPreview[]) => {
+    clearPending(pendingRef.current);
+    pendingRef.current = next;
+    setPending(next);
+  };
+
+  useEffect(() => {
+    if (uploading) return;
+    if (pendingRef.current.length === 0) return;
+    clearPending(pendingRef.current);
+    pendingRef.current = [];
+    setPending([]);
+  }, [uploading, files.length]);
+
+  useEffect(
+    () => () => {
+      clearPending(pendingRef.current);
+      pendingRef.current = [];
+    },
+    [],
+  );
+
   const handleIncoming = (incoming: File[]) => {
     if (!incoming.length || !canAdd) return;
-    onFilesSelected(incoming.slice(0, remaining));
+    const batch = incoming.slice(0, remaining);
+    replacePending(
+      batch.map((file, index) => ({
+        id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
+        name: file.name,
+        previewUrl: URL.createObjectURL(file),
+        isImage:
+          file.type.startsWith("image/") ||
+          /\.(png|jpe?g|gif|webp|heic)$/i.test(file.name),
+      })),
+    );
+    onFilesSelected(batch);
   };
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
@@ -93,9 +149,10 @@ export const FormFileUploadZone = ({
   };
 
   const acceptHint = formatAcceptHint(accept);
+  const frameHeight = compact ? "min-h-40" : "min-h-52 sm:min-h-56";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <input
         ref={inputRef}
         id={id}
@@ -110,15 +167,85 @@ export const FormFileUploadZone = ({
         }}
       />
 
-      {files.length > 0 ? (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {showSinglePreview ? (
+        <div
+          className={cn(
+            "relative w-full overflow-hidden rounded-2xl border bg-muted/30",
+            frameHeight,
+          )}
+        >
+          {singlePending ? (
+            <>
+              {singlePending.isImage ? (
+                <img
+                  src={singlePending.previewUrl}
+                  alt={singlePending.name}
+                  className="absolute inset-0 size-full object-cover opacity-80"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                  <FileIcon className="size-10 text-muted-foreground" />
+                </div>
+              )}
+              <div className="absolute inset-0 flex items-center justify-center bg-background/35">
+                <Loader2 className="size-7 animate-spin text-primary" />
+              </div>
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 py-2.5">
+                <p className="truncate text-xs font-medium text-white">
+                  {singlePending.name}
+                </p>
+              </div>
+            </>
+          ) : singleFile ? (
+            <>
+              {isImageFile(singleFile) && singleFile.url ? (
+                <img
+                  src={singleFile.url}
+                  alt={singleFile.name}
+                  className="absolute inset-0 size-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted/50 p-4 text-center">
+                  {isVideoFile(singleFile) ? (
+                    <FileVideo2 className="size-10 text-muted-foreground" />
+                  ) : (
+                    <FileIcon className="size-10 text-muted-foreground" />
+                  )}
+                  <p className="line-clamp-2 text-sm font-medium text-foreground">
+                    {singleFile.name}
+                  </p>
+                </div>
+              )}
+              {onRemove ? (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="secondary"
+                  className="absolute right-2 top-2 size-8 rounded-full bg-background/95 shadow-sm"
+                  disabled={disabled || uploading}
+                  aria-label={`Remove ${singleFile.name}`}
+                  onClick={() => onRemove(0)}
+                >
+                  <X className="size-4" />
+                </Button>
+              ) : null}
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 py-2.5">
+                <p className="truncate text-xs font-medium text-white">
+                  {singleFile.name}
+                </p>
+              </div>
+            </>
+          ) : null}
+        </div>
+      ) : showMultiGrid ? (
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {files.map((file, index) => (
             <li
               key={file.path ?? file.url ?? `${file.name}-${index}`}
-              className="group relative overflow-hidden rounded-xl border bg-muted/30"
+              className="group relative overflow-hidden rounded-xl border bg-background"
             >
-              <div className="aspect-[4/3] w-full">
-                {isImageFile(file) ? (
+              <div className="relative aspect-square w-full bg-muted/40">
+                {isImageFile(file) && file.url ? (
                   <img
                     src={file.url}
                     alt={file.name}
@@ -126,34 +253,66 @@ export const FormFileUploadZone = ({
                     loading="lazy"
                   />
                 ) : (
-                  <div className="flex size-full flex-col items-center justify-center gap-2 bg-muted/50 p-3 text-center">
+                  <div className="flex size-full flex-col items-center justify-center gap-1.5 p-2 text-center">
                     {isVideoFile(file) ? (
-                      <FileVideo2 className="size-8 text-muted-foreground" />
+                      <FileVideo2 className="size-7 text-muted-foreground" />
                     ) : (
-                      <FileIcon className="size-8 text-muted-foreground" />
+                      <FileIcon className="size-7 text-muted-foreground" />
                     )}
-                    <span className="line-clamp-2 text-xs font-medium text-foreground">
-                      {file.name}
-                    </span>
                   </div>
                 )}
+                {onRemove ? (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="absolute right-1.5 top-1.5 size-7 rounded-full bg-background/95 shadow-sm"
+                    disabled={disabled || uploading}
+                    aria-label={`Remove ${file.name}`}
+                    onClick={() => onRemove(index)}
+                  >
+                    <X className="size-3.5" />
+                  </Button>
+                ) : null}
               </div>
-              {onRemove ? (
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="secondary"
-                  className="absolute right-2 top-2 size-8 rounded-full bg-background/90 shadow-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                  disabled={disabled || uploading}
-                  aria-label={`Remove ${file.name}`}
-                  onClick={() => onRemove(index)}
+              <div className="border-t px-2 py-1.5">
+                <p
+                  className="truncate text-xs font-medium text-foreground"
+                  title={file.name}
                 >
-                  <X className="size-4" />
-                </Button>
-              ) : null}
-              <div className="border-t bg-background/90 px-2 py-1.5">
-                <p className="truncate text-xs text-muted-foreground">
                   {file.name}
+                </p>
+              </div>
+            </li>
+          ))}
+
+          {pending.map((entry) => (
+            <li
+              key={entry.id}
+              className="relative overflow-hidden rounded-xl border border-primary/30 bg-background"
+            >
+              <div className="relative aspect-square w-full bg-muted/40">
+                {entry.isImage ? (
+                  <img
+                    src={entry.previewUrl}
+                    alt={entry.name}
+                    className="size-full object-cover opacity-70"
+                  />
+                ) : (
+                  <div className="flex size-full items-center justify-center">
+                    <FileIcon className="size-7 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="absolute inset-0 flex items-center justify-center bg-background/35">
+                  <Loader2 className="size-6 animate-spin text-primary" />
+                </div>
+              </div>
+              <div className="border-t px-2 py-1.5">
+                <p
+                  className="truncate text-xs font-medium text-foreground"
+                  title={entry.name}
+                >
+                  {entry.name}
                 </p>
               </div>
             </li>
@@ -164,7 +323,7 @@ export const FormFileUploadZone = ({
               <button
                 type="button"
                 className={cn(
-                  "flex aspect-[4/3] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-3 text-center transition-colors",
+                  "flex h-full min-h-[7.5rem] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-3 py-4 text-center transition-colors",
                   "border-muted-foreground/30 hover:border-primary/50 hover:bg-primary/5",
                 )}
                 onClick={openPicker}
@@ -235,17 +394,21 @@ export const FormFileUploadZone = ({
               </p>
               <p className="mt-3 text-xs text-muted-foreground">{acceptHint}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Up to {maxFiles} files
+                Up to {maxFiles} file{maxFiles === 1 ? "" : "s"}
               </p>
             </>
           ) : null}
         </div>
       )}
 
-      {files.length > 0 ? (
+      {showFooter && !isSingleSlot ? (
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>
-            {files.length} of {maxFiles} file{maxFiles === 1 ? "" : "s"} added
+            {uploading
+              ? uploadingCount > 1
+                ? `Uploading ${uploadingCount} photos…`
+                : "Uploading…"
+              : `${files.length} of ${maxFiles} photo${maxFiles === 1 ? "" : "s"}`}
           </span>
           {canAdd ? (
             <button

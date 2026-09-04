@@ -11,6 +11,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { useGetOne, type Identifier } from "ra-core";
+import { useNavigate } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -29,9 +30,9 @@ import {
 import { AddTask } from "@/components/atomic-crm/tasks/AddTask";
 import { NoteCreateSheet } from "@/components/atomic-crm/notes/NoteCreateSheet";
 import { CalendarReminderDialog } from "@/modules/calendar/CalendarReminderDialog";
-import { NewDealDialog } from "@/modules/deals/NewDealDialog";
 import { NewTicketDialog } from "@/modules/tickets/NewTicketDialog";
 import type { Contact } from "@/components/atomic-crm/types";
+import { getClientDealCreatePath } from "@/app/routing";
 import { normalizePhoneForTel } from "@/lib/linking";
 import { cn } from "@/lib/utils";
 import { resolveBillingRecipientEmail } from "@/modules/billing/billingRecipientResolution";
@@ -109,10 +110,10 @@ export const ClientQuickActions = ({
   presentation = "circles",
   className,
 }: ClientQuickActionsProps) => {
+  const navigate = useNavigate();
   const [noteOpen, setNoteOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [meetingOpen, setMeetingOpen] = useState(false);
-  const [newDealOpen, setNewDealOpen] = useState(false);
   const [newTicketOpen, setNewTicketOpen] = useState(false);
   const { smsEnabled } = useMessagingEnabled();
   const messagesQuickAccess = useMessagesQuickAccessOptional();
@@ -166,9 +167,15 @@ export const ClientQuickActions = ({
         <TooltipContent>More</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setNewDealOpen(true)}>
+        <DropdownMenuItem
+          onClick={() =>
+            navigate(
+              getClientDealCreatePath(record.id, primaryContactId ?? undefined),
+            )
+          }
+        >
           <Briefcase className="size-4" />
-          New deal
+          New project
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setNewTicketOpen(true)}>
           <Ticket className="size-4" />
@@ -220,13 +227,6 @@ export const ClientQuickActions = ({
         initialRecord={{
           contact_id: primaryContactId ?? null,
         }}
-      />
-
-      <NewDealDialog
-        open={newDealOpen}
-        onOpenChange={setNewDealOpen}
-        companyId={record.id}
-        defaultContactId={primaryContactId}
       />
 
       <NewTicketDialog

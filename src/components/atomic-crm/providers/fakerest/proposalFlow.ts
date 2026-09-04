@@ -116,7 +116,7 @@ export const fakeAcceptProposal = async (
         company_id: proposal.company_id,
         contact_id: proposal.contact_id,
         contact_ids: proposal.contact_id ? [proposal.contact_id] : [],
-        stage: "pending_payment",
+        stage: "won",
         lifecycle_phase: "opportunity",
         accepted_proposal_id: proposalId,
         amount: proposal.amount ?? 0,
@@ -271,7 +271,7 @@ export const fakeSignProposalContract = async (
     });
     await dataProvider.update("deals", {
       id: proposal.deal_id,
-      data: { stage: "pending_payment", lifecycle_phase: "opportunity" },
+      data: { stage: "won", lifecycle_phase: "opportunity" },
       previousData: deal,
     });
   }

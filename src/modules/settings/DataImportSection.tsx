@@ -163,7 +163,7 @@ const MODULE_CONFIG: Array<{
   },
   {
     key: "Deals",
-    label: "Deals (Projects)",
+    label: "Projects",
     description: "Linked to their company and primary contact.",
     icon: Briefcase,
     stagingField: "deals_raw",

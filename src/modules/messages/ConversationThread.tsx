@@ -284,7 +284,9 @@ export const ConversationThread = ({
             disabled={!canSendMessages}
             externalPhone={clientSmsExternalPhone}
             onExternalPhoneChange={onClientSmsPhoneChange}
+            prefillRequest={messagesQuickAccess?.smsPrefillRequest ?? null}
             onSent={({ conversation: nextConversation, message }) => {
+              messagesQuickAccess?.clearSmsPrefillRequest();
               onClientSmsSent?.(nextConversation);
               if (message?.created_at && nextConversation?.id != null) {
                 markConversationRead?.(nextConversation.id, message.created_at);

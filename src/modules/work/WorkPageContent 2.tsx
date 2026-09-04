@@ -16,7 +16,6 @@ import {
   ModuleSearchField,
 } from "@/components/atomic-crm/layout/ModuleToolbar";
 import { TaskEdit } from "@/components/atomic-crm/tasks/TaskEdit";
-import { TaskEditSheet } from "@/components/atomic-crm/tasks/TaskEditSheet";
 import { useTaskParticipantsByTaskIds } from "@/components/atomic-crm/tasks/useTaskParticipants";
 import {
   useMarkTaskTagNotificationsRead,
@@ -752,19 +751,11 @@ export const WorkPageContent = () => {
       />
 
       {editTaskId != null ? (
-        isMobile ? (
-          <TaskEditSheet
-            taskId={editTaskId}
-            open={editTaskOpen}
-            onOpenChange={setEditTaskOpen}
-          />
-        ) : (
-          <TaskEdit
-            taskId={editTaskId}
-            open={editTaskOpen}
-            close={() => setEditTaskOpen(false)}
-          />
-        )
+        <TaskEdit
+          taskId={editTaskId}
+          open={editTaskOpen}
+          onOpenChange={setEditTaskOpen}
+        />
       ) : null}
     </div>
   );

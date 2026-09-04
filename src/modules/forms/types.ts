@@ -88,6 +88,12 @@ export type PublicFormPayload = {
     schema: FormSchemaV2;
     type: string;
     logo_url?: string | null;
+    /** Agency / workspace name shown on public form open. */
+    agency_name?: string | null;
+    agency_phone?: string | null;
+    agency_email?: string | null;
+    agency_address?: string | null;
+    agency_website?: string | null;
     primary_color?: string | null;
     background_image_url?: string | null;
     welcome_title?: string | null;
@@ -101,6 +107,11 @@ export type PublicFormPayload = {
     custom_css?: string | null;
   };
   prefill?: Record<string, unknown>;
+  /** Scope stored on the token — keeps share URLs as plain /f/{code}. */
+  request_scope?: {
+    sections?: string[];
+    presetServices?: string[];
+  } | null;
   links?: {
     contact_id?: number | null;
     company_id?: number | null;

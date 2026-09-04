@@ -4,7 +4,7 @@ import { getLbsProjectScopeMode } from "@/modules/deals/lbsProjectConstants";
 import { ProjectScopeChecklist } from "@/modules/deals/ProjectScopeChecklist";
 import { usesContractorBriefForm } from "@/modules/deals/contractorBriefSchema";
 import { ContractorBriefInternalSection } from "@/modules/deals/contractorBrief/ContractorBriefInternalSection";
-import { getVisibleBriefSections } from "@/modules/deals/websiteBriefSchema";
+import { getProjectBriefSections, getVisibleBriefSections } from "@/modules/deals/websiteBriefSchema";
 import { evaluateCondition } from "@/lib/forms-v2/conditionalLogic";
 import type { LbsDeal } from "@/modules/types";
 import {
@@ -45,9 +45,11 @@ export const WebsiteBriefFormSections = ({
     | undefined;
   const briefAnswers =
     (useWatch({ name: "website_brief" }) as Record<string, unknown>) ?? {};
-  const sections = getVisibleBriefSections(projectType).filter(
-    (section) => !onlySectionId || section.id === onlySectionId,
-  );
+  const sections = (
+    onlySectionId
+      ? getVisibleBriefSections(projectType)
+      : getProjectBriefSections(projectType, "essential")
+  ).filter((section) => !onlySectionId || section.id === onlySectionId);
   const scopeMode = getLbsProjectScopeMode(projectType);
   const excluded = new Set(excludeFieldKeys);
   const hideSectionHeader = Boolean(onlySectionId);
