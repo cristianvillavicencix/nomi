@@ -3,7 +3,6 @@ import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useGetIdentity, useNotify, type Identifier } from "ra-core";
 
 import { IconButton } from "@/components/ui/icon-button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   Contact,
@@ -116,6 +115,8 @@ export const ClientSmsComposer = ({
   disabled,
   prefillRequest,
   compact = false,
+  showTemplateShortcuts,
+  showRecipientField,
   externalPhone,
   onExternalPhoneChange,
 }: {
@@ -130,9 +131,15 @@ export const ClientSmsComposer = ({
   disabled?: boolean;
   prefillRequest?: { key: number; text: string } | null;
   compact?: boolean;
+  /** Defaults to false in compact composers (project/ticket side panels). */
+  showTemplateShortcuts?: boolean;
+  /** Defaults to false in compact composers — contact is already shown above. */
+  showRecipientField?: boolean;
   externalPhone?: string | null;
   onExternalPhoneChange?: (e164: string) => void;
 }) => {
+  const shortcutsEnabled = showTemplateShortcuts ?? !compact;
+  const recipientVisible = showRecipientField ?? !compact;
   const notify = useNotify();
   const { identity } = useGetIdentity();
   const isStandardUser = isScopedWorkspaceUser(
@@ -381,11 +388,6 @@ export const ClientSmsComposer = ({
     await handleSend();
   };
 
-  const showSignatureToggle =
-    Boolean(signature) && !isInternalNote && !signatureRequired;
-  const showSignatureBadge =
-    Boolean(signature) && !isInternalNote && signatureRequired;
-
   return (
     <form
       onSubmit={handleSubmit}
@@ -398,44 +400,16 @@ export const ClientSmsComposer = ({
         isInternalNote && "bg-warning/[0.06]",
       )}
     >
-      {contact ? (
-        <div className="flex items-center justify-between gap-3">
-          <ClientSmsPhoneField
-            contact={contact}
-            value={externalPhone ?? resolvedExternalPhone}
-            onChange={(next) => onExternalPhoneChange?.(next)}
-            disabled={disabled || isSending}
-            variant="header"
-            className="min-w-0 flex-1"
-          />
-          {showSignatureToggle ? (
-            <label
-              htmlFor="sms-include-signature"
-              className={cn(
-                "inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                includeSignature
-                  ? "bg-primary/10 text-primary"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted/70",
-                (disabled || isSending) && "cursor-not-allowed opacity-50",
-              )}
-            >
-              <Checkbox
-                id="sms-include-signature"
-                checked={includeSignature}
-                onCheckedChange={(value) => setIncludeSignature(value === true)}
-                disabled={disabled || isSending}
-                className="size-3.5 rounded-[3px]"
-                aria-label="Include signature"
-              />
-              Signature
-            </label>
-          ) : showSignatureBadge ? (
-            <span className="inline-flex shrink-0 items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-              Signature on
-            </span>
-          ) : null}
-        </div>
-      ) : resolvedExternalPhone ? (
+      {recipientVisible && contact ? (
+        <ClientSmsPhoneField
+          contact={contact}
+          value={externalPhone ?? resolvedExternalPhone}
+          onChange={(next) => onExternalPhoneChange?.(next)}
+          disabled={disabled || isSending}
+          variant="header"
+          className="min-w-0"
+        />
+      ) : recipientVisible && resolvedExternalPhone ? (
         <p className="min-w-0 truncate text-sm text-muted-foreground">
           <span>To </span>
           <span className="font-medium text-foreground">
@@ -443,11 +417,9 @@ export const ClientSmsComposer = ({
           </span>
           <span className="text-muted-foreground"> · Unsaved number</span>
         </p>
-      ) : showSignatureBadge ? (
-        <p className="text-xs font-medium text-primary">Signature on</p>
       ) : null}
 
-      {!isInternalNote ? (
+      {!isInternalNote && shortcutsEnabled ? (
         <SmsTemplateShortcutTiles
           contact={contact}
           companyName={contact?.company_name}

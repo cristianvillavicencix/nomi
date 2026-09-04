@@ -181,7 +181,7 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
             ) : null}
             <TabsContent value="messages" className="pt-4">
               {showTab("messages") ? (
-                <div className="h-[min(32rem,60vh)] min-h-[22rem] overflow-hidden rounded-md border">
+                <div className="h-[min(42rem,calc(100dvh-16rem))] min-h-[28rem]">
                   <ProjectMessagesPanel record={record} className="h-full" />
                 </div>
               ) : null}

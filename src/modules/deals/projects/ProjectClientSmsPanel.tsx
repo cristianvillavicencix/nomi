@@ -202,6 +202,7 @@ export const ProjectClientSmsPanel = ({
           conversationId={conversation?.id}
           disabled={!canSendMessages}
           compact
+          showTemplateShortcuts={false}
           onSent={({ conversation: nextConversation }) => {
             setConversation(nextConversation);
             void refetch();
