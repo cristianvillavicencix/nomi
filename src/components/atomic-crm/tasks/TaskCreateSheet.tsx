@@ -11,6 +11,7 @@ import { CreateSheet } from "../misc/CreateSheet";
 import { foreignKeyMapping } from "../notes/foreignKeyMapping";
 import { TaskFormContent } from "./TaskFormContent";
 import { normalizeTaskCreateData } from "./taskConstants";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
 export interface TaskCreateSheetProps {
   open: boolean;
@@ -25,7 +26,7 @@ export const TaskCreateSheet = ({
 }: TaskCreateSheetProps) => {
   const { identity } = useGetIdentity();
 
-  const selectContact = contact_id == null;
+  const selectContact = !isValidRecordId(contact_id);
   const { data: contact } = useGetOne(
     "contacts",
     { id: contact_id! },

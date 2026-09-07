@@ -8,7 +8,7 @@ import { TextInput } from "@/components/admin/text-input";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { toSlug } from "@/lib/toSlug";
 import type { DealPipeline } from "@/components/atomic-crm/types";
-import { validateItemsInUse } from "@/components/atomic-crm/settings/SettingsPage";
+import { validateItemsInUse } from "@/components/atomic-crm/settings/validateItemsInUse";
 import { PipelinesEditor } from "@/modules/settings/workflows/PipelinesEditor";
 import { InboundLeadAutomationPanel } from "@/modules/settings/leads/InboundLeadAutomationPanel";
 import { SettingsSubNav } from "@/modules/settings/SettingsSubNav";

@@ -296,6 +296,73 @@ async function getOrgMemberByEmail(email: string, org_id: number) {
   return data;
 }
 
+/** Move a trigger-created personal workspace member into the inviter org. */
+async function adoptInvitedMemberIntoOrg(userId: string, orgId: number) {
+  const { data: members, error: lookupError } = await supabaseAdmin
+    .from("organization_members")
+    .select("id, org_id")
+    .eq("user_id", userId);
+
+  if (lookupError) {
+    console.error("adoptInvitedMemberIntoOrg lookup", lookupError);
+    throw lookupError;
+  }
+  if (!members?.length) return;
+
+  const current = members[0];
+  const leftoverOrgId = Number(current.org_id);
+  if (!Number.isFinite(leftoverOrgId) || leftoverOrgId <= 0) {
+    const { error: moveError } = await supabaseAdmin
+      .from("organization_members")
+      .update({ org_id: orgId })
+      .eq("id", current.id);
+    if (moveError) {
+      console.error("adoptInvitedMemberIntoOrg move", moveError);
+      throw moveError;
+    }
+    await syncInviteAppMetadata(userId, orgId);
+    return;
+  }
+  if (leftoverOrgId === orgId) {
+    await syncInviteAppMetadata(userId, orgId);
+    return;
+  }
+
+  const { error: moveError } = await supabaseAdmin
+    .from("organization_members")
+    .update({ org_id: orgId })
+    .eq("id", current.id);
+  if (moveError) {
+    console.error("adoptInvitedMemberIntoOrg move", moveError);
+    throw moveError;
+  }
+
+  const { count, error: countError } = await supabaseAdmin
+    .from("organization_members")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", leftoverOrgId);
+  if (!countError && (count ?? 0) === 0) {
+    const { error: deleteError } = await supabaseAdmin
+      .from("organizations")
+      .delete()
+      .eq("id", leftoverOrgId);
+    if (deleteError) {
+      console.error("adoptInvitedMemberIntoOrg leftover org", deleteError);
+    }
+  }
+
+  await syncInviteAppMetadata(userId, orgId);
+}
+
+async function syncInviteAppMetadata(userId: string, orgId: number) {
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+    app_metadata: { org_id: String(orgId) },
+  });
+  if (error) {
+    console.error("syncInviteAppMetadata", error);
+  }
+}
+
 async function sendInviteOrSetPasswordEmail(
   email: string,
   metadata: Record<string, string>,
@@ -573,6 +640,7 @@ async function inviteUser(req: Request, currentOrgMember: any) {
         roles,
         module_permissions: administrator ? null : validatedModules!,
       });
+      await syncInviteAppMetadata(user.id, orgId);
 
       const mailError = await sendInviteOrSetPasswordEmail(
         email,
@@ -611,6 +679,7 @@ async function inviteUser(req: Request, currentOrgMember: any) {
   }
 
   try {
+    await adoptInvitedMemberIntoOrg(user.id, orgId);
     const saleRow = await finalizeInvitedMember(user.id, {
       disabled,
       administrator,

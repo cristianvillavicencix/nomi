@@ -69,13 +69,8 @@ export const buildClientPaymentMetadata = (params: {
 export const amountToCents = (amount: number) => Math.round(amount * 100);
 
 export const isStripeMockMode = () => {
-  const skip =
-    Deno.env.get("SKIP_CLIENT_BILLING") === "1" ||
-    Deno.env.get("SKIP_CLIENT_BILLING") === "true" ||
-    Deno.env.get("SKIP_CLIENT_BILLING") === "yes" ||
-    Deno.env.get("SKIP_CLIENT_BILLING") === "on";
-  const stripeKey = Deno.env.get("STRIPE_SECRET_KEY")?.trim();
-  return skip || !stripeKey;
+  const skip = Deno.env.get("SKIP_CLIENT_BILLING")?.trim().toLowerCase();
+  return skip === "1" || skip === "true" || skip === "yes" || skip === "on";
 };
 
 export const isAuthorizedClientBillingCron = (req: Request) => {

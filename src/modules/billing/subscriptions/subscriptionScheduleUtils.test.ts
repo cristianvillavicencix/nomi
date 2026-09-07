@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildStripeScheduleUnixParams,
   computeSubscriptionEndsAt,
+  formatLocalIsoDate,
   parseIsoDateAtStartOfDay,
 } from "@/modules/billing/subscriptions/subscriptionScheduleUtils";
 
@@ -13,7 +14,7 @@ describe("subscriptionScheduleUtils", () => {
       startsAt: startsAt!,
       duration: "6",
     });
-    expect(endsAt?.toISOString().slice(0, 10)).toBe("2027-02-15");
+    expect(endsAt && formatLocalIsoDate(endsAt)).toBe("2027-02-15");
   });
 
   it("returns null for ongoing subscriptions", () => {

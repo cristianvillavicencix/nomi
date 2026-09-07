@@ -2,7 +2,6 @@ import { LayoutPanelLeft, LayoutPanelTop, Settings, User } from "lucide-react";
 import { useCanAccess, useUserMenu } from "ra-core";
 import { Link } from "react-router";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { SettingsPage } from "../settings/SettingsPage";
 import { ProfilePage } from "../settings/ProfilePage";
 import { useNavigationLayoutPreference } from "./navigationLayoutPreference";
 
@@ -36,8 +35,8 @@ const SettingsMenu = () => {
   }
 
   const settingsPath = canEditSettings
-    ? SettingsPage.path
-    : `${SettingsPage.path}?tab=users`;
+    ? "/settings"
+    : "/settings?tab=users";
 
   return (
     <DropdownMenuItem asChild onClick={userMenuContext.onClose}>

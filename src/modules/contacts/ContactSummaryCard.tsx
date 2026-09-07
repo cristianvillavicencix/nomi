@@ -36,6 +36,7 @@ import {
 import { CrmPhoneDisplay } from "@/modules/voice/CrmPhoneDisplay";
 import { ContactQuickActions } from "@/modules/contacts/ContactQuickActions";
 import { getClientShowPath, getPersonShowPath } from "@/app/routing";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 import {
   EntityIdentityHeader,
   EntityMetaItem,
@@ -98,19 +99,19 @@ export const ContactSummaryCard = (props: ContactSummaryCardProps) => {
   const { data: company } = useGetOne(
     "companies",
     { id: record.company_id! },
-    { enabled: record.company_id != null },
+    { enabled: isValidRecordId(record.company_id) },
   );
 
   const { data: owner } = useGetOne<OrganizationMember>(
     "organization_members",
     { id: record.organization_member_id! },
-    { enabled: record.organization_member_id != null },
+    { enabled: isValidRecordId(record.organization_member_id) },
   );
 
   const { data: referrerContact } = useGetOne<Contact>(
     "contacts",
     { id: record.referred_by_contact_id! },
-    { enabled: record.referred_by_contact_id != null },
+    { enabled: isValidRecordId(record.referred_by_contact_id) },
   );
 
   const { data: referrerCompany } = useGetOne(
@@ -118,8 +119,8 @@ export const ContactSummaryCard = (props: ContactSummaryCardProps) => {
     { id: record.referred_by_company_id! },
     {
       enabled:
-        record.referred_by_company_id != null &&
-        record.referred_by_contact_id == null,
+        isValidRecordId(record.referred_by_company_id) &&
+        !isValidRecordId(record.referred_by_contact_id),
     },
   );
 

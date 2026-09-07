@@ -12,6 +12,7 @@ import { CreateSheet } from "../misc/CreateSheet";
 import { foreignKeyMapping } from "./foreignKeyMapping";
 import { NoteInputs } from "./NoteInputs";
 import { getCurrentDate } from "./utils";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
 export interface NoteCreateSheetProps {
   open: boolean;
@@ -26,7 +27,7 @@ export const NoteCreateSheet = ({
 }: NoteCreateSheetProps) => {
   const { identity } = useGetIdentity();
 
-  const selectContact = contact_id == null;
+  const selectContact = !isValidRecordId(contact_id);
   const { data: contact } = useGetOne(
     "contacts",
     { id: contact_id! },

@@ -1,3 +1,4 @@
+import { afterEach, beforeAll, it, vi } from "vitest";
 import { webcrypto } from "node:crypto";
 
 import type { Contact, EmailAndType } from "../../types";
@@ -7,9 +8,33 @@ Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
 });
 
+const marmelabEmail = "anthony@marmelab.com";
+let marmelabHash = "";
+
+beforeAll(async () => {
+  marmelabHash = await hash(marmelabEmail);
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes(`www.gravatar.com/avatar/${marmelabHash}`)) {
+      return new Response("ok", { status: 200 });
+    }
+    if (url.includes("www.gravatar.com/avatar/")) {
+      return new Response("missing", { status: 404 });
+    }
+    if (url === "https://gravatar.com/favicon.ico") {
+      return new Response("ico", { status: 200 });
+    }
+    return new Response("no", { status: 404 });
+  });
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
 it("should return gravatar URL for anthony@marmelab.com", async () => {
   const email: EmailAndType[] = [
-    { email: "anthony@marmelab.com", type: "Work" },
+    { email: marmelabEmail, type: "Work" },
   ];
   const record: Partial<Contact> = { email_jsonb: email };
 
@@ -68,7 +93,7 @@ it("should return null if email has no gravatar or validate domain", async () =>
 it("should return gravatar URL for 2nd email if 1st email has no gravatar nor valid domain", async () => {
   const email: EmailAndType[] = [
     { email: "anthony@fake-domain-marmelab.com", type: "Work" },
-    { email: "anthony@marmelab.com", type: "Work" },
+    { email: marmelabEmail, type: "Work" },
   ];
   const record: Partial<Contact> = { email_jsonb: email };
 

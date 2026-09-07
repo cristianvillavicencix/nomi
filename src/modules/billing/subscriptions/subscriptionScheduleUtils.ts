@@ -27,6 +27,13 @@ export type SubscriptionEnrollmentMode = "direct" | "agreement";
 
 export const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
+export const formatLocalIsoDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export const parseIsoDateAtStartOfDay = (isoDate: string) => {
   const trimmed = isoDate.trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
@@ -141,7 +148,7 @@ export const resolveDurationFromSubscription = (
       duration: option.value,
       customEndDate: "",
     });
-    if (computed && computed.toISOString().slice(0, 10) === endDate) {
+    if (computed && formatLocalIsoDate(computed) === endDate) {
       return { duration: option.value, customEndDate: endDate };
     }
   }

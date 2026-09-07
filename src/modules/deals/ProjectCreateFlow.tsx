@@ -7,6 +7,7 @@ import {
   buildProjectCreatePath,
   type ProjectCreateMode,
 } from "@/modules/deals/projectCreatePaths";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
 type ProjectCreateFlowProps = {
   onClose?: () => void;
@@ -52,13 +53,13 @@ export const ProjectCreateFlow = ({ onClose }: ProjectCreateFlowProps) => {
   const { data: company } = useGetOne(
     "companies",
     { id: companyId! },
-    { enabled: !!companyId && step === "web-form" },
+    { enabled: isValidRecordId(companyId) && step === "web-form" },
   );
 
   const { data: contact } = useGetOne(
     "contacts",
     { id: contactId! },
-    { enabled: !!contactId && step === "web-form" },
+    { enabled: isValidRecordId(contactId) && step === "web-form" },
   );
 
   const clientEmail =

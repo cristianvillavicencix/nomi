@@ -20,6 +20,7 @@ import { InlineInvoiceEditor } from "@/modules/billing/InlineInvoiceEditor";
 import { InvoiceOnlinePaymentSetupDialog } from "@/modules/billing/InvoiceOnlinePaymentSetupDialog";
 import { SendInvoiceDialog } from "@/modules/billing/SendInvoiceDialog";
 import { resolveInvoiceRecipientEmail } from "@/modules/billing/billingUtils";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 import {
   buildClientInvoicePdfContext,
   downloadClientInvoicePdf,
@@ -173,7 +174,7 @@ export const StandaloneInvoiceCreatePage = () => {
   const { data: companyFromContact } = useGetOne(
     "companies",
     { id: companyId ?? "" },
-    { enabled: Boolean(companyId) && !billTo?.company },
+    { enabled: isValidRecordId(companyId) && !billTo?.company },
   );
 
   const company = billTo?.company ?? companyFromContact ?? null;
@@ -184,7 +185,7 @@ export const StandaloneInvoiceCreatePage = () => {
   const { data: primaryContact } = useGetOne<Contact>(
     "contacts",
     { id: primaryContactId ?? "" },
-    { enabled: Boolean(primaryContactId) && !billTo?.contact },
+    { enabled: isValidRecordId(primaryContactId) && !billTo?.contact },
   );
 
   const contact = billTo?.contact ?? primaryContact ?? null;

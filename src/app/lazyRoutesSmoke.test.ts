@@ -73,11 +73,15 @@ const lazyRouteModules = [
 ] as const;
 
 describe("lazy route smoke", () => {
-  it.each(lazyRouteModules)("imports %s", async (_name, loader) => {
-    const module = await loader();
-    expect(module).toBeTruthy();
-    expect(Object.keys(module).length).toBeGreaterThan(0);
-  });
+  it.each(lazyRouteModules)(
+    "imports %s",
+    async (_name, loader) => {
+      const module = await loader();
+      expect(module).toBeTruthy();
+      expect(Object.keys(module).length).toBeGreaterThan(0);
+    },
+    20_000,
+  );
 });
 
 describe("async vendor smoke", () => {

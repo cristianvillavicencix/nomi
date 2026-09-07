@@ -26,6 +26,7 @@ import {
   resolveLeadWebsiteUrl,
 } from "@/modules/leads/leadBackgroundUtils";
 import { getClientShowPath } from "@/app/routing";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 import { cn } from "@/lib/utils";
 
 const ProfileSectionTitle = ({ children }: { children: ReactNode }) => (
@@ -59,7 +60,7 @@ export const LeadSummaryCard = ({ record }: { record: Contact }) => {
   const { data: company } = useGetOne(
     "companies",
     { id: record.company_id! },
-    { enabled: record.company_id != null },
+    { enabled: isValidRecordId(record.company_id) },
   );
 
   const { data: openTasks = [] } = useGetList<Task>(
