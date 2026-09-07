@@ -49,6 +49,29 @@ export default tseslint.config(
   },
   {
     files: [
+      "src/modules/billing/invoiceStatusRibbon.ts",
+      "src/modules/billing/billingDisplayUtils.ts",
+      "src/modules/billing/invoiceStatusSidebarLabel.ts",
+      "src/modules/tickets/ticketPriorityUi.ts",
+      "src/modules/tickets/ticketInboxConfig.ts",
+      "src/modules/tickets/ticketSlaUtils.ts",
+      "src/modules/leads/leadStages.ts",
+      "src/modules/messages/smsDeliveryStatus.ts",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "Literal[value=/\\b(bg|text|border)-(red|emerald|orange|blue|green|amber)-[0-9]{3}\\b/]",
+          message:
+            "Use toneClass() from @/modules/shared/status instead of palette color classes.",
+        },
+      ],
+    },
+  },
+  {
+    files: [
       "src/components/admin/*.{ts,tsx}",
       "src/hooks/*.{ts,tsx}",
       "src/lib/*.{ts,tsx}",

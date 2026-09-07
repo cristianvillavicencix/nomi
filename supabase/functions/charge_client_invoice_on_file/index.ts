@@ -240,8 +240,7 @@ Deno.serve(
         }
 
         const amountCents = amountToCents(target.chargeAmount);
-        const today = new Date().toISOString().slice(0, 10);
-        const idempotencyKey = `invoice-staff-${invoice.id}-${amountCents}-${today}-${Date.now()}`;
+        const idempotencyKey = `invoice-staff-${invoice.id}-${amountCents}-${target.installmentNumber ?? "0"}`;
 
         const paymentIntent = await createOffSessionInvoicePaymentIntent(
           stripe,

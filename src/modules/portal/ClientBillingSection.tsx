@@ -1,6 +1,6 @@
 import { ExternalLink } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StatusPill, type Tone } from "@/modules/shared/status";
 import {
   Table,
   TableBody,
@@ -30,13 +30,11 @@ const invoiceStatusLabel = (status: string, copy: PortalCopy) => {
   return status.replace(/_/g, " ");
 };
 
-const invoiceStatusVariant = (
-  status: string,
-): "default" | "secondary" | "destructive" | "outline" => {
-  if (status === "paid") return "default";
+const portalInvoiceTone = (status: string): Tone => {
+  if (status === "paid") return "success";
   if (status === "overdue") return "destructive";
-  if (status === "sent") return "secondary";
-  return "outline";
+  if (status === "sent") return "info";
+  return "muted";
 };
 
 const paymentStatusLabel = (
@@ -141,12 +139,12 @@ export const ClientBillingSection = ({
                         ) : null}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={invoiceStatusVariant(invoice.status)}
+                        <StatusPill
+                          tone={portalInvoiceTone(invoice.status)}
                           className="font-normal"
                         >
                           {invoiceStatusLabel(invoice.status, copy)}
-                        </Badge>
+                        </StatusPill>
                       </TableCell>
                       <TableCell className="text-right">
                         {href ? (

@@ -1,8 +1,10 @@
 import { isClientInvoiceOverdue } from "@/modules/billing/billingDisplayUtils";
+import { toneClass, type Tone } from "@/modules/shared/status";
 
 /** Corner ribbon for invoice cards / document preview (same labels). */
 export type InvoiceStatusRibbon = {
   label: string;
+  tone: Tone;
   className: string;
 };
 
@@ -12,14 +14,20 @@ export const resolveInvoiceStatusRibbon = (invoice: {
 }): InvoiceStatusRibbon | null => {
   const status = invoice.status?.toLowerCase() ?? "";
 
+  const ribbon = (label: string, tone: Tone): InvoiceStatusRibbon => ({
+    label,
+    tone,
+    className: toneClass(tone, "solid"),
+  });
+
   if (isClientInvoiceOverdue(invoice)) {
-    return { label: "Overdue", className: "bg-red-600 text-white" };
+    return ribbon("Overdue", "destructive");
   }
   if (status === "paid") {
-    return { label: "Paid", className: "bg-emerald-600 text-white" };
+    return ribbon("Paid", "success");
   }
   if (status === "sent") {
-    return { label: "Sent", className: "bg-blue-600 text-white" };
+    return ribbon("Sent", "info");
   }
   // Draft / void: badge only — same as invoice document preview.
   return null;

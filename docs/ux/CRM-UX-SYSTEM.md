@@ -39,8 +39,8 @@ Layered reuse so modules do not fork the same jobs.
 ```
 src/modules/shared/
   profile/   # identity, meta, location, context cards
-  chrome/    # EmptyState, skeletons, PageBackLink, HubPageHeader (future)
-  status/    # StatusPill (future)
+  chrome/    # EmptyState, ListSkeleton, PageBackLink
+  status/    # toneClass + StatusPill
   actions/   # EntityQuickActions (future)
 ```
 

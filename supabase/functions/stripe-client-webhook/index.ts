@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 /** Client payment webhooks — signing secret from Settings → Integrations → Stripe or env. */
+import { claimStripeEvent } from "../_shared/stripeEventIdempotency.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
   getClientWebhookSecret,
@@ -308,6 +309,7 @@ Deno.serve(async (req: Request) => {
   const body = await req.text();
 
   let event: {
+    id: string;
     type: string;
     data: { object: Record<string, unknown> };
   };
@@ -320,6 +322,20 @@ Deno.serve(async (req: Request) => {
     )) as typeof event;
   } catch (e) {
     return createErrorResponse(400, (e as Error).message);
+  }
+
+  try {
+    const claim = await claimStripeEvent(
+      event.id,
+      "stripe-client-webhook",
+      event.type,
+    );
+    if (claim === "duplicate") {
+      return jsonResponse({ received: true, duplicate: true });
+    }
+  } catch (e) {
+    console.error("stripe-client-webhook idempotency", e);
+    return createErrorResponse(500, (e as Error).message);
   }
 
   // Valid signature: always 200 so Stripe does not disable the endpoint.

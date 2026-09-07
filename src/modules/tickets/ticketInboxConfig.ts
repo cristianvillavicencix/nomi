@@ -1,3 +1,5 @@
+import { toneBadgeVariant, type Tone } from "@/modules/shared/status";
+
 export const DEFAULT_TICKET_INBOX_EMAIL =
   import.meta.env.VITE_TICKET_INBOX_EMAIL?.trim() || "supplements@lbs.bz";
 
@@ -13,20 +15,21 @@ export type TicketStatusFilterId = (typeof TICKET_STATUS_FILTERS)[number]["id"];
 
 export const ticketStatusLabel = (status: string) => status.replace(/_/g, " ");
 
-export const ticketStatusVariant = (status: string) => {
+export const ticketStatusTone = (status: string): Tone => {
   switch (status) {
     case "new":
-      return "default" as const;
+      return "info";
     case "open":
-      return "secondary" as const;
+      return "success";
     case "waiting":
-      return "outline" as const;
-    case "resolved":
-      return "outline" as const;
+      return "warning";
     default:
-      return "outline" as const;
+      return "muted";
   }
 };
+
+export const ticketStatusVariant = (status: string) =>
+  toneBadgeVariant(ticketStatusTone(status));
 
 export const formatTicketRelativeTime = (value?: string | null) => {
   if (!value) return "—";

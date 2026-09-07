@@ -7,6 +7,7 @@ import {
 } from "@/modules/billing/billingUtils";
 import type { ClientInvoice, ClientInvoiceLineItem } from "@/modules/types";
 import { computeInvoiceBalanceDue } from "@/modules/billing/invoicePaymentUtils";
+import { TONE_HEX } from "@/modules/shared/status";
 
 export type ClientInvoicePdfContext = {
   invoice: ClientInvoice;
@@ -107,7 +108,7 @@ const buildLineItemsTable = (
       layout: {
         hLineWidth: () => 0.5,
         vLineWidth: () => 0,
-        hLineColor: () => "#e2e8f0",
+        hLineColor: () => TONE_HEX.border,
       },
     };
   }
@@ -134,7 +135,7 @@ const buildLineItemsTable = (
               ? {
                   stack: [
                     { text: title, bold: true },
-                    { text: detail, fontSize: 9, color: "#64748b" },
+                    { text: detail, fontSize: 9, color: TONE_HEX.muted },
                   ],
                 }
               : title,
@@ -157,7 +158,7 @@ const buildLineItemsTable = (
     layout: {
       hLineWidth: () => 0.5,
       vLineWidth: () => 0,
-      hLineColor: () => "#e2e8f0",
+      hLineColor: () => TONE_HEX.border,
     },
   };
 };
@@ -194,13 +195,13 @@ const buildDocDefinition = (
 
   const totalsRows: unknown[][] = [
     [
-      { text: "Sub Total", color: "#64748b" },
+      { text: "Sub Total", color: TONE_HEX.muted },
       { text: formatMoney(subtotal, currency), alignment: "right" },
     ],
   ];
   if (discountAmount > 0) {
     totalsRows.push([
-      { text: "Discount", color: "#64748b" },
+      { text: "Discount", color: TONE_HEX.muted },
       {
         text: `-${formatMoney(discountAmount, currency)}`,
         alignment: "right",
@@ -209,7 +210,7 @@ const buildDocDefinition = (
   }
   if (feeAmount > 0) {
     totalsRows.push([
-      { text: "Transfer Fee", color: "#64748b" },
+      { text: "Transfer Fee", color: TONE_HEX.muted },
       { text: formatMoney(feeAmount, currency), alignment: "right" },
     ]);
   }
@@ -349,29 +350,29 @@ const buildDocDefinition = (
     styles: {
       orgName: { fontSize: 14, bold: true },
       invoiceTitle: { fontSize: 24, bold: true },
-      invoiceNumber: { fontSize: 10, color: "#64748b", margin: [0, 4, 0, 0] },
+      invoiceNumber: { fontSize: 10, color: TONE_HEX.muted, margin: [0, 4, 0, 0] },
       balanceDue: { fontSize: 22, bold: true, margin: [0, 2, 0, 0] },
-      label: { fontSize: 9, color: "#64748b", margin: [0, 0, 0, 2] },
+      label: { fontSize: 9, color: TONE_HEX.muted, margin: [0, 0, 0, 2] },
       value: { fontSize: 11 },
       billToLabel: { fontSize: 11, bold: true, margin: [0, 0, 0, 4] },
-      billToName: { fontSize: 11, bold: true, color: "#1d4ed8" },
-      muted: { fontSize: 10, color: "#64748b" },
-      link: { fontSize: 10, color: "#2563eb" },
+      billToName: { fontSize: 11, bold: true, color: TONE_HEX.brand },
+      muted: { fontSize: 10, color: TONE_HEX.muted },
+      link: { fontSize: 10, color: TONE_HEX.info },
       tableHeaderDark: {
         bold: true,
         color: "#ffffff",
-        fillColor: "#334155",
+        fillColor: TONE_HEX.brandNavy,
         margin: [4, 6, 4, 6],
         fontSize: 9,
       },
       termsHeading: {
         fontSize: 9,
         bold: true,
-        color: "#64748b",
+        color: TONE_HEX.muted,
         margin: [0, 0, 0, 6],
         characterSpacing: 0.5,
       },
-      termsBody: { fontSize: 9, color: "#475569", lineHeight: 1.35 },
+      termsBody: { fontSize: 9, color: TONE_HEX.muted, lineHeight: 1.35 },
     },
     defaultStyle: { fontSize: 10, lineHeight: 1.25 },
   };

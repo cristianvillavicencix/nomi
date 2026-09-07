@@ -24,6 +24,7 @@ import { useMemberCapability } from "@/components/atomic-crm/providers/commons/u
 import type { TicketInbox } from "@/modules/types";
 import { LBS_SUPPORT_SIGNATURE } from "@/modules/tickets/ticketReplyTemplates";
 import { buildSignatureHtml } from "@/modules/tickets/ticketReplySignature";
+import { sanitizeTicketEmailHtml } from "@/modules/tickets/sanitizeTicketEmailHtml";
 
 type TicketInboxRow = Pick<
   TicketInbox,
@@ -111,7 +112,10 @@ export const TicketInboxReplySignatureSection = ({
   }, [selectedInbox]);
 
   const previewHtml = useMemo(
-    () => buildSignatureHtml(signatureText.trim() || null),
+    () =>
+      sanitizeTicketEmailHtml(
+        buildSignatureHtml(signatureText.trim() || null),
+      ),
     [signatureText],
   );
 

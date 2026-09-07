@@ -2,7 +2,11 @@ import { UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNotify, useUpdate, type Identifier } from "ra-core";
 import type { OrganizationMember, Ticket } from "@/modules/types";
-import { ticketStatusLabel } from "@/modules/tickets/ticketInboxConfig";
+import { toneClass } from "@/modules/shared/status";
+import {
+  ticketStatusLabel,
+  ticketStatusTone,
+} from "@/modules/tickets/ticketInboxConfig";
 import { memberDisplayName } from "@/modules/tickets/ticketInboxUi";
 import { useTicketStatusChange } from "@/modules/tickets/useTicketStatusChange";
 import { SignedMemberAvatarImage } from "@/components/avatar/SignedMemberAvatarImage";
@@ -19,15 +23,11 @@ import {
 } from "@/components/atomic-crm/tasks/taskMemberOptions";
 
 const STATUS_OPTIONS = [
-  { id: "new", color: "bg-info" },
-  { id: "open", color: "bg-success" },
-  { id: "waiting", color: "bg-warning" },
-  { id: "resolved", color: "bg-muted-foreground/50" },
+  { id: "new" },
+  { id: "open" },
+  { id: "waiting" },
+  { id: "resolved" },
 ] as const;
-
-const statusColor = (status: string) =>
-  STATUS_OPTIONS.find((option) => option.id === status)?.color ??
-  "bg-muted-foreground/50";
 
 export const TicketListStatusControl = ({
   ticket,
@@ -59,7 +59,10 @@ export const TicketListStatusControl = ({
       onClick={(event) => event.stopPropagation()}
     >
       <span
-        className={cn("size-2.5 rounded-full", statusColor(ticket.status))}
+        className={cn(
+          "size-2.5 rounded-full",
+          toneClass(ticketStatusTone(ticket.status), "dot"),
+        )}
         aria-hidden
       />
     </button>
@@ -87,7 +90,12 @@ export const TicketListStatusControl = ({
               )}
               onClick={() => handleChange(option.id)}
             >
-              <span className={cn("size-2.5 rounded-full", option.color)} />
+              <span
+                className={cn(
+                  "size-2.5 rounded-full",
+                  toneClass(ticketStatusTone(option.id), "dot"),
+                )}
+              />
               <span className="capitalize">{ticketStatusLabel(option.id)}</span>
             </button>
           ))}

@@ -1,4 +1,5 @@
 import { Mail } from "lucide-react";
+import { EmptyState, ListSkeleton } from "@/modules/shared/chrome";
 import { useMemo } from "react";
 import { useGetMany, useListContext } from "ra-core";
 import type { Company } from "@/components/atomic-crm/types";
@@ -75,24 +76,25 @@ export const InvoiceListTable = ({
   );
 
   if (isPending) {
-    return (
-      <div className="p-4 text-sm text-muted-foreground">Loading invoices…</div>
-    );
+    return <ListSkeleton rows={8} />;
   }
 
   if (!invoices.length) {
     return (
-      <div className="p-8 text-center text-sm text-muted-foreground">
-        No invoices yet.
-      </div>
+      <EmptyState
+        icon={<Mail className="size-8 text-muted-foreground" />}
+        title="No invoices yet"
+        description="Create an invoice to send a payment request."
+      />
     );
   }
 
   if (!visibleInvoices.length) {
     return (
-      <div className="p-8 text-center text-sm text-muted-foreground">
-        No invoices match this search.
-      </div>
+      <EmptyState
+        title="No matching invoices"
+        description="Try a different search."
+      />
     );
   }
 

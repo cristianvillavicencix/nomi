@@ -38,7 +38,7 @@ describe("getSmsDeliveryDisplay", () => {
       ),
     ).toMatchObject({
       label: "Not delivered",
-      tone: "error",
+      tone: "destructive",
       detail: "Blocked by carrier (spam filter)",
     });
   });

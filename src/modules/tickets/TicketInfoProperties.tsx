@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { useGetOne } from "ra-core";
+import { StatusPill } from "@/modules/shared/status";
 import type { OrganizationMember, Ticket } from "@/modules/types";
-import { Badge } from "@/components/ui/badge";
 import {
   ticketStatusLabel,
-  ticketStatusVariant,
+  ticketStatusTone,
 } from "@/modules/tickets/ticketInboxConfig";
 import {
   ticketPriorityClassName,
@@ -57,12 +57,12 @@ export const TicketInfoProperties = ({ ticket }: { ticket: Ticket }) => {
       </p>
       <div className="mt-2.5 grid grid-cols-2 gap-2">
         <PropertyChip label="Status">
-          <Badge
-            variant={ticketStatusVariant(ticket.status)}
+          <StatusPill
+            tone={ticketStatusTone(ticket.status)}
             className="h-5 px-1.5 text-[10px] capitalize"
           >
             {ticketStatusLabel(ticket.status)}
-          </Badge>
+          </StatusPill>
         </PropertyChip>
         <PropertyChip label="Priority">
           <span

@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MarketingAudienceFilterFields } from "@/modules/marketing/MarketingAudienceFilterFields";
 import { DEFAULT_EMAIL_AUDIENCE_FILTER } from "@/modules/marketing/marketingAudienceDefaults";
 import { summarizeAudienceFilter } from "@/modules/marketing/marketingAudienceLabels";
+import { sanitizeTicketEmailHtml } from "@/modules/tickets/sanitizeTicketEmailHtml";
 import { textToMarketingEmailHtml } from "@/modules/marketing/marketingPreviewUtils";
 import type { EmailCampaign, MarketingAudienceFilter } from "@/modules/types";
 
@@ -189,9 +190,10 @@ export const MarketingEmailCampaignDialog = ({
               <div
                 className="prose prose-sm max-w-none dark:prose-invert"
                 dangerouslySetInnerHTML={{
-                  __html:
+                  __html: sanitizeTicketEmailHtml(
                     previewHtml ||
-                    '<p class="text-muted-foreground">No content yet</p>',
+                      '<p class="text-muted-foreground">No content yet</p>',
+                  ),
                 }}
               />
               <p className="mt-4 text-xs text-muted-foreground">

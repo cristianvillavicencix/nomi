@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { sanitizeTicketEmailHtml } from "@/modules/tickets/sanitizeTicketEmailHtml";
 import { summarizeAudienceFilter } from "@/modules/marketing/marketingAudienceLabels";
 import {
   formatCampaignStatus,
@@ -108,7 +109,10 @@ export const MarketingCampaignDetailSheet = ({
         <div
           className="prose prose-sm max-w-none text-sm dark:prose-invert"
           dangerouslySetInnerHTML={{
-            __html: emailCampaign.body_html || textToMarketingEmailHtml(emailCampaign.body_text ?? ""),
+            __html: sanitizeTicketEmailHtml(
+              emailCampaign.body_html ||
+                textToMarketingEmailHtml(emailCampaign.body_text ?? ""),
+            ),
           }}
         />
       </div>

@@ -1,3 +1,5 @@
+import { toneCssValue, type Tone } from "@/modules/shared/status";
+
 /**
  * Lead pipeline stages used by the Kanban view. The column ids must match
  * `public.contacts.lead_stage` values written by the anti-olvido system and
@@ -6,6 +8,7 @@
  *
  * Order here defines column order in the Kanban.
  */
+
 export type LeadStageId =
   | "new"
   | "contacted"
@@ -20,61 +23,36 @@ export type LeadStageDef = {
   id: LeadStageId;
   label: string;
   description: string;
+  tone: Tone;
+  /** CSS token for inline Kanban styles (`var(--info)`, etc.). */
   color: string;
   terminal?: boolean;
 };
 
+const stage = (
+  id: LeadStageId,
+  label: string,
+  description: string,
+  tone: Tone,
+  terminal?: boolean,
+): LeadStageDef => ({
+  id,
+  label,
+  description,
+  tone,
+  color: toneCssValue(tone),
+  ...(terminal ? { terminal: true } : {}),
+});
+
 export const LBS_LEAD_KANBAN_STAGES: readonly LeadStageDef[] = Object.freeze([
-  {
-    id: "new",
-    label: "New",
-    description: "Just created, not contacted yet",
-    color: "#94a3b8",
-  },
-  {
-    id: "contacted",
-    label: "Contacted",
-    description: "First outreach completed",
-    color: "#3b82f6",
-  },
-  {
-    id: "talking",
-    label: "Talking",
-    description: "Active conversation",
-    color: "#8b5cf6",
-  },
-  {
-    id: "quoted",
-    label: "Quoted",
-    description: "Proposal sent",
-    color: "#f59e0b",
-  },
-  {
-    id: "closing",
-    label: "Closing",
-    description: "Close is imminent",
-    color: "#ec4899",
-  },
-  {
-    id: "paused",
-    label: "Paused",
-    description: "Waiting on the prospect",
-    color: "#a3a3a3",
-  },
-  {
-    id: "won",
-    label: "Won",
-    description: "Converted (terminal)",
-    color: "#22c55e",
-    terminal: true,
-  },
-  {
-    id: "lost",
-    label: "Lost",
-    description: "Not moving forward (terminal)",
-    color: "#ef4444",
-    terminal: true,
-  },
+  stage("new", "New", "Just created, not contacted yet", "muted"),
+  stage("contacted", "Contacted", "First outreach completed", "info"),
+  stage("talking", "Talking", "Active conversation", "brand"),
+  stage("quoted", "Quoted", "Proposal sent", "warning"),
+  stage("closing", "Closing", "Close is imminent", "warning"),
+  stage("paused", "Paused", "Waiting on the prospect", "muted"),
+  stage("won", "Won", "Converted (terminal)", "success", true),
+  stage("lost", "Lost", "Not moving forward (terminal)", "destructive", true),
 ]);
 
 /** Active pipeline columns shown on the leads Kanban board (excludes Won/Lost). */

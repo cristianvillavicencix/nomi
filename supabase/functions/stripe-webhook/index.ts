@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 /** Secrets: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET. Register endpoint in Stripe Dashboard → Developers → Webhooks. */
+import { claimStripeEvent } from "../_shared/stripeEventIdempotency.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
   getStripe,
@@ -53,6 +54,7 @@ Deno.serve(async (req: Request) => {
   const body = await req.text();
 
   let event: {
+    id: string;
     type: string;
     data: { object: Record<string, unknown> };
   };
@@ -65,6 +67,23 @@ Deno.serve(async (req: Request) => {
     )) as typeof event;
   } catch (e) {
     return createErrorResponse(400, (e as Error).message);
+  }
+
+  try {
+    const claim = await claimStripeEvent(
+      event.id,
+      "stripe-webhook",
+      event.type,
+    );
+    if (claim === "duplicate") {
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+  } catch (e) {
+    console.error("stripe-webhook idempotency", e);
+    return createErrorResponse(500, (e as Error).message);
   }
 
   try {

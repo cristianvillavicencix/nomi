@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
-import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
-import { IconButton } from "@/components/ui/icon-button";
+import { PageBackLink } from "@/modules/shared/chrome";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Deal, Ticket } from "@/modules/types";
 import { getClientShowPath, getPersonShowPath } from "@/app/routing";
@@ -80,13 +78,11 @@ export const TicketCompactHeader = ({
     <div className="shrink-0 border-b bg-background px-4 py-3 md:px-5">
       <div className="flex flex-wrap items-start gap-2">
         {showBack && onBack ? (
-          <IconButton
-            className="shrink-0 lg:hidden"
+          <PageBackLink
+            className="lg:hidden"
             onClick={onBack}
-            aria-label="Back to tickets"
-          >
-            <ArrowLeft className="size-4" />
-          </IconButton>
+            label="Back to tickets"
+          />
         ) : null}
 
         <div className="min-w-0 flex-1 space-y-1.5">

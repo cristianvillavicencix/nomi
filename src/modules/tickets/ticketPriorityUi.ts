@@ -1,4 +1,5 @@
 import type { Ticket } from "@/modules/types";
+import { toneClass, type Tone } from "@/modules/shared/status";
 
 export const ticketPriorityLabel = (priority?: string | null) => {
   switch (priority?.trim().toLowerCase()) {
@@ -13,18 +14,19 @@ export const ticketPriorityLabel = (priority?: string | null) => {
   }
 };
 
-export const ticketPriorityClassName = (priority?: string | null) => {
+export const ticketPriorityTone = (priority?: string | null): Tone => {
   switch (priority?.trim().toLowerCase()) {
     case "urgent":
-      return "border-destructive/40 bg-destructive/10 text-destructive";
+      return "destructive";
     case "high":
-      return "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-300";
-    case "low":
-      return "border-border bg-muted/40 text-muted-foreground";
+      return "warning";
     default:
-      return "";
+      return "muted";
   }
 };
+
+export const ticketPriorityClassName = (priority?: string | null) =>
+  toneClass(ticketPriorityTone(priority), "border");
 
 export const isElevatedTicketPriority = (ticket: Pick<Ticket, "priority">) => {
   const value = ticket.priority?.trim().toLowerCase();

@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { EnvelopeSimple } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/modules/shared/chrome";
 import { mailboxesSettingsPath } from "./mailSettingsPath";
 
 export function MailEmptyState({
@@ -11,15 +12,16 @@ export function MailEmptyState({
   description?: string;
 }) {
   return (
-    <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-4 px-6 text-center">
-      <EnvelopeSimple className="size-10 text-muted-foreground" weight="duotone" />
-      <div className="space-y-1">
-        <h2 className="text-base font-semibold">{title}</h2>
-        <p className="max-w-sm text-sm text-muted-foreground">{description}</p>
-      </div>
-      <Button asChild>
-        <Link to={mailboxesSettingsPath()}>Connect a mailbox</Link>
-      </Button>
-    </div>
+    <EmptyState
+      className="h-full min-h-[320px]"
+      icon={<EnvelopeSimple className="size-8 text-muted-foreground" weight="duotone" />}
+      title={title}
+      description={description}
+      action={
+        <Button asChild>
+          <Link to={mailboxesSettingsPath()}>Connect a mailbox</Link>
+        </Button>
+      }
+    />
   );
 }

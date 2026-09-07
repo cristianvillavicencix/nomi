@@ -1,5 +1,9 @@
 import { differenceInCalendarDays, parseISO } from "date-fns";
-import { todayIso } from "@/modules/billing/billingDisplayUtils";
+import {
+  invoiceStatusTone,
+  todayIso,
+} from "@/modules/billing/billingDisplayUtils";
+import { toneBadgeVariant } from "@/modules/shared/status";
 
 /** Compact status line for the invoice sidebar (Zoho-style). */
 export const invoiceStatusSidebarLabel = (
@@ -35,13 +39,4 @@ export const invoiceStatusSidebarLabel = (
 export const invoiceStatusSidebarVariant = (
   status?: string | null,
   dueDate?: string | null,
-): "default" | "secondary" | "destructive" | "outline" => {
-  const normalized = status?.toLowerCase() ?? "";
-  if (normalized === "paid") return "default";
-  if (normalized === "void" || normalized === "draft") return "outline";
-  if (normalized === "sent" && dueDate && dueDate < todayIso()) {
-    return "destructive";
-  }
-  if (normalized === "sent") return "secondary";
-  return "outline";
-};
+) => toneBadgeVariant(invoiceStatusTone(status, dueDate));

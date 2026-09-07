@@ -8,6 +8,8 @@ describe("resolveInvoiceStatusRibbon", () => {
       due_date: "2000-01-01",
     });
     expect(ribbon?.label).toBe("Overdue");
+    expect(ribbon?.tone).toBe("destructive");
+    expect(ribbon?.className).toContain("bg-destructive");
   });
 
   it("marks paid invoices", () => {

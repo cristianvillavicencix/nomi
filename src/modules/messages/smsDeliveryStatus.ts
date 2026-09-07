@@ -1,4 +1,5 @@
 import type { ConversationMessage } from "@/modules/types";
+import { toneClass, type Tone } from "@/modules/shared/status";
 
 export type SmsDeliveryStatus =
   | "queued"
@@ -11,7 +12,7 @@ export type SmsDeliveryStatus =
 
 export type SmsDeliveryDisplay = {
   label: string;
-  tone: "success" | "pending" | "warning" | "error" | "muted";
+  tone: Tone;
   detail?: string;
 };
 
@@ -72,39 +73,27 @@ export const getSmsDeliveryDisplay = (
       return { label: "Delivered", tone: "success" };
     case "queued":
     case "sending":
-      return { label: "Sending…", tone: "pending" };
+      return { label: "Sending…", tone: "warning" };
     case "sent":
-      return { label: "Sent", tone: "pending" };
+      return { label: "Sent", tone: "info" };
     case "undelivered":
       return {
         label: "Not delivered",
-        tone: "error",
+        tone: "destructive",
         detail: errorHint ?? (errorCode ? `Error ${errorCode}` : undefined),
       };
     case "failed":
       return {
         label: "Failed",
-        tone: "error",
+        tone: "destructive",
         detail: errorHint ?? (errorCode ? `Error ${errorCode}` : undefined),
       };
     case "canceled":
       return { label: "Canceled", tone: "muted" };
     default:
-      return { label: "Sent", tone: "pending" };
+      return { label: "Sent", tone: "info" };
   }
 };
 
-export const smsDeliveryToneClassName = (tone: SmsDeliveryDisplay["tone"]) => {
-  switch (tone) {
-    case "success":
-      return "text-emerald-600 dark:text-emerald-400";
-    case "pending":
-      return "text-amber-600 dark:text-amber-400";
-    case "warning":
-      return "text-orange-600 dark:text-orange-400";
-    case "error":
-      return "text-destructive";
-    default:
-      return "text-muted-foreground";
-  }
-};
+export const smsDeliveryToneClassName = (tone: SmsDeliveryDisplay["tone"]) =>
+  toneClass(tone, "text");

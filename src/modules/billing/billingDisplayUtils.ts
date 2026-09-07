@@ -1,4 +1,5 @@
 import type { ProposalPaymentInstallment } from "@/modules/types";
+import { toneBadgeVariant, type Tone } from "@/modules/shared/status";
 
 export const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -174,23 +175,24 @@ export const invoiceStatusLabel = (
   return status?.replace(/_/g, " ") ?? "—";
 };
 
-export const invoiceStatusVariant = (
+export const invoiceStatusTone = (
   status?: string | null,
   dueDate?: string | null,
-) => {
+): Tone => {
   if (isClientInvoiceOverdue({ status, due_date: dueDate })) {
-    return "destructive" as const;
+    return "destructive";
   }
   switch (status) {
     case "paid":
-      return "default" as const;
+      return "success";
     case "sent":
-      return "secondary" as const;
-    case "void":
-      return "outline" as const;
-    case "draft":
-      return "outline" as const;
+      return "info";
     default:
-      return "outline" as const;
+      return "muted";
   }
 };
+
+export const invoiceStatusVariant = (
+  status?: string | null,
+  dueDate?: string | null,
+) => toneBadgeVariant(invoiceStatusTone(status, dueDate));

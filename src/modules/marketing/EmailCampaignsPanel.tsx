@@ -43,6 +43,7 @@ import {
   formatCampaignStatus,
 } from "@/modules/marketing/marketingCampaignStatus";
 import { SendCampaignConfirmDialog } from "@/modules/marketing/SendCampaignConfirmDialog";
+import { sanitizeTicketEmailHtml } from "@/modules/tickets/sanitizeTicketEmailHtml";
 import type { EmailCampaign } from "@/modules/types";
 
 const relativeTime = (value?: string | null) => {
@@ -360,7 +361,7 @@ export const EmailCampaignsPanel = () => {
             <div
               className="prose prose-sm max-w-none text-sm dark:prose-invert"
               dangerouslySetInnerHTML={{
-                __html: sendCampaign?.body_html ?? "",
+                __html: sanitizeTicketEmailHtml(sendCampaign?.body_html ?? ""),
               }}
             />
           </div>

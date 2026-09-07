@@ -1,5 +1,6 @@
 import { ticketStatusLabel } from "@/modules/tickets/ticketInboxConfig";
 import { formatDurationShort } from "@/modules/tickets/ticketInboxUi";
+import { toneClass } from "@/modules/shared/status";
 
 const WAITING_SLA_HOURS = 48;
 
@@ -26,7 +27,7 @@ export const ticketWaitingSlaClassName = (
   updatedAt?: string | null,
 ) => {
   if (!getTicketWaitingDurationLabel(status, updatedAt)) return "";
-  return "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200";
+  return toneClass("warning", "border");
 };
 
 /** Time spent in the current ticket status (from updated_at). */
@@ -54,11 +55,11 @@ export const ticketStatusDurationClassName = (
   if (!getTicketStatusDurationLabel(status, updatedAt)) return "";
   if (status === "waiting") {
     return getTicketWaitingDurationLabel(status, updatedAt)
-      ? "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200"
-      : "border-border bg-muted/40 text-muted-foreground";
+      ? toneClass("warning", "border")
+      : toneClass("muted", "border");
   }
   if (status === "resolved") {
-    return "border-emerald-500/30 bg-emerald-500/5 text-emerald-800 dark:text-emerald-200";
+    return toneClass("success", "border");
   }
-  return "border-border bg-muted/40 text-muted-foreground";
+  return toneClass("muted", "border");
 };

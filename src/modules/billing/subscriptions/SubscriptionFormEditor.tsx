@@ -6,7 +6,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import {
   useDataProvider,
@@ -85,14 +84,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ContractDocumentMarkdown } from "@/modules/billing/subscriptions/ContractDocumentMarkdown";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -115,50 +106,13 @@ import type {
   OrganizationContractTerms,
   ServicePackage,
 } from "@/modules/types";
+import { SubscriptionAgreementPreviewDialog } from "@/modules/billing/subscriptions/SubscriptionAgreementPreviewDialog";
+import { SubscriptionFloatingSelectField as FloatingSelectField } from "@/modules/billing/subscriptions/SubscriptionFloatingSelectField";
 import {
   CreateFormFieldRow,
   CreateFormSection,
 } from "@/modules/shared/createForm/CreateFormLayout";
 
-const floatingSelectTriggerClassName =
-  "h-9 w-full border-0 bg-transparent px-3 shadow-none hover:bg-transparent focus:ring-0 data-[size=default]:h-9";
-
-const FloatingSelectField = ({
-  id,
-  label,
-  value,
-  onValueChange,
-  disabled,
-  children,
-  activeWhenEmpty = false,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onValueChange: (value: string) => void;
-  disabled?: boolean;
-  children: ReactNode;
-  activeWhenEmpty?: boolean;
-}) => {
-  const [open, setOpen] = useState(false);
-  const active = open || activeWhenEmpty || Boolean(value && value !== "none");
-  return (
-    <FloatingFieldShell active={active} label={label} htmlFor={id}>
-      <Select
-        value={value}
-        disabled={disabled}
-        open={open}
-        onOpenChange={setOpen}
-        onValueChange={onValueChange}
-      >
-        <SelectTrigger id={id} className={floatingSelectTriggerClassName}>
-          <SelectValue placeholder=" " />
-        </SelectTrigger>
-        <SelectContent>{children}</SelectContent>
-      </Select>
-    </FloatingFieldShell>
-  );
-};
 export type SubscriptionFormEditorHandle = {
   submit: () => void;
   canSubmit: boolean;
@@ -2061,42 +2015,14 @@ export const SubscriptionFormEditor = forwardRef<
         />
       </div>
 
-      <Dialog open={agreementPreviewOpen} onOpenChange={setAgreementPreviewOpen}>
-        <DialogContent className="flex max-h-[min(94vh,960px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(100vw-2rem,920px)]">
-          <DialogHeader className="shrink-0 border-b px-5 py-4 pr-12 text-left">
-            <DialogTitle>
-              Preview —{" "}
-              {selectedTemplate?.title?.trim() ||
-                subscriptionName ||
-                "Agreement"}
-            </DialogTitle>
-            <DialogDescription>
-              Same A4 contract document the client receives, filled with this
-              subscription’s client and plan.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto bg-[#e5e7eb]">
-            {agreementTermsMarkdown.trim() ? (
-              <ContractDocumentMarkdown page>
-                {agreementTermsMarkdown}
-              </ContractDocumentMarkdown>
-            ) : (
-              <p className="p-6 text-center text-sm text-muted-foreground">
-                No terms to preview. Choose a contract template first.
-              </p>
-            )}
-          </div>
-          <DialogFooter className="shrink-0 border-t px-5 py-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setAgreementPreviewOpen(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SubscriptionAgreementPreviewDialog
+        open={agreementPreviewOpen}
+        onOpenChange={setAgreementPreviewOpen}
+        title={
+          selectedTemplate?.title?.trim() || subscriptionName || "Agreement"
+        }
+        markdown={agreementTermsMarkdown}
+      />
 
       <SignedSubscriptionAgreementDialog
         open={signedAgreementOpen}

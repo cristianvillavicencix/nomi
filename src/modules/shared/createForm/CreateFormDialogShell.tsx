@@ -8,12 +8,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toneClass, type Tone } from "@/modules/shared/status";
 import { cn } from "@/lib/utils";
 import { DialogFormSubmitButton } from "@/components/admin/form-guard/DialogFormSubmitButton";
 
 export type CreateFormDialogShellProps = {
   icon: LucideIcon;
-  iconTone?: "blue" | "violet" | "amber" | "slate";
+  iconTone?: "info" | "brand" | "warning" | "muted" | "blue" | "violet" | "amber" | "slate";
   title: string;
   description: string;
   isSaving?: boolean;
@@ -28,20 +29,27 @@ export type CreateFormDialogShellProps = {
   children: ReactNode;
 };
 
-const iconToneClass: Record<
-  NonNullable<CreateFormDialogShellProps["iconTone"]>,
-  string
-> = {
-  blue: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
-  violet:
-    "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
-  amber: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  slate: "bg-muted text-muted-foreground",
+const resolveIconTone = (
+  tone: NonNullable<CreateFormDialogShellProps["iconTone"]>,
+): Tone => {
+  switch (tone) {
+    case "blue":
+    case "info":
+      return "info";
+    case "violet":
+    case "brand":
+      return "brand";
+    case "amber":
+    case "warning":
+      return "warning";
+    default:
+      return "muted";
+  }
 };
 
 export const CreateFormDialogShell = ({
   icon: Icon,
-  iconTone = "blue",
+  iconTone = "info",
   title,
   description,
   isSaving = false,
@@ -61,7 +69,7 @@ export const CreateFormDialogShell = ({
         <div
           className={cn(
             "flex size-9 shrink-0 items-center justify-center rounded-lg",
-            iconToneClass[iconTone],
+            toneClass(resolveIconTone(iconTone), "soft"),
           )}
         >
           <Icon className="size-4" aria-hidden />
